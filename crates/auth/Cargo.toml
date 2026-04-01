@@ -1,0 +1,17 @@
+[package]
+name = "privatemesh-auth"
+description = "Authentication primitives: passkeys, magic links, TOTP, session tokens"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+privatemesh-domain = { workspace = true }
+serde = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+anyhow = { workspace = true }
+ring = { workspace = true }
+base64 = { workspace = true }

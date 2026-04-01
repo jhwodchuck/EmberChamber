@@ -1,0 +1,17 @@
+[package]
+name = "privatemesh-relay-protocol"
+description = "Relay envelope types, signing, and federation protocol definitions"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+privatemesh-domain = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+ring = { workspace = true }
+base64 = { workspace = true }

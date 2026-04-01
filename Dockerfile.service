@@ -1,0 +1,59 @@
+# PrivateMesh — Rust service Dockerfile
+#
+# Build any service from the workspace root:
+#   docker build --build-arg SERVICE=control-api -t pm-control-api .
+#
+# Used by infra/compose/docker-compose.yml with per-service build-arg overrides.
+
+ARG SERVICE=control-api
+
+# ── Build stage ──────────────────────────────────────────────────────────────
+FROM rust:1.80-slim AS builder
+ARG SERVICE
+
+WORKDIR /build
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    pkg-config libssl-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy workspace manifests (for dependency caching)
+COPY Cargo.toml ./
+COPY crates/domain/Cargo.toml       crates/domain/
+COPY crates/db/Cargo.toml           crates/db/
+COPY crates/auth/Cargo.toml         crates/auth/
+COPY crates/relay-protocol/Cargo.toml crates/relay-protocol/
+COPY crates/test-support/Cargo.toml crates/test-support/
+COPY services/control-api/Cargo.toml   services/control-api/
+COPY services/realtime-gateway/Cargo.toml services/realtime-gateway/
+COPY services/relay-gateway/Cargo.toml  services/relay-gateway/
+COPY services/media-worker/Cargo.toml   services/media-worker/
+COPY services/push-worker/Cargo.toml    services/push-worker/
+COPY services/directory-ca/Cargo.toml   services/directory-ca/
+
+# Stub all sources so cargo resolves the dependency graph without full sources
+RUN for crate in domain db auth relay-protocol test-support; do \
+      mkdir -p crates/$crate/src && \
+      printf 'pub fn _stub() {}\n' > crates/$crate/src/lib.rs; \
+    done && \
+    for svc in control-api realtime-gateway relay-gateway media-worker push-worker directory-ca; do \
+      mkdir -p services/$svc/src && \
+      printf 'fn main() {}\n' > services/$svc/src/main.rs; \
+    done
+
+RUN cargo build --release --bin "$SERVICE" 2>/dev/null; exit 0
+
+# Copy real sources and do incremental rebuild
+COPY crates/ crates/
+COPY services/ services/
+RUN find crates services -name '*.rs' -exec touch {} + && \
+    cargo build --release --bin "$SERVICE"
+
+# ── Runtime stage ─────────────────────────────────────────────────────────────
+FROM debian:bookworm-slim AS runtime
+ARG SERVICE
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+COPY --from=builder /build/target/release/$SERVICE /usr/local/bin/privatemesh-service
+ENV SERVICE_NAME=$SERVICE
+ENTRYPOINT ["/usr/local/bin/privatemesh-service"]

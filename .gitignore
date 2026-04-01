@@ -8,6 +8,7 @@ dist/
 .next/
 out/
 build/
+target/
 
 # Environment files
 .env
@@ -37,5 +38,12 @@ coverage/
 # TypeScript
 *.tsbuildinfo
 
+# Rust / Cargo
+Cargo.lock
+**/*.rs.bk
+
 # Docker volumes
 infra/data/
+
+# Turbo
+.turbo/

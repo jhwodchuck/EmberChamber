@@ -1,0 +1,73 @@
+use serde::{Deserialize, Serialize};
+
+/// Whether a conversation is a 1:1 DM (E2EE by default) or a hosted group/channel.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ConversationKind {
+    /// Direct message — end-to-end encrypted by default.
+    DirectMessage,
+    /// Group conversation — server-managed, not E2EE in MVP.
+    Group,
+    /// Broadcast channel — server-managed, not E2EE in MVP.
+    Channel,
+}
+
+/// Role-based permission flags for a conversation or community scope.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct PermissionSet {
+    pub can_send_messages: bool,
+    pub can_delete_messages: bool,
+    pub can_manage_members: bool,
+    pub can_manage_invites: bool,
+    pub can_manage_roles: bool,
+    pub can_view_audit_log: bool,
+    pub can_configure_community: bool,
+    pub can_ban_members: bool,
+    pub can_mute_members: bool,
+}
+
+impl PermissionSet {
+    /// Full permissions granted to community owners.
+    pub fn owner() -> Self {
+        Self {
+            can_send_messages: true,
+            can_delete_messages: true,
+            can_manage_members: true,
+            can_manage_invites: true,
+            can_manage_roles: true,
+            can_view_audit_log: true,
+            can_configure_community: true,
+            can_ban_members: true,
+            can_mute_members: true,
+        }
+    }
+
+    /// Permissions for regular members.
+    pub fn member() -> Self {
+        Self {
+            can_send_messages: true,
+            ..Default::default()
+        }
+    }
+}
+
+/// User-configurable privacy preferences.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PrivacySettings {
+    /// Whether to send read receipts to other participants.
+    pub send_read_receipts: bool,
+    /// Whether to show online/typing presence.
+    pub show_presence: bool,
+    /// Whether to allow direct messages from non-contacts.
+    pub allow_dm_from_strangers: bool,
+}
+
+impl Default for PrivacySettings {
+    fn default() -> Self {
+        Self {
+            send_read_receipts: true,
+            show_presence: true,
+            allow_dm_from_strangers: false,
+        }
+    }
+}
