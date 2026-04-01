@@ -4,25 +4,29 @@
 
 @layer base {
   :root {
-    --bg-primary: #ffffff;
-    --bg-secondary: #f8f9fa;
-    --bg-sidebar: #f1f3f5;
-    --text-primary: #1a1a2e;
-    --text-secondary: #6c757d;
-    --border: #e9ecef;
-    --brand: #3b5bdb;
-    --scroll-thumb-hover: rgba(108, 117, 125, 0.5);
+    --bg-primary: #fcf7f2;
+    --bg-secondary: #fffdf9;
+    --bg-sidebar: #f4ece6;
+    --bg-elevated: rgba(255, 251, 247, 0.82);
+    --bg-overlay: 252 247 242;
+    --text-primary: #201312;
+    --text-secondary: #725852;
+    --border: #e9d8ca;
+    --brand: #c85832;
+    --scroll-thumb-hover: rgba(141, 102, 89, 0.45);
   }
 
   .dark {
-    --bg-primary: #0f1117;
-    --bg-secondary: #161b22;
-    --bg-sidebar: #13161d;
-    --text-primary: #e6edf3;
-    --text-secondary: #8b949e;
-    --border: #21262d;
-    --brand: #5e7ffe;
-    --scroll-thumb-hover: rgba(139, 148, 158, 0.5);
+    --bg-primary: #140d0e;
+    --bg-secondary: #1b1213;
+    --bg-sidebar: #181011;
+    --bg-elevated: rgba(27, 18, 19, 0.86);
+    --bg-overlay: 20 13 14;
+    --text-primary: #f8ede7;
+    --text-secondary: #c7a89a;
+    --border: #3a2725;
+    --brand: #ea6f3f;
+    --scroll-thumb-hover: rgba(199, 168, 154, 0.45);
   }
 
   * {
@@ -32,10 +36,17 @@
   body {
     @apply bg-[var(--bg-primary)] text-[var(--text-primary)] antialiased;
     font-family: "Inter", system-ui, sans-serif;
+    background-image:
+      radial-gradient(circle at top, rgba(255, 191, 146, 0.16), transparent 32%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.34), transparent 22%);
   }
 
   ::selection {
     @apply bg-brand-500/30;
+  }
+
+  .font-display {
+    font-family: var(--font-display), Georgia, serif;
   }
 
   /* Custom scrollbar */
@@ -59,15 +70,15 @@
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:pointer-events-none disabled:opacity-50;
   }
 
   .btn-primary {
-    @apply btn bg-brand-500 text-white hover:bg-brand-600 active:bg-brand-700;
+    @apply btn bg-brand-500 text-white shadow-[0_10px_30px_rgba(200,88,50,0.24)] hover:bg-brand-600 active:bg-brand-700;
   }
 
   .btn-ghost {
-    @apply btn text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)];
+    @apply btn border border-[var(--border)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)];
   }
 
   .btn-danger {
@@ -75,11 +86,43 @@
   }
 
   .input {
-    @apply w-full rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50;
+    @apply w-full rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50;
   }
 
   .card {
-    @apply rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-4;
+    @apply rounded-[1.6rem] border border-[var(--border)] bg-[var(--bg-elevated)] p-5 shadow-[0_10px_30px_rgba(32,19,18,0.06)];
+  }
+
+  .panel {
+    @apply rounded-[2rem] border border-[var(--border)] bg-[var(--bg-elevated)] shadow-[0_16px_48px_rgba(32,19,18,0.08)];
+  }
+
+  .eyebrow {
+    @apply inline-flex items-center gap-2 rounded-full border border-brand-500/20 bg-brand-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-brand-600;
+  }
+
+  .prose-block h2 {
+    @apply font-display text-3xl font-semibold text-[var(--text-primary)];
+  }
+
+  .prose-block h3 {
+    @apply text-lg font-semibold text-[var(--text-primary)];
+  }
+
+  .prose-block p,
+  .prose-block li {
+    @apply text-[var(--text-secondary)] leading-7;
+  }
+
+  .prose-block ul {
+    @apply space-y-3 pl-5;
+  }
+
+  .surface-grid {
+    background-image:
+      linear-gradient(to right, rgba(114, 88, 82, 0.08) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(114, 88, 82, 0.08) 1px, transparent 1px);
+    background-size: 24px 24px;
   }
 
   .sidebar-item {
