@@ -1,0 +1,689 @@
+openapi: "3.1.0"
+info:
+  title: PrivateMesh API
+  version: "0.1.0"
+  description: |
+    PrivateMesh REST API for privacy-first messaging.
+
+    Authentication: All protected endpoints require `Authorization: Bearer <accessToken>`.
+    Access tokens expire in 15 minutes. Use `/auth/refresh` to get a new one.
+
+servers:
+  - url: http://localhost:3001/api
+    description: Local development
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+        details:
+          type: object
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        displayName:
+          type: string
+        avatarUrl:
+          type: string
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        conversation_id:
+          type: string
+          format: uuid
+        sender_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [text, file, image, audio, system]
+        content:
+          type: string
+          nullable: true
+        edited_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [dm, group]
+        name:
+          type: string
+          nullable: true
+        is_encrypted:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Channel:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+          nullable: true
+        visibility:
+          type: string
+          enum: [public, private]
+        member_count:
+          type: integer
+        post_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/register:
+    post:
+      summary: Register a new user
+      security: []
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, displayName, password]
+              properties:
+                username:
+                  type: string
+                  minLength: 3
+                  maxLength: 64
+                  pattern: "^[a-zA-Z0-9_-]+$"
+                displayName:
+                  type: string
+                  minLength: 1
+                  maxLength: 128
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+                  maxLength: 128
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: "#/components/schemas/User"
+                      accessToken:
+                        type: string
+                      refreshToken:
+                        type: string
+        "409":
+          description: Username or email already taken
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /auth/login:
+    post:
+      summary: Login with username/password
+      security: []
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+                deviceName:
+                  type: string
+                deviceType:
+                  type: string
+                  enum: [web, mobile, desktop]
+      responses:
+        "200":
+          description: Login successful
+        "401":
+          description: Invalid credentials
+
+  /auth/refresh:
+    post:
+      summary: Refresh access token
+      security: []
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        "200":
+          description: New access token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      accessToken:
+                        type: string
+
+  /auth/logout:
+    post:
+      summary: Logout (revoke session)
+      tags: [Auth]
+      responses:
+        "200":
+          description: Logged out
+
+  /auth/me:
+    get:
+      summary: Get current user
+      tags: [Auth]
+      responses:
+        "200":
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/User"
+
+  /conversations:
+    get:
+      summary: List user's conversations
+      tags: [Conversations]
+      responses:
+        "200":
+          description: List of conversations
+
+  /conversations/dm:
+    post:
+      summary: Get or create a DM conversation
+      tags: [Conversations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId]
+              properties:
+                userId:
+                  type: string
+                  format: uuid
+      responses:
+        "200":
+          description: Existing DM conversation
+        "201":
+          description: New DM conversation created
+
+  /conversations/group:
+    post:
+      summary: Create a group conversation
+      tags: [Conversations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                isEncrypted:
+                  type: boolean
+                memberIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        "201":
+          description: Group created
+
+  /conversations/{id}:
+    get:
+      summary: Get conversation details
+      tags: [Conversations]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Conversation details
+        "404":
+          description: Not found
+
+  /conversations/{id}/messages:
+    get:
+      summary: Get messages in a conversation
+      tags: [Conversations]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: before
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: List of messages
+    post:
+      summary: Send a message
+      tags: [Conversations]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content:
+                  type: string
+                  maxLength: 4096
+                type:
+                  type: string
+                  enum: [text, file, image, audio]
+                attachmentId:
+                  type: string
+                  format: uuid
+                replyToId:
+                  type: string
+                  format: uuid
+      responses:
+        "201":
+          description: Message sent
+
+  /channels:
+    get:
+      summary: Discover public channels
+      tags: [Channels]
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of public channels
+    post:
+      summary: Create a channel
+      tags: [Channels]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                visibility:
+                  type: string
+                  enum: [public, private]
+      responses:
+        "201":
+          description: Channel created
+
+  /channels/{id}/join:
+    post:
+      summary: Join a public channel
+      tags: [Channels]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Joined
+
+  /channels/{id}/posts:
+    get:
+      summary: Get channel posts
+      tags: [Channels]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: List of posts
+    post:
+      summary: Create a post (admins/mods only)
+      tags: [Channels]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content:
+                  type: string
+                  maxLength: 4096
+      responses:
+        "201":
+          description: Post created
+
+  /invites:
+    post:
+      summary: Create an invite link
+      tags: [Invites]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                conversationId:
+                  type: string
+                  format: uuid
+                channelId:
+                  type: string
+                  format: uuid
+                expiresInHours:
+                  type: integer
+                maxUses:
+                  type: integer
+      responses:
+        "201":
+          description: Invite created
+
+  /invites/{code}:
+    get:
+      summary: Preview invite
+      tags: [Invites]
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Invite preview
+        "404":
+          description: Invalid code
+        "410":
+          description: Expired or revoked
+
+  /invites/{code}/accept:
+    post:
+      summary: Accept an invite
+      tags: [Invites]
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Joined successfully
+
+  /search:
+    get:
+      summary: Search messages, channels, and users
+      tags: [Search]
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [messages, channels, users, all]
+      responses:
+        "200":
+          description: Search results
+
+  /attachments/upload:
+    post:
+      summary: Upload a file attachment
+      tags: [Attachments]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "201":
+          description: File uploaded, returns attachment ID and signed URL
+        "413":
+          description: File too large
+
+  /users/search:
+    get:
+      summary: Search users
+      tags: [Users]
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of users
+
+  /users/me:
+    patch:
+      summary: Update own profile
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                displayName:
+                  type: string
+                bio:
+                  type: string
+                avatarUrl:
+                  type: string
+      responses:
+        "200":
+          description: Updated profile
+
+  /users/me/privacy:
+    patch:
+      summary: Update privacy settings
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                showLastSeen:
+                  type: boolean
+                showReadReceipts:
+                  type: boolean
+                allowDmsFrom:
+                  type: string
+                  enum: [everyone, contacts, nobody]
+                showOnlineStatus:
+                  type: boolean
+                profileVisible:
+                  type: boolean
+      responses:
+        "200":
+          description: Privacy settings updated
+
+  /users/block:
+    post:
+      summary: Block a user
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId]
+              properties:
+                userId:
+                  type: string
+                  format: uuid
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: User blocked
+
+  /users/report:
+    post:
+      summary: Report abuse
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reportedUserId:
+                  type: string
+                  format: uuid
+                reportedMessageId:
+                  type: string
+                  format: uuid
+                reportedChannelId:
+                  type: string
+                  format: uuid
+                reason:
+                  type: string
+                  enum: [spam, harassment, illegal, csam, malware, impersonation, other]
+                details:
+                  type: string
+      responses:
+        "201":
+          description: Report submitted
