@@ -180,3 +180,13 @@ The new beta scaffold should verify cleanly with:
 - Architecture: [`docs/architecture.md`](docs/architecture.md)
 - Launch targets: [`docs/launch-targets.md`](docs/launch-targets.md)
 - Legacy prototype API spec: [`docs/openapi.yaml`](docs/openapi.yaml)
+
+## Public Web Companion
+
+The public Next.js surface now includes:
+
+- `/` for positioning and launch framing
+- `/download` for target-platform guidance
+- `/privacy` for high-level privacy commitments
+- `/beta-terms` for controlled-beta expectations
+- `/trust-and-safety` for the anti-abuse boundary model

@@ -11,7 +11,7 @@ import { GroupCoordinatorDO } from "./do/group-coordinator";
 import { RateLimitDO } from "./do/rate-limit";
 import { blindIndex, encryptString, normalizeEmail, sha256Hex, signValue } from "./lib/crypto";
 import { dbAll, dbFirst, dbRun } from "./lib/d1";
-import { errorResponse, HttpError, json, readJson } from "./lib/http";
+import { errorResponse, HttpError, json, preflightResponse, readJson, withCors } from "./lib/http";
 import { signAccessToken, verifyAccessToken } from "./lib/tokens";
 
 export interface Env {
@@ -32,6 +32,7 @@ export interface Env {
   EMBERCHAMBER_ACCESS_TOKEN_SECRET: string;
   EMBERCHAMBER_REFRESH_TOKEN_SECRET: string;
   EMBERCHAMBER_ATTACHMENT_TOKEN_SECRET: string;
+  EMBERCHAMBER_ALLOWED_ORIGINS: string;
 }
 
 interface AuthContext {
@@ -302,15 +303,24 @@ function conversationTitleForAccount(accountId: string): string {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     try {
+      if (request.method === "OPTIONS") {
+        return preflightResponse(request, env.EMBERCHAMBER_ALLOWED_ORIGINS);
+      }
+
+      const respond = (response: Response) =>
+        withCors(response, request, env.EMBERCHAMBER_ALLOWED_ORIGINS);
+
       const url = new URL(request.url);
       const pathname = url.pathname;
 
       if (request.method === "GET" && pathname === "/health") {
-        return json({
-          status: "ok",
-          relay: "cloudflare-workers",
-          timestamp: new Date().toISOString(),
-        });
+        return respond(
+          json({
+            status: "ok",
+            relay: "cloudflare-workers",
+            timestamp: new Date().toISOString(),
+          })
+        );
       }
 
       if (request.method === "POST" && pathname === "/v1/auth/start") {
@@ -360,7 +370,7 @@ export default {
           ...(env.EMBERCHAMBER_EMAIL_PROVIDER === "log" ? { debugCompletionToken: completionToken } : {}),
         };
 
-        return json(response, { status: 202 });
+        return respond(json(response, { status: 202 }));
       }
 
       if (request.method === "POST" && pathname === "/v1/auth/complete") {
@@ -437,7 +447,7 @@ export default {
           challenge.id
         );
 
-        return json(await createSession(env, account.account_id, deviceId));
+        return respond(json(await createSession(env, account.account_id, deviceId)));
       }
 
       if (request.method === "POST" && pathname === "/v1/auth/refresh") {
@@ -470,11 +480,13 @@ export default {
           env.EMBERCHAMBER_ACCESS_TOKEN_SECRET
         );
 
-        return json({
+        return respond(
+          json({
           accessToken,
           sessionId: session.id,
           deviceId: session.device_id,
-        });
+          })
+        );
       }
 
       if (
@@ -486,12 +498,15 @@ export default {
           "/v1/passkeys/auth/verify",
         ].includes(pathname)
       ) {
-        return json(
-          {
-            supported: false,
-            message: "Passkey enrollment is scaffolded in the protocol, but not yet wired in this beta relay.",
-          },
-          { status: 501 }
+        return respond(
+          json(
+            {
+              supported: false,
+              message:
+                "Passkey enrollment is scaffolded in the protocol, but not yet wired in this beta relay.",
+            },
+            { status: 501 }
+          )
         );
       }
 
@@ -517,7 +532,7 @@ export default {
           auth.accountId
         );
 
-        return json({ registered: true, deviceId: auth.deviceId });
+        return respond(json({ registered: true, deviceId: auth.deviceId }));
       }
 
       if (request.method === "POST" && pathname === "/v1/devices/link/start") {
@@ -540,11 +555,13 @@ export default {
           expiresAt
         );
 
-        return json({
-          linkId,
-          qrPayload: linkToken,
-          expiresAt,
-        });
+        return respond(
+          json({
+            linkId,
+            qrPayload: linkToken,
+            expiresAt,
+          })
+        );
       }
 
       if (request.method === "POST" && pathname === "/v1/devices/link/confirm") {
@@ -562,7 +579,7 @@ export default {
           auth.accountId
         );
 
-        return json({ confirmed: true, linkId: body.linkId });
+        return respond(json({ confirmed: true, linkId: body.linkId }));
       }
 
       if (request.method === "POST" && pathname === "/v1/contacts/card/resolve") {
@@ -575,7 +592,7 @@ export default {
           throw new HttpError(404, "Contact card not found", "CONTACT_NOT_FOUND");
         }
 
-        return json(decoded);
+        return respond(json(decoded));
       }
 
       if (request.method === "GET" && pathname === "/v1/me/contact-card") {
@@ -591,10 +608,12 @@ export default {
           label: account?.display_name ?? conversationTitleForAccount(auth.accountId),
         };
 
-        return json({
-          ...card,
-          cardToken: btoa(JSON.stringify(card)),
-        });
+        return respond(
+          json({
+            ...card,
+            cardToken: btoa(JSON.stringify(card)),
+          })
+        );
       }
 
       if (request.method === "POST" && pathname === "/v1/dm/open") {
@@ -635,7 +654,7 @@ export default {
             memberAccountIds: [auth.accountId, body.peerAccountId],
             createdAt: existing.created_at,
           };
-          return json(descriptor);
+          return respond(json(descriptor));
         }
 
         const conversationId = crypto.randomUUID();
@@ -657,13 +676,15 @@ export default {
           createdAt
         );
 
-        return json({
-          id: conversationId,
-          kind: "direct_message",
-          epoch: 1,
-          memberAccountIds: [auth.accountId, body.peerAccountId],
-          createdAt,
-        } satisfies ConversationDescriptor);
+        return respond(
+          json({
+            id: conversationId,
+            kind: "direct_message",
+            epoch: 1,
+            memberAccountIds: [auth.accountId, body.peerAccountId],
+            createdAt,
+          } satisfies ConversationDescriptor)
+        );
       }
 
       if (request.method === "POST" && pathname === "/v1/groups") {
@@ -704,14 +725,16 @@ export default {
           }),
         });
 
-        return json({
-          id: conversationId,
-          kind: "group",
-          title: body.title,
-          epoch: 1,
-          memberAccountIds,
-          createdAt,
-        } satisfies ConversationDescriptor);
+        return respond(
+          json({
+            id: conversationId,
+            kind: "group",
+            title: body.title,
+            epoch: 1,
+            memberAccountIds,
+            createdAt,
+          } satisfies ConversationDescriptor)
+        );
       }
 
       const groupInviteMatch = pathname.match(/^\/v1\/groups\/([0-9a-f-]{36})\/invites$/i);
@@ -752,12 +775,14 @@ export default {
           new Date().toISOString()
         );
 
-        return json({
-          id: inviteId,
-          inviteToken,
-          expiresAt,
-          maxUses: body.maxUses ?? null,
-        });
+        return respond(
+          json({
+            id: inviteId,
+            inviteToken,
+            expiresAt,
+            maxUses: body.maxUses ?? null,
+          })
+        );
       }
 
       if (request.method === "POST" && pathname === "/v1/messages/batch") {
@@ -839,7 +864,7 @@ export default {
           accepted.push(envelope.envelopeId);
         }
 
-        return json({ acceptedEnvelopeIds: accepted }, { status: 202 });
+        return respond(json({ acceptedEnvelopeIds: accepted }, { status: 202 }));
       }
 
       if (request.method === "GET" && pathname === "/v1/mailbox/sync") {
@@ -848,7 +873,11 @@ export default {
         const stub = env.DEVICE_MAILBOX.get(id);
         const after = url.searchParams.get("after");
         const limit = url.searchParams.get("limit") ?? "50";
-        return stub.fetch(`https://do/sync?after=${encodeURIComponent(after ?? "")}&limit=${encodeURIComponent(limit)}`);
+        return respond(
+          await stub.fetch(
+            `https://do/sync?after=${encodeURIComponent(after ?? "")}&limit=${encodeURIComponent(limit)}`
+          )
+        );
       }
 
       if (request.method === "POST" && pathname === "/v1/mailbox/ack") {
@@ -856,10 +885,12 @@ export default {
         const body = mailboxAckSchema.parse(await readJson(request));
         const id = env.DEVICE_MAILBOX.idFromName(auth.deviceId);
         const stub = env.DEVICE_MAILBOX.get(id);
-        return stub.fetch("https://do/ack", {
-          method: "POST",
-          body: JSON.stringify(body),
-        });
+        return respond(
+          await stub.fetch("https://do/ack", {
+            method: "POST",
+            body: JSON.stringify(body),
+          })
+        );
       }
 
       if (request.method === "POST" && pathname === "/v1/attachments/ticket") {
@@ -894,7 +925,7 @@ export default {
           expiresAt: expiresAt.toISOString(),
           maxBytes: body.byteLength,
         };
-        return json(response, { status: 201 });
+        return respond(json(response, { status: 201 }));
       }
 
       const attachmentUploadMatch = pathname.match(/^\/v1\/attachments\/upload\/([0-9a-f-]{36})$/i);
@@ -920,7 +951,7 @@ export default {
           httpMetadata: { contentType: attachment.mime_type },
         });
 
-        return json({ uploaded: true });
+        return respond(json({ uploaded: true }));
       }
 
       const attachmentDownloadMatch = pathname.match(/^\/v1\/attachments\/download\/([0-9a-f-]{36})$/i);
@@ -954,12 +985,14 @@ export default {
           attachmentId
         );
 
-        return new Response(await object.arrayBuffer(), {
-          headers: {
-            "content-type": attachment.mime_type,
-            etag: object.httpEtag ?? "",
-          },
-        });
+        return respond(
+          new Response(await object.arrayBuffer(), {
+            headers: {
+              "content-type": attachment.mime_type,
+              etag: object.httpEtag ?? "",
+            },
+          })
+        );
       }
 
       if (request.method === "POST" && pathname === "/v1/reports") {
@@ -979,12 +1012,12 @@ export default {
           new Date().toISOString()
         );
 
-        return json({ reportId, status: "open" }, { status: 201 });
+        return respond(json({ reportId, status: "open" }, { status: 201 }));
       }
 
-      return json({ error: "Not found" }, { status: 404 });
+      return respond(json({ error: "Not found" }, { status: 404 }));
     } catch (error) {
-      return errorResponse(error);
+      return withCors(errorResponse(error), request, env.EMBERCHAMBER_ALLOWED_ORIGINS);
     }
   },
 };

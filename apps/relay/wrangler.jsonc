@@ -4,11 +4,13 @@
   "main": "src/index.ts",
   "compatibility_date": "2025-01-10",
   "workers_dev": true,
+  "preview_urls": false,
   "vars": {
     "EMBERCHAMBER_RELAY_PUBLIC_URL": "http://127.0.0.1:8787",
     "EMBERCHAMBER_EMAIL_PROVIDER": "log",
     "EMBERCHAMBER_EMAIL_FROM": "noreply@emberchamber.local",
-    "EMBERCHAMBER_DEV_INVITE_TOKEN": "dev-beta-invite"
+    "EMBERCHAMBER_DEV_INVITE_TOKEN": "dev-beta-invite",
+    "EMBERCHAMBER_ALLOWED_ORIGINS": "http://127.0.0.1:3000,http://localhost:3000"
   },
   "durable_objects": {
     "bindings": [
@@ -75,7 +77,8 @@
         "EMBERCHAMBER_RELAY_PUBLIC_URL": "https://relay.emberchamber.com",
         "EMBERCHAMBER_EMAIL_PROVIDER": "queue",
         "EMBERCHAMBER_EMAIL_FROM": "noreply@emberchamber.com",
-        "EMBERCHAMBER_DEV_INVITE_TOKEN": ""
+        "EMBERCHAMBER_DEV_INVITE_TOKEN": "",
+        "EMBERCHAMBER_ALLOWED_ORIGINS": "https://emberchamber.com,https://www.emberchamber.com"
       },
       "durable_objects": {
         "bindings": [

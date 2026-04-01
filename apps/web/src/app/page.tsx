@@ -1,165 +1,139 @@
-import Image from "next/image";
 import Link from "next/link";
+import { MarketingShell } from "@/components/marketing-shell";
+import { faqItems, launchPlatforms, trustFacts } from "@/lib/site";
+
+const productPillars = [
+  {
+    title: "Minimal relay, not maximal central visibility",
+    body: "The beta uses Cloudflare Workers, Durable Objects, D1, and R2 to move encrypted traffic without pretending modern phones can operate as an always-on pure mesh.",
+  },
+  {
+    title: "Invite-only trusted circles",
+    body: "EmberChamber is not a public network. Launch scope is DMs, small groups, encrypted attachments, and controlled onboarding.",
+  },
+  {
+    title: "Local-first message history",
+    body: "Devices keep the authoritative conversation history, local search indexes, and safety state. The relay is there to deliver, not to become your archive.",
+  },
+];
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="border-b border-[var(--border)] px-6 py-4">
-        <nav className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Image
-              src="/brand/emberchamber-mark.svg"
-              alt="EmberChamber mark"
-              width={36}
-              height={36}
-              priority
-            />
-            <Image
-              src="/brand/emberchamber-wordmark.svg"
-              alt="EmberChamber"
-              width={240}
-              height={47}
-              className="h-auto w-[184px] sm:w-[220px]"
-            />
+    <MarketingShell>
+      <section className="mx-auto max-w-6xl px-6 pb-16 pt-14 sm:pb-24 sm:pt-20">
+        <div className="panel surface-grid overflow-hidden px-6 py-10 sm:px-10 sm:py-14">
+          <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-end">
+            <div>
+              <div className="eyebrow">Closed beta for trusted circles</div>
+              <h1 className="mt-6 max-w-4xl font-display text-5xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-7xl">
+                Private messaging that admits the hard parts.
+              </h1>
+              <p className="mt-6 max-w-3xl text-lg leading-8 text-[var(--text-secondary)] sm:text-xl">
+                EmberChamber is being rebuilt as an invite-only encrypted messenger for
+                Android, Windows, and Ubuntu. It does not pretend phones can be reliably
+                serverless. It uses a minimal relay, local-first history, and explicit privacy
+                boundaries instead.
+              </p>
+
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <Link href="/download" className="btn-primary px-6 py-3 text-base">
+                  Explore launch targets
+                </Link>
+                <Link href="/trust-and-safety" className="btn-ghost px-6 py-3 text-base">
+                  Read the trust model
+                </Link>
+              </div>
+
+              <div className="mt-10 grid gap-4 sm:grid-cols-3">
+                {productPillars.map((pillar) => (
+                  <div key={pillar.title} className="card h-full">
+                    <h2 className="text-base font-semibold text-[var(--text-primary)]">{pillar.title}</h2>
+                    <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{pillar.body}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <aside className="panel bg-[linear-gradient(180deg,rgba(255,255,255,0.08),transparent),linear-gradient(160deg,#2a1512,#120a0b)] p-6 text-white shadow-[0_20px_60px_rgba(32,19,18,0.22)]">
+              <div className="text-sm uppercase tracking-[0.22em] text-[#f8bc9c]">Beta snapshot</div>
+              <div className="mt-5 space-y-5">
+                <div>
+                  <div className="text-xs uppercase tracking-[0.18em] text-[#d7a68a]">Scope</div>
+                  <p className="mt-1 text-lg font-medium">E2EE DMs, small groups, encrypted attachments</p>
+                </div>
+                <div>
+                  <div className="text-xs uppercase tracking-[0.18em] text-[#d7a68a]">Bootstrap</div>
+                  <p className="mt-1 text-lg font-medium">Invite-only email magic links, passkeys later</p>
+                </div>
+                <div>
+                  <div className="text-xs uppercase tracking-[0.18em] text-[#d7a68a]">Shipping first</div>
+                  <p className="mt-1 text-lg font-medium">Android, Windows, Ubuntu</p>
+                </div>
+                <div>
+                  <div className="text-xs uppercase tracking-[0.18em] text-[#d7a68a]">Not in beta</div>
+                  <p className="mt-1 text-lg font-medium">Phone numbers, public discovery, fake “no server” claims</p>
+                </div>
+              </div>
+            </aside>
           </div>
-          <div className="flex items-center gap-3">
-            <Link href="/login" className="btn-ghost">
-              Request magic link
-            </Link>
-            <Link href="/register" className="btn-primary">
-              Join beta
-            </Link>
-          </div>
-        </nav>
-      </header>
+        </div>
+      </section>
 
-      {/* Hero */}
-      <main className="flex-1">
-        <section className="max-w-5xl mx-auto px-6 py-20 text-center">
-          <Image
-            src="/brand/emberchamber-lockup.svg"
-            alt="EmberChamber lockup"
-            width={720}
-            height={216}
-            priority
-            className="mx-auto mb-10 h-auto w-full max-w-[620px]"
-          />
-          <div className="inline-flex items-center gap-2 rounded-full bg-brand-500/10 px-4 py-1.5 text-sm text-brand-500 mb-8">
-            <span className="w-2 h-2 rounded-full bg-brand-500 animate-pulse" />
-            Closed beta for trusted circles
-          </div>
+      <section className="mx-auto max-w-6xl px-6 py-10 sm:py-14">
+        <div className="mb-8">
+          <div className="eyebrow">Launch surfaces</div>
+          <h2 className="mt-4 font-display text-4xl font-semibold text-[var(--text-primary)] sm:text-5xl">
+            Built for the platforms you can actually ship first.
+          </h2>
+        </div>
 
-          <h1 className="text-4xl sm:text-5xl font-bold text-[var(--text-primary)] mb-6 leading-tight">
-            Encrypted messaging with a{" "}
-            <span className="text-brand-500">minimal relay</span>
-          </h1>
+        <div className="grid gap-5 lg:grid-cols-3">
+          {launchPlatforms.map((platform) => (
+            <div key={platform.name} className="card h-full">
+              <div className="text-xs uppercase tracking-[0.2em] text-brand-600">{platform.artifact}</div>
+              <h3 className="mt-3 text-2xl font-semibold text-[var(--text-primary)]">{platform.name}</h3>
+              <p className="mt-2 text-sm font-medium text-brand-700">{platform.status}</p>
+              <p className="mt-4 text-sm leading-6 text-[var(--text-secondary)]">{platform.detail}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
-          <p className="text-xl text-[var(--text-secondary)] mb-10 max-w-2xl mx-auto">
-            EmberChamber is shifting from a centralized starter into an invite-only beta for
-            Android, Windows, and Ubuntu. Accounts bootstrap with private email magic links,
-            while message history stays on device and the relay stores ciphertext only.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/register" className="btn-primary text-base px-6 py-3">
-              Request beta access
-            </Link>
-            <Link
-              href="/login"
-              className="btn-ghost border border-[var(--border)] text-base px-6 py-3"
-            >
-              Sign in with email
-            </Link>
-          </div>
-        </section>
-
-        {/* Features */}
-        <section className="max-w-5xl mx-auto px-6 py-16">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              {
-                icon: "🔒",
-                title: "True E2EE DMs",
-                description:
-                  "Per-device encrypted envelopes with local-first history and relay-assisted offline delivery.",
-              },
-              {
-                icon: "👥",
-                title: "Small Invite-Only Groups",
-                description:
-                  "Private groups capped for trusted circles, with membership epochs and QR or deep-link invites.",
-              },
-              {
-                icon: "🛡️",
-                title: "Private Bootstrap Identity",
-                description:
-                  "Email is used only for auth and recovery. No phone numbers, no Google auth, and no public discovery.",
-              },
-              {
-                icon: "📡",
-                title: "Minimal Relay Control Plane",
-                description:
-                  "Cloudflare Workers, Durable Objects, D1, and R2 handle signaling, mailbox sync, and encrypted attachments.",
-              },
-              {
-                icon: "⚡",
-                title: "Android-First Beta",
-                description:
-                  "The first shipping clients are Android plus Windows and Ubuntu desktop builds. iPhone and macOS wait.",
-              },
-              {
-                icon: "🔍",
-                title: "Local Search Only",
-                description:
-                  "Search runs on your device against decrypted local history. The relay does not index your messages.",
-              },
-            ].map((feature) => (
-              <div key={feature.title} className="card">
-                <div className="text-3xl mb-3">{feature.icon}</div>
-                <h3 className="font-semibold text-[var(--text-primary)] mb-2">
-                  {feature.title}
-                </h3>
-                <p className="text-sm text-[var(--text-secondary)]">
-                  {feature.description}
-                </p>
+      <section className="mx-auto max-w-6xl px-6 py-10 sm:py-14">
+        <div className="panel px-6 py-8 sm:px-8 sm:py-10">
+          <div className="eyebrow">Visibility boundaries</div>
+          <div className="mt-6 grid gap-6 lg:grid-cols-3">
+            {trustFacts.map((fact) => (
+              <div key={fact.title} className="rounded-[1.4rem] border border-[var(--border)] bg-[var(--bg-secondary)] p-5">
+                <h3 className="text-lg font-semibold text-[var(--text-primary)]">{fact.title}</h3>
+                <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{fact.body}</p>
               </div>
             ))}
           </div>
-        </section>
-
-        {/* Trust & Safety */}
-        <section className="border-t border-[var(--border)]">
-          <div className="max-w-5xl mx-auto px-6 py-12 text-center">
-            <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">
-              Private by design. Precise about tradeoffs.
-            </h2>
-            <p className="text-[var(--text-secondary)] max-w-2xl mx-auto">
-              EmberChamber is not promising perfect anonymity or pure peer-to-peer delivery. The
-              beta uses a small hosted relay for reliability on phones and desktops, while keeping
-              encrypted content out of routine server visibility.
-            </p>
-          </div>
-        </section>
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-[var(--border)] px-6 py-6">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-[var(--text-secondary)]">
-          <p>© {new Date().getFullYear()} EmberChamber. All rights reserved.</p>
-          <div className="flex gap-4">
-            <a href="#" className="hover:text-[var(--text-primary)]">
-              Privacy Policy
-            </a>
-            <a href="#" className="hover:text-[var(--text-primary)]">
-              Beta Terms
-            </a>
-            <a href="#" className="hover:text-[var(--text-primary)]">
-              Trust & Safety
-            </a>
-          </div>
         </div>
-      </footer>
-    </div>
+      </section>
+
+      <section className="mx-auto grid max-w-6xl gap-8 px-6 py-10 sm:py-14 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+        <div>
+          <div className="eyebrow">FAQ</div>
+          <h2 className="mt-4 font-display text-4xl font-semibold text-[var(--text-primary)] sm:text-5xl">
+            Honest answers before the beta opens wider.
+          </h2>
+          <p className="mt-4 max-w-xl text-base leading-7 text-[var(--text-secondary)]">
+            The first job of the public site is to explain what EmberChamber is trying to
+            be, what it is deliberately not trying to be, and where the trust boundaries land.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          {faqItems.map((item) => (
+            <div key={item.question} className="card">
+              <h3 className="text-lg font-semibold text-[var(--text-primary)]">{item.question}</h3>
+              <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{item.answer}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+    </MarketingShell>
   );
 }
