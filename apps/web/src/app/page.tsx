@@ -65,15 +65,15 @@ export default function HomePage() {
             {[
               {
                 icon: "🔒",
-                title: "End-to-End Encrypted DMs",
+                title: "Private Direct Messaging",
                 description:
-                  "Private one-to-one conversations with strong encryption. Your messages stay between you.",
+                  "Direct conversations with user-controlled privacy settings today, with secure DM protocol work staged separately.",
               },
               {
                 icon: "👥",
                 title: "Group Chat & Communities",
                 description:
-                  "Create groups and channels for your communities. Invite-only or open to all.",
+                  "Create groups and channels for your communities, with invite-first access and clear admin boundaries.",
               },
               {
                 icon: "🛡️",
@@ -95,9 +95,9 @@ export default function HomePage() {
               },
               {
                 icon: "🔍",
-                title: "Powerful Search",
+                title: "Scoped Search",
                 description:
-                  "Search messages, channels, and users. Find what you need quickly.",
+                  "Search only the people and spaces you can already access instead of browsing a public network.",
               },
             ].map((feature) => (
               <div key={feature.title} className="card">
@@ -122,8 +122,8 @@ export default function HomePage() {
             <p className="text-[var(--text-secondary)] max-w-2xl mx-auto">
               PrivateMesh is built to reduce unnecessary centralized visibility
               while enforcing clear boundaries against illegal content, malware,
-              extortion, CSAM, and platform abuse. Strong privacy and
-              responsible enforcement are not opposites.
+              extortion, CSAM, and platform abuse. Product language should stay
+              precise about current trust boundaries rather than overclaiming.
             </p>
           </div>
         </section>

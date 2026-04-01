@@ -166,11 +166,48 @@ router.post("/dm", async (req: AuthRequest, res: Response, next) => {
       return;
     }
 
+    const targetPrivacy = await queryOne<{
+      allow_dms_from: "everyone" | "contacts" | "nobody";
+    }>(
+      `SELECT allow_dms_from
+       FROM user_privacy_settings
+       WHERE user_id = $1`,
+      [targetUserId]
+    );
+
+    const dmPolicy = targetPrivacy?.allow_dms_from ?? "everyone";
+    if (dmPolicy === "nobody") {
+      throw createError(
+        "This user is not accepting new direct messages",
+        403,
+        "DM_NOT_ALLOWED"
+      );
+    }
+
+    if (dmPolicy === "contacts") {
+      const existingContact = await queryOne(
+        `SELECT id
+         FROM contacts
+         WHERE (user_id = $1 AND contact_id = $2)
+            OR (user_id = $2 AND contact_id = $1)
+         LIMIT 1`,
+        [req.userId, targetUserId]
+      );
+
+      if (!existingContact) {
+        throw createError(
+          "This user only accepts direct messages from contacts",
+          403,
+          "DM_CONTACTS_ONLY"
+        );
+      }
+    }
+
     // Create new DM conversation
     const conv = await withTransaction(async (client) => {
       const { rows } = await client.query(
         `INSERT INTO conversations (type, is_encrypted, created_by)
-         VALUES ('dm', TRUE, $1) RETURNING id`,
+         VALUES ('dm', FALSE, $1) RETURNING id`,
         [req.userId]
       );
       const conv = rows[0];

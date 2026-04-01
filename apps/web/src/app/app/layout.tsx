@@ -384,7 +384,7 @@ export default function AppLayout({
 
               <div className="px-2 mt-3">
                 <Link href="/app/discover" className="btn-ghost w-full text-sm py-2">
-                  🔍 Discover channels
+                  Join with invite
                 </Link>
               </div>
             </div>

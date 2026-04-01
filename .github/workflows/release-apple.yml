@@ -1,24 +1,4 @@
-name: Release — macOS and iOS
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Requirements to enable this workflow:
-#
-# macOS (.dmg):
-#   - APPLE_SIGNING_IDENTITY      — e.g. "Developer ID Application: Acme Corp"
-#   - APPLE_CERTIFICATE           — base64-encoded .p12 signing certificate
-#   - APPLE_CERTIFICATE_PASSWORD  — .p12 password
-#   - APPLE_ID                    — Apple ID email (for notarization)
-#   - APPLE_TEAM_ID               — 10-character Apple team ID
-#   - APPLE_PASSWORD              — app-specific password for notarization
-#
-# iOS (.ipa):
-#   - APPLE_CERTIFICATE           — same .p12 above (includes iOS distribution cert)
-#   - APPLE_CERTIFICATE_PASSWORD  — same password
-#   - IOS_PROVISIONING_PROFILE    — base64-encoded .mobileprovision
-#
-# All secrets are set in GitHub → Settings → Secrets and variables → Actions.
-# Apple Developer account ($99/yr): https://developer.apple.com/programs/
-# ─────────────────────────────────────────────────────────────────────────────
+name: Release - macOS and iPhone
 
 on:
   push:
@@ -30,158 +10,78 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ── macOS ──────────────────────────────────────────────────────────────────
   macos:
-    name: Build macOS .dmg (universal binary)
+    name: Build macOS .dmg
     runs-on: macos-14
+    env:
+      PRIVATEMESH_APP_URL: ${{ vars.PRIVATEMESH_APP_URL }}
     steps:
       - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
+          cache: npm
 
-      - name: Install Rust with Apple Silicon + Intel targets
-        uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-darwin,x86_64-apple-darwin
 
-      - name: Import Apple signing certificate
-        if: ${{ env.APPLE_CERTIFICATE != '' }}
-        uses: apple-actions/import-codesign-certs@v3
-        with:
-          p12-file-base64: ${{ secrets.APPLE_CERTIFICATE }}
-          p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-        env:
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Cache cargo registry
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: macos-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Verify web build
+        run: npm run build --workspace=apps/web
 
-      - name: Cache cargo bin (tauri-cli)
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/bin/cargo-tauri
-          key: macos-tauri-cli-2
-
-      - name: Install pnpm dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build web frontend
-        run: pnpm --filter @privatemesh/web build
-
-      - name: Install Tauri CLI
-        run: cargo install tauri-cli --version "^2.0" --locked
-
-      - name: Build macOS universal app + DMG
-        working-directory: apps/desktop
-        run: cargo tauri build --target universal-apple-darwin
-        env:
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      - name: Build macOS shell
+        run: npm run build --workspace=apps/desktop -- --target universal-apple-darwin
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
           name: privatemesh-macos
-          path: target/universal-apple-darwin/release/bundle/dmg/*.dmg
+          path: apps/desktop/src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
           retention-days: 30
 
-  # ── iOS ────────────────────────────────────────────────────────────────────
   ios:
-    name: Build iOS .ipa
+    name: Build iPhone .ipa
     runs-on: macos-14
+    env:
+      PRIVATEMESH_APP_URL: ${{ vars.PRIVATEMESH_APP_URL }}
     steps:
       - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
+          cache: npm
 
-      - name: Install Rust with iOS targets
-        uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-ios,aarch64-apple-ios-sim
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: temurin
 
       - name: Select Xcode version
         run: sudo xcode-select -s /Applications/Xcode_16.app
 
-      - name: Install Apple signing certificate
-        if: ${{ env.APPLE_CERTIFICATE != '' }}
-        uses: apple-actions/import-codesign-certs@v3
-        with:
-          p12-file-base64: ${{ secrets.APPLE_CERTIFICATE }}
-          p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-        env:
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Install provisioning profile
-        if: ${{ env.IOS_PROVISIONING_PROFILE != '' }}
-        run: |
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          echo "${{ secrets.IOS_PROVISIONING_PROFILE }}" | base64 --decode \
-            > ~/Library/MobileDevice/Provisioning\ Profiles/PrivateMesh.mobileprovision
-        env:
-          IOS_PROVISIONING_PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
+      - name: Verify web build
+        run: npm run build --workspace=apps/web
 
-      - name: Cache cargo registry
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ios-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Cache cargo bin (tauri-cli)
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/bin/cargo-tauri
-          key: ios-tauri-cli-2
-
-      - name: Install pnpm dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build web frontend
-        run: pnpm --filter @privatemesh/web build
-
-      - name: Install Tauri CLI
-        run: cargo install tauri-cli --version "^2.0" --locked
-
-      - name: Initialize iOS project (first time)
-        working-directory: apps/desktop
-        run: cargo tauri ios init
+      - name: Initialize iOS project
+        run: npm run ios:init --workspace=apps/desktop
         continue-on-error: true
 
-      - name: Build iOS app
-        working-directory: apps/desktop
-        run: cargo tauri ios build
-        env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      - name: Build iPhone shell
+        run: npm run build:ios --workspace=apps/desktop
 
-      - name: Upload iOS .ipa
+      - name: Upload iPhone artifacts
         uses: actions/upload-artifact@v4
         with:
           name: privatemesh-ios

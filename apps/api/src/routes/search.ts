@@ -47,14 +47,17 @@ router.get("/", async (req: AuthRequest, res: Response, next) => {
 
     if (params.type === "all" || params.type === "channels") {
       const channels = await query(
-        `SELECT id, name, slug, description, visibility, member_count
-         FROM channels
-         WHERE visibility = 'public' AND archived_at IS NULL
-           AND to_tsvector('english', name || ' ' || COALESCE(description, ''))
-               @@ plainto_tsquery('english', $1)
-         ORDER BY member_count DESC
-         LIMIT $2`,
-        [params.q, params.limit]
+        `SELECT c.id, c.name, c.slug, c.description, c.visibility, c.member_count
+         FROM channels c
+         INNER JOIN channel_members cm ON cm.channel_id = c.id
+         WHERE cm.user_id = $1
+           AND cm.left_at IS NULL
+           AND c.archived_at IS NULL
+           AND to_tsvector('english', c.name || ' ' || COALESCE(c.description, ''))
+               @@ plainto_tsquery('english', $2)
+         ORDER BY c.member_count DESC
+         LIMIT $3`,
+        [req.userId, params.q, params.limit]
       );
       results.channels = channels;
     }

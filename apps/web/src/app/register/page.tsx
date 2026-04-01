@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { authApi } from "@/lib/api";
 import { useAuthStore } from "@/lib/store";
 import toast from "react-hot-toast";
 
-export default function RegisterPage() {
+function RegisterPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login, isAuthenticated } = useAuthStore();
   const [form, setForm] = useState({
     username: "",
@@ -18,10 +19,15 @@ export default function RegisterPage() {
     confirmPassword: "",
   });
   const [isLoading, setIsLoading] = useState(false);
+  const nextPath = searchParams?.get("next");
+  const redirectPath =
+    nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//")
+      ? nextPath
+      : "/app";
 
   useEffect(() => {
-    if (isAuthenticated) router.replace("/app");
-  }, [isAuthenticated, router]);
+    if (isAuthenticated) router.replace(redirectPath);
+  }, [isAuthenticated, redirectPath, router]);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -60,7 +66,7 @@ export default function RegisterPage() {
         result.refreshToken
       );
       toast.success("Welcome to PrivateMesh!");
-      router.push("/app");
+      router.push(redirectPath);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Registration failed";
       toast.error(message);
@@ -198,11 +204,32 @@ export default function RegisterPage() {
 
         <p className="text-center text-sm text-[var(--text-secondary)] mt-4">
           Already have an account?{" "}
-          <Link href="/login" className="text-brand-500 hover:underline font-medium">
+          <Link
+            href={
+              redirectPath === "/app"
+                ? "/login"
+                : `/login?next=${encodeURIComponent(redirectPath)}`
+            }
+            className="text-brand-500 hover:underline font-medium"
+          >
             Sign in
           </Link>
         </p>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center p-4 bg-[var(--bg-primary)]">
+          <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <RegisterPageContent />
+    </Suspense>
   );
 }

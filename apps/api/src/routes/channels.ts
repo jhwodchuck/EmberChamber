@@ -11,7 +11,7 @@ router.use(authenticate);
 const CreateChannelSchema = z.object({
   name: z.string().min(1).max(128),
   description: z.string().max(512).optional(),
-  visibility: z.enum(["public", "private"]).default("public"),
+  visibility: z.enum(["public", "private"]).default("private"),
 });
 
 const UpdateChannelSchema = z.object({

@@ -49,13 +49,17 @@ export default function SearchPage() {
 
   return (
     <div className="flex flex-col h-full max-w-2xl mx-auto p-6">
-      <h2 className="text-xl font-bold text-[var(--text-primary)] mb-4">Search</h2>
+      <h2 className="text-xl font-bold text-[var(--text-primary)] mb-2">Search</h2>
+      <p className="text-sm text-[var(--text-secondary)] mb-4">
+        Search only returns conversations, channels, and profiles you can
+        already access.
+      </p>
       <input
         type="text"
         value={query}
         onChange={(e) => handleSearch(e.target.value)}
         className="input mb-4"
-        placeholder="Search messages, channels, users..."
+        placeholder="Search your messages, channels, and people..."
         autoFocus
       />
 
@@ -108,7 +112,7 @@ export default function SearchPage() {
           {/* Channels */}
           {(activeTab === "all" || activeTab === "channels") && (results.channels?.length ?? 0) > 0 && (
             <div>
-              <h3 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-2">Channels</h3>
+              <h3 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-2">Your Channels</h3>
               <div className="space-y-2">
                 {results.channels?.map((ch) => (
                   <Link

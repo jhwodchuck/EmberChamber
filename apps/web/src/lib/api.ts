@@ -212,6 +212,14 @@ export const usersApi = {
       method: "PATCH",
       body: JSON.stringify(data),
     }),
+  getPrivacy: () =>
+    fetchApi<{
+      showLastSeen: boolean;
+      showReadReceipts: boolean;
+      allowDmsFrom: "everyone" | "contacts" | "nobody";
+      showOnlineStatus: boolean;
+      profileVisible: boolean;
+    }>("/users/me/privacy"),
   getSessions: () => fetchApi<unknown[]>("/users/me/sessions"),
   revokeSession: (sessionId: string) =>
     fetchApi<unknown>(`/users/me/sessions/${sessionId}`, { method: "DELETE" }),

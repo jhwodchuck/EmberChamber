@@ -7,7 +7,7 @@ import toast from "react-hot-toast";
 
 export default function NewChannelPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ name: "", description: "", visibility: "public" });
+  const [form, setForm] = useState({ name: "", description: "", visibility: "private" });
   const [isLoading, setIsLoading] = useState(false);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
@@ -34,7 +34,17 @@ export default function NewChannelPage() {
 
   return (
     <div className="flex flex-col h-full max-w-xl mx-auto p-6">
-      <h2 className="text-xl font-bold text-[var(--text-primary)] mb-6">Create Channel</h2>
+      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brand-500 mb-2">
+        Broadcast Community
+      </p>
+      <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-2">
+        Create a channel
+      </h2>
+      <p className="text-sm text-[var(--text-secondary)] mb-6">
+        Channels default to private and are intended to be shared through
+        invite links. Public channel discovery is intentionally de-emphasized in
+        this starter.
+      </p>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-[var(--text-primary)] mb-1.5">Channel Name</label>
@@ -47,8 +57,8 @@ export default function NewChannelPage() {
         <div>
           <label className="block text-sm font-medium text-[var(--text-primary)] mb-1.5">Visibility</label>
           <select name="visibility" value={form.visibility} onChange={handleChange} className="input">
-            <option value="public">Public — anyone can find and join</option>
             <option value="private">Private — invite only</option>
+            <option value="public">Public — anyone can find and join</option>
           </select>
         </div>
         <button type="submit" className="btn-primary w-full" disabled={isLoading}>

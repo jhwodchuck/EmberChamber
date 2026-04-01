@@ -9,6 +9,7 @@ dist/
 out/
 build/
 target/
+src-tauri/gen/
 
 # Environment files
 .env
@@ -47,3 +48,12 @@ infra/data/
 
 # Turbo
 .turbo/
+
+# Native packaging
+*.ipa
+*.dmg
+*.msi
+*.AppImage
+*.deb
+*.apk
+*.aab

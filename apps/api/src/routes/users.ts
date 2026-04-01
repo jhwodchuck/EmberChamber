@@ -140,6 +140,39 @@ router.patch("/me", async (req: AuthRequest, res: Response, next) => {
 });
 
 // PATCH /api/users/me/privacy
+router.get(
+  "/me/privacy",
+  async (req: AuthRequest, res: Response, next) => {
+    try {
+      const privacy = await queryOne<{
+        show_last_seen: boolean;
+        show_read_receipts: boolean;
+        allow_dms_from: "everyone" | "contacts" | "nobody";
+        show_online_status: boolean;
+        profile_visible: boolean;
+      }>(
+        `SELECT show_last_seen, show_read_receipts, allow_dms_from,
+                show_online_status, profile_visible
+         FROM user_privacy_settings
+         WHERE user_id = $1`,
+        [req.userId]
+      );
+
+      res.json({
+        data: {
+          showLastSeen: privacy?.show_last_seen ?? true,
+          showReadReceipts: privacy?.show_read_receipts ?? true,
+          allowDmsFrom: privacy?.allow_dms_from ?? "everyone",
+          showOnlineStatus: privacy?.show_online_status ?? true,
+          profileVisible: privacy?.profile_visible ?? true,
+        },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 router.patch(
   "/me/privacy",
   async (req: AuthRequest, res: Response, next) => {

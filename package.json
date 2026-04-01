@@ -3,15 +3,26 @@
   "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@10.33.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "turbo dev",
-    "build": "turbo build",
-    "test": "turbo test",
-    "lint": "turbo lint",
+    "dev": "concurrently \"npm run dev --workspace=apps/api\" \"npm run dev --workspace=apps/web\"",
+    "build": "npm run build --workspace=packages/shared && npm run build --workspace=apps/api && npm run build --workspace=apps/web",
+    "build:web": "npm run build --workspace=apps/web",
+    "dev:desktop": "npm run dev --workspace=apps/desktop",
+    "doctor:desktop": "npm run doctor --workspace=apps/desktop",
+    "build:desktop": "npm run build --workspace=apps/desktop",
+    "build:android": "npm run build:android --workspace=apps/desktop",
+    "build:ios": "npm run build:ios --workspace=apps/desktop",
+    "test": "npm run test --workspace=apps/api",
+    "lint": "npm run lint --workspace=apps/api && npm run lint --workspace=apps/web",
     "type-check": "turbo type-check",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\" --ignore-path .gitignore"
   },
   "devDependencies": {
+    "concurrently": "^8.2.2",
     "prettier": "^3.3.3",
     "turbo": "^2.3.3"
   }

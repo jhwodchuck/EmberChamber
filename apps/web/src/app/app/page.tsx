@@ -1,7 +1,9 @@
+import Link from "next/link";
+
 export default function AppHome() {
   return (
     <div className="flex-1 flex items-center justify-center bg-[var(--bg-primary)]">
-      <div className="text-center">
+      <div className="text-center max-w-lg px-6">
         <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
           <svg viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8 text-brand-500">
             <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
@@ -10,9 +12,24 @@ export default function AppHome() {
         <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-2">
           Welcome to PrivateMesh
         </h2>
-        <p className="text-[var(--text-secondary)] text-sm max-w-xs mx-auto">
-          Select a conversation from the sidebar or start a new one.
+        <p className="text-[var(--text-secondary)] text-sm max-w-md mx-auto">
+          Start a private conversation, create an invite-only community, or join
+          a space from an invite link.
         </p>
+        <div className="mt-6 grid gap-3 sm:grid-cols-3">
+          <Link href="/app/new-dm" className="card text-left hover:border-brand-500 transition-colors">
+            <p className="text-sm font-semibold text-[var(--text-primary)]">New DM</p>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">Message someone by username.</p>
+          </Link>
+          <Link href="/app/new-group" className="card text-left hover:border-brand-500 transition-colors">
+            <p className="text-sm font-semibold text-[var(--text-primary)]">New Group</p>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">Create an invite-first community.</p>
+          </Link>
+          <Link href="/app/discover" className="card text-left hover:border-brand-500 transition-colors">
+            <p className="text-sm font-semibold text-[var(--text-primary)]">Join Invite</p>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">Paste a code or invite link.</p>
+          </Link>
+        </div>
       </div>
     </div>
   );

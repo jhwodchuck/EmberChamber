@@ -1,4 +1,4 @@
-name: Release — Linux
+name: Release - Linux
 
 on:
   push:
@@ -13,22 +13,19 @@ jobs:
   build:
     name: Build Ubuntu .deb and AppImage
     runs-on: ubuntu-22.04
+    env:
+      PRIVATEMESH_APP_URL: ${{ vars.PRIVATEMESH_APP_URL }}
     steps:
       - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
+          cache: npm
 
-      - name: Install stable Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@stable
 
-      - name: Install Linux system dependencies (Tauri / WebKit2GTK)
+      - name: Install Linux system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -39,43 +36,20 @@ jobs:
             libssl-dev \
             pkg-config
 
-      - name: Cache cargo registry
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: linux-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Cache cargo bin (tauri-cli)
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/bin/cargo-tauri
-          key: linux-tauri-cli-2
+      - name: Verify web build
+        run: npm run build --workspace=apps/web
 
-      - name: Install pnpm dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build web frontend
-        run: pnpm --filter @privatemesh/web build
-
-      - name: Install Tauri CLI
-        run: cargo install tauri-cli --version "^2.0" --locked
-
-      - name: Build Linux app
-        working-directory: apps/desktop
-        run: cargo tauri build
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      - name: Build Linux shell
+        run: npm run build --workspace=apps/desktop
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
           name: privatemesh-linux
           path: |
-            target/release/bundle/deb/*.deb
-            target/release/bundle/appimage/*.AppImage
+            apps/desktop/src-tauri/target/release/bundle/deb/*.deb
+            apps/desktop/src-tauri/target/release/bundle/appimage/*.AppImage
           retention-days: 30
