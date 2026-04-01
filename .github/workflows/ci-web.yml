@@ -1,0 +1,54 @@
+name: CI — Web
+
+on:
+  push:
+    branches: [main, "copilot/**"]
+    paths:
+      - "apps/web/**"
+      - "packages/**"
+      - "pnpm-workspace.yaml"
+      - "turbo.json"
+      - "package.json"
+      - ".github/workflows/ci-web.yml"
+  pull_request:
+    paths:
+      - "apps/web/**"
+      - "packages/**"
+      - "pnpm-workspace.yaml"
+      - "turbo.json"
+      - "package.json"
+
+concurrency:
+  group: ci-web-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build, lint, and type-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type-check
+        run: pnpm type-check
+
+      - name: Build
+        run: pnpm build
+
+      - name: Test
+        run: pnpm test

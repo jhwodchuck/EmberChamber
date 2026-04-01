@@ -1,0 +1,25 @@
+[package]
+name = "privatemesh-desktop"
+description = "PrivateMesh Tauri v2 shell — wraps the Next.js PWA for Windows, macOS, Linux, Android, and iOS"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "privatemesh_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "privatemesh-desktop"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { workspace = true }
+
+[dependencies]
+privatemesh-domain = { workspace = true }
+tauri = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }

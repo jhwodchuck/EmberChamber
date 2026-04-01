@@ -1,0 +1,25 @@
+{
+  "name": "@privatemesh/client-sdk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Browser client SDK for the PrivateMesh REST and WebSocket APIs",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src --ext .ts"
+  },
+  "dependencies": {
+    "@privatemesh/api-types": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}

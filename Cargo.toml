@@ -1,0 +1,68 @@
+[workspace]
+resolver = "2"
+members = [
+    # Desktop / mobile shell
+    "apps/desktop/src-tauri",
+    # Services
+    "services/control-api",
+    "services/realtime-gateway",
+    "services/relay-gateway",
+    "services/media-worker",
+    "services/push-worker",
+    "services/directory-ca",
+    # Shared crates
+    "crates/auth",
+    "crates/db",
+    "crates/domain",
+    "crates/relay-protocol",
+    "crates/test-support",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/jhwodchuck/PrivateMesh"
+
+[workspace.dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+# Web framework
+axum = { version = "0.8", features = ["macros"] }
+tower = { version = "0.5" }
+tower-http = { version = "0.6", features = ["cors", "trace", "compression-gzip"] }
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "uuid", "chrono", "migrate"] }
+# Async Redis
+redis = { version = "0.27", features = ["tokio-comp"] }
+# Observability
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+opentelemetry = "0.26"
+opentelemetry_sdk = { version = "0.26", features = ["rt-tokio"] }
+opentelemetry-otlp = { version = "0.26", features = ["grpc-tonic"] }
+tracing-opentelemetry = "0.27"
+# Utilities
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "2"
+anyhow = "1"
+config = "0.14"
+dotenvy = "0.15"
+# HTTP client
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+# Crypto
+ring = "0.17"
+base64 = "0.22"
+# Tauri desktop / mobile shell
+tauri = { version = "2", features = ["protocol-asset"] }
+tauri-build = { version = "2", features = [] }
+# Workspace crates
+privatemesh-domain = { path = "crates/domain" }
+privatemesh-db = { path = "crates/db" }
+privatemesh-auth = { path = "crates/auth" }
+privatemesh-relay-protocol = { path = "crates/relay-protocol" }
+privatemesh-test-support = { path = "crates/test-support" }

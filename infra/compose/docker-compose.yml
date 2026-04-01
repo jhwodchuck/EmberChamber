@@ -1,0 +1,214 @@
+version: "3.9"
+
+# PrivateMesh — local development stack
+# Sprint 0: infrastructure services + service stubs
+# Full service images are wired up in Sprints 1-5.
+
+services:
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: privatemesh_postgres
+    environment:
+      POSTGRES_USER: privatemesh
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-privatemesh}
+      POSTGRES_DB: privatemesh
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U privatemesh"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis ───────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: privatemesh_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ── MinIO (S3-compatible object storage) ────────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: privatemesh_minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── MinIO bucket bootstrap ───────────────────────────────────────────────────
+  minio_init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 minioadmin $${MINIO_ROOT_PASSWORD:-minioadmin};
+      mc mb local/privatemesh --ignore-existing;
+      mc mb local/privatemesh-e2ee --ignore-existing;
+      echo 'MinIO buckets initialised';
+      "
+
+  # ── control-api (Rust/Axum) — Sprint 1 ──────────────────────────────────────
+  control-api:
+    build:
+      context: ../..
+      dockerfile: Dockerfile.service
+      args:
+        SERVICE: control-api
+    container_name: privatemesh_control_api
+    environment:
+      DATABASE_URL: postgresql://privatemesh:${DB_PASSWORD:-privatemesh}@postgres:5432/privatemesh
+      REDIS_URL: redis://redis:6379
+      SESSION_SECRET: ${SESSION_SECRET:-change-me-32-bytes-minimum-secret}
+      RUST_LOG: ${RUST_LOG:-info}
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles: ["services"]
+
+  # ── realtime-gateway (Rust/Axum) — Sprint 2 ─────────────────────────────────
+  realtime-gateway:
+    build:
+      context: ../..
+      dockerfile: Dockerfile.service
+      args:
+        SERVICE: realtime-gateway
+    container_name: privatemesh_realtime
+    environment:
+      REDIS_URL: redis://redis:6379
+      RUST_LOG: ${RUST_LOG:-info}
+    ports:
+      - "3002:3002"
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles: ["services"]
+
+  # ── relay-gateway (Rust/Axum) — Sprint 5 ────────────────────────────────────
+  relay-gateway:
+    build:
+      context: ../..
+      dockerfile: Dockerfile.service
+      args:
+        SERVICE: relay-gateway
+    container_name: privatemesh_relay
+    environment:
+      DATABASE_URL: postgresql://privatemesh:${DB_PASSWORD:-privatemesh}@postgres:5432/privatemesh
+      REDIS_URL: redis://redis:6379
+      RUST_LOG: ${RUST_LOG:-info}
+    ports:
+      - "3003:3003"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles: ["services"]
+
+  # ── media-worker (Rust) — Sprint 2 ───────────────────────────────────────────
+  media-worker:
+    build:
+      context: ../..
+      dockerfile: Dockerfile.service
+      args:
+        SERVICE: media-worker
+    container_name: privatemesh_media
+    environment:
+      DATABASE_URL: postgresql://privatemesh:${DB_PASSWORD:-privatemesh}@postgres:5432/privatemesh
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: privatemesh
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      RUST_LOG: ${RUST_LOG:-info}
+    depends_on:
+      minio:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles: ["services"]
+
+  # ── push-worker (Rust) — Sprint 2 ────────────────────────────────────────────
+  push-worker:
+    build:
+      context: ../..
+      dockerfile: Dockerfile.service
+      args:
+        SERVICE: push-worker
+    container_name: privatemesh_push
+    environment:
+      REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgresql://privatemesh:${DB_PASSWORD:-privatemesh}@postgres:5432/privatemesh
+      RUST_LOG: ${RUST_LOG:-info}
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles: ["services"]
+
+  # ── directory-ca (Rust/Axum) — Sprint 5 ─────────────────────────────────────
+  directory-ca:
+    build:
+      context: ../..
+      dockerfile: Dockerfile.service
+      args:
+        SERVICE: directory-ca
+    container_name: privatemesh_directory
+    environment:
+      DATABASE_URL: postgresql://privatemesh:${DB_PASSWORD:-privatemesh}@postgres:5432/privatemesh
+      RUST_LOG: ${RUST_LOG:-info}
+    ports:
+      - "3004:3004"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles: ["services"]
+
+  # ── web (Next.js PWA) ────────────────────────────────────────────────────────
+  web:
+    build:
+      context: ../..
+      dockerfile: apps/web/Dockerfile
+    container_name: privatemesh_web
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+      NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-ws://localhost:3002}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - control-api
+    restart: unless-stopped
+    profiles: ["services"]
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:

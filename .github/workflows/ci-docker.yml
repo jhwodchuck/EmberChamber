@@ -1,0 +1,45 @@
+name: CI — Docker Compose
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "infra/compose/**"
+      - ".env.example"
+      - ".github/workflows/ci-docker.yml"
+  pull_request:
+    paths:
+      - "infra/compose/**"
+      - ".env.example"
+
+concurrency:
+  group: ci-docker-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compose-up:
+    name: Verify Compose stack boots
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy env example
+        run: cp .env.example .env
+
+      - name: Boot Compose stack (infra only)
+        run: |
+          docker compose -f infra/compose/docker-compose.yml \
+            up -d postgres redis minio
+        timeout-minutes: 5
+
+      - name: Wait for Postgres
+        run: |
+          for i in $(seq 1 30); do
+            docker compose -f infra/compose/docker-compose.yml \
+              exec -T postgres pg_isready -U privatemesh && break
+            sleep 2
+          done
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f infra/compose/docker-compose.yml down -v

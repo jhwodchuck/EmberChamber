@@ -1,0 +1,16 @@
+[package]
+name = "privatemesh-db"
+description = "SQLx queries, connection pool helpers, and SQL migrations"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+privatemesh-domain = { workspace = true }
+sqlx = { workspace = true }
+serde = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+anyhow = { workspace = true }
