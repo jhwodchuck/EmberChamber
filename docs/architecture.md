@@ -2,6 +2,12 @@
 
 ## System Architecture Diagram
 
+Current implementation note:
+
+- The runtime in use today is `apps/api` plus `apps/web`
+- `apps/desktop` is an active packaging shell around that runtime
+- the Rust `services/` and `crates/` workspace is present for future migration and federation work, but it is not the primary backend path yet
+
 ```mermaid
 graph TB
     subgraph Client["Client Layer"]

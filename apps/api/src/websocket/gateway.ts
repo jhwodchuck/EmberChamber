@@ -63,9 +63,8 @@ subscriber.on("message", (channel: string, message: string) => {
   const subs = subscriptions.get(channel);
   if (!subs || subs.size === 0) return;
 
-  let parsed: unknown;
   try {
-    parsed = JSON.parse(message);
+    JSON.parse(message);
   } catch {
     return;
   }

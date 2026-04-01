@@ -19,6 +19,12 @@ PrivateMesh now has two client layers:
 
 This is the fastest credible path to shipping all five launch targets without rewriting the current product UI. It also keeps the backend, auth, realtime, and moderation stack shared across every platform.
 
+For repo clarity:
+
+- the current working product runtime is still `apps/api` + `apps/web`
+- the Rust `services/` and `crates/` directories remain forward-looking scaffold work
+- the desktop/mobile launch path is real today through `apps/desktop`
+
 ## Important Constraint
 
 The native shell currently wraps the deployed PrivateMesh web client. It does not yet embed a fully offline-capable native UI. That means:

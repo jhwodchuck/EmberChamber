@@ -18,7 +18,7 @@
     "build:ios": "npm run build:ios --workspace=apps/desktop",
     "test": "npm run test --workspace=apps/api",
     "lint": "npm run lint --workspace=apps/api && npm run lint --workspace=apps/web",
-    "type-check": "turbo type-check",
+    "type-check": "npm run type-check --workspace=apps/api && npm run type-check --workspace=apps/web && npm run build --workspace=packages/shared",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\" --ignore-path .gitignore"
   },
   "devDependencies": {

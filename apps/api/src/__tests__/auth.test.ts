@@ -1,4 +1,6 @@
 import { signAccessToken, verifyAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt";
+import { createError } from "../middleware/errorHandler";
+import { z } from "zod";
 
 // Set env vars before tests
 process.env.JWT_SECRET = "test-secret-key-for-testing";
@@ -47,8 +49,6 @@ describe("JWT utilities", () => {
 });
 
 describe("Middleware error handler", () => {
-  const { createError } = require("../middleware/errorHandler");
-
   it("should create an error with status code", () => {
     const err = createError("Not found", 404, "NOT_FOUND");
     expect(err.message).toBe("Not found");
@@ -64,8 +64,6 @@ describe("Middleware error handler", () => {
 });
 
 describe("Validation schemas", () => {
-  const { z } = require("zod");
-
   it("should validate username format", () => {
     const UsernameSchema = z
       .string()
