@@ -2,18 +2,17 @@
   "name": "@privatemesh/desktop",
   "version": "0.1.0",
   "private": true,
-  "description": "PrivateMesh native app shell (Tauri v2) — Windows, macOS, Linux, Android, iOS",
+  "description": "PrivateMesh native shell for Windows, Linux, macOS, Android, and iPhone packaging",
   "scripts": {
-    "dev": "cargo tauri dev",
-    "build": "cargo tauri build",
-    "build:android": "cargo tauri android build",
-    "build:ios": "cargo tauri ios build",
-    "lint": "echo 'no TS lint for desktop shell'"
-  },
-  "dependencies": {
-    "@privatemesh/web": "workspace:*"
+    "dev": "tauri dev",
+    "doctor": "tauri info",
+    "build": "tauri build",
+    "android:init": "tauri android init",
+    "build:android": "tauri android build",
+    "ios:init": "tauri ios init",
+    "build:ios": "tauri ios build"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.0.0"
+    "@tauri-apps/cli": "^2.9.1"
   }
 }

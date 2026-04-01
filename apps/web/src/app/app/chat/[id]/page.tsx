@@ -42,7 +42,8 @@ interface ConversationInfo {
 }
 
 export default function ChatPage() {
-  const { id } = useParams<{ id: string }>();
+  const params = useParams<{ id: string }>();
+  const id = params?.id ?? "";
   const router = useRouter();
   const { user } = useAuthStore();
   const [conversation, setConversation] = useState<ConversationInfo | null>(null);
@@ -63,7 +64,7 @@ export default function ChatPage() {
       if (!msg?.type) return;
 
       if (msg.type === "message.new") {
-        const newMsg = msg.payload as Message;
+        const newMsg = msg.payload as unknown as Message;
         if (newMsg.conversation_id === id) {
           setMessages((prev) => {
             if (prev.find((m) => m.id === newMsg.id)) return prev;
@@ -74,14 +75,17 @@ export default function ChatPage() {
           }, 50);
         }
       } else if (msg.type === "message.edited") {
-        const { id: msgId, content: newContent } = msg.payload as { id: string; content: string };
+        const { id: msgId, content: newContent } = msg.payload as unknown as {
+          id: string;
+          content: string;
+        };
         setMessages((prev) =>
           prev.map((m) =>
             m.id === msgId ? { ...m, content: newContent, edited_at: new Date().toISOString() } : m
           )
         );
       } else if (msg.type === "message.deleted") {
-        const { id: msgId } = msg.payload as { id: string };
+        const { id: msgId } = msg.payload as unknown as { id: string };
         setMessages((prev) =>
           prev.map((m) =>
             m.id === msgId ? { ...m, deleted_at: new Date().toISOString(), content: undefined } : m
@@ -193,6 +197,14 @@ export default function ChatPage() {
     conversation?.type === "dm"
       ? conversation.members?.find((m) => m.user_id !== user?.id)?.display_name ?? "DM"
       : conversation?.name ?? "Group";
+  const trustLabel =
+    conversation?.type === "dm"
+      ? "Private direct message"
+      : "Hosted community conversation";
+  const composerPlaceholder =
+    conversation?.type === "dm"
+      ? "Write a private message..."
+      : "Post to the conversation...";
 
   return (
     <div className="flex flex-col h-full">
@@ -201,9 +213,7 @@ export default function ChatPage() {
         <Avatar src={conversation?.avatar_url} name={convName} size="sm" />
         <div className="flex-1 min-w-0">
           <h2 className="font-semibold text-[var(--text-primary)] truncate">{convName}</h2>
-          {conversation?.is_encrypted && (
-            <span className="text-xs text-green-500">🔒 End-to-end encrypted</span>
-          )}
+          <span className="text-xs text-[var(--text-secondary)]">{trustLabel}</span>
           {typingText && (
             <span className="text-xs text-[var(--text-secondary)] italic">{typingText}</span>
           )}
@@ -361,7 +371,7 @@ export default function ChatPage() {
             }}
             onKeyDown={handleKeyDown}
             className="input flex-1 resize-none min-h-[40px] max-h-32 py-2"
-            placeholder="Write a message... (Enter to send)"
+            placeholder={`${composerPlaceholder} (Enter to send)`}
             rows={1}
             disabled={isSending}
           />

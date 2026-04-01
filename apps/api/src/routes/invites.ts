@@ -6,7 +6,6 @@ import { createError } from "../middleware/errorHandler";
 import { generateInviteCode } from "../utils/jwt";
 
 const router = Router();
-router.use(authenticate);
 
 const CreateInviteSchema = z.object({
   conversationId: z.string().uuid().optional(),
@@ -16,7 +15,7 @@ const CreateInviteSchema = z.object({
 });
 
 // POST /api/invites - create invite
-router.post("/", async (req: AuthRequest, res: Response, next) => {
+router.post("/", authenticate, async (req: AuthRequest, res: Response, next) => {
   try {
     const body = CreateInviteSchema.parse(req.body);
 
@@ -124,7 +123,7 @@ router.get("/:code", async (req: Request, res: Response, next) => {
 });
 
 // POST /api/invites/:code/accept
-router.post("/:code/accept", async (req: AuthRequest, res: Response, next) => {
+router.post("/:code/accept", authenticate, async (req: AuthRequest, res: Response, next) => {
   try {
     const { code } = req.params;
 
@@ -192,7 +191,7 @@ router.post("/:code/accept", async (req: AuthRequest, res: Response, next) => {
 });
 
 // DELETE /api/invites/:id - revoke invite
-router.delete("/:id", async (req: AuthRequest, res: Response, next) => {
+router.delete("/:id", authenticate, async (req: AuthRequest, res: Response, next) => {
   try {
     const invite = await queryOne(
       "SELECT id FROM invites WHERE id = $1 AND created_by = $2",

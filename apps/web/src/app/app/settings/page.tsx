@@ -39,6 +39,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (activeTab === "sessions") loadSessions();
+    if (activeTab === "privacy") loadPrivacy();
   }, [activeTab]);
 
   async function loadSessions() {
@@ -46,6 +47,15 @@ export default function SettingsPage() {
       const data = await usersApi.getSessions();
       setSessions(data as Session[]);
     } catch { /* ignore */ }
+  }
+
+  async function loadPrivacy() {
+    try {
+      const data = await usersApi.getPrivacy();
+      setPrivacy(data);
+    } catch {
+      // Keep defaults when the request fails.
+    }
   }
 
   async function saveProfile(e: React.FormEvent) {
@@ -164,6 +174,17 @@ export default function SettingsPage() {
       {/* Privacy Tab */}
       {activeTab === "privacy" && (
         <form onSubmit={savePrivacy} className="space-y-4">
+          <div className="card bg-brand-500/5 border-brand-500/20">
+            <p className="text-sm font-medium text-[var(--text-primary)] mb-1">
+              Privacy controls
+            </p>
+            <p className="text-sm text-[var(--text-secondary)]">
+              Direct messages are private to participants, but this starter does
+              not yet ship full end-to-end encryption. Invite-only communities
+              and clear account-level controls are the current trust boundary.
+            </p>
+          </div>
+
           {[
             { key: "showLastSeen", label: "Show last seen time", description: "Let others see when you were last active" },
             { key: "showReadReceipts", label: "Send read receipts", description: "Let senders know when you've read their messages" },
@@ -202,6 +223,10 @@ export default function SettingsPage() {
               <option value="contacts">Contacts only</option>
               <option value="nobody">Nobody</option>
             </select>
+            <p className="text-xs text-[var(--text-secondary)] mt-1">
+              Choose whether new direct-message requests can come from anyone,
+              existing contacts, or no one.
+            </p>
           </div>
 
           <button type="submit" className="btn-primary" disabled={isSaving}>

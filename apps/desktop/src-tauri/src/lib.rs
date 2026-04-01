@@ -1,19 +1,38 @@
-use privatemesh_domain::telemetry::init_tracing;
+use tauri::{WebviewUrl, WebviewWindowBuilder};
 
-/// Tauri application entry point — called from `main.rs` on desktop and
-/// from the mobile runtime on Android / iOS.
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
-    init_tracing("privatemesh-desktop");
+const DEV_APP_URL: &str = "http://localhost:3000";
 
-    tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![greet])
-        .run(tauri::generate_context!())
-        .expect("error while running PrivateMesh");
+fn launch_url() -> Result<WebviewUrl, String> {
+    if cfg!(debug_assertions) {
+        let url = url::Url::parse(DEV_APP_URL).map_err(|error| error.to_string())?;
+        return Ok(WebviewUrl::External(url));
+    }
+
+    if let Some(app_url) = option_env!("PRIVATEMESH_APP_URL") {
+        let url = url::Url::parse(app_url).map_err(|error| error.to_string())?;
+        return Ok(WebviewUrl::External(url));
+    }
+
+    Ok(WebviewUrl::App("index.html".into()))
 }
 
-/// Placeholder IPC command — replaced by real SDK calls in Sprint 2.
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("PrivateMesh — welcome, {name}!")
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    tauri::Builder::default()
+        .setup(|app| {
+            let url = launch_url()
+                .map_err(|error| std::io::Error::other(format!("invalid launch URL: {error}")))?;
+
+            WebviewWindowBuilder::new(app, "main", url)
+                .title("PrivateMesh")
+                .inner_size(1280.0, 860.0)
+                .min_inner_size(420.0, 640.0)
+                .resizable(true)
+                .center()
+                .build()?;
+
+            Ok(())
+        })
+        .run(tauri::generate_context!())
+        .expect("error while running PrivateMesh");
 }

@@ -33,7 +33,8 @@ interface Post {
 }
 
 export default function ChannelPage() {
-  const { id } = useParams<{ id: string }>();
+  const params = useParams<{ id: string }>();
+  const id = params?.id ?? "";
   const router = useRouter();
   const { user } = useAuthStore();
   const [channel, setChannel] = useState<Channel | null>(null);

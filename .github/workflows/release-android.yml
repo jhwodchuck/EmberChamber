@@ -1,4 +1,4 @@
-name: Release — Android
+name: Release - Android
 
 on:
   push:
@@ -13,72 +13,46 @@ jobs:
   build:
     name: Build Android APK / AAB
     runs-on: ubuntu-22.04
+    env:
+      PRIVATEMESH_APP_URL: ${{ vars.PRIVATEMESH_APP_URL }}
     steps:
       - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
+          cache: npm
 
-      - name: Install stable Rust toolchain with Android targets
-        uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android,i686-linux-android
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           java-version: 17
           distribution: temurin
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v3
 
-      - name: Install NDK
+      - name: Install Android NDK
         run: sdkmanager "ndk;27.0.12077973"
 
-      - name: Cache cargo registry
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: android-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Cache cargo bin (tauri-cli)
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/bin/cargo-tauri
-          key: android-tauri-cli-2
+      - name: Verify web build
+        run: npm run build --workspace=apps/web
 
-      - name: Install pnpm dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build web frontend
-        run: pnpm --filter @privatemesh/web build
-
-      - name: Install Tauri CLI
-        run: cargo install tauri-cli --version "^2.0" --locked
-
-      - name: Initialize Android project (first time)
-        working-directory: apps/desktop
-        run: cargo tauri android init
+      - name: Initialize Android project
+        run: npm run android:init --workspace=apps/desktop
         continue-on-error: true
 
-      - name: Build Android APK (debug for CI)
-        working-directory: apps/desktop
-        run: cargo tauri android build --debug
+      - name: Build Android shell
+        run: npm run build:android --workspace=apps/desktop -- --debug
         env:
           NDK_HOME: ${{ env.ANDROID_NDK_ROOT }}
 
-      - name: Upload Android APK
+      - name: Upload Android artifacts
         uses: actions/upload-artifact@v4
         with:
           name: privatemesh-android

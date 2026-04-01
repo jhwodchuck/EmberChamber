@@ -11,6 +11,7 @@
     --text-secondary: #6c757d;
     --border: #e9ecef;
     --brand: #3b5bdb;
+    --scroll-thumb-hover: rgba(108, 117, 125, 0.5);
   }
 
   .dark {
@@ -21,10 +22,11 @@
     --text-secondary: #8b949e;
     --border: #21262d;
     --brand: #5e7ffe;
+    --scroll-thumb-hover: rgba(139, 148, 158, 0.5);
   }
 
   * {
-    @apply border-border;
+    border-color: var(--border);
   }
 
   body {
@@ -51,7 +53,7 @@
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-[var(--text-secondary)]/50;
+    background-color: var(--scroll-thumb-hover);
   }
 }
 

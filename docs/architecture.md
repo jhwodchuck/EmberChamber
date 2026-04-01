@@ -6,7 +6,7 @@
 graph TB
     subgraph Client["Client Layer"]
         WEB["Next.js Web App\n(React + TypeScript)"]
-        PWA["Progressive Web App"]
+        NATIVE["Tauri Native Shell\n(Windows/Linux/macOS/Android/iOS)"]
     end
 
     subgraph Gateway["API Gateway Layer"]
@@ -27,6 +27,7 @@ graph TB
 
     WEB --> API
     WEB --> WS
+    NATIVE --> WEB
     API --> PG
     API --> RD
     API --> S3
@@ -111,21 +112,37 @@ sequenceDiagram
     WS->>C2: WebSocket frame: {type: "message.new", ...}
 ```
 
-## E2EE Design (DM conversations)
+## DM Security Boundary
 
-For private one-to-one conversations, PrivateMesh implements a Signal Protocol-inspired design:
+The current starter does **not** yet implement full Signal-style E2EE for direct messages.
 
-- Each device registers an identity key pair and pre-keys
-- The server stores ONLY public key material (no private keys)
-- Session keys are established client-side using X3DH key agreement
-- Message content is encrypted client-side; server stores ciphertext only
-- The `encrypted_content` field stores ciphertext when `is_encrypted=true`
-- Server-managed group chat is acceptable for MVP; per-message E2EE is a roadmap item
+Today:
 
-**Trust assumptions:**
-- The server cannot read E2EE message content
-- The server can see metadata: who sent, when, conversation membership
-- Users must verify device fingerprints out-of-band for strongest security
+- Direct-message access is protected by authentication, membership checks, and privacy settings
+- Users can restrict who may start a new DM
+- Invite-first group and channel access reduces unsolicited exposure
+- The server can access hosted message content in this starter implementation
+
+Planned next-step design:
+
+- Each device registers identity key material and pre-keys
+- The server stores only public key material and encrypted backup blobs
+- Session keys are established client-side using a battle-tested protocol
+- Message content is encrypted client-side and stored as ciphertext
+- New device history sync is driven by verified device transfer and user-controlled encrypted backup
+
+**Trust assumptions for the current codebase:**
+- The server enforces privacy and access control, but is still inside the trust boundary for message content
+- The server sees metadata such as sender, recipient, timestamps, and membership
+- Product copy should stay precise until real E2EE is implemented
+
+## Launch Packaging Strategy
+
+- `apps/web` is still the main user-facing client
+- `apps/desktop` packages that experience into Tauri artifacts for Windows, Ubuntu/Linux, Android, iPhone, and macOS
+- The native shell targets a deployed app origin via `PRIVATEMESH_APP_URL`
+- This gives the MVP a practical multi-platform distribution path without rewriting the messaging client before launch
+- If mobile platform constraints tighten, the repo can add a dedicated native client later without replacing the backend contracts
 
 ## Scaling Strategy
 
@@ -153,9 +170,9 @@ graph LR
 
 | Data Type | Visibility | Notes |
 |-----------|-----------|-------|
-| E2EE DM content | Client-only | Server stores ciphertext only |
+| DM content | Server-managed in current starter | E2EE is planned, not yet implemented |
 | Group message content | Server-managed (MVP) | E2EE group planned for roadmap |
-| Channel post content | Server-managed | Public channels indexed for search |
+| Channel post content | Server-managed | Search is scoped to channels the user can access |
 | Message metadata | Server operational | Who/when minimized; IPs not logged permanently |
 | User profiles | Configurable per user | Privacy settings control visibility |
 | Session data | 30-day retention | IP stored for security, not logged to analytics |
