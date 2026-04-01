@@ -57,24 +57,16 @@ export default function ChannelPage() {
     }, [id])
   });
 
-  useEffect(() => {
-    if (id) {
-      loadChannel();
-      loadPosts();
-      send({ type: "subscribe.channel", payload: { channelId: id } });
-    }
-  }, [id]);
-
-  async function loadChannel() {
+  const loadChannel = useCallback(async () => {
     try {
       const data = await channelsApi.get(id);
       setChannel(data as Channel);
     } catch {
       router.push("/app");
     }
-  }
+  }, [id, router]);
 
-  async function loadPosts() {
+  const loadPosts = useCallback(async () => {
     setIsLoading(true);
     try {
       const data = await channelsApi.getPosts(id);
@@ -82,7 +74,15 @@ export default function ChannelPage() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [id]);
+
+  useEffect(() => {
+    if (id) {
+      loadChannel();
+      loadPosts();
+      send({ type: "subscribe.channel", payload: { channelId: id } });
+    }
+  }, [id, loadChannel, loadPosts, send]);
 
   async function handlePost(e: React.FormEvent) {
     e.preventDefault();

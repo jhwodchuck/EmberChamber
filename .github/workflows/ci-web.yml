@@ -1,54 +1,65 @@
-name: CI — Web
+name: CI - App Stack
 
 on:
   push:
     branches: [main, "copilot/**"]
     paths:
+      - "apps/api/**"
       - "apps/web/**"
-      - "packages/**"
-      - "pnpm-workspace.yaml"
-      - "turbo.json"
+      - "apps/desktop/**"
+      - "packages/shared/**"
       - "package.json"
+      - "package-lock.json"
       - ".github/workflows/ci-web.yml"
   pull_request:
     paths:
+      - "apps/api/**"
       - "apps/web/**"
-      - "packages/**"
-      - "pnpm-workspace.yaml"
-      - "turbo.json"
+      - "apps/desktop/**"
+      - "packages/shared/**"
       - "package.json"
+      - "package-lock.json"
 
 concurrency:
-  group: ci-web-${{ github.ref }}
+  group: ci-app-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build-and-test:
-    name: Build, lint, and type-check
-    runs-on: ubuntu-latest
+  verify:
+    name: Lint, build, test, and shell check
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Tauri Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev \
+            pkg-config
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm ci
 
       - name: Lint
-        run: pnpm lint
-
-      - name: Type-check
-        run: pnpm type-check
+        run: npm run lint
 
       - name: Build
-        run: pnpm build
+        run: npm run build
 
-      - name: Test
-        run: pnpm test
+      - name: Test API
+        run: npm test --workspace=apps/api
+
+      - name: Check desktop shell
+        run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml

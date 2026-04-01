@@ -10,6 +10,13 @@
 
 PrivateMesh is a production-minded messaging platform starter focused on invite-first communities, direct conversations, resilient delivery, and explicit trust boundaries. The current implementation centers on the TypeScript web app and API, with additional Rust/Tauri scaffolding in the repo for native packaging and future service evolution.
 
+Current repo status:
+
+- `apps/api` and `apps/web` are the working MVP implementation today
+- `apps/desktop` is the working Tauri shell for launch packaging
+- `services/`, `crates/`, `packages/api-types`, `packages/client-sdk`, `packages/config`, `packages/ui`, and `infra/compose` are future-facing scaffold paths, not the main runtime yet
+- JavaScript commands in this repo currently use `npm` workspaces even though `pnpm-workspace.yaml` and `turbo.json` remain for broader monorepo evolution
+
 ### What PrivateMesh is
 - Privacy-first, user-controlled messaging
 - Invite-first groups and channels instead of default public discovery
@@ -128,6 +135,8 @@ docker compose -f infra/docker-compose.yml exec api npm run migrate
 ```
 
 Open `http://localhost:3000`.
+
+The alternate scaffold in `infra/compose/docker-compose.yml` is future-facing Rust-service infrastructure and is not the primary local app stack yet.
 
 ### Local Development
 

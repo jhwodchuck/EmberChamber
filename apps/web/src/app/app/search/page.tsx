@@ -153,7 +153,7 @@ export default function SearchPage() {
           )}
 
           {query.length >= 2 && !isSearching && !results.messages?.length && !results.channels?.length && !results.users?.length && (
-            <p className="text-center text-[var(--text-secondary)] py-8">No results found for "{query}"</p>
+            <p className="text-center text-[var(--text-secondary)] py-8">No results found for &quot;{query}&quot;</p>
           )}
         </div>
       )}

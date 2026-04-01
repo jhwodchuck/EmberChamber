@@ -104,24 +104,16 @@ export default function ChatPage() {
     }, [id, user?.id])
   });
 
-  useEffect(() => {
-    if (id) {
-      loadConversation();
-      loadMessages();
-      send({ type: "subscribe.conversation", payload: { conversationId: id } });
-    }
-  }, [id]);
-
-  async function loadConversation() {
+  const loadConversation = useCallback(async () => {
     try {
       const data = await conversationsApi.get(id);
       setConversation(data as ConversationInfo);
     } catch {
       router.push("/app");
     }
-  }
+  }, [id, router]);
 
-  async function loadMessages() {
+  const loadMessages = useCallback(async () => {
     setIsLoading(true);
     try {
       const data = await conversationsApi.getMessages(id);
@@ -132,7 +124,15 @@ export default function ChatPage() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [id]);
+
+  useEffect(() => {
+    if (id) {
+      loadConversation();
+      loadMessages();
+      send({ type: "subscribe.conversation", payload: { conversationId: id } });
+    }
+  }, [id, loadConversation, loadMessages, send]);
 
   async function handleSend(e?: React.FormEvent) {
     e?.preventDefault();
