@@ -1,0 +1,88 @@
+name: Release — Android
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+concurrency:
+  group: release-android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Android APK / AAB
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install stable Rust toolchain with Android targets
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android,i686-linux-android
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: temurin
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install NDK
+        run: sdkmanager "ndk;27.0.12077973"
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: android-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo bin (tauri-cli)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/cargo-tauri
+          key: android-tauri-cli-2
+
+      - name: Install pnpm dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build web frontend
+        run: pnpm --filter @privatemesh/web build
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2.0" --locked
+
+      - name: Initialize Android project (first time)
+        working-directory: apps/desktop
+        run: cargo tauri android init
+        continue-on-error: true
+
+      - name: Build Android APK (debug for CI)
+        working-directory: apps/desktop
+        run: cargo tauri android build --debug
+        env:
+          NDK_HOME: ${{ env.ANDROID_NDK_ROOT }}
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: privatemesh-android
+          path: |
+            apps/desktop/src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+            apps/desktop/src-tauri/gen/android/app/build/outputs/bundle/**/*.aab
+          retention-days: 30

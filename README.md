@@ -47,11 +47,50 @@ PrivateMesh is a privacy-respecting messaging platform built for invite-only pri
 
 ---
 
+## MVP Launch Deliverables
+
+| Platform | Format | Built by CI |
+|----------|--------|-------------|
+| **Windows** | `.exe` NSIS installer + `.msi` | `release-windows.yml` |
+| **Ubuntu / Debian Linux** | `.deb` package + AppImage | `release-linux.yml` |
+| **Android** | `.apk` (debug) / `.aab` (release) | `release-android.yml` |
+| **macOS** | Universal `.dmg` (Apple Silicon + Intel) | `release-apple.yml` |
+| **iPhone (iOS)** | `.ipa` via TestFlight → App Store | `release-apple.yml` |
+
+All native clients are built with **[Tauri v2](https://tauri.app)**, which wraps the existing Next.js
+frontend in a lightweight Rust shell — no Electron, no bundled Chromium, significantly smaller download.
+
+### What you need to enable macOS and iPhone builds
+
+Both macOS and iOS are built on the same GitHub Actions runner (`macos-14`) and require
+an **[Apple Developer Program membership](https://developer.apple.com/programs/)** ($99 USD/year).
+
+| Secret | Where to get it | Used for |
+|--------|----------------|---------|
+| `APPLE_CERTIFICATE` | Export a **Developer ID Application** cert from Keychain as `.p12`, then base64-encode it | macOS code signing |
+| `APPLE_CERTIFICATE_PASSWORD` | Password you set when exporting the `.p12` | macOS code signing |
+| `APPLE_SIGNING_IDENTITY` | e.g. `"Developer ID Application: Acme Corp (XXXXXXXXXX)"` | macOS code signing |
+| `APPLE_ID` | Your Apple ID email | macOS notarization (Gatekeeper) |
+| `APPLE_TEAM_ID` | 10-character team ID from developer.apple.com | macOS notarization + iOS |
+| `APPLE_PASSWORD` | App-specific password from appleid.apple.com | macOS notarization |
+| `IOS_PROVISIONING_PROFILE` | Download from developer.apple.com, base64-encode the `.mobileprovision` | iOS code signing |
+| `TAURI_SIGNING_PRIVATE_KEY` | `cargo tauri signer generate` | Tauri update signature (all platforms) |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Chosen when running the above | Tauri update signature |
+
+Set all secrets in **GitHub → Settings → Secrets and variables → Actions**.
+
+> **Tip:** If you are not ready to distribute on the App Store, iOS apps can be installed
+> directly on test devices via TestFlight or an Enterprise Distribution certificate without
+> going through App Store review.
+
+---
+
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
 | Frontend | Next.js 15 + React 19 + TypeScript (PWA) |
+| Native shell | Tauri v2 (Rust) — Windows, macOS, Linux, Android, iOS |
 | Backend services | Rust (Axum, Tokio, SQLx) |
 | Database | PostgreSQL 16 |
 | Cache / pub-sub | Redis 7 |
@@ -60,7 +99,7 @@ PrivateMesh is a privacy-respecting messaging platform built for invite-only pri
 | Search | PostgreSQL FTS (groups/channels); client-side index (DMs) |
 | Federation | Signed relay envelopes over HTTPS |
 | Styling | Tailwind CSS + design tokens (`packages/ui`) |
-| Build | pnpm + Turborepo (web) · Cargo workspace (Rust) |
+| Build | pnpm + Turborepo (web) · Cargo workspace (Rust + Tauri) |
 
 ---
 
@@ -69,7 +108,9 @@ PrivateMesh is a privacy-respecting messaging platform built for invite-only pri
 ```
 /
 ├─ apps/
-│  └─ web/                   # Next.js PWA frontend
+│  ├─ web/                   # Next.js PWA frontend
+│  └─ desktop/               # Tauri v2 shell (Windows/macOS/Linux/Android/iOS)
+│     └─ src-tauri/          # Rust Tauri crate
 ├─ services/
 │  ├─ control-api/           # REST auth + admin (Rust/Axum)
 │  ├─ realtime-gateway/      # WebSocket fan-out (Rust/Axum)
@@ -141,12 +182,30 @@ Visit `http://localhost:3000`
 - Node.js 20+, pnpm 9+
 - Rust 1.80+ with Cargo
 - PostgreSQL 16, Redis 7 (or use the Compose stack for infrastructure only)
+- **For desktop:** no extras — `cargo tauri dev` handles it
+- **For Android:** Android Studio + NDK 27 + `cargo install tauri-cli`
+- **For iOS / macOS:** Xcode 16 on a Mac + Apple Developer account
 
 ### Frontend
 
 ```bash
 pnpm install
 pnpm dev          # starts apps/web on :3000
+```
+
+### Desktop (Tauri)
+
+```bash
+cd apps/desktop
+cargo tauri dev   # opens native window wrapping localhost:3000
+```
+
+### Native release builds
+
+```bash
+cargo tauri build                      # current OS (Windows/macOS/Linux)
+cargo tauri android build --debug      # Android APK
+cargo tauri ios build                  # iOS .ipa (macOS only)
 ```
 
 ### Rust services

@@ -1,6 +1,8 @@
 [workspace]
 resolver = "2"
 members = [
+    # Desktop / mobile shell
+    "apps/desktop/src-tauri",
     # Services
     "services/control-api",
     "services/realtime-gateway",
@@ -55,6 +57,9 @@ reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-feature
 # Crypto
 ring = "0.17"
 base64 = "0.22"
+# Tauri desktop / mobile shell
+tauri = { version = "2", features = ["protocol-asset"] }
+tauri-build = { version = "2", features = [] }
 # Workspace crates
 privatemesh-domain = { path = "crates/domain" }
 privatemesh-db = { path = "crates/db" }
