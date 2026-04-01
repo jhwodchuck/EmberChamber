@@ -49,7 +49,7 @@ PrivateMesh is a production-ready MVP for a privacy-first messaging platform. It
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | Next.js 14 + React 18 + TypeScript |
+| Frontend | Next.js 15 + React 19 + TypeScript |
 | Backend | Node.js + Express + TypeScript |
 | Database | PostgreSQL 16 |
 | Cache/PubSub | Redis 7 |

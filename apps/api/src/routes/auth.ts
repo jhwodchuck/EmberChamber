@@ -92,7 +92,7 @@ router.post("/register", async (req: Request, res: Response, next) => {
       const { rows: deviceRows } = await client.query(
         `INSERT INTO devices (user_id, device_name, device_type)
          VALUES ($1, $2, $3) RETURNING id`,
-        ["web", "Web Browser", "web"]
+        [user.id, "Web Browser", "web"]
       );
       const device = deviceRows[0];
 
