@@ -28,6 +28,9 @@ macro_rules! typed_id {
 }
 
 typed_id!(UserId);
+typed_id!(AccountId);
 typed_id!(DeviceId);
 typed_id!(ConversationId);
+typed_id!(SessionId);
+typed_id!(InviteId);
 typed_id!(NodeId);

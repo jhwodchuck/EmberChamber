@@ -3,6 +3,8 @@ resolver = "2"
 members = [
     # Desktop / mobile shell
     "apps/desktop/src-tauri",
+    # Cross-platform secure client core
+    "crates/core",
     # Services
     "services/control-api",
     "services/realtime-gateway",
@@ -22,7 +24,7 @@ members = [
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
-repository = "https://github.com/jhwodchuck/PrivateMesh"
+repository = "https://github.com/jhwodchuck/EmberChamber"
 
 [workspace.dependencies]
 # Async runtime
@@ -61,8 +63,9 @@ base64 = "0.22"
 tauri = { version = "2", features = ["protocol-asset"] }
 tauri-build = { version = "2", features = [] }
 # Workspace crates
-privatemesh-domain = { path = "crates/domain" }
-privatemesh-db = { path = "crates/db" }
-privatemesh-auth = { path = "crates/auth" }
-privatemesh-relay-protocol = { path = "crates/relay-protocol" }
-privatemesh-test-support = { path = "crates/test-support" }
+emberchamber-core = { path = "crates/core" }
+emberchamber-domain = { path = "crates/domain" }
+emberchamber-db = { path = "crates/db" }
+emberchamber-auth = { path = "crates/auth" }
+emberchamber-relay-protocol = { path = "crates/relay-protocol" }
+emberchamber-test-support = { path = "crates/test-support" }

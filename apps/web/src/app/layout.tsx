@@ -6,9 +6,13 @@ import { Providers } from "./providers";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "PrivateMesh",
+  title: "EmberChamber",
   description:
-    "Privacy-first messaging for groups, channels, and communities.",
+    "Invite-only encrypted messaging for trusted circles on Android, Windows, and Ubuntu.",
+  icons: {
+    icon: "/brand/emberchamber-mark.svg",
+    shortcut: "/brand/emberchamber-mark.svg",
+  },
 };
 
 export default function RootLayout({

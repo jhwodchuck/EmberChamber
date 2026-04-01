@@ -54,7 +54,7 @@ function getS3Client(): S3Client {
   });
 }
 
-const BUCKET = process.env.S3_BUCKET ?? "privatemesh";
+const BUCKET = process.env.S3_BUCKET ?? "emberchamber";
 
 // POST /api/attachments/upload
 router.post(

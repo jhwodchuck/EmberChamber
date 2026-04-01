@@ -1,7 +1,7 @@
-# PrivateMesh — Rust service Dockerfile
+# EmberChamber — Rust service Dockerfile
 #
 # Build any service from the workspace root:
-#   docker build --build-arg SERVICE=control-api -t pm-control-api .
+#   docker build --build-arg SERVICE=control-api -t emberchamber-control-api .
 #
 # Used by infra/compose/docker-compose.yml with per-service build-arg overrides.
 
@@ -54,6 +54,6 @@ FROM debian:bookworm-slim AS runtime
 ARG SERVICE
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && \
     rm -rf /var/lib/apt/lists/*
-COPY --from=builder /build/target/release/$SERVICE /usr/local/bin/privatemesh-service
+COPY --from=builder /build/target/release/$SERVICE /usr/local/bin/emberchamber-service
 ENV SERVICE_NAME=$SERVICE
-ENTRYPOINT ["/usr/local/bin/privatemesh-service"]
+ENTRYPOINT ["/usr/local/bin/emberchamber-service"]

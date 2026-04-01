@@ -1,4 +1,4 @@
-import type { WebSocketEvent } from "@privatemesh/api-types";
+import type { WebSocketEvent } from "@emberchamber/api-types";
 
 /** Minimal transport abstraction — wires up in Sprint 2. */
 export interface TransportRouter {

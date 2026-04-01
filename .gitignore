@@ -10,6 +10,9 @@ out/
 build/
 target/
 src-tauri/gen/
+.expo/
+android/
+ios/
 
 # Environment files
 .env
@@ -48,6 +51,7 @@ infra/data/
 
 # Turbo
 .turbo/
+.vercel/
 
 # Native packaging
 *.ipa

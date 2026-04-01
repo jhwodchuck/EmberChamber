@@ -92,7 +92,7 @@ const wss = new WebSocketServer({ server, path: "/ws" });
 createWebSocketServer(wss);
 
 server.listen(PORT, () => {
-  console.log(`PrivateMesh API listening on port ${PORT}`);
+  console.log(`EmberChamber API listening on port ${PORT}`);
   console.log(`WebSocket server listening on ws://localhost:${PORT}/ws`);
 });
 

@@ -1,144 +1,151 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import Image from "next/image";
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { authApi } from "@/lib/api";
-import { useAuthStore } from "@/lib/store";
 import toast from "react-hot-toast";
+import { startMagicLink } from "@/lib/relay";
 
-function LoginPageContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const { login, isAuthenticated } = useAuthStore();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const nextPath = searchParams?.get("next");
-  const redirectPath =
-    nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//")
-      ? nextPath
-      : "/app";
+const authBootstrapEnabled =
+  process.env.NEXT_PUBLIC_EMBERCHAMBER_AUTH_BOOTSTRAP_ENABLED === "true";
 
-  useEffect(() => {
-    if (isAuthenticated) router.replace(redirectPath);
-  }, [isAuthenticated, redirectPath, router]);
+export default function LoginPage() {
+  const [email, setEmail] = useState("");
+  const [deviceLabel, setDeviceLabel] = useState("Web companion");
+  const [challenge, setChallenge] = useState<{
+    expiresAt: string;
+    debugCompletionToken?: string;
+  } | null>(null);
+  const [isPending, startTransition] = useTransition();
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setIsLoading(true);
-
-    try {
-      const result = await authApi.login({
-        username,
-        password,
-        deviceName: navigator.userAgent.slice(0, 128),
-      });
-      login(
-        {
-          id: result.user.id,
-          username: result.user.username,
-          displayName: result.user.displayName,
-          email: (result.user as { email?: string }).email ?? "",
-        },
-        result.accessToken,
-        result.refreshToken
-      );
-      router.push(redirectPath);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Login failed";
-      toast.error(message);
-    } finally {
-      setIsLoading(false);
+  function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!authBootstrapEnabled) {
+      toast.error("Email sign-in is not enabled on this deployment yet.");
+      return;
     }
+
+    startTransition(async () => {
+      try {
+        const nextChallenge = await startMagicLink({
+          email,
+          deviceLabel,
+        });
+        setChallenge(nextChallenge);
+        toast.success("Magic link queued");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Unable to send magic link");
+      }
+    });
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-[var(--bg-primary)]">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 mb-3">
-            <div className="w-10 h-10 rounded-xl bg-brand-500 flex items-center justify-center">
-              <svg viewBox="0 0 24 24" fill="white" className="w-6 h-6">
-                <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
-              </svg>
-            </div>
-            <span className="text-2xl font-bold text-[var(--text-primary)]">
-              PrivateMesh
-            </span>
+          <div className="inline-flex flex-col items-center gap-3 mb-3">
+            <Image
+              src="/brand/emberchamber-mark.svg"
+              alt="EmberChamber"
+              width={72}
+              height={72}
+              priority
+            />
+            <Image
+              src="/brand/emberchamber-wordmark.svg"
+              alt="EmberChamber"
+              width={280}
+              height={54}
+              className="h-auto w-[220px]"
+            />
           </div>
-          <p className="text-[var(--text-secondary)]">Sign in to your account</p>
+          <p className="text-[var(--text-secondary)]">
+            Sign in with a private email magic link.
+          </p>
         </div>
 
-        <div className="card">
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="card space-y-5">
+          {!authBootstrapEnabled ? (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-[var(--text-secondary)]">
+              <p className="font-medium text-[var(--text-primary)]">Closed beta bootstrap is not live here yet</p>
+              <p className="mt-1">
+                This public deployment is active, but email-based account bootstrap is still being wired to a production mail provider.
+              </p>
+            </div>
+          ) : null}
+
+          <form onSubmit={submit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-[var(--text-primary)] mb-1.5">
-                Username
+                Email
               </label>
               <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
                 className="input"
-                placeholder="your_username"
+                placeholder="you@example.com"
                 required
-                autoComplete="username"
+                autoComplete="email"
                 autoFocus
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-[var(--text-primary)] mb-1.5">
-                Password
+                Device label
               </label>
               <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                type="text"
+                value={deviceLabel}
+                onChange={(event) => setDeviceLabel(event.target.value)}
                 className="input"
-                placeholder="••••••••"
+                placeholder="Windows beta laptop"
                 required
-                autoComplete="current-password"
               />
             </div>
             <button
               type="submit"
               className="btn-primary w-full py-2.5"
-              disabled={isLoading}
+              disabled={isPending || !authBootstrapEnabled}
             >
-              {isLoading ? "Signing in..." : "Sign in"}
+              {authBootstrapEnabled
+                ? isPending
+                  ? "Sending link..."
+                  : "Send magic link"
+                : "Email bootstrap coming soon"}
             </button>
           </form>
+
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-4 text-sm text-[var(--text-secondary)]">
+            <p className="font-medium text-[var(--text-primary)]">Trust boundary</p>
+            <p className="mt-1">
+              Email is used only for bootstrap and recovery. It is never public, searchable, or
+              used for discovery.
+            </p>
+          </div>
+
+          {challenge ? (
+            <div className="rounded-xl border border-brand-500/20 bg-brand-500/5 p-4 text-sm">
+              <p className="font-medium text-[var(--text-primary)]">Check your inbox</p>
+              <p className="mt-1 text-[var(--text-secondary)]">
+                The link expires at {new Date(challenge.expiresAt).toLocaleString()}.
+              </p>
+              {challenge.debugCompletionToken ? (
+                <p className="mt-3 font-mono text-xs text-brand-500 break-all">
+                  Dev token: {challenge.debugCompletionToken}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         <p className="text-center text-sm text-[var(--text-secondary)] mt-6">
-          Don&apos;t have an account?{" "}
-          <Link
-            href={
-              redirectPath === "/app"
-                ? "/register"
-                : `/register?next=${encodeURIComponent(redirectPath)}`
-            }
-            className="text-brand-500 hover:underline font-medium"
-          >
-            Create one
+          New here?{" "}
+          <Link href="/register" className="text-brand-500 hover:underline font-medium">
+            Request beta access
           </Link>
         </p>
       </div>
     </div>
-  );
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center p-4 bg-[var(--bg-primary)]">
-          <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
-        </div>
-      }
-    >
-      <LoginPageContent />
-    </Suspense>
   );
 }

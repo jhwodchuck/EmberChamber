@@ -1,4 +1,4 @@
-// Shared types for PrivateMesh
+// Shared types for EmberChamber
 
 export type UserRole = "owner" | "admin" | "moderator" | "member";
 export type ConversationType = "dm" | "group" | "channel";

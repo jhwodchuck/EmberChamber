@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { usersApi, conversationsApi } from "@/lib/api";
-import { Avatar } from "@/app/app/layout";
+import { Avatar } from "@/components/avatar";
 import toast from "react-hot-toast";
 
 interface User {

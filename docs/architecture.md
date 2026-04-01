@@ -1,197 +1,178 @@
-# PrivateMesh Architecture
+# EmberChamber Beta Architecture
 
-## System Architecture Diagram
+## Runtime Roles
 
-Current implementation note:
+- `apps/mobile`: Android-first beta client with local SQLite and SecureStore
+- `apps/desktop`: Windows and Ubuntu Tauri shell with bundled local frontend
+- `apps/web`: public site, invite landing, and account bootstrap companion
+- `apps/relay`: Cloudflare Worker edge service for auth, relay APIs, attachment tickets, and metadata
+- `crates/core`: Rust secure-state and sync engine scaffold
+- `crates/relay-protocol` + `packages/protocol`: shared contracts for relay, mailbox, keys, and sessions
 
-- The runtime in use today is `apps/api` plus `apps/web`
-- `apps/desktop` is an active packaging shell around that runtime
-- the Rust `services/` and `crates/` workspace is present for future migration and federation work, but it is not the primary backend path yet
-
-```mermaid
-graph TB
-    subgraph Client["Client Layer"]
-        WEB["Next.js Web App\n(React + TypeScript)"]
-        NATIVE["Tauri Native Shell\n(Windows/Linux/macOS/Android/iOS)"]
-    end
-
-    subgraph Gateway["API Gateway Layer"]
-        API["REST API\n(Express/TypeScript)"]
-        WS["WebSocket Gateway\n(ws library)"]
-    end
-
-    subgraph Data["Data Layer"]
-        PG[("PostgreSQL\nPrimary Database")]
-        RD[("Redis\nCache + Pub/Sub")]
-        S3[("S3/MinIO\nObject Storage")]
-    end
-
-    subgraph Future["Future: Federation Layer"]
-        RELAY["Relay Node Abstraction"]
-        MESH["Mesh Transport"]
-    end
-
-    WEB --> API
-    WEB --> WS
-    NATIVE --> WEB
-    API --> PG
-    API --> RD
-    API --> S3
-    WS --> RD
-    WS --> PG
-    API -.->|future| RELAY
-    RELAY -.->|future| MESH
-```
-
-## Database Schema Diagram
-
-```mermaid
-erDiagram
-    users ||--o{ sessions : "has"
-    users ||--o{ devices : "owns"
-    users ||--o{ conversation_members : "joins"
-    users ||--o{ channel_members : "subscribes"
-    users ||--o{ messages : "sends"
-    users ||--o{ channel_posts : "writes"
-    users ||--o{ reports : "submits"
-    users ||--|| user_privacy_settings : "has"
-
-    conversations ||--o{ conversation_members : "includes"
-    conversations ||--o{ messages : "contains"
-    conversations ||--o{ invites : "has"
-
-    channels ||--o{ channel_members : "has"
-    channels ||--o{ channel_posts : "contains"
-    channels ||--o{ invites : "has"
-
-    messages ||--o{ message_reactions : "receives"
-    messages ||--o{ message_read_receipts : "tracked"
-    messages }o--|| attachments : "may_have"
-
-    channel_posts }o--|| attachments : "may_have"
-    channel_posts ||--o{ channel_post_reactions : "receives"
-
-    devices ||--o{ encryption_keys : "registers"
-```
-
-## Authentication Flow
-
-```mermaid
-sequenceDiagram
-    participant C as Client
-    participant A as API
-    participant DB as PostgreSQL
-
-    C->>A: POST /auth/register {username, password}
-    A->>A: Hash password (argon2id)
-    A->>DB: Insert user + device + session
-    A->>C: {accessToken (15m), refreshToken (30d)}
-
-    Note over C,A: Normal request flow
-    C->>A: GET /api/... Bearer: <accessToken>
-    A->>A: Verify JWT signature
-    A->>DB: Verify session is active
-    A->>C: 200 Response
-
-    Note over C,A: Token refresh flow
-    C->>A: POST /auth/refresh {refreshToken}
-    A->>DB: Verify refresh token + session
-    A->>C: {accessToken (new 15m)}
-```
-
-## WebSocket Event Flow
-
-```mermaid
-sequenceDiagram
-    participant C1 as Client 1 (Sender)
-    participant API as REST API
-    participant R as Redis Pub/Sub
-    participant C2 as Client 2 (Receiver)
-    participant WS as WebSocket Gateway
-
-    C1->>API: POST /conversations/:id/messages
-    API->>DB: Insert message
-    API->>R: PUBLISH conv:{id} {type: "message.new", payload}
-    API->>C1: 201 {message}
-
-    R-->>WS: Message received from pub/sub
-    WS->>C2: WebSocket frame: {type: "message.new", ...}
-```
-
-## DM Security Boundary
-
-The current starter does **not** yet implement full Signal-style E2EE for direct messages.
-
-Today:
-
-- Direct-message access is protected by authentication, membership checks, and privacy settings
-- Users can restrict who may start a new DM
-- Invite-first group and channel access reduces unsolicited exposure
-- The server can access hosted message content in this starter implementation
-
-Planned next-step design:
-
-- Each device registers identity key material and pre-keys
-- The server stores only public key material and encrypted backup blobs
-- Session keys are established client-side using a battle-tested protocol
-- Message content is encrypted client-side and stored as ciphertext
-- New device history sync is driven by verified device transfer and user-controlled encrypted backup
-
-**Trust assumptions for the current codebase:**
-- The server enforces privacy and access control, but is still inside the trust boundary for message content
-- The server sees metadata such as sender, recipient, timestamps, and membership
-- Product copy should stay precise until real E2EE is implemented
-
-## Launch Packaging Strategy
-
-- `apps/web` is still the main user-facing client
-- `apps/desktop` packages that experience into Tauri artifacts for Windows, Ubuntu/Linux, Android, iPhone, and macOS
-- The native shell targets a deployed app origin via `PRIVATEMESH_APP_URL`
-- This gives the MVP a practical multi-platform distribution path without rewriting the messaging client before launch
-- If mobile platform constraints tighten, the repo can add a dedicated native client later without replacing the backend contracts
-
-## Scaling Strategy
+## High-Level Diagram
 
 ```mermaid
 graph LR
-    LB[Load Balancer] --> API1[API Instance 1]
-    LB --> API2[API Instance 2]
-    LB --> API3[API Instance N]
+    subgraph Clients
+      A[Android App]
+      D[Desktop App]
+      W[Web Companion]
+    end
 
-    API1 --> PG_PRIMARY[(PostgreSQL Primary)]
-    API2 --> PG_PRIMARY
-    API3 --> PG_PRIMARY
+    subgraph SharedCore
+      C[Rust Core]
+      P[Shared Protocol]
+    end
 
-    PG_PRIMARY --> PG_REPLICA[(PostgreSQL Replica\nRead Replicas)]
+    subgraph CloudflareRelay
+      API[Worker API]
+      M[DeviceMailboxDO]
+      G[GroupCoordinatorDO]
+      R[RateLimitDO]
+      DB[(D1)]
+      B[(R2)]
+      Q[Queues]
+    end
 
-    API1 --> REDIS_CLUSTER[(Redis Cluster)]
-    API2 --> REDIS_CLUSTER
-    API3 --> REDIS_CLUSTER
-
-    REDIS_CLUSTER -->|pub/sub fan-out| WS1[WS Gateway 1]
-    REDIS_CLUSTER -->|pub/sub fan-out| WS2[WS Gateway 2]
+    A --> C
+    D --> C
+    C --> P
+    W --> API
+    API --> M
+    API --> G
+    API --> R
+    API --> DB
+    API --> B
+    API --> Q
 ```
 
-## Privacy Model
+## Auth Flow
 
-| Data Type | Visibility | Notes |
-|-----------|-----------|-------|
-| DM content | Server-managed in current starter | E2EE is planned, not yet implemented |
-| Group message content | Server-managed (MVP) | E2EE group planned for roadmap |
-| Channel post content | Server-managed | Search is scoped to channels the user can access |
-| Message metadata | Server operational | Who/when minimized; IPs not logged permanently |
-| User profiles | Configurable per user | Privacy settings control visibility |
-| Session data | 30-day retention | IP stored for security, not logged to analytics |
-| Reports | 7-year retention | Legal compliance requirement |
-| Moderation actions | Permanent | Legal/audit trail |
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Relay as Worker API
+    participant D1
+    participant Queue as Email Queue
 
-## Future Federation Architecture
+    Client->>Relay: POST /v1/auth/start {email, inviteToken?, deviceLabel}
+    Relay->>Relay: normalize email, compute blind index, rate limit
+    Relay->>D1: create auth challenge
+    Relay->>Queue: enqueue magic-link email
+    Relay-->>Client: challenge id + expiry (+ debug token in local dev)
 
-The `relay_nodes` table and transport abstraction are designed to support:
+    Client->>Relay: POST /v1/auth/complete {completionToken, deviceLabel}
+    Relay->>D1: consume challenge
+    Relay->>D1: create or resume account + device + session
+    Relay-->>Client: access token + refresh token + device id
 
-1. **Self-hosting**: Deploy your own instance; users connect to it
-2. **Federated relays**: Trusted relay nodes route messages between instances
-3. **Mesh transport**: Intermittent connectivity via store-and-forward
-4. **Node discovery**: Relay registry enables finding trusted nodes
+    Client->>Relay: POST /v1/devices/register {public key bundle}
+    Relay->>D1: save device keys
+```
 
-This mirrors concepts from ActivityPub, Matrix, and Nostr but remains centralized-first for the MVP.
+## Mailbox Flow
+
+```mermaid
+sequenceDiagram
+    participant Sender
+    participant Relay as Worker API
+    participant Mailbox as DeviceMailboxDO
+    participant Recipient
+
+    Sender->>Relay: POST /v1/messages/batch {cipher envelopes}
+    Relay->>Relay: verify membership + epoch + block rules
+    Relay->>Mailbox: enqueue per-recipient device
+    Relay-->>Sender: accepted envelope ids
+
+    Recipient->>Relay: GET /v1/mailbox/sync
+    Relay->>Mailbox: fetch pending envelopes
+    Mailbox-->>Relay: queued ciphertext envelopes
+    Relay-->>Recipient: envelope batch
+
+    Recipient->>Relay: POST /v1/mailbox/ack
+    Relay->>Mailbox: delete acknowledged envelopes
+```
+
+## Data Boundaries
+
+### On device
+
+- decrypted conversation history
+- local search index
+- private keys
+- outbox and retry state
+- device safety state
+
+### In relay metadata plane
+
+- blinded email index
+- encrypted email ciphertext
+- account, device, and session rows
+- public identity bundles and prekeys
+- conversation membership and epoch
+- blocked-account rules
+- report disclosures
+
+### In relay transient ciphertext plane
+
+- mailbox ciphertext envelopes in Durable Object storage
+- encrypted attachment blobs in R2
+
+## D1 Tables
+
+- `beta_invites`
+- `accounts`
+- `account_emails`
+- `auth_challenges`
+- `devices`
+- `sessions`
+- `passkeys`
+- `conversations`
+- `conversation_members`
+- `conversation_invites`
+- `blocks`
+- `attachments`
+- `reports`
+- `device_links`
+
+## Durable Objects
+
+### `DeviceMailboxDO`
+
+- one object per device
+- stores pending ciphertext envelopes
+- handles sync cursoring and ack deletion
+- becomes the natural place to add live WebSocket delivery next
+
+### `GroupCoordinatorDO`
+
+- one object per small group
+- tracks current epoch and active members
+- coordinates membership rotation without server-readable content
+
+### `RateLimitDO`
+
+- keyed auth and abuse limiter
+- isolates invite abuse, auth storms, and send floods
+
+## Desktop Strategy
+
+- Desktop is no longer a remote URL wrapper.
+- `apps/desktop/shell/index.html` is bundled locally inside Tauri.
+- The next integration step is wiring the desktop shell to the Rust core and relay APIs.
+
+## Mobile Strategy
+
+- Android is the first-class client.
+- Expo is used for faster native iteration and Android build generation.
+- SecureStore is used for bootstrap secrets and session material.
+- SQLite is initialized on-device for local-first state.
+
+## Explicit Non-Goals for Beta
+
+- public discovery
+- public channels
+- server-side private-message search
+- pure P2P operation without any hosted relay
+- phone-number identity
+- blanket server-side moderation visibility into encrypted content

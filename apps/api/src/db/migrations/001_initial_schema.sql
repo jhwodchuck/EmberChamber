@@ -1,4 +1,4 @@
--- PrivateMesh Database Schema Migration
+-- EmberChamber Database Schema Migration
 -- Migration 001: Initial Schema
 
 -- Enable extensions

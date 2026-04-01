@@ -3,68 +3,289 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>PrivateMesh Shell</title>
+    <title>EmberChamber Desktop Beta</title>
     <style>
       :root {
         color-scheme: dark;
-        font-family: Inter, "Segoe UI", sans-serif;
-        background: #0b1220;
-        color: #edf2f7;
+        --bg: #081015;
+        --panel: rgba(11, 24, 31, 0.88);
+        --panel-strong: #10202a;
+        --line: rgba(139, 198, 205, 0.18);
+        --text: #eef6f7;
+        --muted: #a5bcc0;
+        --accent: #8af0d6;
+        --accent-ink: #06242b;
+        font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      * {
+        box-sizing: border-box;
       }
 
       body {
         margin: 0;
         min-height: 100vh;
-        display: grid;
-        place-items: center;
         background:
-          radial-gradient(circle at top, rgba(45, 212, 191, 0.18), transparent 35%),
-          linear-gradient(180deg, #0b1220 0%, #111827 100%);
+          radial-gradient(circle at top left, rgba(138, 240, 214, 0.18), transparent 28%),
+          radial-gradient(circle at bottom right, rgba(76, 118, 255, 0.14), transparent 22%),
+          var(--bg);
       }
 
-      main {
-        width: min(560px, calc(100vw - 32px));
+      .app {
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: 320px 1fr;
+      }
+
+      .sidebar,
+      .content {
         padding: 28px;
-        border: 1px solid rgba(148, 163, 184, 0.2);
-        border-radius: 24px;
-        background: rgba(15, 23, 42, 0.88);
-        box-shadow: 0 20px 80px rgba(2, 6, 23, 0.45);
+      }
+
+      .sidebar {
+        border-right: 1px solid var(--line);
+        background: rgba(4, 12, 16, 0.7);
+      }
+
+      .wordmark {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+
+      .logo {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(160deg, #8af0d6, #6aa7ff);
+        color: #041318;
+        font-weight: 700;
+      }
+
+      .eyebrow {
+        color: var(--accent);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        margin-bottom: 8px;
       }
 
       h1 {
         margin: 0 0 12px;
-        font-size: 1.5rem;
+        font-size: 1.9rem;
+        line-height: 1.1;
       }
 
       p {
-        margin: 0 0 14px;
+        margin: 0;
+        color: var(--muted);
         line-height: 1.6;
-        color: #cbd5e1;
       }
 
-      code {
-        display: inline-block;
-        padding: 2px 6px;
-        border-radius: 8px;
-        background: rgba(30, 41, 59, 0.9);
-        color: #99f6e4;
+      .stack {
+        display: grid;
+        gap: 16px;
+      }
+
+      .panel {
+        border: 1px solid var(--line);
+        background: var(--panel);
+        border-radius: 24px;
+        padding: 20px;
+        box-shadow: 0 18px 48px rgba(0, 0, 0, 0.24);
+      }
+
+      .panel strong {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 1rem;
+      }
+
+      .grid {
+        display: grid;
+        gap: 16px;
+      }
+
+      .content {
+        display: grid;
+        grid-template-rows: auto auto 1fr;
+        gap: 18px;
+      }
+
+      .hero {
+        padding: 28px;
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        background: linear-gradient(155deg, rgba(138, 240, 214, 0.08), rgba(29, 54, 63, 0.78));
+      }
+
+      .hero h2 {
+        margin: 0 0 12px;
+        font-size: 2.4rem;
+        line-height: 1.05;
+        max-width: 12ch;
+      }
+
+      .hero p {
+        max-width: 54ch;
+      }
+
+      .badge-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      .badge {
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: rgba(8, 18, 23, 0.7);
+        color: var(--text);
+        font-size: 0.9rem;
+      }
+
+      .cta {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 22px;
+        padding: 12px 18px;
+        border-radius: 14px;
+        border: none;
+        background: var(--accent);
+        color: var(--accent-ink);
+        font-weight: 700;
+      }
+
+      .meta-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .meta {
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        padding: 18px;
+        background: var(--panel-strong);
+      }
+
+      .meta label {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--muted);
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .meta span {
+        font-size: 1rem;
+        font-weight: 600;
+      }
+
+      @media (max-width: 960px) {
+        .app {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .meta-grid {
+          grid-template-columns: 1fr;
+        }
       }
     </style>
   </head>
   <body>
-    <main>
-      <h1>PrivateMesh Native Shell</h1>
-      <p>
-        This packaged shell needs a deployed app origin to open.
-      </p>
-      <p>
-        Rebuild with <code>PRIVATEMESH_APP_URL</code> set to your hosted
-        PrivateMesh web app, for example <code>https://app.example.com</code>.
-      </p>
-      <p>
-        Local development should use <code>npm run dev:desktop</code>, which
-        points the shell at the Next.js dev server automatically.
-      </p>
-    </main>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="wordmark">
+          <div class="logo">PM</div>
+          <div>
+            <strong>EmberChamber</strong>
+            <p>Desktop beta shell</p>
+          </div>
+        </div>
+
+        <div class="stack">
+          <section class="panel">
+            <span class="eyebrow">Launch scope</span>
+            <strong>Invite-only trusted circles</strong>
+            <p>
+              The desktop app is now a local shell for the new relay-assisted beta, not a wrapper
+              around a hosted web client.
+            </p>
+          </section>
+
+          <section class="panel">
+            <span class="eyebrow">What ships first</span>
+            <p>Windows installer, Ubuntu package, Android app, E2EE DMs, and small groups.</p>
+          </section>
+
+          <section class="panel">
+            <span class="eyebrow">Trust model</span>
+            <p>
+              Email is private and only used for bootstrap and recovery. Message history lives on
+              device. The relay stores ciphertext envelopes and encrypted attachment blobs.
+            </p>
+          </section>
+        </div>
+      </aside>
+
+      <main class="content">
+        <section class="hero">
+          <span class="eyebrow">Desktop beta</span>
+          <h2>Local-first shell for the new EmberChamber stack</h2>
+          <p>
+            This shell is now bundled locally so the Windows and Ubuntu apps no longer depend on a
+            remote web wrapper. The next integration step is wiring the Rust core into onboarding,
+            mailbox sync, and encrypted local storage.
+          </p>
+          <div class="badge-row">
+            <span class="badge">Email magic link</span>
+            <span class="badge">Optional passkeys</span>
+            <span class="badge">Device mailbox relay</span>
+            <span class="badge">Encrypted attachments</span>
+          </div>
+          <button class="cta" type="button">Closed Beta Build</button>
+        </section>
+
+        <section class="meta-grid">
+          <article class="meta">
+            <label>Client Core</label>
+            <span>Rust local-first state engine</span>
+          </article>
+          <article class="meta">
+            <label>Relay</label>
+            <span>Cloudflare Workers + DO + D1 + R2</span>
+          </article>
+          <article class="meta">
+            <label>Desktop</label>
+            <span>Tauri v2 native packaging</span>
+          </article>
+        </section>
+
+        <section class="panel">
+          <span class="eyebrow">Next implementation slice</span>
+          <strong>Bridge this shell to the Rust core and mailbox APIs</strong>
+          <p>
+            The current repo now contains the relay scaffold, the shared protocol package, and the
+            cross-platform Rust core crate. The next code slice should bind real onboarding and
+            sync flows into this shell instead of expanding the old centralized web runtime.
+          </p>
+        </section>
+      </main>
+    </div>
   </body>
 </html>

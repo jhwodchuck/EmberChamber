@@ -10,8 +10,8 @@ name = "media-worker"
 path = "src/main.rs"
 
 [dependencies]
-privatemesh-domain = { workspace = true }
-privatemesh-db = { workspace = true }
+emberchamber-domain = { workspace = true }
+emberchamber-db = { workspace = true }
 tokio = { workspace = true }
 axum = { workspace = true }
 tower = { workspace = true }

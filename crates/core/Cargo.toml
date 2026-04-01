@@ -1,0 +1,16 @@
+[package]
+name = "emberchamber-core"
+description = "Cross-platform local-first sync and secure state engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+emberchamber-domain = { workspace = true }
+emberchamber-relay-protocol = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+

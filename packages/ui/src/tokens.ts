@@ -1,5 +1,5 @@
 /**
- * PrivateMesh design tokens.
+ * EmberChamber design tokens.
  *
  * Visual direction: graphite/ivory base, teal signal colour, restrained motion,
  * dense but calm layouts, editorial display font for headers, neutral sans for UI.

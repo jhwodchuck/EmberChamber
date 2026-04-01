@@ -10,9 +10,9 @@ name = "relay-gateway"
 path = "src/main.rs"
 
 [dependencies]
-privatemesh-domain = { workspace = true }
-privatemesh-db = { workspace = true }
-privatemesh-relay-protocol = { workspace = true }
+emberchamber-domain = { workspace = true }
+emberchamber-db = { workspace = true }
+emberchamber-relay-protocol = { workspace = true }
 tokio = { workspace = true }
 axum = { workspace = true }
 tower = { workspace = true }

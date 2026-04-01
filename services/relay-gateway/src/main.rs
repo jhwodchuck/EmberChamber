@@ -1,4 +1,4 @@
-use privatemesh_domain::telemetry::init_tracing;
+use emberchamber_domain::telemetry::init_tracing;
 
 #[tokio::main]
 async fn main() {

@@ -217,7 +217,7 @@ importers:
 
   packages/client-sdk:
     dependencies:
-      '@privatemesh/api-types':
+      '@emberchamber/api-types':
         specifier: workspace:*
         version: link:../api-types
     devDependencies:

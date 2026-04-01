@@ -1,12 +1,12 @@
 [package]
-name = "privatemesh-auth"
+name = "emberchamber-auth"
 description = "Authentication primitives: passkeys, magic links, TOTP, session tokens"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 
 [dependencies]
-privatemesh-domain = { workspace = true }
+emberchamber-domain = { workspace = true }
 serde = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }

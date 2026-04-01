@@ -1,193 +1,182 @@
-# PrivateMesh
+# EmberChamber
 
-> **Privacy-first messaging for communities.** PrivateMesh gives groups, channels, and direct conversations more control over their communications while reducing unnecessary centralized visibility.
+<p align="center">
+  <img src="brand/emberchamber-lockup.svg" alt="EmberChamber" width="760" />
+</p>
+
+> **Invite-only encrypted messaging for trusted circles.** EmberChamber is being rebuilt as a local-first beta for Android, Windows, and Ubuntu with a minimal hosted relay and private email bootstrap.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
----
+## Current Direction
 
-## Overview
+EmberChamber is no longer targeting a Telegram-like centralized MVP.
 
-PrivateMesh is a production-minded messaging platform starter focused on invite-first communities, direct conversations, resilient delivery, and explicit trust boundaries. The current implementation centers on the TypeScript web app and API, with additional Rust/Tauri scaffolding in the repo for native packaging and future service evolution.
+The repo now pivots toward:
 
-Current repo status:
+- `email magic link + optional passkey` bootstrap auth
+- `true E2EE DMs` and `small E2EE groups`
+- `invite-only beta access`
+- `local-first message history`
+- `Cloudflare Workers + Durable Objects + D1 + R2` as the minimal relay
+- `Android + Windows + Ubuntu` as the first shipping surfaces
 
-- `apps/api` and `apps/web` are the working MVP implementation today
-- `apps/desktop` is the working Tauri shell for launch packaging
-- `services/`, `crates/`, `packages/api-types`, `packages/client-sdk`, `packages/config`, `packages/ui`, and `infra/compose` are future-facing scaffold paths, not the main runtime yet
-- JavaScript commands in this repo currently use `npm` workspaces even though `pnpm-workspace.yaml` and `turbo.json` remain for broader monorepo evolution
+What EmberChamber is not:
 
-### What PrivateMesh is
-- Privacy-first, user-controlled messaging
-- Invite-first groups and channels instead of default public discovery
-- Transparent enforcement boundaries for clearly illegal abuse and platform attacks
-- A practical launch path across web, desktop, and mobile packaging targets
+- not a public social network
+- not a channel/discovery platform in beta
+- not phone-number based
+- not tied to Google auth
+- not “perfect anonymity” or “pure P2P forever”
 
-### What PrivateMesh is NOT
-- A tool for criminal evasion
-- "Perfect anonymity" or "uncensorable forever"
-- A promise that all message surfaces are end-to-end encrypted today
-- A haven for CSAM, malware, extortion, trafficking, or non-consensual abuse
+## Repo Status
 
----
+Working beta scaffolds now in this repo:
 
-## Features (Current Starter)
+- `apps/relay`: Cloudflare relay/control plane scaffold
+- `apps/mobile`: Expo Android-first client scaffold
+- `apps/desktop`: Tauri desktop beta shell with bundled local frontend
+- `apps/web`: public companion site, invite landing, and auth bootstrap UI
+- `crates/core`: Rust local-first sync and secure-state scaffold
+- `crates/relay-protocol`: canonical Rust relay and envelope contracts
+- `packages/protocol`: TypeScript mirror of relay contracts
 
-| Feature | Status |
-|---------|--------|
-| User registration & login (JWT) | ✅ |
-| Private direct messaging | ✅ |
-| Group chat | ✅ |
-| Channels (broadcast) | ✅ |
-| Invite links | ✅ |
-| File attachments (S3/MinIO) | ✅ |
-| Scoped search for accessible spaces | ✅ |
-| User blocking & reporting | ✅ |
-| Admin controls (group/channel) | ✅ |
-| Privacy settings | ✅ |
-| WebSocket real-time updates | ✅ |
-| Dark/light mode | ✅ |
-| Multi-device session management | ✅ |
-| Rate limiting & abuse prevention | ✅ |
-| Public invite preview pages | ✅ |
+Legacy prototype paths retained temporarily:
 
----
+- `apps/api`: Express/Postgres prototype, now legacy
+- `infra/docker-compose.yml`: legacy centralized stack
+- `services/` and several older Rust scaffolds: not part of the active beta runtime
 
-## Launch Targets
+## Beta Product Scope
 
-- Windows: `.exe` and `.msi`
-- Ubuntu / Debian: `.deb` and AppImage
-- Android: `.apk` for direct install and `.aab` for store submission
-- iPhone: `.ipa` for TestFlight and App Store review
-- macOS: signed and notarized `.dmg` or `.pkg`
+Launch beta includes:
 
-Current launch path:
+- invite-only signup
+- email magic-link auth
+- optional passkey enrollment later
+- per-device key registration
+- E2EE direct messaging
+- E2EE small groups capped at 12 members
+- encrypted attachments
+- local search on device
+- blocking and disclosure-based reporting
+- 2-device support
 
-- `apps/web` is the main product UI and admin surface
-- `apps/desktop` provides a Tauri v2 native shell for Windows, Linux, macOS, Android, and iPhone packaging
-- The native shell opens the deployed PrivateMesh web app for MVP packaging rather than shipping a separate native client yet
+Deferred beyond first beta:
 
-More detail: [`docs/launch-targets.md`](docs/launch-targets.md)
+- public channels
+- public discovery
+- phone-number identity
+- iPhone and macOS parity
+- voice/video calling
+- server-side search over private content
 
----
+## Architecture Snapshot
 
-## Tech Stack
+```mermaid
+graph TB
+    subgraph Clients["Client Layer"]
+        MOBILE["Expo Android Client"]
+        DESKTOP["Tauri Desktop Client"]
+        WEB["Next.js Web Companion"]
+    end
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | Next.js 15 + React 18 + TypeScript |
-| Native packaging | Tauri v2 shell |
-| Backend | Node.js + Express + TypeScript |
-| Database | PostgreSQL 16 |
-| Cache / PubSub | Redis 7 |
-| Object storage | S3-compatible (MinIO for local dev) |
-| Real-time | WebSocket (`ws` + Redis fan-out) |
-| Styling | Tailwind CSS |
-| Additional scaffolding | Rust workspace for future services and native integration |
+    subgraph Core["Shared Secure Core"]
+        RUSTCORE["crates/core\nLocal-first sync + state"]
+        PROTOCOL["packages/protocol + crates/relay-protocol"]
+    end
 
----
+    subgraph Relay["Minimal Hosted Relay"]
+        WORKER["Cloudflare Worker API"]
+        MAILBOX["DeviceMailboxDO"]
+        GROUPDO["GroupCoordinatorDO"]
+        LIMITDO["RateLimitDO"]
+        D1[("D1 metadata")]
+        R2[("R2 encrypted attachments")]
+        QUEUES["Queues: email / push / cleanup"]
+    end
 
-## Repository Structure
-
-```text
-privatemesh/
-├── apps/
-│   ├── api/                  # Current Express API + WebSocket gateway
-│   ├── web/                  # Current Next.js frontend
-│   └── desktop/              # Tauri v2 shell for native packaging
-├── packages/
-│   ├── shared/               # Current shared TypeScript types
-│   ├── api-types/            # Additional API type scaffolding
-│   ├── client-sdk/           # SDK scaffolding
-│   ├── config/               # Shared config scaffolding
-│   └── ui/                   # UI token scaffolding
-├── services/                 # Rust service scaffolding
-├── crates/                   # Rust shared crates
-├── infra/
-│   ├── docker-compose.yml    # Current local stack
-│   └── compose/              # Additional infra scaffold
-├── docs/
-│   ├── architecture.md
-│   ├── launch-targets.md
-│   ├── architecture/
-│   ├── api/
-│   ├── product/
-│   └── security/
-├── Cargo.toml
-├── package.json
-├── pnpm-workspace.yaml
-├── turbo.json
-└── .env.example
+    MOBILE --> RUSTCORE
+    DESKTOP --> RUSTCORE
+    WEB --> WORKER
+    RUSTCORE --> PROTOCOL
+    WORKER --> MAILBOX
+    WORKER --> GROUPDO
+    WORKER --> LIMITDO
+    WORKER --> D1
+    WORKER --> R2
+    WORKER --> QUEUES
 ```
 
----
+## Auth Model
 
-## Quick Start
+- Email is private and used only for auth and recovery.
+- New beta accounts require an invite token.
+- `POST /v1/auth/start` creates a 10-minute magic-link challenge.
+- `POST /v1/auth/complete` consumes the link and issues device-bound session tokens.
+- Passkeys are scaffolded in the protocol but not yet fully wired in the relay runtime.
+- Recovery after total device loss re-establishes device identity and should emit a safety-number change event.
 
-### Docker
+## Relay Model
 
-```bash
-git clone https://github.com/jhwodchuck/PrivateMesh.git
-cd PrivateMesh
-cp .env.example .env
-docker compose -f infra/docker-compose.yml up -d
-docker compose -f infra/docker-compose.yml exec api npm run migrate
-```
+The relay stores:
 
-Open `http://localhost:3000`.
+- encrypted attachment blobs
+- ciphertext message envelopes until ack or expiry
+- public key bundles
+- account/session/device metadata
+- invite and group membership metadata
 
-The alternate scaffold in `infra/compose/docker-compose.yml` is future-facing Rust-service infrastructure and is not the primary local app stack yet.
+The relay does not aim to store:
 
-### Local Development
+- decrypted DM or group history
+- server-side search indexes for private messages
+- public contact discovery graphs
+
+## Local Development
+
+### Web companion + relay
 
 ```bash
 npm install
-cp apps/api/.env.example apps/api/.env
-cp apps/web/.env.example apps/web/.env.local
 cp .env.example .env
-cd apps/api && npm run migrate
-cd ../..
+cp apps/web/.env.example apps/web/.env.local
+npm run build --workspace=packages/protocol
 npm run dev
 ```
 
----
+### Relay migrations
 
-## Native Shell Commands
+```bash
+cd apps/relay
+npx wrangler d1 migrations apply emberchamber-relay-dev --local
+```
+
+### Desktop shell
 
 ```bash
 npm run dev:desktop
-npm run doctor:desktop
-npm run build:desktop
-npm run build:android
-npm run build:ios
 ```
 
-Set `PRIVATEMESH_APP_URL` before native release builds so packaged apps open the correct deployed environment.
+### Android scaffold
 
----
+```bash
+npm run dev:mobile
+```
 
-## Current Trust Boundaries
+## Verification Targets
 
-- Direct messages in this starter are private by account access controls, but they are **not yet full Signal-style end-to-end encrypted chats**
-- Groups and channels are server-managed community spaces with clear admin controls
-- Invite links are the primary path into communities; public discovery is intentionally reduced
-- Privacy controls decide who can find you and who can open a new DM with you
+The new beta scaffold should verify cleanly with:
 
----
-
-## Verification
-
-The current local upgrade has been verified with:
-
+- `npm run build --workspace=packages/protocol`
+- `npm run build --workspace=apps/relay`
 - `npm run build --workspace=apps/web`
-- `npm test --workspace=apps/api`
+- `npm test --workspace=apps/relay`
+- `cargo test -p emberchamber-core -p emberchamber-relay-protocol`
 - `cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml`
-
----
 
 ## Documentation
 
 - Architecture: [`docs/architecture.md`](docs/architecture.md)
 - Launch targets: [`docs/launch-targets.md`](docs/launch-targets.md)
-- API starter spec: [`docs/openapi.yaml`](docs/openapi.yaml)
-- Additional future-facing docs: [`docs/architecture/overview.md`](docs/architecture/overview.md)
+- Legacy prototype API spec: [`docs/openapi.yaml`](docs/openapi.yaml)

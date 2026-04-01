@@ -1,0 +1,127 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "emberchamber-relay",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-01-10",
+  "workers_dev": true,
+  "vars": {
+    "EMBERCHAMBER_RELAY_PUBLIC_URL": "http://127.0.0.1:8787",
+    "EMBERCHAMBER_EMAIL_PROVIDER": "log",
+    "EMBERCHAMBER_EMAIL_FROM": "noreply@emberchamber.local",
+    "EMBERCHAMBER_DEV_INVITE_TOKEN": "dev-beta-invite"
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "DEVICE_MAILBOX",
+        "class_name": "DeviceMailboxDO"
+      },
+      {
+        "name": "GROUP_COORDINATOR",
+        "class_name": "GroupCoordinatorDO"
+      },
+      {
+        "name": "RATE_LIMITER",
+        "class_name": "RateLimitDO"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["DeviceMailboxDO", "GroupCoordinatorDO", "RateLimitDO"]
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "emberchamber-relay-dev",
+      "database_id": "local-dev"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "ATTACHMENTS",
+      "bucket_name": "emberchamber-beta-attachments-dev"
+    }
+  ],
+  "queues": {
+    "producers": [
+      {
+        "binding": "EMAIL_QUEUE",
+        "queue": "emberchamber-email"
+      },
+      {
+        "binding": "PUSH_QUEUE",
+        "queue": "emberchamber-push"
+      },
+      {
+        "binding": "CLEANUP_QUEUE",
+        "queue": "emberchamber-cleanup"
+      }
+    ]
+  },
+  "env": {
+    "production": {
+      "name": "emberchamber-relay",
+      "workers_dev": true,
+      "routes": [
+        {
+          "pattern": "relay.emberchamber.com",
+          "custom_domain": true
+        }
+      ],
+      "vars": {
+        "EMBERCHAMBER_RELAY_PUBLIC_URL": "https://relay.emberchamber.com",
+        "EMBERCHAMBER_EMAIL_PROVIDER": "queue",
+        "EMBERCHAMBER_EMAIL_FROM": "noreply@emberchamber.com",
+        "EMBERCHAMBER_DEV_INVITE_TOKEN": ""
+      },
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "DEVICE_MAILBOX",
+            "class_name": "DeviceMailboxDO"
+          },
+          {
+            "name": "GROUP_COORDINATOR",
+            "class_name": "GroupCoordinatorDO"
+          },
+          {
+            "name": "RATE_LIMITER",
+            "class_name": "RateLimitDO"
+          }
+        ]
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "emberchamber-relay-prod-db",
+          "database_id": "be753d5c-92be-44e4-ba59-2c6280c29c13"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "ATTACHMENTS",
+          "bucket_name": "emberchamber-beta-attachments-prod"
+        }
+      ],
+      "queues": {
+        "producers": [
+          {
+            "binding": "EMAIL_QUEUE",
+            "queue": "emberchamber-email-prod"
+          },
+          {
+            "binding": "PUSH_QUEUE",
+            "queue": "emberchamber-push-prod"
+          },
+          {
+            "binding": "CLEANUP_QUEUE",
+            "queue": "emberchamber-cleanup-prod"
+          }
+        ]
+      }
+    }
+  }
+}

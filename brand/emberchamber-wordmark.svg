@@ -1,0 +1,16 @@
+<svg width="920" height="180" viewBox="0 0 920 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="wordmark" x1="0" y1="24" x2="920" y2="150" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5A2C23"/>
+      <stop offset="0.4" stop-color="#B14531"/>
+      <stop offset="1" stop-color="#1A1114"/>
+    </linearGradient>
+  </defs>
+  <rect width="920" height="180" rx="28" fill="#FFF9F4"/>
+  <text x="54" y="108" fill="url(#wordmark)" font-family="Georgia, 'Times New Roman', serif" font-size="84" font-weight="700" letter-spacing="-1.6">
+    EmberChamber
+  </text>
+  <text x="56" y="142" fill="#8B6257" font-family="'IBM Plex Sans', 'Segoe UI', sans-serif" font-size="20" letter-spacing="4.1">
+    PRIVATE MESSAGING FOR TRUSTED CIRCLES
+  </text>
+</svg>

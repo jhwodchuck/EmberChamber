@@ -4,7 +4,7 @@
   "roots": ["<rootDir>/src"],
   "testMatch": ["**/*.test.ts"],
   "moduleNameMapper": {
-    "^@privatemesh/shared$": "<rootDir>/../../packages/shared/src/index.ts"
+    "^@emberchamber/shared$": "<rootDir>/../../packages/shared/src/index.ts"
   },
   "collectCoverageFrom": [
     "src/**/*.ts",

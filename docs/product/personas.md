@@ -1,42 +1,43 @@
-# Product — Personas and Core Flows
+# Product — Beta Personas and Flows
 
 ## Personas
 
-| Persona | Description |
-|---------|-------------|
-| **Community owner / moderator** | Creates and manages a private group or channel; configures invite links, roles, and anti-raid controls. |
-| **Privacy-conscious member** | Joins via invite, uses E2EE DMs, configures read receipts and presence preferences. |
-| **Creator / broadcaster** | Runs a channel for announcements; wants reach within the community without public discovery. |
-| **Independent operator** | Runs a PrivateMesh node for their organisation; enrolls with the CA and manages their own infrastructure. |
-| **Trust-and-safety reviewer** | Reviews flagged content in hosted spaces under role-gated, audited tools. |
+| Persona | What they need |
+| --- | --- |
+| **Trusted-circle organizer** | Runs a small private group, shares invite tokens, removes abusive members, keeps the circle closed. |
+| **Privacy-first member** | Wants encrypted DMs and groups without exposing phone number, Google identity, or public profile. |
+| **Desktop-heavy operator** | Uses Windows or Ubuntu as a daily client and wants the same trust model as mobile. |
+| **Android-first early adopter** | Uses the primary beta client, expects reliable offline delivery and sane recovery. |
+| **Safety reviewer** | Handles disclosure-based abuse reports without routine access to private message content. |
 
-## Core flows
+## Core beta flows
 
-### Onboarding
-1. Choose username (globally unique via `directory-ca`).
-2. Authenticate via passkey or email magic link.
-3. Set display name, avatar, device label.
-4. Configure privacy defaults (read receipts, presence, DM-from-strangers).
-5. Optional: enroll TOTP.
+### Beta onboarding
+1. Receive a beta invite token.
+2. Start email magic-link auth.
+3. Complete the magic link on Android or desktop.
+4. Generate device keys locally and upload the public bundle.
+5. Optionally enroll a passkey later.
 
 ### DM flow
-1. Resolve global username → home operator via directory.
-2. Fetch recipient device keys.
-3. Send per-device encrypted envelopes.
-4. Sync across sender's own devices.
-5. Optional: report with explicitly selected message excerpts.
+1. Resolve a contact card or deep-link invite.
+2. Open or reuse a DM conversation.
+3. Encrypt one envelope per recipient device.
+4. Relay queues ciphertext until the recipient acks it.
+5. Message history remains local on each device.
 
-### Group / channel flow
-1. Create community hosted on one operator.
-2. Generate invite link; members join.
-3. Post messages; moderate with owner/admin/mod tools.
-4. Search via PostgreSQL FTS.
-5. Export audit trail.
+### Small-group flow
+1. Create a group capped at 12 members.
+2. Mint group invites from an owner/admin device.
+3. Send pairwise encrypted envelopes to member devices.
+4. Rotate conversation epoch when membership changes.
+5. Keep reports disclosure-based rather than routinely inspect content.
 
-## MVP out of scope
-- Public directory / discovery
-- Voice / video calls
-- Open (unenrolled) federation
-- Phone-number social graph
-- Anonymous accounts
-- Small-group E2EE (groups stay server-managed in MVP)
+## Beta out of scope
+
+- public channels
+- public discovery
+- phone-number social graph
+- large community moderation stacks
+- voice and video calling
+- web as a primary chat runtime
