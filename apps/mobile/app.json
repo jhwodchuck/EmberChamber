@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "EmberChamber",
+    "slug": "emberchamber-mobile",
+    "scheme": "emberchamber",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "icon": "./assets/icon.png",
+    "android": {
+      "package": "com.emberchamber.mobile",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#140d10"
+      }
+    },
+    "plugins": [
+      [
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": true,
+          "faceIDPermission": "Allow EmberChamber to access your Face ID for passkey-protected sessions."
+        }
+      ],
+      [
+        "expo-sqlite",
+        {
+          "enableFTS": true
+        }
+      ]
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "config": {
+        "usesNonExemptEncryption": false
+      }
+    },
+    "extra": {
+      "relayUrl": "http://10.0.2.2:8787"
+    }
+  }
+}

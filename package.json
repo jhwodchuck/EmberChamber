@@ -1,5 +1,5 @@
 {
-  "name": "privatemesh",
+  "name": "emberchamber",
   "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@10.33.0",
@@ -8,17 +8,21 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev --workspace=apps/api\" \"npm run dev --workspace=apps/web\"",
-    "build": "npm run build --workspace=packages/shared && npm run build --workspace=apps/api && npm run build --workspace=apps/web",
+    "dev": "concurrently \"npm run dev --workspace=apps/relay\" \"npm run dev --workspace=apps/web\"",
+    "dev:legacy": "concurrently \"npm run dev --workspace=apps/api\" \"npm run dev --workspace=apps/web\"",
+    "build": "npm run build --workspace=packages/shared && npm run build --workspace=packages/protocol && npm run build --workspace=apps/relay && npm run build --workspace=apps/web",
     "build:web": "npm run build --workspace=apps/web",
+    "build:relay": "npm run build --workspace=apps/relay",
     "dev:desktop": "npm run dev --workspace=apps/desktop",
     "doctor:desktop": "npm run doctor --workspace=apps/desktop",
     "build:desktop": "npm run build --workspace=apps/desktop",
-    "build:android": "npm run build:android --workspace=apps/desktop",
+    "dev:mobile": "npm run dev --workspace=apps/mobile",
+    "build:android": "npm run build:android --workspace=apps/mobile",
     "build:ios": "npm run build:ios --workspace=apps/desktop",
-    "test": "npm run test --workspace=apps/api",
-    "lint": "npm run lint --workspace=apps/api && npm run lint --workspace=apps/web",
-    "type-check": "npm run type-check --workspace=apps/api && npm run type-check --workspace=apps/web && npm run build --workspace=packages/shared",
+    "test": "npm run test --workspace=apps/relay && cargo test -p emberchamber-core -p emberchamber-relay-protocol",
+    "test:legacy": "npm run test --workspace=apps/api",
+    "lint": "npm run lint --workspace=apps/web && npm run lint --workspace=apps/relay",
+    "type-check": "npm run type-check --workspace=packages/protocol && npm run type-check --workspace=apps/relay && npm run type-check --workspace=apps/web && npm run build --workspace=packages/shared && cargo check -p emberchamber-core -p emberchamber-relay-protocol",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\" --ignore-path .gitignore"
   },
   "devDependencies": {

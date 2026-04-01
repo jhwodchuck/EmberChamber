@@ -1,12 +1,12 @@
 [package]
-name = "privatemesh-relay-protocol"
+name = "emberchamber-relay-protocol"
 description = "Relay envelope types, signing, and federation protocol definitions"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 
 [dependencies]
-privatemesh-domain = { workspace = true }
+emberchamber-domain = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 uuid = { workspace = true }

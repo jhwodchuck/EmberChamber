@@ -1,6 +1,6 @@
 // ─── Identifiers ────────────────────────────────────────────────────────────
 
-/** Opaque UUID string for a PrivateMesh user. */
+/** Opaque UUID string for a EmberChamber user. */
 export type UserId = string;
 /** Opaque UUID string for a device belonging to a user. */
 export type DeviceId = string;
@@ -109,7 +109,7 @@ export interface ReportSubmission {
 
 // ─── Federation (relay) ──────────────────────────────────────────────────────
 
-/** Node certificate issued by the PrivateMesh CA to an operator. */
+/** Node certificate issued by the EmberChamber CA to an operator. */
 export interface NodeCertificate {
   nodeId: NodeId;
   domain: string;

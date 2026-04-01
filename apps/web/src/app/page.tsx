@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export default function HomePage() {
@@ -7,21 +8,27 @@ export default function HomePage() {
       <header className="border-b border-[var(--border)] px-6 py-4">
         <nav className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center">
-              <svg viewBox="0 0 24 24" fill="white" className="w-5 h-5">
-                <path d="M12 2C6.48 2 2 6.48 2 12c0 5.52 4.48 10 10 10s10-4.48 10-10c0-5.52-4.48-10-10-10zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" />
-              </svg>
-            </div>
-            <span className="font-bold text-lg text-[var(--text-primary)]">
-              PrivateMesh
-            </span>
+            <Image
+              src="/brand/emberchamber-mark.svg"
+              alt="EmberChamber mark"
+              width={36}
+              height={36}
+              priority
+            />
+            <Image
+              src="/brand/emberchamber-wordmark.svg"
+              alt="EmberChamber"
+              width={240}
+              height={47}
+              className="h-auto w-[184px] sm:w-[220px]"
+            />
           </div>
           <div className="flex items-center gap-3">
             <Link href="/login" className="btn-ghost">
-              Sign in
+              Request magic link
             </Link>
             <Link href="/register" className="btn-primary">
-              Get started
+              Join beta
             </Link>
           </div>
         </nav>
@@ -30,31 +37,39 @@ export default function HomePage() {
       {/* Hero */}
       <main className="flex-1">
         <section className="max-w-5xl mx-auto px-6 py-20 text-center">
+          <Image
+            src="/brand/emberchamber-lockup.svg"
+            alt="EmberChamber lockup"
+            width={720}
+            height={216}
+            priority
+            className="mx-auto mb-10 h-auto w-full max-w-[620px]"
+          />
           <div className="inline-flex items-center gap-2 rounded-full bg-brand-500/10 px-4 py-1.5 text-sm text-brand-500 mb-8">
             <span className="w-2 h-2 rounded-full bg-brand-500 animate-pulse" />
-            Privacy-first messaging
+            Closed beta for trusted circles
           </div>
 
-          <h1 className="text-5xl sm:text-6xl font-bold text-[var(--text-primary)] mb-6 leading-tight">
-            Your conversations,{" "}
-            <span className="text-brand-500">your control</span>
+          <h1 className="text-4xl sm:text-5xl font-bold text-[var(--text-primary)] mb-6 leading-tight">
+            Encrypted messaging with a{" "}
+            <span className="text-brand-500">minimal relay</span>
           </h1>
 
           <p className="text-xl text-[var(--text-secondary)] mb-10 max-w-2xl mx-auto">
-            PrivateMesh gives communities more control over their communications.
-            Built for user-controlled, resilient messaging with minimal
-            centralized visibility.
+            EmberChamber is shifting from a centralized starter into an invite-only beta for
+            Android, Windows, and Ubuntu. Accounts bootstrap with private email magic links,
+            while message history stays on device and the relay stores ciphertext only.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/register" className="btn-primary text-base px-6 py-3">
-              Create your account
+              Request beta access
             </Link>
             <Link
               href="/login"
               className="btn-ghost border border-[var(--border)] text-base px-6 py-3"
             >
-              Sign in
+              Sign in with email
             </Link>
           </div>
         </section>
@@ -65,39 +80,39 @@ export default function HomePage() {
             {[
               {
                 icon: "🔒",
-                title: "Private Direct Messaging",
+                title: "True E2EE DMs",
                 description:
-                  "Direct conversations with user-controlled privacy settings today, with secure DM protocol work staged separately.",
+                  "Per-device encrypted envelopes with local-first history and relay-assisted offline delivery.",
               },
               {
                 icon: "👥",
-                title: "Group Chat & Communities",
+                title: "Small Invite-Only Groups",
                 description:
-                  "Create groups and channels for your communities, with invite-first access and clear admin boundaries.",
+                  "Private groups capped for trusted circles, with membership epochs and QR or deep-link invites.",
               },
               {
                 icon: "🛡️",
-                title: "User-Controlled Privacy",
+                title: "Private Bootstrap Identity",
                 description:
-                  "Granular privacy settings. Control who can message you, see your activity, and find your profile.",
+                  "Email is used only for auth and recovery. No phone numbers, no Google auth, and no public discovery.",
               },
               {
                 icon: "📡",
-                title: "Resilient Architecture",
+                title: "Minimal Relay Control Plane",
                 description:
-                  "Built for reliability. Designed for self-hosting and future federation support.",
+                  "Cloudflare Workers, Durable Objects, D1, and R2 handle signaling, mailbox sync, and encrypted attachments.",
               },
               {
                 icon: "⚡",
-                title: "Real-Time Messaging",
+                title: "Android-First Beta",
                 description:
-                  "Instant message delivery via WebSocket. File sharing, voice notes, and reactions.",
+                  "The first shipping clients are Android plus Windows and Ubuntu desktop builds. iPhone and macOS wait.",
               },
               {
                 icon: "🔍",
-                title: "Scoped Search",
+                title: "Local Search Only",
                 description:
-                  "Search only the people and spaces you can already access instead of browsing a public network.",
+                  "Search runs on your device against decrypted local history. The relay does not index your messages.",
               },
             ].map((feature) => (
               <div key={feature.title} className="card">
@@ -117,13 +132,12 @@ export default function HomePage() {
         <section className="border-t border-[var(--border)]">
           <div className="max-w-5xl mx-auto px-6 py-12 text-center">
             <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">
-              Privacy-first. Not lawlessness.
+              Private by design. Precise about tradeoffs.
             </h2>
             <p className="text-[var(--text-secondary)] max-w-2xl mx-auto">
-              PrivateMesh is built to reduce unnecessary centralized visibility
-              while enforcing clear boundaries against illegal content, malware,
-              extortion, CSAM, and platform abuse. Product language should stay
-              precise about current trust boundaries rather than overclaiming.
+              EmberChamber is not promising perfect anonymity or pure peer-to-peer delivery. The
+              beta uses a small hosted relay for reliability on phones and desktops, while keeping
+              encrypted content out of routine server visibility.
             </p>
           </div>
         </section>
@@ -132,13 +146,13 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="border-t border-[var(--border)] px-6 py-6">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-[var(--text-secondary)]">
-          <p>© {new Date().getFullYear()} PrivateMesh. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} EmberChamber. All rights reserved.</p>
           <div className="flex gap-4">
             <a href="#" className="hover:text-[var(--text-primary)]">
               Privacy Policy
             </a>
             <a href="#" className="hover:text-[var(--text-primary)]">
-              Terms of Service
+              Beta Terms
             </a>
             <a href="#" className="hover:text-[var(--text-primary)]">
               Trust & Safety

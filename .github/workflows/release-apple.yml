@@ -1,89 +1,13 @@
-name: Release - macOS and iPhone
+name: Release - Apple Deferred
 
 on:
-  push:
-    tags: ["v*"]
   workflow_dispatch:
 
-concurrency:
-  group: release-apple-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  macos:
-    name: Build macOS .dmg
-    runs-on: macos-14
-    env:
-      PRIVATEMESH_APP_URL: ${{ vars.PRIVATEMESH_APP_URL }}
+  deferred:
+    name: iPhone and macOS are phase 2
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-apple-darwin,x86_64-apple-darwin
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Verify web build
-        run: npm run build --workspace=apps/web
-
-      - name: Build macOS shell
-        run: npm run build --workspace=apps/desktop -- --target universal-apple-darwin
-
-      - name: Upload macOS artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: privatemesh-macos
-          path: apps/desktop/src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
-          retention-days: 30
-
-  ios:
-    name: Build iPhone .ipa
-    runs-on: macos-14
-    env:
-      PRIVATEMESH_APP_URL: ${{ vars.PRIVATEMESH_APP_URL }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-apple-ios,aarch64-apple-ios-sim
-
-      - uses: actions/setup-java@v4
-        with:
-          java-version: 17
-          distribution: temurin
-
-      - name: Select Xcode version
-        run: sudo xcode-select -s /Applications/Xcode_16.app
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Verify web build
-        run: npm run build --workspace=apps/web
-
-      - name: Initialize iOS project
-        run: npm run ios:init --workspace=apps/desktop
-        continue-on-error: true
-
-      - name: Build iPhone shell
-        run: npm run build:ios --workspace=apps/desktop
-
-      - name: Upload iPhone artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: privatemesh-ios
-          path: apps/desktop/src-tauri/gen/apple/build/arm64/*.ipa
-          retention-days: 30
+      - run: |
+          echo "EmberChamber beta launch targets are Android, Windows, and Ubuntu."
+          echo "Apple packaging is intentionally deferred until the Android and desktop beta is stable."

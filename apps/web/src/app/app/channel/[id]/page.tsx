@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { channelsApi } from "@/lib/api";
 import { useAuthStore } from "@/lib/store";
 import { useWebSocket } from "@/hooks/useWebSocket";
-import { Avatar } from "@/app/app/layout";
+import { Avatar } from "@/components/avatar";
 import { formatDistanceToNow } from "date-fns";
 import toast from "react-hot-toast";
 import { clsx } from "clsx";

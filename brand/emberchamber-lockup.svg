@@ -1,0 +1,45 @@
+<svg width="1200" height="360" viewBox="0 0 1200 360" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="lockup-ember" x1="72" y1="46" x2="272" y2="282" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#23151A"/>
+      <stop offset="1" stop-color="#120E12"/>
+    </linearGradient>
+    <linearGradient id="lockup-text" x1="390" y1="108" x2="960" y2="252" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#41221D"/>
+      <stop offset="1" stop-color="#140E11"/>
+    </linearGradient>
+    <linearGradient id="lockup-accent" x1="126" y1="82" x2="212" y2="228" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFD08D"/>
+      <stop offset="0.4" stop-color="#FF9252"/>
+      <stop offset="1" stop-color="#D5472E"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="360" rx="34" fill="#FFF9F4"/>
+  <g transform="translate(42 40)">
+    <rect width="280" height="280" rx="86" fill="url(#lockup-ember)"/>
+    <path
+      d="M140 45C184.735 45 221 81.2654 221 126V171C221 224.741 183.364 255.757 140 258C96.6358 255.757 59 224.741 59 171V126C59 81.2654 95.2654 45 140 45Z"
+      stroke="url(#lockup-accent)"
+      stroke-width="11"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M139.563 92C153.196 108.543 160.882 123.868 160.366 137.982C170.635 132.913 179.986 134.61 188.418 143.072C197.658 152.35 202.278 163.857 202.278 177.595C202.278 192.316 197.275 204.882 187.268 215.294C177.314 225.654 164.898 231.37 150.019 232.442C133.658 233.615 119.559 229.126 107.72 218.974C95.9332 208.77 90.04 195.402 90.04 178.868C90.04 168.272 92.4519 158.861 97.2758 150.636C102.1 142.358 109.064 135.551 118.166 130.216C117.537 121.805 118.953 114.295 122.413 107.687C125.926 101.078 131.643 95.8498 139.563 92Z"
+      fill="url(#lockup-accent)"
+    />
+  </g>
+
+  <g transform="translate(376 100)">
+    <path d="M0 0H580" stroke="#F1DDD2"/>
+    <text x="0" y="82" fill="url(#lockup-text)" font-family="Georgia, 'Times New Roman', serif" font-size="82" font-weight="700" letter-spacing="-1.4">
+      EmberChamber
+    </text>
+    <text x="4" y="132" fill="#7E5A50" font-family="'IBM Plex Sans', 'Segoe UI', sans-serif" font-size="22" letter-spacing="3.8">
+      PRIVATE, INVITE-ONLY, RELAY-ASSISTED MESSAGING
+    </text>
+    <text x="4" y="196" fill="#A46B57" font-family="'IBM Plex Sans', 'Segoe UI', sans-serif" font-size="20">
+      Android-first beta with local-first history and minimal centralized visibility.
+    </text>
+  </g>
+</svg>

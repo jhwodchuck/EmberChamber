@@ -1,235 +1,162 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import Image from "next/image";
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { authApi } from "@/lib/api";
-import { useAuthStore } from "@/lib/store";
 import toast from "react-hot-toast";
+import { startMagicLink } from "@/lib/relay";
 
-function RegisterPageContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const { login, isAuthenticated } = useAuthStore();
-  const [form, setForm] = useState({
-    username: "",
-    displayName: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  });
-  const [isLoading, setIsLoading] = useState(false);
-  const nextPath = searchParams?.get("next");
-  const redirectPath =
-    nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//")
-      ? nextPath
-      : "/app";
+const authBootstrapEnabled =
+  process.env.NEXT_PUBLIC_EMBERCHAMBER_AUTH_BOOTSTRAP_ENABLED === "true";
 
-  useEffect(() => {
-    if (isAuthenticated) router.replace(redirectPath);
-  }, [isAuthenticated, redirectPath, router]);
+export default function RegisterPage() {
+  const [email, setEmail] = useState("");
+  const [inviteToken, setInviteToken] = useState("");
+  const [deviceLabel, setDeviceLabel] = useState("Beta primary device");
+  const [challenge, setChallenge] = useState<{
+    expiresAt: string;
+    debugCompletionToken?: string;
+  } | null>(null);
+  const [isPending, startTransition] = useTransition();
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-
-    if (form.password !== form.confirmPassword) {
-      toast.error("Passwords do not match");
+  function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!authBootstrapEnabled) {
+      toast.error("Beta onboarding is not enabled on this deployment yet.");
       return;
     }
 
-    if (form.password.length < 8) {
-      toast.error("Password must be at least 8 characters");
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const result = await authApi.register({
-        username: form.username,
-        displayName: form.displayName || form.username,
-        email: form.email || undefined,
-        password: form.password,
-      });
-
-      login(
-        {
-          id: result.user.id,
-          username: result.user.username,
-          displayName: result.user.displayName,
-          email: (result.user as { email?: string }).email ?? "",
-        },
-        result.accessToken,
-        result.refreshToken
-      );
-      toast.success("Welcome to PrivateMesh!");
-      router.push(redirectPath);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Registration failed";
-      toast.error(message);
-    } finally {
-      setIsLoading(false);
-    }
+    startTransition(async () => {
+      try {
+        const nextChallenge = await startMagicLink({
+          email,
+          inviteToken,
+          deviceLabel,
+        });
+        setChallenge(nextChallenge);
+        toast.success("Beta link queued");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Unable to start beta onboarding");
+      }
+    });
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-[var(--bg-primary)]">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 mb-3">
-            <div className="w-10 h-10 rounded-xl bg-brand-500 flex items-center justify-center">
-              <svg viewBox="0 0 24 24" fill="white" className="w-6 h-6">
-                <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
-              </svg>
-            </div>
-            <span className="text-2xl font-bold text-[var(--text-primary)]">
-              PrivateMesh
-            </span>
+          <div className="inline-flex flex-col items-center gap-3 mb-3">
+            <Image
+              src="/brand/emberchamber-mark.svg"
+              alt="EmberChamber"
+              width={72}
+              height={72}
+              priority
+            />
+            <Image
+              src="/brand/emberchamber-wordmark.svg"
+              alt="EmberChamber"
+              width={280}
+              height={54}
+              className="h-auto w-[220px]"
+            />
           </div>
-          <p className="text-[var(--text-secondary)]">
-            Create your account
-          </p>
+          <p className="text-[var(--text-secondary)]">Join the invite-only beta</p>
         </div>
 
-        <div className="card">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1.5">
-                Username <span className="text-red-400">*</span>
-              </label>
-              <input
-                type="text"
-                name="username"
-                value={form.username}
-                onChange={handleChange}
-                className="input"
-                placeholder="your_username"
-                required
-                pattern="[a-zA-Z0-9_-]+"
-                minLength={3}
-                maxLength={64}
-                autoFocus
-              />
-              <p className="text-xs text-[var(--text-secondary)] mt-1">
-                3–64 chars, letters, numbers, _ and - only
+        <div className="card space-y-5">
+          {!authBootstrapEnabled ? (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-[var(--text-secondary)]">
+              <p className="font-medium text-[var(--text-primary)]">Closed beta onboarding is not live here yet</p>
+              <p className="mt-1">
+                The public site is up, but invite-driven email bootstrap is waiting on a production mail channel before it is turned on.
               </p>
             </div>
+          ) : null}
 
+          <form onSubmit={submit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-[var(--text-primary)] mb-1.5">
-                Display Name
-              </label>
-              <input
-                type="text"
-                name="displayName"
-                value={form.displayName}
-                onChange={handleChange}
-                className="input"
-                placeholder="Your Name"
-                maxLength={128}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1.5">
-                Email (optional)
+                Email
               </label>
               <input
                 type="email"
-                name="email"
-                value={form.email}
-                onChange={handleChange}
                 className="input"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
                 placeholder="you@example.com"
+                required
+                autoComplete="email"
+                autoFocus
               />
             </div>
-
             <div>
               <label className="block text-sm font-medium text-[var(--text-primary)] mb-1.5">
-                Password <span className="text-red-400">*</span>
+                Beta invite token
               </label>
               <input
-                type="password"
-                name="password"
-                value={form.password}
-                onChange={handleChange}
+                type="text"
                 className="input"
-                placeholder="••••••••"
+                value={inviteToken}
+                onChange={(event) => setInviteToken(event.target.value)}
+                placeholder="Paste your invite token"
                 required
-                minLength={8}
-                autoComplete="new-password"
               />
             </div>
-
             <div>
               <label className="block text-sm font-medium text-[var(--text-primary)] mb-1.5">
-                Confirm Password <span className="text-red-400">*</span>
+                First device label
               </label>
               <input
-                type="password"
-                name="confirmPassword"
-                value={form.confirmPassword}
-                onChange={handleChange}
+                type="text"
                 className="input"
-                placeholder="••••••••"
+                value={deviceLabel}
+                onChange={(event) => setDeviceLabel(event.target.value)}
+                placeholder="Android beta phone"
                 required
-                autoComplete="new-password"
               />
             </div>
 
             <button
               type="submit"
               className="btn-primary w-full py-2.5"
-              disabled={isLoading}
+              disabled={isPending || !authBootstrapEnabled}
             >
-              {isLoading ? "Creating account..." : "Create account"}
+              {authBootstrapEnabled
+                ? isPending
+                  ? "Queuing magic link..."
+                  : "Start beta onboarding"
+                : "Invite bootstrap coming soon"}
             </button>
           </form>
+
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-4 text-sm text-[var(--text-secondary)]">
+            <p className="font-medium text-[var(--text-primary)]">Beta defaults</p>
+            <p className="mt-1">DMs and small groups only. No public usernames, no discovery, and no phone numbers.</p>
+          </div>
+
+          {challenge ? (
+            <div className="rounded-xl border border-brand-500/20 bg-brand-500/5 p-4 text-sm">
+              <p className="font-medium text-[var(--text-primary)]">Almost there</p>
+              <p className="mt-1 text-[var(--text-secondary)]">
+                Your beta magic link expires at {new Date(challenge.expiresAt).toLocaleString()}.
+              </p>
+              {challenge.debugCompletionToken ? (
+                <p className="mt-3 font-mono text-xs text-brand-500 break-all">
+                  Dev token: {challenge.debugCompletionToken}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
-        <p className="text-xs text-center text-[var(--text-secondary)] mt-4">
-          By creating an account, you agree to our{" "}
-          <a href="#" className="text-brand-500 hover:underline">
-            Terms of Service
-          </a>{" "}
-          and{" "}
-          <a href="#" className="text-brand-500 hover:underline">
-            Privacy Policy
-          </a>
-          .
-        </p>
-
-        <p className="text-center text-sm text-[var(--text-secondary)] mt-4">
-          Already have an account?{" "}
-          <Link
-            href={
-              redirectPath === "/app"
-                ? "/login"
-                : `/login?next=${encodeURIComponent(redirectPath)}`
-            }
-            className="text-brand-500 hover:underline font-medium"
-          >
-            Sign in
+        <p className="text-center text-sm text-[var(--text-secondary)] mt-6">
+          Already have an invite?{" "}
+          <Link href="/login" className="text-brand-500 hover:underline font-medium">
+            Request a sign-in link
           </Link>
         </p>
       </div>
     </div>
-  );
-}
-
-export default function RegisterPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center p-4 bg-[var(--bg-primary)]">
-          <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
-        </div>
-      }
-    >
-      <RegisterPageContent />
-    </Suspense>
   );
 }

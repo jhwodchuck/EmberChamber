@@ -1,0 +1,24 @@
+{
+  "name": "@emberchamber/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "App.tsx",
+  "scripts": {
+    "dev": "expo start --clear",
+    "android": "expo run:android",
+    "prebuild": "expo prebuild --platform android --clean",
+    "build:android": "expo prebuild --platform android --non-interactive",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "expo": "~55.0.0",
+    "expo-secure-store": "~55.0.9",
+    "expo-sqlite": "~55.0.11",
+    "react": "19.2.0",
+    "react-native": "0.83.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.2",
+    "typescript": "^5.4.5"
+  }
+}

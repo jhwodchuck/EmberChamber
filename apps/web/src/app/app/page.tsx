@@ -10,24 +10,25 @@ export default function AppHome() {
           </svg>
         </div>
         <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-2">
-          Welcome to PrivateMesh
+          Web is now the companion surface
         </h2>
         <p className="text-[var(--text-secondary)] text-sm max-w-md mx-auto">
-          Start a private conversation, create an invite-only community, or join
-          a space from an invite link.
+          The real beta clients are Android plus Windows and Ubuntu desktop builds. Use this web
+          surface for invite links, account recovery, and beta guidance while the local-first
+          clients come online.
         </p>
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
-          <Link href="/app/new-dm" className="card text-left hover:border-brand-500 transition-colors">
-            <p className="text-sm font-semibold text-[var(--text-primary)]">New DM</p>
-            <p className="mt-1 text-xs text-[var(--text-secondary)]">Message someone by username.</p>
+          <Link href="/register" className="card text-left hover:border-brand-500 transition-colors">
+            <p className="text-sm font-semibold text-[var(--text-primary)]">Join Beta</p>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">Start invite-only onboarding.</p>
           </Link>
-          <Link href="/app/new-group" className="card text-left hover:border-brand-500 transition-colors">
-            <p className="text-sm font-semibold text-[var(--text-primary)]">New Group</p>
-            <p className="mt-1 text-xs text-[var(--text-secondary)]">Create an invite-first community.</p>
+          <Link href="/login" className="card text-left hover:border-brand-500 transition-colors">
+            <p className="text-sm font-semibold text-[var(--text-primary)]">Email Sign-In</p>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">Request a fresh magic link.</p>
           </Link>
-          <Link href="/app/discover" className="card text-left hover:border-brand-500 transition-colors">
-            <p className="text-sm font-semibold text-[var(--text-primary)]">Join Invite</p>
-            <p className="mt-1 text-xs text-[var(--text-secondary)]">Paste a code or invite link.</p>
+          <Link href="/invite/example" className="card text-left hover:border-brand-500 transition-colors">
+            <p className="text-sm font-semibold text-[var(--text-primary)]">Invite Landing</p>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">See how native invite handoff works.</p>
           </Link>
         </div>
       </div>

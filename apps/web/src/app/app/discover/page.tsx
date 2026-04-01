@@ -98,7 +98,7 @@ export default function DiscoverPage() {
           Join a private space with an invite
         </h2>
         <p className="text-sm text-[var(--text-secondary)] max-w-xl">
-          PrivateMesh communities are designed to be gated by the people who run
+          EmberChamber communities are designed to be gated by the people who run
           them. Paste an invite code or invite link to preview the destination
           before you join.
         </p>

@@ -1,6 +1,6 @@
 version: "3.9"
 
-# PrivateMesh — local development stack
+# EmberChamber — local development stack
 # Sprint 0: infrastructure services + service stubs
 # Full service images are wired up in Sprints 1-5.
 
@@ -8,17 +8,17 @@ services:
   # ── PostgreSQL ──────────────────────────────────────────────────────────────
   postgres:
     image: postgres:16-alpine
-    container_name: privatemesh_postgres
+    container_name: emberchamber_postgres
     environment:
-      POSTGRES_USER: privatemesh
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-privatemesh}
-      POSTGRES_DB: privatemesh
+      POSTGRES_USER: emberchamber
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-emberchamber}
+      POSTGRES_DB: emberchamber
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U privatemesh"]
+      test: ["CMD-SHELL", "pg_isready -U emberchamber"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -26,7 +26,7 @@ services:
   # ── Redis ───────────────────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
-    container_name: privatemesh_redis
+    container_name: emberchamber_redis
     ports:
       - "6379:6379"
     volumes:
@@ -40,7 +40,7 @@ services:
   # ── MinIO (S3-compatible object storage) ────────────────────────────────────
   minio:
     image: minio/minio:latest
-    container_name: privatemesh_minio
+    container_name: emberchamber_minio
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: minioadmin
@@ -65,8 +65,8 @@ services:
     entrypoint: >
       /bin/sh -c "
       mc alias set local http://minio:9000 minioadmin $${MINIO_ROOT_PASSWORD:-minioadmin};
-      mc mb local/privatemesh --ignore-existing;
-      mc mb local/privatemesh-e2ee --ignore-existing;
+      mc mb local/emberchamber --ignore-existing;
+      mc mb local/emberchamber-e2ee --ignore-existing;
       echo 'MinIO buckets initialised';
       "
 
@@ -77,9 +77,9 @@ services:
       dockerfile: Dockerfile.service
       args:
         SERVICE: control-api
-    container_name: privatemesh_control_api
+    container_name: emberchamber_control_api
     environment:
-      DATABASE_URL: postgresql://privatemesh:${DB_PASSWORD:-privatemesh}@postgres:5432/privatemesh
+      DATABASE_URL: postgresql://emberchamber:${DB_PASSWORD:-emberchamber}@postgres:5432/emberchamber
       REDIS_URL: redis://redis:6379
       SESSION_SECRET: ${SESSION_SECRET:-change-me-32-bytes-minimum-secret}
       RUST_LOG: ${RUST_LOG:-info}
@@ -100,7 +100,7 @@ services:
       dockerfile: Dockerfile.service
       args:
         SERVICE: realtime-gateway
-    container_name: privatemesh_realtime
+    container_name: emberchamber_realtime
     environment:
       REDIS_URL: redis://redis:6379
       RUST_LOG: ${RUST_LOG:-info}
@@ -119,9 +119,9 @@ services:
       dockerfile: Dockerfile.service
       args:
         SERVICE: relay-gateway
-    container_name: privatemesh_relay
+    container_name: emberchamber_relay
     environment:
-      DATABASE_URL: postgresql://privatemesh:${DB_PASSWORD:-privatemesh}@postgres:5432/privatemesh
+      DATABASE_URL: postgresql://emberchamber:${DB_PASSWORD:-emberchamber}@postgres:5432/emberchamber
       REDIS_URL: redis://redis:6379
       RUST_LOG: ${RUST_LOG:-info}
     ports:
@@ -141,11 +141,11 @@ services:
       dockerfile: Dockerfile.service
       args:
         SERVICE: media-worker
-    container_name: privatemesh_media
+    container_name: emberchamber_media
     environment:
-      DATABASE_URL: postgresql://privatemesh:${DB_PASSWORD:-privatemesh}@postgres:5432/privatemesh
+      DATABASE_URL: postgresql://emberchamber:${DB_PASSWORD:-emberchamber}@postgres:5432/emberchamber
       S3_ENDPOINT: http://minio:9000
-      S3_BUCKET: privatemesh
+      S3_BUCKET: emberchamber
       S3_ACCESS_KEY: minioadmin
       S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
       RUST_LOG: ${RUST_LOG:-info}
@@ -162,10 +162,10 @@ services:
       dockerfile: Dockerfile.service
       args:
         SERVICE: push-worker
-    container_name: privatemesh_push
+    container_name: emberchamber_push
     environment:
       REDIS_URL: redis://redis:6379
-      DATABASE_URL: postgresql://privatemesh:${DB_PASSWORD:-privatemesh}@postgres:5432/privatemesh
+      DATABASE_URL: postgresql://emberchamber:${DB_PASSWORD:-emberchamber}@postgres:5432/emberchamber
       RUST_LOG: ${RUST_LOG:-info}
     depends_on:
       redis:
@@ -180,9 +180,9 @@ services:
       dockerfile: Dockerfile.service
       args:
         SERVICE: directory-ca
-    container_name: privatemesh_directory
+    container_name: emberchamber_directory
     environment:
-      DATABASE_URL: postgresql://privatemesh:${DB_PASSWORD:-privatemesh}@postgres:5432/privatemesh
+      DATABASE_URL: postgresql://emberchamber:${DB_PASSWORD:-emberchamber}@postgres:5432/emberchamber
       RUST_LOG: ${RUST_LOG:-info}
     ports:
       - "3004:3004"
@@ -197,7 +197,7 @@ services:
     build:
       context: ../..
       dockerfile: apps/web/Dockerfile
-    container_name: privatemesh_web
+    container_name: emberchamber_web
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
       NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-ws://localhost:3002}

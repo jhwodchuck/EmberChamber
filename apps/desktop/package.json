@@ -1,8 +1,8 @@
 {
-  "name": "@privatemesh/desktop",
+  "name": "@emberchamber/desktop",
   "version": "0.1.0",
   "private": true,
-  "description": "PrivateMesh native shell for Windows, Linux, macOS, Android, and iPhone packaging",
+  "description": "EmberChamber native shell for Windows, Linux, macOS, Android, and iPhone packaging",
   "scripts": {
     "dev": "tauri dev",
     "doctor": "tauri info",

@@ -1,5 +1,5 @@
 [package]
-name = "privatemesh-test-support"
+name = "emberchamber-test-support"
 description = "Test fixtures, factories, and in-process database helpers"
 version.workspace = true
 edition.workspace = true
@@ -9,8 +9,8 @@ license.workspace = true
 tokio = { workspace = true }
 
 [dependencies]
-privatemesh-domain = { workspace = true }
-privatemesh-db = { workspace = true }
+emberchamber-domain = { workspace = true }
+emberchamber-db = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 uuid = { workspace = true }

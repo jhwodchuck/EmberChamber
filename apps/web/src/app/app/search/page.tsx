@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { searchApi } from "@/lib/api";
-import { Avatar } from "@/app/app/layout";
+import { Avatar } from "@/components/avatar";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 

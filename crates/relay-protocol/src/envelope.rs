@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use emberchamber_domain::{AccountId, ConversationId, DeviceId};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -35,4 +36,36 @@ pub struct RelayReceipt {
     pub node_id: Uuid,
     /// When the envelope was accepted.
     pub accepted_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PrekeyBundle {
+    pub identity_key_b64: String,
+    pub signed_prekey_b64: String,
+    pub signed_prekey_signature_b64: String,
+    pub one_time_prekeys_b64: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceKeyBundle {
+    pub account_id: AccountId,
+    pub device_id: DeviceId,
+    pub device_label: String,
+    pub bundle: PrekeyBundle,
+    pub uploaded_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CipherEnvelope {
+    pub envelope_id: String,
+    pub conversation_id: ConversationId,
+    pub epoch: u32,
+    pub sender_account_id: AccountId,
+    pub sender_device_id: DeviceId,
+    pub recipient_device_id: DeviceId,
+    pub ciphertext: String,
+    pub attachment_ids: Vec<String>,
+    pub client_message_id: String,
+    pub created_at: DateTime<Utc>,
+    pub expires_at: DateTime<Utc>,
 }

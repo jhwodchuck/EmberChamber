@@ -3,5 +3,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    privatemesh_desktop_lib::run();
+    emberchamber_desktop_lib::run();
 }

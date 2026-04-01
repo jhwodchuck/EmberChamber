@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   compose-up:
-    name: Verify current app stack services boot
+    name: Verify legacy prototype stack services boot
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -36,7 +36,7 @@ jobs:
         run: |
           for i in $(seq 1 30); do
             docker compose -f infra/docker-compose.yml \
-              exec -T postgres pg_isready -U privatemesh && break
+              exec -T postgres pg_isready -U emberchamber && break
             sleep 2
           done
 
