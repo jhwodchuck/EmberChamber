@@ -69,7 +69,7 @@ services:
   # ── API (backend) ───────────────────────────────────────────────────────────
   api:
     build:
-      context: ./apps/api
+      context: ../apps/api
       dockerfile: Dockerfile
     container_name: privatemesh_api
     environment:
@@ -100,7 +100,7 @@ services:
   # ── Web (frontend) ──────────────────────────────────────────────────────────
   web:
     build:
-      context: ./apps/web
+      context: ../apps/web
       dockerfile: Dockerfile
     container_name: privatemesh_web
     environment:
