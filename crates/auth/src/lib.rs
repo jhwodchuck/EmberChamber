@@ -1,4 +1,4 @@
-pub mod session;
 pub mod passkey;
+pub mod session;
 
 pub use session::SessionToken;

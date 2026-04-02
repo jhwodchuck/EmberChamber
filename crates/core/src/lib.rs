@@ -35,8 +35,7 @@ impl ConversationState {
     }
 
     pub fn acknowledge(&mut self, envelope_id: &str) {
-        self.acknowledged_envelopes
-            .insert(envelope_id.to_string());
+        self.acknowledged_envelopes.insert(envelope_id.to_string());
     }
 }
 
