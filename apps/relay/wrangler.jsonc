@@ -62,9 +62,92 @@
         "binding": "CLEANUP_QUEUE",
         "queue": "emberchamber-cleanup"
       }
+    ],
+    "consumers": [
+      {
+        "queue": "emberchamber-cleanup",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 3,
+        "retry_delay": 30
+      },
+      {
+        "queue": "emberchamber-email",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 3,
+        "retry_delay": 30
+      }
     ]
   },
   "env": {
+    "staging": {
+      "name": "emberchamber-relay-staging",
+      "workers_dev": true,
+      "preview_urls": false,
+      "vars": {
+        "EMBERCHAMBER_RELAY_PUBLIC_URL": "https://replace-with-staging-relay-origin.example.com",
+        "EMBERCHAMBER_WEB_PUBLIC_URL": "https://replace-with-staging-web-origin.example.com",
+        "EMBERCHAMBER_EMAIL_PROVIDER": "queue",
+        "EMBERCHAMBER_EMAIL_FROM": "noreply@emberchamber.com",
+        "EMBERCHAMBER_DEV_INVITE_TOKEN": "",
+        "EMBERCHAMBER_ALLOWED_ORIGINS": "https://replace-with-staging-web-origin.example.com,https://tauri.localhost,http://tauri.localhost,tauri://localhost"
+      },
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "DEVICE_MAILBOX",
+            "class_name": "DeviceMailboxDO"
+          },
+          {
+            "name": "GROUP_COORDINATOR",
+            "class_name": "GroupCoordinatorDO"
+          },
+          {
+            "name": "RATE_LIMITER",
+            "class_name": "RateLimitDO"
+          }
+        ]
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "emberchamber-relay-staging-db",
+          "database_id": "replace-with-staging-d1-database-id"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "ATTACHMENTS",
+          "bucket_name": "emberchamber-beta-attachments-staging"
+        }
+      ],
+      "queues": {
+        "producers": [
+          {
+            "binding": "EMAIL_QUEUE",
+            "queue": "emberchamber-email-staging"
+          },
+          {
+            "binding": "PUSH_QUEUE",
+            "queue": "emberchamber-push-staging"
+          },
+          {
+            "binding": "CLEANUP_QUEUE",
+            "queue": "emberchamber-cleanup-staging"
+          }
+        ],
+        "consumers": [
+          {
+            "queue": "emberchamber-cleanup-staging",
+            "max_batch_size": 10,
+            "max_batch_timeout": 5,
+            "max_retries": 3,
+            "retry_delay": 30
+          }
+        ]
+      }
+    },
     "production": {
       "name": "emberchamber-relay",
       "workers_dev": true,
@@ -124,6 +207,22 @@
           {
             "binding": "CLEANUP_QUEUE",
             "queue": "emberchamber-cleanup-prod"
+          }
+        ],
+        "consumers": [
+          {
+            "queue": "emberchamber-cleanup-prod",
+            "max_batch_size": 10,
+            "max_batch_timeout": 5,
+            "max_retries": 3,
+            "retry_delay": 30
+          },
+          {
+            "queue": "emberchamber-email-prod",
+            "max_batch_size": 10,
+            "max_batch_timeout": 5,
+            "max_retries": 3,
+            "retry_delay": 30
           }
         ]
       }
