@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.emberchamber.mobile",
+      "sha256_cert_fingerprints": [
+        "C9:65:5D:D8:94:FE:23:B2:1A:BC:2E:18:7E:3B:ED:1A:42:84:05:DB:8C:8F:3A:E6:F6:63:89:70:64:1B:76:74"
+      ]
+    }
+  }
+]

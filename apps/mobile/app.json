@@ -10,6 +10,7 @@
     "icon": "./assets/icon.png",
     "android": {
       "package": "com.emberchamber.mobile",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#140d10"
@@ -76,8 +77,5 @@
         }
       ]
     ],
-    "extra": {
-      "relayUrl": "http://10.0.2.2:8787"
-    }
   }
 }
