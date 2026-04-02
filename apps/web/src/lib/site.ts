@@ -4,6 +4,10 @@ export const siteUrl =
 export const authBootstrapEnabled =
   process.env.NEXT_PUBLIC_EMBERCHAMBER_AUTH_BOOTSTRAP_ENABLED === "true";
 
+export const githubRepoUrl = "https://github.com/jhwodchuck/EmberChamber";
+export const githubReleasesUrl = `${githubRepoUrl}/releases`;
+export const githubSourceZipUrl = `${githubRepoUrl}/archive/refs/heads/main.zip`;
+
 export const primaryNav = [
   { href: "/download", label: "Download" },
   { href: "/trust-and-safety", label: "Trust & Safety" },
@@ -19,18 +23,21 @@ export const footerLinks = [
 
 export const launchPlatforms = [
   {
+    id: "android",
     name: "Android",
     artifact: ".apk",
     status: "Primary beta client",
     detail: "Expo-based native client with local SQLite, SecureStore, and relay-assisted sync.",
   },
   {
+    id: "windows",
     name: "Windows",
     artifact: ".exe / .msi",
     status: "Desktop beta shell",
     detail: "Tauri bundle that will consume the same secure Rust core and relay contracts.",
   },
   {
+    id: "ubuntu",
     name: "Ubuntu",
     artifact: ".deb / AppImage",
     status: "Desktop beta shell",
