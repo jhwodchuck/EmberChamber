@@ -74,9 +74,6 @@
         {
           "enableFTS": true
         }
-      ],
-      [
-        "expo-screen-capture"
       ]
     ],
     "extra": {
