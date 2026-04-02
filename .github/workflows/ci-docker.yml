@@ -21,7 +21,7 @@ jobs:
     name: Verify legacy prototype stack services boot
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Copy env example
         run: cp .env.example .env
