@@ -106,7 +106,7 @@ export function MainScreen(props: MainScreenProps) {
                 <Text style={styles.infoTitle}>Contact card ready</Text>
                 <Text style={styles.infoBody}>
                   Share this token later by QR or copy flow. The immediate goal is that this
-                  phone now has both a relay session and a device identity.
+                  phone now has a working relay session and registered delivery metadata.
                 </Text>
                 <Text selectable style={styles.codeText}>
                   {contactCard.cardToken}
@@ -116,9 +116,9 @@ export function MainScreen(props: MainScreenProps) {
 
             <View style={styles.metricRow}>
               <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>Device identity</Text>
+                <Text style={styles.metricLabel}>Device registration</Text>
                 <Text style={styles.metricValueText}>
-                  {deviceBundleReady ? "Registered" : "Pending"}
+                  {deviceBundleReady ? "Synced" : "Pending"}
                 </Text>
                 <Text style={styles.helper}>
                   {deviceBundleCount} visible bundle{deviceBundleCount === 1 ? "" : "s"} on the relay.
@@ -245,7 +245,7 @@ export function MainScreen(props: MainScreenProps) {
         </Text>
         <Text style={styles.sectionBody}>
           {selectedGroup
-            ? "This is the first real messaging surface on Android: recent thread history, photo upload, and send."
+            ? "This Android beta supports recent thread history, photo uploads, and message send for your current groups."
             : "Join or select a group to unlock the composer."}
         </Text>
 

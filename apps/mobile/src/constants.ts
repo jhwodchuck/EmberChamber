@@ -11,8 +11,6 @@ export const STORAGE_KEYS = {
   inviteToken: "emberchamber.auth.v1.inviteToken",
   deviceLabel: "emberchamber.auth.v1.deviceLabel",
   session: "emberchamber.auth.v1.session",
-  profileSetupComplete: "emberchamber.profile.v1.setupComplete",
-  selfieUri: "emberchamber.profile.v1.selfieUri",
 } as const;
 
 export const defaultPrivacyDefaults: PrivacyDefaults = {
@@ -30,6 +28,6 @@ export const onboardingSteps = [
 
 export const onboardingAssurances = [
   "Email is private and used only for bootstrap and recovery.",
-  "Display names and handles carry the social identity. Email is never the public identity.",
-  "The relay moves ciphertext, attachment blobs, and delivery metadata instead of indexing private chat history.",
+  "This phone keeps session state, privacy defaults, and recent thread cache locally.",
+  "Android group history and attachment handling still use the current relay-hosted beta path while stronger end-to-end protection rolls out.",
 ] as const;

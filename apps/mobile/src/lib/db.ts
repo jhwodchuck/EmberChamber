@@ -1,5 +1,10 @@
 import * as SQLite from "expo-sqlite";
-import type { GroupThreadMessage, NotificationPreviewMode, PrivacyDefaults } from "../types";
+import type {
+  GroupMembershipSummary,
+  GroupThreadMessage,
+  NotificationPreviewMode,
+  PrivacyDefaults,
+} from "../types";
 import { defaultPrivacyDefaults } from "../constants";
 
 export async function bootstrapLocalStore() {
@@ -45,6 +50,24 @@ export async function bootstrapLocalStore() {
       private_note TEXT,
       updated_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS group_memberships_cache (
+      account_id TEXT NOT NULL,
+      conversation_id TEXT NOT NULL,
+      payload TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (account_id, conversation_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_group_memberships_cache_account
+      ON group_memberships_cache (account_id, updated_at DESC);
+    CREATE TABLE IF NOT EXISTS group_messages_cache (
+      conversation_id TEXT NOT NULL,
+      message_id TEXT NOT NULL,
+      payload TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      PRIMARY KEY (conversation_id, message_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_group_messages_cache_conversation
+      ON group_messages_cache (conversation_id, created_at ASC);
   `);
 
   await Promise.all([
@@ -143,4 +166,102 @@ export async function persistVaultMediaRecord(
 export async function countVaultItems(db: SQLite.SQLiteDatabase) {
   const row = await db.getFirstAsync<{ count: number }>("SELECT COUNT(*) AS count FROM vault_media");
   return row?.count ?? 0;
+}
+
+export async function loadCachedGroups(
+  db: SQLite.SQLiteDatabase,
+  accountId: string,
+): Promise<GroupMembershipSummary[]> {
+  const rows = await db.getAllAsync<{ payload: string }>(
+    `SELECT payload
+       FROM group_memberships_cache
+      WHERE account_id = ?
+      ORDER BY updated_at DESC`,
+    accountId,
+  );
+
+  return rows.flatMap((row) => {
+    try {
+      return [JSON.parse(row.payload) as GroupMembershipSummary];
+    } catch {
+      return [];
+    }
+  });
+}
+
+export async function saveCachedGroups(
+  db: SQLite.SQLiteDatabase,
+  accountId: string,
+  groups: GroupMembershipSummary[],
+) {
+  await db.runAsync("DELETE FROM group_memberships_cache WHERE account_id = ?", accountId);
+
+  if (!groups.length) {
+    return;
+  }
+
+  const updatedAt = new Date().toISOString();
+  for (const group of groups) {
+    await db.runAsync(
+      `INSERT INTO group_memberships_cache (
+         account_id,
+         conversation_id,
+         payload,
+         updated_at
+       ) VALUES (?, ?, ?, ?)`,
+      accountId,
+      group.id,
+      JSON.stringify(group),
+      updatedAt,
+    );
+  }
+}
+
+export async function loadCachedGroupMessages(
+  db: SQLite.SQLiteDatabase,
+  conversationId: string,
+): Promise<GroupThreadMessage[]> {
+  const rows = await db.getAllAsync<{ payload: string }>(
+    `SELECT payload
+       FROM group_messages_cache
+      WHERE conversation_id = ?
+      ORDER BY created_at ASC`,
+    conversationId,
+  );
+
+  return rows.flatMap((row) => {
+    try {
+      return [JSON.parse(row.payload) as GroupThreadMessage];
+    } catch {
+      return [];
+    }
+  });
+}
+
+export async function saveCachedGroupMessages(
+  db: SQLite.SQLiteDatabase,
+  conversationId: string,
+  messages: GroupThreadMessage[],
+) {
+  await db.runAsync("DELETE FROM group_messages_cache WHERE conversation_id = ?", conversationId);
+
+  const recentMessages = messages
+    .slice()
+    .sort((left, right) => left.createdAt.localeCompare(right.createdAt))
+    .slice(-100);
+
+  for (const message of recentMessages) {
+    await db.runAsync(
+      `INSERT INTO group_messages_cache (
+         conversation_id,
+         message_id,
+         payload,
+         created_at
+       ) VALUES (?, ?, ?, ?)`,
+      conversationId,
+      message.id,
+      JSON.stringify(message),
+      message.createdAt,
+    );
+  }
 }

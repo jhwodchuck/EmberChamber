@@ -18,14 +18,18 @@ export function suggestMobileDeviceLabel() {
 }
 
 export function makeOpaqueToken() {
-  const randomSegment = () => Math.random().toString(36).slice(2, 18);
-  const cryptoUuid = globalThis.crypto?.randomUUID?.bind(globalThis.crypto);
+  const cryptoObject = globalThis.crypto;
+  const cryptoUuid = cryptoObject?.randomUUID?.bind(cryptoObject);
 
   if (cryptoUuid) {
     return `${cryptoUuid().replace(/-/g, "")}${cryptoUuid().replace(/-/g, "")}`;
   }
 
-  return `${Date.now().toString(36)}${randomSegment()}${randomSegment()}${randomSegment()}`;
+  if (cryptoObject?.getRandomValues) {
+    return bytesToHex(cryptoObject.getRandomValues(new Uint8Array(24)));
+  }
+
+  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 26)}`;
 }
 
 export function extractCompletionTokenFromUrl(input: string): string | null {
@@ -114,11 +118,50 @@ export function deviceBundleStorageKey(deviceId: string) {
   return `emberchamber.auth.v1.deviceBundle.${deviceId}`;
 }
 
-export function createPlaceholderDeviceBundle() {
+export function createDeviceBundleScaffold() {
   return {
-    identityKeyB64: makeOpaqueToken(),
-    signedPrekeyB64: makeOpaqueToken(),
-    signedPrekeySignatureB64: makeOpaqueToken(),
-    oneTimePrekeysB64: Array.from({ length: 12 }, () => makeOpaqueToken()),
+    identityKeyB64: randomBase64(32),
+    signedPrekeyB64: randomBase64(32),
+    signedPrekeySignatureB64: randomBase64(64),
+    oneTimePrekeysB64: Array.from({ length: 12 }, () => randomBase64(32)),
   };
+}
+
+export function isDefaultDisplayName(value: string) {
+  return /^Member [0-9a-f]{8}$/i.test(value.trim());
+}
+
+function randomBase64(byteLength: number) {
+  const cryptoObject = globalThis.crypto;
+  const bytes = new Uint8Array(byteLength);
+
+  if (cryptoObject?.getRandomValues) {
+    cryptoObject.getRandomValues(bytes);
+    return encodeBase64(bytes);
+  }
+
+  return makeOpaqueToken();
+}
+
+function bytesToHex(bytes: Uint8Array) {
+  return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
+}
+
+function encodeBase64(bytes: Uint8Array) {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  let output = "";
+
+  for (let index = 0; index < bytes.length; index += 3) {
+    const byte1 = bytes[index] ?? 0;
+    const byte2 = bytes[index + 1] ?? 0;
+    const byte3 = bytes[index + 2] ?? 0;
+    const combined = (byte1 << 16) | (byte2 << 8) | byte3;
+
+    output += alphabet[(combined >> 18) & 63];
+    output += alphabet[(combined >> 12) & 63];
+    output += index + 1 < bytes.length ? alphabet[(combined >> 6) & 63] : "=";
+    output += index + 2 < bytes.length ? alphabet[combined & 63] : "=";
+  }
+
+  return output;
 }
