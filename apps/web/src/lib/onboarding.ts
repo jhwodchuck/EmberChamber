@@ -1,33 +1,33 @@
 export const onboardingSteps = [
   {
     number: "01",
-    title: "Add your private email",
-    body: "Use a private email only for bootstrap and recovery. It is not meant to become a public handle or discovery path.",
+    title: "Bring the invite and inbox",
+    body: "Use a private email for bootstrap and recovery, then add the invite token or group link only when a new account needs it.",
   },
   {
     number: "02",
-    title: "Name this device clearly",
-    body: "Readable device names make session reviews, device revokes, and future recovery less painful.",
+    title: "Confirm adults-only access",
+    body: "EmberChamber is for adults 18 and over. The beta uses a clear self-attested gate instead of heavy identity verification.",
   },
   {
     number: "03",
-    title: "Confirm from your inbox",
-    body: "The first magic link establishes the session. Passkeys can layer on later when the beta flow is fully wired.",
+    title: "Name the device and finish sign-in",
+    body: "Readable device names make session reviews and recovery less painful. The first magic link establishes the session.",
   },
 ] as const;
 
 export const onboardingAssurances = [
   {
     title: "Invite-first, not feed-first",
-    body: "New beta accounts need an invite token. Returning users should only need their email and the current device name.",
+    body: "New beta accounts need a trusted invite path. Returning users should only need their private email, 18+ affirmation, and current device name.",
+  },
+  {
+    title: "Pseudonymous by default",
+    body: "Email stays private. Display names and handles carry the social identity inside trusted circles.",
   },
   {
     title: "Local-first trust model",
-    body: "The relay moves ciphertext and delivery metadata. Conversation history and local search stay on device.",
-  },
-  {
-    title: "Low-friction, not low-clarity",
-    body: "The first beta keeps the path short: bootstrap, name the device, confirm the email, and move into trusted circles.",
+    body: "The relay moves ciphertext and delivery metadata. Conversation history and local search should stay on device over time.",
   },
 ] as const;
 

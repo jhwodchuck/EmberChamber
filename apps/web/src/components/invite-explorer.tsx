@@ -5,11 +5,11 @@ import { ClipboardPaste, ShieldAlert } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { formatUtcDateTime } from "@/lib/format";
-import { hasRelaySession, relayGroupApi } from "@/lib/relay";
+import { hasRelaySession, relayConversationApi } from "@/lib/relay";
 import { StatusCallout } from "@/components/status-callout";
 
 type NormalizedInvite = {
-  groupId: string;
+  conversationId: string;
   inviteToken: string;
 };
 
@@ -25,7 +25,7 @@ function normalizeInviteReference(value: string): NormalizedInvite | null {
     const inviteIndex = segments.findIndex((segment) => segment === "invite");
     if (inviteIndex >= 0 && segments.length >= inviteIndex + 3) {
       return {
-        groupId: segments[inviteIndex + 1] ?? "",
+        conversationId: segments[inviteIndex + 1] ?? "",
         inviteToken: segments[inviteIndex + 2] ?? "",
       };
     }
@@ -36,7 +36,7 @@ function normalizeInviteReference(value: string): NormalizedInvite | null {
   const slashParts = trimmed.split("/").filter(Boolean);
   if (slashParts.length >= 2) {
     return {
-      groupId: slashParts[slashParts.length - 2] ?? "",
+      conversationId: slashParts[slashParts.length - 2] ?? "",
       inviteToken: slashParts[slashParts.length - 1] ?? "",
     };
   }
@@ -44,7 +44,7 @@ function normalizeInviteReference(value: string): NormalizedInvite | null {
   const colonParts = trimmed.split(":");
   if (colonParts.length === 2) {
     return {
-      groupId: colonParts[0] ?? "",
+      conversationId: colonParts[0] ?? "",
       inviteToken: colonParts[1] ?? "",
     };
   }
@@ -53,19 +53,26 @@ function normalizeInviteReference(value: string): NormalizedInvite | null {
 }
 
 export function InviteExplorer({
-  initialGroupId = "",
+  initialConversationId = "",
   initialToken = "",
   mode = "companion",
   onAccept,
 }: {
-  initialGroupId?: string;
+  initialConversationId?: string;
   initialToken?: string;
   mode?: "companion" | "public";
-  onAccept: (result: { conversationId: string }) => void;
+  onAccept: (result: {
+    conversationId: string;
+    rootConversationId: string;
+    rootConversationKind: "group" | "community";
+  }) => void;
 }) {
-  const initialRef = initialGroupId && initialToken ? `${initialGroupId}/${initialToken}` : "";
+  const initialRef =
+    initialConversationId && initialToken ? `${initialConversationId}/${initialToken}` : "";
   const [inviteInput, setInviteInput] = useState(initialRef);
-  const [preview, setPreview] = useState<Awaited<ReturnType<typeof relayGroupApi.previewInvite>> | null>(null);
+  const [preview, setPreview] = useState<Awaited<
+    ReturnType<typeof relayConversationApi.previewInvite>
+  > | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
@@ -83,15 +90,18 @@ export function InviteExplorer({
     setPreview(null);
     setInviteInput(rawValue.trim());
 
-    if (!normalized?.groupId || !normalized.inviteToken) {
+    if (!normalized?.conversationId || !normalized.inviteToken) {
       return;
     }
 
     setIsLoading(true);
     try {
-      const data = await relayGroupApi.previewInvite(normalized.groupId, normalized.inviteToken);
+      const data = await relayConversationApi.previewInvite(
+        normalized.conversationId,
+        normalized.inviteToken,
+      );
       setPreview(data);
-      setInviteInput(`${normalized.groupId}/${normalized.inviteToken}`);
+      setInviteInput(`${normalized.conversationId}/${normalized.inviteToken}`);
     } catch (err: unknown) {
       setPreviewError(err instanceof Error ? err.message : "Invite preview failed.");
     } finally {
@@ -100,10 +110,10 @@ export function InviteExplorer({
   }, []);
 
   useEffect(() => {
-    if (initialGroupId && initialToken) {
-      void previewInvite(`${initialGroupId}/${initialToken}`);
+    if (initialConversationId && initialToken) {
+      void previewInvite(`${initialConversationId}/${initialToken}`);
     }
-  }, [initialGroupId, initialToken, previewInvite]);
+  }, [initialConversationId, initialToken, previewInvite]);
 
   async function handlePreview(rawValue?: string) {
     await previewInvite(rawValue ?? inviteInput);
@@ -131,15 +141,26 @@ export function InviteExplorer({
     setIsJoining(true);
 
     try {
-      const result = await relayGroupApi.acceptInvite(normalizedInvite.groupId, normalizedInvite.inviteToken);
+      const result = await relayConversationApi.acceptInvite(
+        normalizedInvite.conversationId,
+        normalizedInvite.inviteToken,
+      );
       toast.success("Invite accepted");
-      onAccept({ conversationId: result.conversationId });
+      onAccept({
+        conversationId: result.conversationId,
+        rootConversationId: result.rootConversationId,
+        rootConversationKind: result.rootConversationKind,
+      });
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to accept invite");
     } finally {
       setIsJoining(false);
     }
   }
+
+  const nextInvitePath = normalizedInvite
+    ? `/invite/${normalizedInvite.conversationId}/${normalizedInvite.inviteToken}`
+    : "/invite";
 
   return (
     <div className="card space-y-5">
@@ -157,7 +178,7 @@ export function InviteExplorer({
             value={inviteInput}
             onChange={(event) => setInviteInput(event.target.value)}
             className="input flex-1"
-            placeholder="Paste an /invite/{groupId}/{token} link…"
+            placeholder="Paste an /invite/{conversationId}/{token} link…"
             autoComplete="off"
             spellCheck={false}
           />
@@ -175,7 +196,7 @@ export function InviteExplorer({
           </button>
         </div>
         <p className="mt-2 text-xs text-[var(--text-secondary)]">
-          Invite links now include the target group and the invite token together.
+          Invite links include the target private space and the invite token together.
         </p>
       </div>
 
@@ -189,14 +210,14 @@ export function InviteExplorer({
         <div className="space-y-4 rounded-[1.35rem] border border-[var(--border)] bg-[var(--bg-secondary)] p-5">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">
-              Invite-only group
+              Invite-only space
             </p>
             <h3 className="mt-2 text-xl font-semibold text-[var(--text-primary)]">
-              {preview.group.title}
+              {preview.room?.title ?? preview.conversation.title}
             </h3>
             <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-              Issued by {preview.invite.inviterDisplayName}. Member cap {preview.group.memberCap},
-              current members {preview.group.memberCount}.
+              Issued by {preview.invite.inviterDisplayName}. Member cap {preview.conversation.memberCap},
+              current members {preview.conversation.memberCount}.
             </p>
           </div>
 
@@ -211,6 +232,18 @@ export function InviteExplorer({
                 {preview.invite.maxUses ? ` / ${preview.invite.maxUses}` : ""}
               </span>
             </p>
+            <p>
+              Space:{" "}
+              <span className="font-medium capitalize text-[var(--text-primary)]">
+                {preview.conversation.kind}
+              </span>
+            </p>
+            <p>
+              Scope:{" "}
+              <span className="font-medium capitalize text-[var(--text-primary)]">
+                {preview.invite.scope.replace("_", " ")}
+              </span>
+            </p>
             {preview.invite.expiresAt ? (
               <p className="sm:col-span-2">
                 Expires:{" "}
@@ -221,13 +254,25 @@ export function InviteExplorer({
             ) : null}
           </div>
 
-          {preview.group.joinRuleText ? (
+          {preview.conversation.joinRuleText ? (
             <div className="rounded-[1.2rem] border border-[var(--border)] bg-[var(--bg-primary)] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">
                 Join rule
               </p>
               <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                {preview.group.joinRuleText}
+                {preview.conversation.joinRuleText}
+              </p>
+            </div>
+          ) : null}
+
+          {preview.room ? (
+            <div className="rounded-[1.2rem] border border-[var(--border)] bg-[var(--bg-primary)] p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">
+                Target room
+              </p>
+              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                {preview.room.title} with {preview.room.memberCount} members and a{" "}
+                {preview.room.roomAccessPolicy.replace("_", " ")} access policy.
               </p>
             </div>
           ) : null}
@@ -243,10 +288,9 @@ export function InviteExplorer({
             </div>
           ) : null}
 
-          {preview.group.sensitiveMediaDefault ? (
+          {preview.conversation.sensitiveMediaDefault ? (
             <StatusCallout tone="warning" title="Sensitive media defaults are enabled">
-              This group is configured for private-vault handling and stronger leak deterrence by
-              default.
+              This space is configured for stronger leak deterrence by default.
             </StatusCallout>
           ) : null}
 
@@ -263,7 +307,7 @@ export function InviteExplorer({
             ) : (
               <>
                 <Link
-                  href={`/login?next=${encodeURIComponent(`/invite/${normalizedInvite?.groupId}/${normalizedInvite?.inviteToken}`)}`}
+                  href={`/login?next=${encodeURIComponent(nextInvitePath)}`}
                   className="btn-primary"
                 >
                   Request Sign-In Link

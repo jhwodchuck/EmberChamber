@@ -20,6 +20,10 @@ export default function TrustAndSafetyPage() {
           The target model is end-to-end encrypted DMs and small groups. Those conversations should
           not be subject to routine blanket inspection by the relay.
         </p>
+        <p>
+          The current beta is also adults-only. That boundary is enforced through invite gating,
+          self-attested 18+ onboarding, and organizer-controlled spaces rather than public discovery.
+        </p>
       </section>
 
       <section>
@@ -27,7 +31,7 @@ export default function TrustAndSafetyPage() {
         <ul>
           <li>User reports are the primary trigger for review in private spaces.</li>
           <li>Reports should be disclosure-based, revealing selected evidence rather than unrelated history.</li>
-          <li>Account bans, invite revocation, and rate limiting are platform-level controls for severe abuse.</li>
+          <li>Account bans, invite revocation, session revocation, and rate limiting are platform-level controls for severe abuse.</li>
         </ul>
       </section>
 

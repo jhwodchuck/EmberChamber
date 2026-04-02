@@ -8,7 +8,7 @@ export function SiteFooter() {
         <div>
           <p className="font-medium text-[var(--text-primary)]">EmberChamber</p>
           <p className="mt-1">
-            Invite-only encrypted messaging for trusted circles with minimal centralized visibility.
+            Private messaging for the people you trust. Invite-only, end-to-end encrypted.
           </p>
         </div>
 

@@ -1,94 +1,89 @@
 "use client";
 
 import { useState } from "react";
-import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
+import type { ConversationSearchResult } from "@emberchamber/protocol";
 import { Avatar } from "@/components/avatar";
-import { conversationsApi, searchApi } from "@/lib/api";
+import { relayConversationApi } from "@/lib/relay";
+import { conversationHref } from "@/lib/conversation-routes";
 
-interface SearchResults {
-  messages?: Array<{
-    id: string;
-    conversation_id: string;
-    content: string;
-    created_at: string;
-    display_name: string;
-    conv_name?: string;
-  }>;
-  channels?: Array<{
-    id: string;
-    name: string;
-    description?: string;
-    member_count: number;
-  }>;
-  users?: Array<{
-    id: string;
-    username: string;
-    display_name: string;
-    avatar_url?: string;
-  }>;
-}
+type SearchTab = "all" | "conversations" | "accounts";
+
+const searchTabs: SearchTab[] = ["all", "conversations", "accounts"];
 
 export default function SearchPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const scopedCommunityId = searchParams?.get("communityId") ?? undefined;
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchResults>({});
+  const [results, setResults] = useState<ConversationSearchResult>({
+    query: "",
+    conversations: [],
+    accounts: [],
+  });
   const [isSearching, setIsSearching] = useState(false);
-  const [activeTab, setActiveTab] = useState<"all" | "messages" | "channels" | "users">("all");
+  const [activeTab, setActiveTab] = useState<SearchTab>("all");
 
-  async function handleSearch(q: string, nextTab = activeTab) {
-    setQuery(q);
-    if (q.length < 2) {
-      setResults({});
+  async function handleSearch(nextQuery: string) {
+    setQuery(nextQuery);
+    if (nextQuery.trim().length < 2) {
+      setResults({
+        query: nextQuery,
+        conversations: [],
+        accounts: [],
+      });
       return;
     }
+
     setIsSearching(true);
     try {
-      const data = await searchApi.search(q, nextTab === "all" ? undefined : nextTab);
-      setResults(data as SearchResults);
+      setResults(await relayConversationApi.search(nextQuery.trim(), scopedCommunityId));
     } finally {
       setIsSearching(false);
     }
   }
 
-  async function openDm(userId: string) {
+  async function openAccountDm(accountId: string) {
     try {
-      const { id } = (await conversationsApi.getOrCreateDm(userId)) as { id: string };
-      router.push(`/app/chat/${id}`);
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to start conversation");
+      const conversation = await relayConversationApi.openDm(accountId);
+      router.push(`/app/chat/${conversation.id}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to open the DM");
     }
   }
 
+  const showConversations = activeTab === "all" || activeTab === "conversations";
+  const showAccounts = activeTab === "all" || activeTab === "accounts";
+
   return (
-    <div className="mx-auto flex h-full max-w-2xl flex-col p-6">
+    <div className="mx-auto flex h-full max-w-3xl flex-col p-6">
       <h2 className="mb-2 text-xl font-bold text-[var(--text-primary)]">Search</h2>
       <p className="mb-4 text-sm text-[var(--text-secondary)]">
-        Search stays available on web for the messages, channels, and people you can already
-        access. Native remains better for longer sessions and heavier media review.
+        Search on web is relay-native now. It looks through joined-space metadata and shared
+        contacts, not private message bodies.
       </p>
+      {scopedCommunityId ? (
+        <p className="mb-4 text-xs font-medium uppercase tracking-[0.18em] text-brand-600">
+          Scoped to one joined community
+        </p>
+      ) : null}
       <input
         type="text"
         value={query}
-        onChange={(e) => void handleSearch(e.target.value)}
+        onChange={(event) => void handleSearch(event.target.value)}
         className="input mb-4"
-        placeholder="Search your messages, channels, and people…"
+        placeholder="Search joined spaces and shared contacts…"
         autoFocus
       />
 
       <div className="mb-4 flex gap-1 border-b border-[var(--border)]">
-        {(["all", "messages", "channels", "users"] as const).map((tab) => (
+        {searchTabs.map((tab) => (
           <button
             key={tab}
             type="button"
-            onClick={() => {
-              setActiveTab(tab);
-              if (query.length >= 2) {
-                void handleSearch(query, tab);
-              }
-            }}
+            onClick={() => setActiveTab(tab)}
             className={`px-3 py-2 text-sm font-medium capitalize transition-colors ${
               activeTab === tab
                 ? "border-b-2 border-brand-500 text-brand-500"
@@ -106,76 +101,65 @@ export default function SearchPage() {
         </div>
       ) : (
         <div className="space-y-6 overflow-y-auto">
-          {(activeTab === "all" || activeTab === "messages") && (results.messages?.length ?? 0) > 0 ? (
+          {showConversations && results.conversations.length > 0 ? (
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
-                Messages
+                Conversations
               </h3>
               <div className="space-y-2">
-                {results.messages?.map((msg) => (
+                {results.conversations.map((conversation) => (
                   <Link
-                    key={msg.id}
-                    href={`/app/chat/${msg.conversation_id}`}
+                    key={conversation.id}
+                    href={conversationHref({ id: conversation.id, kind: conversation.kind })}
                     className="block card transition-colors hover:bg-[var(--bg-primary)]"
                   >
-                    <div className="mb-1 flex items-center justify-between">
-                      <span className="text-sm font-medium text-[var(--text-primary)]">{msg.display_name}</span>
-                      <span className="text-xs text-[var(--text-secondary)]">
-                        {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
+                    <div className="mb-1 flex items-center justify-between gap-3">
+                      <span className="text-sm font-medium text-[var(--text-primary)]">
+                        {conversation.title ??
+                          (conversation.kind === "direct_message" ? "Direct message" : "Private space")}
+                      </span>
+                      <span className="text-xs uppercase tracking-[0.14em] text-[var(--text-secondary)]">
+                        {conversation.kind === "direct_message"
+                          ? "DM"
+                          : conversation.kind === "room"
+                            ? "Room"
+                            : conversation.kind === "community"
+                              ? "Community"
+                              : "Group"}
                       </span>
                     </div>
-                    <p className="truncate text-sm text-[var(--text-secondary)]">{msg.content}</p>
+                    <p className="text-sm text-[var(--text-secondary)]">
+                      {conversation.historyMode === "device_encrypted"
+                        ? "Local-first DM history"
+                        : conversation.kind === "room"
+                          ? "Relay-hosted room history"
+                          : conversation.kind === "community"
+                            ? "Community container and room index"
+                            : "Relay-hosted group history"}
+                    </p>
                   </Link>
                 ))}
               </div>
             </div>
           ) : null}
 
-          {(activeTab === "all" || activeTab === "channels") && (results.channels?.length ?? 0) > 0 ? (
+          {showAccounts && results.accounts.length > 0 ? (
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
-                Channels
+                Accounts
               </h3>
               <div className="space-y-2">
-                {results.channels?.map((channel) => (
-                  <Link
-                    key={channel.id}
-                    href={`/app/channel/${channel.id}`}
-                    className="block card transition-colors hover:bg-[var(--bg-primary)]"
-                  >
-                    <div className="mb-0.5 flex items-center gap-2">
-                      <span className="font-bold text-brand-500">#</span>
-                      <span className="font-medium text-[var(--text-primary)]">{channel.name}</span>
-                      <span className="text-xs text-[var(--text-secondary)]">
-                        {channel.member_count} subscribers
-                      </span>
-                    </div>
-                    {channel.description ? (
-                      <p className="truncate text-sm text-[var(--text-secondary)]">{channel.description}</p>
-                    ) : null}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
-          {(activeTab === "all" || activeTab === "users") && (results.users?.length ?? 0) > 0 ? (
-            <div>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
-                Users
-              </h3>
-              <div className="space-y-2">
-                {results.users?.map((user) => (
+                {results.accounts.map((account) => (
                   <button
-                    key={user.id}
+                    key={account.accountId}
                     type="button"
-                    onClick={() => void openDm(user.id)}
+                    onClick={() => void openAccountDm(account.accountId)}
                     className="card flex w-full items-center gap-3 text-left transition-colors hover:bg-[var(--bg-primary)]"
                   >
-                    <Avatar src={user.avatar_url} name={user.display_name} size="sm" />
+                    <Avatar name={account.displayName} size="sm" />
                     <div>
-                      <p className="font-medium text-[var(--text-primary)]">{user.display_name}</p>
-                      <p className="text-sm text-[var(--text-secondary)]">@{user.username}</p>
+                      <p className="font-medium text-[var(--text-primary)]">{account.displayName}</p>
+                      <p className="text-sm text-[var(--text-secondary)]">@{account.username}</p>
                     </div>
                   </button>
                 ))}
@@ -183,13 +167,12 @@ export default function SearchPage() {
             </div>
           ) : null}
 
-          {query.length >= 2 &&
+          {query.trim().length >= 2 &&
           !isSearching &&
-          !results.messages?.length &&
-          !results.channels?.length &&
-          !results.users?.length ? (
+          results.conversations.length === 0 &&
+          results.accounts.length === 0 ? (
             <p className="py-8 text-center text-[var(--text-secondary)]">
-              No results found for &quot;{query}&quot;
+              No joined-space metadata matched &quot;{query}&quot;.
             </p>
           ) : null}
         </div>

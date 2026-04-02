@@ -1,92 +1,65 @@
 # EmberChamber Launch Targets
 
-## First Beta Targets
+This file tracks what the repo can actually build and, where release lanes exist, distribute today.
 
-| Platform | Target | Packaging path | Status in repo |
-| --- | --- | --- | --- |
-| Android | `.apk` | `apps/mobile` via Expo prebuild | Scaffolded |
-| iPhone | `.app` (simulator) | `apps/mobile` via Expo prebuild | Scaffolded |
-| Windows | `.exe`, `.msi` | `apps/desktop` via Tauri v2 | Scaffolded |
-| Ubuntu / Debian | `.deb`, AppImage | `apps/desktop` via Tauri v2 | Scaffolded |
-| macOS | `.dmg`, `.app` | `apps/desktop` via Tauri v2 | Scaffolded |
+## Current Buildable Surfaces
 
-## Deferred Targets
+| Surface | Artifact | Backend path | Current product scope | Automation |
+| --- | --- | --- | --- | --- |
+| Android | Debug `.apk` from `apps/mobile` | Relay | Email bootstrap, sessions, privacy defaults, group invite preview/accept, relay-hosted group threads, attachment upload/download, local SQLite and SecureStore. | `.github/workflows/release-android.yml` |
+| iPhone | Simulator `.app` zipped from `apps/mobile` | Relay | Same codebase and runtime scope as Android. No signed TestFlight or App Store lane yet, and not a first-beta commitment. | `.github/workflows/release-apple.yml` |
+| Windows | `.exe` and `.msi` from `apps/desktop` | Relay | Bundled desktop shell for auth, groups, invites, sessions, privacy, and attachment sending. | `.github/workflows/release-windows.yml` |
+| Ubuntu / Debian | `.deb` and `.AppImage` from `apps/desktop` | Relay | Bundled desktop shell for auth, groups, invites, sessions, privacy settings, and attachment sending. | `.github/workflows/release-linux.yml` |
+| macOS | `.app` and `.dmg` from `apps/desktop` | Relay | Same bundled desktop shell as Windows/Linux, but signed distribution and launch commitment remain later work. | `.github/workflows/release-macos.yml` |
+| Web | Next.js deployment from `apps/web` | Relay | Public site, onboarding, DM/chat, groups, invite flows, joined-space metadata search, and settings on relay. Legacy channel routes are retired placeholders only. | `.github/workflows/ci-web.yml` |
 
-No targets formally deferred at this time, other than broader non-goals.
+## What Counts As Primary Right Now
 
-## Beta Artifact Strategy
+- Android, Windows, and Ubuntu are the active first-wave native surfaces.
+- Web is intentionally available and still a real product surface, but it remains secondary to native for longer sessions and heavier media handling.
+- iPhone and macOS build lanes exist, but neither is a committed first-beta launch surface.
+- Native remains the preferred daily-use path for longer sessions and heavier media handling.
+- Adults-only invite-gated onboarding is part of the current product contract across every committed surface.
+
+## Release Workflow Reality
 
 ### Android
 
-- real primary client
-- built from `apps/mobile`
-- uses email magic link onboarding
-- local SQLite for conversation history
-- SecureStore for small secret material
+1. Install Node and Android toolchain dependencies.
+2. Run Expo prebuild for Android.
+3. Build a debug APK.
+4. Upload the artifact and optionally attach it to a tagged GitHub Release.
 
-### iPhone
+### Apple mobile
 
-- shares the same Expo codebase as Android
-- built from `apps/mobile` with `expo prebuild --platform ios`
-- CI produces a simulator `.app` bundle (no code signing)
-- TestFlight and App Store distribution require Apple Developer certificates and are a separate step
+1. Install Node dependencies on macOS.
+2. Run Expo prebuild for iOS.
+3. Build an unsigned simulator `.app`.
+4. Zip and upload the artifact.
 
-### macOS, Windows and Ubuntu
+### Desktop
 
-- companion native chat shell
-- built from `apps/desktop`
-- local bundled frontend, not a hosted remote wrapper
-- intended to consume the same relay contracts and Rust core over time
+1. Install Node and Rust dependencies.
+2. Build the bundled Tauri shell locally for the target OS.
+3. Upload the generated bundles.
 
-### Web
+## Deferred Or Not Yet Productized
 
-- built from `apps/web`
-- deployed as a Next.js app rather than packaged as a native artifact
-- supports onboarding, messaging, search, invite review, settings, and lighter-weight channel use
-- intentionally positioned as a secondary surface rather than the preferred primary client
+- Play Store, App Store, and TestFlight publishing
+- Signed and notarized Apple desktop releases
+- Code-signed Windows desktop releases
+- Auto-update channels
+- Later-beta community-room flows
+- Final end-to-end encrypted group-history and attachment model
 
-## What the web app is now
+## Distribution Assumptions
 
-`apps/web` is a real but secondary client surface. It is used for:
+- Beta remains invite-only.
+- Android, Windows, and Ubuntu are the committed first-wave native surfaces.
+- Web remains available for onboarding, messaging, invite review, search, settings, and recovery when a native build is unavailable or not preferred.
+- iPhone and macOS are deferred until the first-wave surfaces are stable enough to justify the extra reliability and review work.
+- Channel-style browser surfaces remain deferred, and they are not the target long-term beta architecture.
 
-- beta positioning and download guidance
-- invite landing pages
-- auth bootstrap
-- direct messages and lighter-weight chat use
-- group creation and invite review
-- search across accessible conversations, channels, and users
-- channel reading and posting
-- account recovery support
-- privacy and session settings
+## Ubuntu Testing
 
-## Android CI
-
-The Android release lane now:
-
-1. installs repo dependencies
-2. runs Expo prebuild for Android
-3. builds a debug APK from the generated Android project
-
-This is a beta artifact lane, not a Play Store publishing lane yet.
-
-## iOS CI
-
-The iOS release lane now:
-
-1. installs repo dependencies on a macOS runner
-2. runs Expo prebuild for iOS
-3. builds a simulator `.app` bundle via `xcodebuild` (no signing)
-4. packages the artifact as a zip for GitHub Releases
-
-This is a beta artifact lane. TestFlight distribution requires Apple Developer certificates and provisioning profiles.
-
-## Desktop CI
-
-The macOS, Windows, and Ubuntu release lanes now build the bundled Tauri desktop shell directly, without requiring a deployed web origin.
-
-## Assumptions
-
-- Beta is invite-only.
-- Android and iPhone are the priority clients.
-- macOS, Windows and Ubuntu matter for early adopters and operators.
-- Web remains available when it is the fastest path, but native stays preferred for primary use.
+- Use [`ubuntu-install-and-test.md`](/home/jason/gh/PrivateMesh/docs/ubuntu-install-and-test.md) for the current Linux release state, install path, local build commands, and smoke-test checklist.

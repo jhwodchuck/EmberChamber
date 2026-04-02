@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Hash, MessageSquare, Search, Settings, ShieldCheck, Users } from "lucide-react";
+import { ArrowRight, MessageSquare, Search, Settings, ShieldCheck, Users } from "lucide-react";
 import Link from "next/link";
 import { useCompanionShell } from "@/components/companion-shell";
 import { StatusCallout } from "@/components/status-callout";
@@ -14,8 +14,8 @@ const actionCards = [
   },
   {
     href: "/app/search",
-    label: "Search Messages",
-    description: "Find conversations, channels, and people you already have access to.",
+    label: "Search Joined Spaces",
+    description: "Find conversation metadata and shared contacts you already have access to.",
     icon: Search,
   },
   {
@@ -25,10 +25,10 @@ const actionCards = [
     icon: Users,
   },
   {
-    href: "/app/new-channel",
-    label: "Create a Channel",
-    description: "Use the browser for lighter-weight broadcast and follow flows when needed.",
-    icon: Hash,
+    href: "/app/new-community",
+    label: "Create a Community",
+    description: "Stand up a multi-room space with organizer policies and scoped invites.",
+    icon: Users,
   },
   {
     href: "/app/discover",
@@ -57,9 +57,9 @@ export default function AppHome() {
               Web messaging stays available. Native stays preferred.
             </h2>
             <p className="mt-5 max-w-3xl text-base leading-7 text-[var(--text-secondary)]">
-              Welcome back, {userName}. The browser can handle direct messages, groups, channels,
-              invite review, and account settings. Android and desktop should still be the
-              higher-headroom surfaces for daily primary use and heavier media traffic.
+              Welcome back, {userName}. The browser can handle direct messages, groups,
+              communities, invite review, search, and account settings. Android and desktop should
+              still be the higher-headroom surfaces for daily primary use and heavier media traffic.
             </p>
 
             <div className="mt-6 grid gap-4 sm:grid-cols-3">
@@ -97,8 +97,8 @@ export default function AppHome() {
             <p className="text-sm uppercase tracking-[0.2em] text-[#f8bc9c]">Start from here</p>
             <div className="mt-5 space-y-4 text-sm leading-6 text-[#f3ddd3]">
               <p>Open a DM or jump into an existing chat from the browser.</p>
-              <p>Use search when you know what you are trying to reach.</p>
-              <p>Create groups or channels here, then shift heavier usage to native when needed.</p>
+              <p>Use search when you know what you are trying to reach inside spaces you already joined.</p>
+              <p>Create groups or communities here, review invites, then shift heavier usage to native when needed.</p>
             </div>
             <div className="mt-6 space-y-3">
               <Link href="/app/new-dm" className="btn-primary w-full">

@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { InviteExplorer } from "@/components/invite-explorer";
 import { MarketingShell } from "@/components/marketing-shell";
+import { acceptedInviteHref } from "@/lib/conversation-routes";
 
 export default function InviteLandingPage() {
   const params = useParams<{ code: string }>();
@@ -20,15 +21,15 @@ export default function InviteLandingPage() {
             Preview the invite before you trust it.
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-[var(--text-secondary)]">
-            New relay-native invites now include both a group id and a token. This fallback route
+            New relay-native invites now include both a conversation id and a token. This fallback route
             stays available so older links can still land on a safe preview surface.
           </p>
         </div>
 
         <InviteExplorer
           mode="public"
-          onAccept={() => {
-            router.push("/app");
+          onAccept={(result) => {
+            router.push(acceptedInviteHref(result));
           }}
         />
 

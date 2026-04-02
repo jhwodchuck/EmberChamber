@@ -11,10 +11,6 @@ FROM base AS builder
 COPY package.json ./
 RUN npm install --ignore-scripts
 COPY . .
-ARG NEXT_PUBLIC_API_URL
-ARG NEXT_PUBLIC_WS_URL
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL
 RUN npm run build
 
 # Runtime

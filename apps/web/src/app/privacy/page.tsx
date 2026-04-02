@@ -18,6 +18,8 @@ export default function PrivacyPage() {
         <h2>Core commitments</h2>
         <ul>
           <li>Email is used for auth and recovery, not public discovery.</li>
+          <li>Email is not the social identity inside the product; pseudonymous names and handles are.</li>
+          <li>The current beta is adults-only and uses a self-attested 18+ confirmation step.</li>
           <li>The relay should store ciphertext message envelopes, not routine plaintext DM history.</li>
           <li>Message history and local search are intended to live primarily on user devices.</li>
           <li>EmberChamber does not market itself as perfect anonymity, law-proof infrastructure, or zero-visibility hosting.</li>

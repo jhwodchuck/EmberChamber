@@ -1,189 +1,74 @@
 # EmberChamber Beta Architecture
 
-## Runtime Roles
+This document tracks the active beta runtime in this repo. It separates current implementation
+from target direction so the docs do not overstate privacy, platform maturity, or migration status.
 
-- `apps/mobile`: Android and iPhone beta client with local SQLite and SecureStore
-- `apps/desktop`: macOS, Windows and Ubuntu Tauri shell with bundled local frontend
-- `apps/web`: public site plus secondary-but-capable web messaging workspace
-- `apps/relay`: Cloudflare Worker edge service for auth, relay APIs, attachment tickets, and metadata
-- `crates/core`: Rust secure-state and sync engine scaffold
-- `crates/relay-protocol` + `packages/protocol`: shared contracts for relay, mailbox, keys, and sessions
+## Runtime Map
 
-## High-Level Diagram
+| Runtime | Repo path | Current status | Notes |
+| --- | --- | --- | --- |
+| Mobile client | `apps/mobile` | Active | Expo client using relay APIs for bootstrap, adults-only affirmation, sessions, privacy, group invite flows, group threads, and attachment upload/download with local SQLite and SecureStore. |
+| Desktop client | `apps/desktop` | Active | Tauri shell with bundled local HTML/JS UI. Talks directly to the relay for auth, adults-only affirmation, groups, invites, sessions, privacy, and attachments. |
+| Web app | `apps/web` | Active | Relay-native for onboarding, adults-only affirmation, DMs, groups, settings, joined-space search, and invite preview/accept. Legacy channel pages are retired placeholders, not active backend dependencies. |
+| Relay runtime | `apps/relay` | Active | Cloudflare Worker with D1, Durable Objects, R2, and queue bindings. |
+| Shared contracts | `packages/protocol`, `crates/relay-protocol` | Active | Shared types for sessions, group flows, mailbox envelopes, device bundles, and attachments. |
+| Rust core | `crates/core` | Partial | Present in repo and instantiated by desktop bootstrap, but not yet the primary engine behind every client flow. |
+| Legacy prototype | `apps/api`, `infra/docker-compose.yml`, `services/*` | Retained | Older centralized Express/Postgres stack plus earlier Rust service scaffolds. Not the target beta runtime. |
 
-```mermaid
-graph LR
-    subgraph Clients
-      A[Android + iPhone App]
-      D[Desktop App]
-      W[Web App Secondary Surface]
-    end
+## Relay Storage Planes
 
-    subgraph SharedCore
-      C[Rust Core]
-      P[Shared Protocol]
-    end
+| Surface | Current implementation | Direction |
+| --- | --- | --- |
+| Auth and identity metadata | D1 stores blinded email indexes, encrypted email ciphertext, accounts, adults-only affirmation state, devices, sessions, invites, and reports. | Keep centralized metadata minimal and bounded to bootstrap, routing, and safety workflows. |
+| Cipher mailbox queue | `DeviceMailboxDO` stores ciphertext envelopes written through `/v1/messages/batch`, enforces backlog caps, and deletes them on ack or expiry. | Mature the mailbox path into the default DM and future encrypted-group transport on every client. |
+| Group threads | D1 `conversation_messages` stores group thread text in `body_text` plus attachment references. | Replace relay-hosted readable group history with a stronger end-to-end model. |
+| Attachments | R2 stores uploaded bytes referenced by signed upload/download tickets. The browser DM path now supports client-encrypted uploads, while current mobile and desktop flows still upload raw file bytes. | Move every client to client-side attachment encryption before upload. |
+| Client local state | Mobile persists SQLite, SecureStore, and vault metadata. Desktop persists local shell state. Web persists browser session state. | Push more authoritative history and safety state back onto devices over time. |
 
-    subgraph CloudflareRelay
-      API[Worker API]
-      M[DeviceMailboxDO]
-      G[GroupCoordinatorDO]
-      R[RateLimitDO]
-      DB[(D1)]
-      B[(R2)]
-      Q[Queues]
-    end
+## Active Relay Capabilities
 
-    A --> C
-    D --> C
-    C --> P
-    W --> API
-    API --> M
-    API --> G
-    API --> R
-    API --> DB
-    API --> B
-    API --> Q
-```
+- Email magic-link bootstrap with invite-only account creation and optional group-invite bootstrap.
+- Adults-only affirmation on bootstrap, with email kept private and non-discoverable.
+- Session listing and self-revocation.
+- Group creation, membership listing, owner or admin invite minting, invite preview/accept, and member removal.
+- Relay-hosted group thread read/write APIs plus attachment ticketing.
+- Device bundle registration, contact-card resolution, `dm/open`, ciphertext batch send, and mailbox sync/ack as the encrypted-delivery substrate.
+- Disclosure-based report submission.
 
-## Auth Flow
+## Present but Not Finished
 
-```mermaid
-sequenceDiagram
-    participant Client
-    participant Relay as Worker API
-    participant D1
-    participant Queue as Email Queue
+- Passkey endpoints exist but currently return `501`.
+- Device-link start/confirm exists, but the full user-facing recovery and trusted-device flow is not complete.
+- `PUSH_QUEUE` is provisioned in config but not yet consumed by worker code.
+- The encrypted mailbox/device-bundle path now powers the browser DM flow, but the repo does not yet expose a fully migrated encrypted-group experience on top of it across every client surface.
 
-    Client->>Relay: POST /v1/auth/start {email, inviteToken?, deviceLabel}
-    Relay->>Relay: normalize email, compute blind index, rate limit
-    Relay->>D1: create auth challenge
-    Relay->>Queue: enqueue magic-link email
-    Relay-->>Client: challenge id + expiry (+ debug token in local dev)
+## Current Client Surface Matrix
 
-    Client->>Relay: POST /v1/auth/complete {completionToken, deviceLabel}
-    Relay->>D1: consume challenge
-    Relay->>D1: create or resume account + device + session
-    Relay-->>Client: access token + refresh token + device id
+| Surface | Relay-native today | Still legacy or missing |
+| --- | --- | --- |
+| Android and iPhone | Bootstrap, adults-only affirmation, sessions, privacy defaults, contact card, device bundle registration, group invite preview/accept, group threads, attachment upload/download, local cache. | Real production key handling and final E2EE UX are still scaffolded rather than complete. |
+| Desktop | Bootstrap, adults-only affirmation, sessions, privacy defaults, group creation, group invite management, invite preview/accept, group threads, attachment upload/download. | Passkeys, polished recovery, and deeper Rust-core integration are incomplete. |
+| Web | Public site, invite landing, magic-link bootstrap, profile/privacy settings, relay-native DM/chat, joined-space metadata search, group creation, relay-hosted group threads, and invite preview/accept. | Encrypted-group rollout, universal encrypted attachments, and passkey/recovery maturity are still incomplete. |
 
-    Client->>Relay: POST /v1/devices/register {public key bundle}
-    Relay->>D1: save device keys
-```
+## D1 Schema Summary
 
-## Mailbox Flow
+- Bootstrap and auth: `beta_invites`, `accounts`, `account_emails`, `auth_challenges`, `devices`, `sessions`, `passkeys`, `device_links`
+- Conversations and membership: `conversations`, `conversation_members`, `conversation_invites`, `conversation_messages`, `blocks`
+- Media and safety: `attachments`, `reports`
 
-```mermaid
-sequenceDiagram
-    participant Sender
-    participant Relay as Worker API
-    participant Mailbox as DeviceMailboxDO
-    participant Recipient
+## Durable Objects and Queues
 
-    Sender->>Relay: POST /v1/messages/batch {cipher envelopes}
-    Relay->>Relay: verify membership + epoch + block rules
-    Relay->>Mailbox: enqueue per-recipient device
-    Relay-->>Sender: accepted envelope ids
+- `DeviceMailboxDO`: per-device ciphertext queue with backlog caps, ack-based deletion, and alarm-driven expiry.
+- `GroupCoordinatorDO`: stores current group epoch and member set for relay-side coordination.
+- `RateLimitDO`: keyed abuse limiter for auth, invite, and send flows.
+- `EMAIL_QUEUE`: used for magic-link dispatch.
+- `PUSH_QUEUE`: declared but not yet wired into runtime logic.
+- `CLEANUP_QUEUE`: wired into runtime logic for retention cleanup work.
 
-    Recipient->>Relay: GET /v1/mailbox/sync
-    Relay->>Mailbox: fetch pending envelopes
-    Mailbox-->>Relay: queued ciphertext envelopes
-    Relay-->>Recipient: envelope batch
+## Architectural Gaps To Close
 
-    Recipient->>Relay: POST /v1/mailbox/ack
-    Relay->>Mailbox: delete acknowledged envelopes
-```
-
-## Data Boundaries
-
-### On device
-
-- decrypted conversation history
-- local search index
-- private keys
-- outbox and retry state
-- device safety state
-
-### In relay metadata plane
-
-- blinded email index
-- encrypted email ciphertext
-- account, device, and session rows
-- public identity bundles and prekeys
-- conversation membership and epoch
-- blocked-account rules
-- report disclosures
-
-### In relay transient ciphertext plane
-
-- mailbox ciphertext envelopes in Durable Object storage
-- encrypted attachment blobs in R2
-
-## D1 Tables
-
-- `beta_invites`
-- `accounts`
-- `account_emails`
-- `auth_challenges`
-- `devices`
-- `sessions`
-- `passkeys`
-- `conversations`
-- `conversation_members`
-- `conversation_invites`
-- `blocks`
-- `attachments`
-- `reports`
-- `device_links`
-
-## Durable Objects
-
-### `DeviceMailboxDO`
-
-- one object per device
-- stores pending ciphertext envelopes
-- handles sync cursoring and ack deletion
-- becomes the natural place to add live WebSocket delivery next
-
-### `GroupCoordinatorDO`
-
-- one object per small group
-- tracks current epoch and active members
-- coordinates membership rotation without server-readable content
-
-### `RateLimitDO`
-
-- keyed auth and abuse limiter
-- isolates invite abuse, auth storms, and send floods
-
-## Desktop Strategy
-
-- Desktop is no longer a remote URL wrapper.
-- `apps/desktop/shell/index.html` is bundled locally inside Tauri.
-- The next integration step is wiring the desktop shell to the Rust core and relay APIs.
-
-## Web Strategy
-
-- Web remains a real client surface rather than a marketing-only companion.
-- `apps/web` handles onboarding, invite landing, auth bootstrap, direct messages, group setup,
-  channel reading/posting, search, settings, and recovery.
-- Web talks directly to the relay runtime and shared protocol contracts.
-- Android and desktop remain the preferred primary-use surfaces for heavier daily usage and
-  attachment-heavy workflows.
-
-## Mobile Strategy
-
-- Android and iPhone are first-class clients.
-- Expo is used for faster native iteration and both Android and iOS build generation.
-- SecureStore is used for bootstrap secrets and session material.
-- SQLite is initialized on-device for local-first state.
-- iPhone uses the same codebase and relay contracts as Android.
-
-## Explicit Non-Goals for Beta
-
-- public discovery
-- public-discovery-first community growth
-- server-side private-message search
-- pure P2P operation without any hosted relay
-- phone-number identity
-- blanket server-side moderation visibility into encrypted content
-- web as the only or preferred primary runtime
+- Finish the migration from relay-hosted readable group threads to an end-to-end encrypted group-history model.
+- Add client-side attachment encryption before upload and document ciphertext retention precisely.
+- Wire passkeys, safer recovery/device-link flows, and safety-number style change handling end to end.
+- Finish the remaining removal of legacy `apps/api` dependencies outside retired placeholder routes and docs.
+- Add automated cleanup for mailbox envelopes and expired attachment records.

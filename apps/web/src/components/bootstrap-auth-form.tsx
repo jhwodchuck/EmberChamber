@@ -11,7 +11,7 @@ import { RelayRequestError, startMagicLink } from "@/lib/relay";
 import { authBootstrapEnabled } from "@/lib/site";
 
 type BootstrapAuthMode = "signin" | "join";
-type BootstrapField = "email" | "inviteToken" | "deviceLabel";
+type BootstrapField = "email" | "inviteToken" | "deviceLabel" | "ageConfirmed18";
 
 const STORAGE_KEYS = {
   email: "emberchamber.auth.v1.email",
@@ -43,6 +43,7 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
   const [email, setEmail] = useState("");
   const [inviteToken, setInviteToken] = useState("");
   const [deviceLabel, setDeviceLabel] = useState("Browser companion");
+  const [ageConfirmed18, setAgeConfirmed18] = useState(false);
   const [challenge, setChallenge] = useState<{
     expiresAt: string;
     debugCompletionToken?: string;
@@ -59,6 +60,7 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
   const emailRef = useRef<HTMLInputElement>(null);
   const inviteTokenRef = useRef<HTMLInputElement>(null);
   const deviceLabelRef = useRef<HTMLInputElement>(null);
+  const ageConfirmed18Ref = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setEmail(readDraft("email"));
@@ -75,6 +77,11 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
 
     if (field === "inviteToken") {
       inviteTokenRef.current?.focus();
+      return;
+    }
+
+    if (field === "ageConfirmed18") {
+      ageConfirmed18Ref.current?.focus();
       return;
     }
 
@@ -96,6 +103,10 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
       } else if (inviteToken.trim().length < 4) {
         nextErrors.inviteToken = "This invite token is too short to be valid.";
       }
+    }
+
+    if (!ageConfirmed18) {
+      nextErrors.ageConfirmed18 = "EmberChamber beta access is limited to adults 18 and over.";
     }
 
     if (!deviceLabel.trim()) {
@@ -141,8 +152,8 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
         title: "Fix the highlighted fields first",
         body:
           mode === "join"
-            ? "Invite-only onboarding needs a valid email, a readable device label, and the beta invite token."
-            : "This sign-in link needs a valid email address and a readable device label before it can be queued.",
+            ? "Invite-only onboarding needs a valid email, 18+ confirmation, a readable device label, and the beta invite token when required."
+            : "This sign-in link needs a valid email address, 18+ confirmation, and a readable device label before it can be queued.",
       });
       return;
     }
@@ -154,6 +165,7 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
           email: email.trim(),
           inviteToken: trimmedInvite ? trimmedInvite : undefined,
           deviceLabel: deviceLabel.trim(),
+          ageConfirmed18: true,
         });
 
         writeDraft("email", email.trim());
@@ -208,8 +220,8 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
   const title = mode === "join" ? "Join the invite-only beta" : "Continue with a private email";
   const subtitle =
     mode === "join"
-      ? "Your invite token is only needed for a new beta account. Existing users should use the sign-in path instead."
-      : "Returning users only need their private email and a readable device name.";
+      ? "Adults-only access stays invite-gated. Your invite token is only needed for a new beta account."
+      : "Returning users only need their private email, an adults-only affirmation, and a readable device name.";
   const requiresInviteToken = mode === "join" || inviteFieldVisible;
 
   return (
@@ -245,11 +257,11 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
           </div>
           <div className="rounded-[1.2rem] border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-3">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-600">Step 2</p>
-            <p className="mt-1 text-sm font-medium text-[var(--text-primary)]">Name this device</p>
+            <p className="mt-1 text-sm font-medium text-[var(--text-primary)]">Confirm 18+</p>
           </div>
           <div className="rounded-[1.2rem] border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-3">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-600">Step 3</p>
-            <p className="mt-1 text-sm font-medium text-[var(--text-primary)]">Confirm from inbox</p>
+            <p className="mt-1 text-sm font-medium text-[var(--text-primary)]">Name device + confirm inbox</p>
           </div>
         </div>
 
@@ -405,6 +417,44 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
             ) : null}
           </div>
 
+          <div className="rounded-[1.2rem] border border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-4">
+            <label htmlFor={`${mode}-age-confirmed`} className="flex items-start gap-3">
+              <input
+                id={`${mode}-age-confirmed`}
+                ref={ageConfirmed18Ref}
+                type="checkbox"
+                checked={ageConfirmed18}
+                onChange={(event) => {
+                  setAgeConfirmed18(event.target.checked);
+                  if (errors.ageConfirmed18) {
+                    setErrors((current) => ({ ...current, ageConfirmed18: undefined }));
+                  }
+                }}
+                className="mt-1 h-4 w-4 rounded border-[var(--border)] text-brand-600"
+                aria-invalid={errors.ageConfirmed18 ? "true" : "false"}
+                aria-describedby={
+                  errors.ageConfirmed18 ? `${mode}-age-confirmed-error` : `${mode}-age-confirmed-hint`
+                }
+              />
+              <span>
+                <span className="block text-sm font-medium text-[var(--text-primary)]">
+                  I confirm I am at least 18 years old
+                </span>
+                <span
+                  id={`${mode}-age-confirmed-hint`}
+                  className="mt-1 block text-xs leading-5 text-[var(--text-secondary)]"
+                >
+                  EmberChamber beta access is adults-only. This is a self-attested gate, not identity verification.
+                </span>
+              </span>
+            </label>
+            {errors.ageConfirmed18 ? (
+              <p id={`${mode}-age-confirmed-error`} className="mt-2 text-sm text-red-500">
+                {errors.ageConfirmed18}
+              </p>
+            ) : null}
+          </div>
+
           <button
             type="submit"
             className="btn-primary w-full py-3"
@@ -413,6 +463,7 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
               !authBootstrapEnabled ||
               !isReady ||
               !email.trim() ||
+              !ageConfirmed18 ||
               !deviceLabel.trim() ||
               (requiresInviteToken && !inviteToken.trim())
             }
@@ -434,12 +485,12 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
           <br />
           2. Confirm the link from the device you want to use first.
           <br />
-          3. Return later to review devices, add a second device, or enroll a passkey.
+          3. Finish profile setup with a pseudonymous name, then return later to review devices or enroll a passkey.
         </StatusCallout>
 
         <StatusCallout tone="info" title="Trust boundary">
           Email is used only for bootstrap and recovery. It is never public, searchable, or used
-          for discovery.
+          for discovery, and it is not your social identity inside the product.
         </StatusCallout>
 
         {challenge ? (

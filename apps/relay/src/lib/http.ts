@@ -1,3 +1,5 @@
+import { ZodError } from "zod";
+
 export class HttpError extends Error {
   constructor(
     public readonly status: number,
@@ -71,6 +73,17 @@ export async function readJson<T>(request: Request): Promise<T> {
 export function errorResponse(error: unknown): Response {
   if (error instanceof HttpError) {
     return json({ error: error.message, code: error.code }, { status: error.status });
+  }
+
+  if (error instanceof ZodError) {
+    return json(
+      {
+        error: "Invalid request body",
+        code: "INVALID_REQUEST",
+        details: error.flatten(),
+      },
+      { status: 400 }
+    );
   }
 
   console.error("relay_error", error);

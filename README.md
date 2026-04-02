@@ -4,7 +4,7 @@
   <img src="brand/emberchamber-lockup.svg" alt="EmberChamber" width="760" />
 </p>
 
-> **Invite-only encrypted messaging for trusted circles.** EmberChamber is being rebuilt as a local-first beta for Android, iPhone, Windows, and Ubuntu with a minimal hosted relay and private email bootstrap.
+> **Invite-only encrypted messaging for trusted circles.** EmberChamber is being rebuilt as a local-first beta for Android, Windows, Ubuntu, and web with a minimal hosted relay and private email bootstrap. iPhone and macOS remain deferred.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -15,11 +15,12 @@ EmberChamber is no longer targeting a Telegram-like centralized MVP.
 The repo now pivots toward:
 
 - `email magic link + optional passkey` bootstrap auth
-- `true E2EE DMs` and `small E2EE groups`
+- `migrating toward true E2EE DMs` and `small E2EE groups`
 - `invite-only beta access`
 - `local-first message history`
 - `Cloudflare Workers + Durable Objects + D1 + R2` as the minimal relay
-- `Android + iPhone + Windows + Ubuntu + macOS` as the first shipping surfaces
+- `Android + Windows + Ubuntu + web` as the first committed beta surfaces
+- `iPhone + macOS` deferred until the first-wave surfaces are stable enough to justify the extra review and reliability work
 
 What EmberChamber is not:
 
@@ -47,18 +48,29 @@ Legacy prototype paths retained temporarily:
 - `infra/docker-compose.yml`: legacy centralized stack
 - `services/` and several older Rust scaffolds: not part of the active beta runtime
 
-## Beta Product Scope
+Current implementation reality:
 
-Launch beta includes:
+- relay-native bootstrap, sessions, privacy settings, group creation/invites, relay-hosted group threads, and signed attachment tickets are live
+- the encrypted mailbox and device-bundle path now powers the browser DM flow, but the user-facing encrypted-group migration is still incomplete
+- current relay-native group threads store readable text in D1 and current attachment uploads are raw blobs in R2
+- the web workspace now runs on relay APIs for authenticated messaging, joined-space search, invites, and settings
 
+## Beta Product Direction
+
+The intended beta surface includes:
+
+- adults-only invite-gated access with explicit 18+ affirmation
 - invite-only signup
 - email magic-link auth
 - optional passkey enrollment later
 - web messaging, search, invite review, and settings as a secondary surface
+- pseudonymous display names and handles as the social identity
 - per-device key registration
-- E2EE direct messaging
-- E2EE small groups capped at 12 members
-- encrypted attachments
+- ciphertext mailbox delivery for direct messages
+- small groups capped at 12 members
+- organizer/admin-controlled invites in phase 1
+- standard media defaults globally, with stronger per-group protections when organizers opt in
+- signed attachment upload/download with private-vault defaults
 - local search on device
 - blocking and disclosure-based reporting
 - 2-device support
@@ -76,9 +88,9 @@ Deferred beyond first beta:
 ```mermaid
 graph TB
     subgraph Clients["Client Layer"]
-        MOBILE["Expo Android + iPhone Client"]
+        MOBILE["Expo Mobile Client"]
         DESKTOP["Tauri Desktop Client"]
-        WEB["Next.js Web App\nSecondary Surface"]
+        WEB["Next.js Web App\nRelay-First Surface"]
     end
 
     subgraph Core["Shared Secure Core"]
@@ -92,9 +104,11 @@ graph TB
         GROUPDO["GroupCoordinatorDO"]
         LIMITDO["RateLimitDO"]
         D1[("D1 metadata")]
-        R2[("R2 encrypted attachments")]
+        R2[("R2 attachment blobs")]
         QUEUES["Queues: email / push / cleanup"]
     end
+
+    LEGACY["Legacy apps/api\nRetained prototype only"]
 
     MOBILE --> RUSTCORE
     DESKTOP --> RUSTCORE
@@ -111,23 +125,25 @@ graph TB
 ## Auth Model
 
 - Email is private and used only for auth and recovery.
-- New beta accounts require an invite token.
+- Beta access is adults-only and currently uses a self-attested 18+ confirmation step.
+- New beta accounts require a beta invite token or a qualifying group invite.
 - `POST /v1/auth/start` creates a 10-minute magic-link challenge.
 - `POST /v1/auth/complete` consumes the link and issues device-bound session tokens.
 - Passkeys are scaffolded in the protocol but not yet fully wired in the relay runtime.
-- Recovery after total device loss re-establishes device identity and should emit a safety-number change event.
+- Recovery after total device loss still needs a fuller trusted-device flow and safety-change handling.
 
 ## Relay Model
 
 The relay stores:
 
-- encrypted attachment blobs
-- ciphertext message envelopes until ack or expiry
-- public key bundles
+- attachment blobs uploaded through signed tickets
+- ciphertext message envelopes until ack
+- public key bundles and mailbox metadata
 - account/session/device metadata
 - invite and group membership metadata
+- relay-hosted group thread text and attachment metadata in the current `/v1/groups/*` flow
 
-The relay does not aim to store:
+The target end state does not aim to store:
 
 - decrypted DM or group history
 - server-side search indexes for private messages
@@ -158,7 +174,17 @@ npx wrangler d1 migrations apply emberchamber-relay-dev --local
 npm run dev:desktop
 ```
 
-### Android and iPhone scaffold
+### Ubuntu local test lane
+
+```bash
+npm run ubuntu:ready
+```
+
+That prepares the local relay, seeds the reusable `ubuntu-local-test-invite` token, builds and installs the Ubuntu desktop package, and leaves the relay running in a detached `screen` session named `ember-relay`.
+
+When the desktop app opens without a saved relay override, it adopts the local relay automatically and prefills that real local beta invite token for the Ubuntu smoke-test path.
+
+### Android-first mobile scaffold
 
 ```bash
 npm run dev:mobile
@@ -177,11 +203,15 @@ The new beta scaffold should verify cleanly with:
 
 ## Documentation
 
+- Docs index: [`docs/README.md`](docs/README.md)
 - Architecture: [`docs/architecture.md`](docs/architecture.md)
 - Launch targets: [`docs/launch-targets.md`](docs/launch-targets.md)
+- Ubuntu install and test: [`docs/ubuntu-install-and-test.md`](docs/ubuntu-install-and-test.md)
+- Roadmap: [`docs/roadmap.md`](docs/roadmap.md)
+- Relay API: [`docs/api/relay-http.md`](docs/api/relay-http.md)
 - Web app: [`apps/web/README.md`](apps/web/README.md)
 - Operator playbook: [`docs/operator-playbook.md`](docs/operator-playbook.md)
-- Legacy prototype API spec: [`docs/openapi.yaml`](docs/openapi.yaml)
+- Legacy prototype API spec: [`docs/api/openapi.yaml`](docs/api/openapi.yaml)
 
 ## Web App
 
@@ -204,10 +234,15 @@ Authenticated web workspace routes:
 - `/app` for the web workspace home
 - `/app/new-dm` and `/app/chat/[id]` for direct messaging
 - `/app/new-group` for group creation
-- `/app/new-channel` and `/app/channel/[id]` for lighter-weight channel use
+- `/app/new-channel` as a later-beta placeholder for community-room work
+- `/app/channel/[id]` for the retired legacy-channel notice
 - `/app/search` for workspace search
 - `/app/discover` for invite preview and join
 - `/app/settings` for account, session, and privacy controls
 
-The web app supports real messaging and account flows, but Android and desktop remain the
-preferred primary-use surfaces.
+Current backend split:
+
+- relay-native: onboarding, adults-only affirmation, invite landing/preview, DM chat, joined-space search, profile and privacy settings, session review, group creation, and group invite creation/acceptance
+- legacy `apps/api`: retained prototype only, not part of the active authenticated web workspace
+
+The web app remains useful, but Android and desktop are still the preferred primary-use surfaces.

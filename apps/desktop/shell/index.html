@@ -748,6 +748,8 @@
 
     <script>
       const DEFAULT_RELAY_URL = "https://relay.emberchamber.com";
+      const LOCAL_RELAY_URL = "http://127.0.0.1:8787";
+      const LOCAL_RELAY_TEST_INVITE_TOKEN = "ubuntu-local-test-invite";
       const storageKeys = {
         relayUrl: "emberchamber.relay-url.override",
         session: "emberchamber.desktop.relay.session.v1",
@@ -795,13 +797,14 @@
           inviteToken: readText(storageKeys.inviteToken),
           groupInviteReference: readText(storageKeys.groupInviteReference),
           deviceLabel: readText(storageKeys.deviceLabel) || suggestDesktopLabel(),
+          ageConfirmed18: false,
           completionInput: readCompletionTokenFromLocation(),
         },
         createGroupForm: {
           title: "",
           joinRuleText: "",
           memberCap: "12",
-          sensitiveMediaDefault: true,
+          sensitiveMediaDefault: false,
           allowMemberInvites: false,
         },
         groupInviteDrafts: {},
@@ -870,6 +873,52 @@
 
       function normalizeRelayUrl(value) {
         return (value || DEFAULT_RELAY_URL).trim().replace(/\/$/, "");
+      }
+
+      function isLocalRelayUrl(value = state.relayUrl) {
+        try {
+          const url = new URL(normalizeRelayUrl(value));
+          return ["127.0.0.1", "localhost"].includes(url.hostname);
+        } catch {
+          return false;
+        }
+      }
+
+      function hasStoredRelayOverride() {
+        return Boolean(readText(storageKeys.relayUrl).trim());
+      }
+
+      async function maybeAdoptLocalRelay() {
+        if (state.session || hasStoredRelayOverride()) {
+          return;
+        }
+
+        try {
+          const response = await fetch(`${LOCAL_RELAY_URL}/health`);
+          if (!response.ok) {
+            return;
+          }
+
+          state.relayUrl = LOCAL_RELAY_URL;
+          writeText(storageKeys.relayUrl, state.relayUrl);
+
+          if (!state.authForm.groupInviteReference.trim() && !state.authForm.inviteToken.trim()) {
+            state.authForm.inviteToken = LOCAL_RELAY_TEST_INVITE_TOKEN;
+            writeText(storageKeys.inviteToken, state.authForm.inviteToken);
+          }
+
+          const status = createStatus(
+            "success",
+            "Local Ubuntu test setup detected",
+            "A local relay is already running, so this install will use it directly. The reusable local beta invite is prefilled when you need bootstrap instead of a group invite URL.",
+            state.relayUrl
+          );
+          state.authStatus = status;
+          state.settingsStatus = status;
+          render();
+        } catch {
+          // Leave the hosted relay as the default when local dev infrastructure is absent.
+        }
       }
 
       function suggestDesktopLabel() {
@@ -1441,10 +1490,19 @@
 
       async function startMagicLink() {
         const email = state.authForm.email.trim();
-        const inviteToken = state.authForm.inviteToken.trim();
         const groupInviteReference = state.authForm.groupInviteReference.trim();
         const deviceLabel = state.authForm.deviceLabel.trim();
         const parsedGroupInvite = groupInviteReference ? parseInviteReference(groupInviteReference) : null;
+        const localRelay = isLocalRelayUrl();
+        const inviteToken =
+          parsedGroupInvite
+            ? ""
+            : state.authForm.inviteToken.trim() || (localRelay ? LOCAL_RELAY_TEST_INVITE_TOKEN : "");
+
+        if (localRelay && !parsedGroupInvite && !state.authForm.inviteToken.trim()) {
+          state.authForm.inviteToken = inviteToken;
+          writeText(storageKeys.inviteToken, inviteToken);
+        }
 
         if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
           state.authStatus = createStatus(
@@ -1476,6 +1534,16 @@
           return;
         }
 
+        if (!state.authForm.ageConfirmed18) {
+          state.authStatus = createStatus(
+            "error",
+            "Confirm adults-only access first",
+            "EmberChamber beta access is limited to adults 18 and over."
+          );
+          render();
+          return;
+        }
+
         setBusy("start-auth");
 
         try {
@@ -1489,6 +1557,7 @@
                 groupId: parsedGroupInvite?.groupId,
                 groupInviteToken: parsedGroupInvite?.inviteToken,
                 deviceLabel,
+                ageConfirmed18: true,
               }),
             },
             { auth: false },
@@ -1506,10 +1575,20 @@
           }
 
           state.authStatus = createStatus(
-            challenge.inviteRequired ? "warning" : "success",
-            challenge.inviteRequired ? "Inbox link sent for bootstrap" : "Magic link sent",
+            localRelay && challenge.debugCompletionToken
+              ? "success"
+              : challenge.inviteRequired
+                ? "warning"
+                : "success",
+            localRelay && challenge.debugCompletionToken
+              ? "Local completion token ready"
+              : challenge.inviteRequired
+                ? "Inbox link sent for bootstrap"
+                : "Magic link sent",
             parsedGroupInvite
               ? `Open the email, finish sign-in, and this install will land inside the invited group before ${formatDateTime(challenge.expiresAt)}.`
+              : localRelay && challenge.debugCompletionToken
+                ? `Local relay mode is active. The completion token was pasted into the field below, so you can finish sign-in before ${formatDateTime(challenge.expiresAt)} without leaving the app.`
               : `Open the email, then paste the magic link or completion token here before ${formatDateTime(challenge.expiresAt)}.`,
             challenge.debugCompletionToken || undefined,
           );
@@ -1670,7 +1749,6 @@
               memberCap: Number(state.createGroupForm.memberCap) || 12,
               joinRuleText: state.createGroupForm.joinRuleText.trim() || undefined,
               sensitiveMediaDefault: Boolean(state.createGroupForm.sensitiveMediaDefault),
-              allowMemberInvites: Boolean(state.createGroupForm.allowMemberInvites),
             }),
           });
 
@@ -1678,7 +1756,7 @@
             title: "",
             joinRuleText: "",
             memberCap: "12",
-            sensitiveMediaDefault: true,
+            sensitiveMediaDefault: false,
             allowMemberInvites: false,
           };
           state.groupsStatus = createStatus(
@@ -1945,6 +2023,11 @@
           return;
         }
 
+        if (bind === "auth.ageConfirmed18") {
+          state.authForm.ageConfirmed18 = Boolean(value);
+          return;
+        }
+
         if (bind === "auth.completionInput") {
           state.authForm.completionInput = value;
           return;
@@ -1967,11 +2050,6 @@
 
         if (bind === "createGroup.sensitiveMediaDefault") {
           state.createGroupForm.sensitiveMediaDefault = Boolean(value);
-          return;
-        }
-
-        if (bind === "createGroup.allowMemberInvites") {
-          state.createGroupForm.allowMemberInvites = Boolean(value);
           return;
         }
 
@@ -2217,14 +2295,14 @@
                 </p>
 
                 <div class="highlight">
-                  Android is still the long-term target, but Ubuntu now needs to prove the same core loop instead of a companion-only admin flow.
+                  Ubuntu now needs one normal onboarding path: use the invite you are testing, finish sign-in in-app, and send the first photo without bouncing through a second client or a separate desktop-only lane.
                 </div>
 
                 <div class="grid-3" style="margin-top: 22px">
                   <section class="step">
                     <div class="step-number">01</div>
-                    <h3>Paste the group invite</h3>
-                    <p>Start from the actual invite you received so sign-in can drop you into the right group.</p>
+                    <h3>Use the invite you are testing</h3>
+                    <p>Paste the real group invite URL you received, or use the reusable local Ubuntu test invite when the local relay is already running.</p>
                   </section>
                   <section class="step">
                     <div class="step-number">02</div>
@@ -2257,7 +2335,7 @@
                   </section>
                   <section class="mini-card">
                     <p class="label">Privacy</p>
-                    <p style="margin-top: 10px">Sensitive media stays visually protected by default with reveal controls and watermark overlays.</p>
+                    <p style="margin-top: 10px">Stronger media protections are optional per group, with reveal controls and watermark overlays when organizers enable them.</p>
                   </section>
                   <section class="mini-card">
                     <p class="label">Group setup</p>
@@ -2273,15 +2351,22 @@
                   <div class="logo small">EC</div>
                   <div>
                     <p class="eyebrow">Desktop bootstrap</p>
-                    <h2>Start from the invite</h2>
+                    <h2>Use the invite you are testing</h2>
                   </div>
                 </div>
 
                 <p class="section-intro" style="margin-top: 14px">
-                  Paste the group invite URL when you have one. Leave it blank only if this account is already in the beta or you are bootstrapping with a separate beta token.
+                  Paste the group invite URL when you have one. If the local Ubuntu relay is already running, this install can also use a reusable real beta invite token without switching into a separate test lane.
                 </p>
 
                 ${renderStatus(state.authStatus)}
+                ${isLocalRelayUrl() ? `
+                  <section class="status info" style="margin-top: 16px">
+                    <h3>Local relay detected</h3>
+                    <p>This install is pointed at the local relay. The reusable local beta invite is <strong>${escapeHtml(LOCAL_RELAY_TEST_INVITE_TOKEN)}</strong>, and the completion token should appear in-app after you send the magic link request.</p>
+                    <code>${escapeHtml(state.relayUrl)}</code>
+                  </section>
+                ` : ""}
 
                 <form data-form="start-auth" class="field-stack" style="margin-top: 18px">
                   <div class="field">
@@ -2299,7 +2384,7 @@
                   <div class="field">
                     <label for="auth-invite">Beta invite token</label>
                     <input id="auth-invite" type="text" data-bind="auth.inviteToken" value="${escapeHtml(state.authForm.inviteToken)}" autocomplete="off" />
-                    <div class="hint">Fallback bootstrap path when you do not already have a group invite URL.</div>
+                    <div class="hint">Fallback bootstrap path when you do not already have a group invite URL. Local Ubuntu test setups prefill a reusable real beta invite here.</div>
                   </div>
 
                   <div class="field">
@@ -2307,6 +2392,14 @@
                     <input id="auth-device" type="text" data-bind="auth.deviceLabel" value="${escapeHtml(state.authForm.deviceLabel)}" autocomplete="off" />
                     <div class="hint">Readable labels make session review and recovery less painful later. The default is already fine for most users.</div>
                   </div>
+
+                  <label class="checkbox-row">
+                    <input id="auth-age-confirmed" type="checkbox" data-bind="auth.ageConfirmed18" ${state.authForm.ageConfirmed18 ? "checked" : ""} />
+                    <span>
+                      <strong>I confirm I am at least 18 years old</strong>
+                      <div class="hint">EmberChamber beta access is adults-only. This is a self-attested gate, not heavy identity verification.</div>
+                    </span>
+                  </label>
 
                   <button class="primary-button" type="submit" ${isBusy("start-auth") ? "disabled" : ""}>
                     ${isBusy("start-auth") ? "Sending magic link..." : "Send magic link"}
@@ -2364,6 +2457,7 @@
                       ${isBusy("check-relay") ? "Checking relay..." : "Check relay"}
                     </button>
                   </div>
+                  <div class="hint">If a local relay is already running on this Ubuntu box, the app adopts it automatically. Override the URL here only when you need staging or the hosted relay.</div>
                 </form>
               </section>
             </aside>
@@ -2607,7 +2701,7 @@
                 </div>
                 <div class="badge-row">
                   <span class="badge">${escapeHtml(String(group.memberCount))} / ${escapeHtml(String(group.memberCap))} members</span>
-                  <span class="badge ${group.sensitiveMediaDefault ? "good" : "warn"}">${group.sensitiveMediaDefault ? "Sensitive media default" : "Standard media default"}</span>
+                  <span class="badge ${group.sensitiveMediaDefault ? "good" : "warn"}">${group.sensitiveMediaDefault ? "Stronger media protections" : "Standard media default"}</span>
                 </div>
               </div>
               <p class="section-intro" style="margin-top: 12px">
@@ -2763,7 +2857,7 @@
               </div>
             </div>
             <p class="section-intro" style="margin-top: 12px">
-              Small-group defaults are enforced here: maximum 12 members, sensitive media on by default, and member-minted invites off unless you deliberately enable them.
+              Small-group defaults are enforced here: maximum 12 members, standard media by default, and invite minting stays with owners or admins during phase 1.
             </p>
 
             <form data-form="create-group" class="field-stack" style="margin-top: 18px">
@@ -2787,18 +2881,17 @@
                 <label class="checkbox-row">
                   <input type="checkbox" data-bind="createGroup.sensitiveMediaDefault" ${state.createGroupForm.sensitiveMediaDefault ? "checked" : ""} />
                   <span>
-                    <strong>Sensitive media defaults on</strong>
-                    <div class="hint">Image and video messages default to the sensitive-media protection profile.</div>
+                    <strong>Stronger media protections on</strong>
+                    <div class="hint">Image and video messages use the standard profile by default. Turn this on when the group should begin with blur-and-reveal behavior and stricter handling.</div>
                   </span>
                 </label>
 
-                <label class="checkbox-row">
-                  <input type="checkbox" data-bind="createGroup.allowMemberInvites" ${state.createGroupForm.allowMemberInvites ? "checked" : ""} />
+                <div class="checkbox-row">
                   <span>
-                    <strong>Allow member-minted invites</strong>
-                    <div class="hint">Leave off during beta unless the group really needs decentralized invite issuance.</div>
+                    <strong>Organizer-managed invites</strong>
+                    <div class="hint">Phase 1 keeps invite creation with owners and admins only. Member-minted invites can return later if a larger community explicitly needs them.</div>
                   </span>
-                </label>
+                </div>
               </div>
 
               <button class="primary-button" type="submit" ${isBusy("create-group") ? "disabled" : ""}>
@@ -2831,7 +2924,7 @@
                             </div>
                             <div class="badge-row">
                               <span class="badge">${escapeHtml(String(group.memberCount))} / ${escapeHtml(String(group.memberCap))} members</span>
-                              <span class="badge ${group.sensitiveMediaDefault ? "good" : "warn"}">${group.sensitiveMediaDefault ? "Sensitive media default" : "Standard media default"}</span>
+                              <span class="badge ${group.sensitiveMediaDefault ? "good" : "warn"}">${group.sensitiveMediaDefault ? "Stronger media protections" : "Standard media default"}</span>
                               ${group.inviteFreezeEnabled ? '<span class="badge warn">Invites frozen</span>' : ""}
                               <button class="secondary-button" type="button" data-action="open-group" data-group-id="${escapeHtml(group.id)}">Open thread</button>
                             </div>
@@ -2955,7 +3048,7 @@
                     </section>
                     <section class="mini-card">
                       <p class="label">Media default</p>
-                      <p style="margin-top: 10px">${preview.group.sensitiveMediaDefault ? "Sensitive media profile" : "Standard media profile"}</p>
+                      <p style="margin-top: 10px">${preview.group.sensitiveMediaDefault ? "Stronger media protections" : "Standard media profile"}</p>
                     </section>
                     <section class="mini-card">
                       <p class="label">Invite limits</p>
@@ -3283,10 +3376,16 @@
         void handleSubmit(event);
       });
 
-      render();
-      if (state.session) {
-        void loadWorkspace();
+      async function initializeDesktopShell() {
+        render();
+        await maybeAdoptLocalRelay();
+
+        if (state.session) {
+          await loadWorkspace();
+        }
       }
+
+      void initializeDesktopShell();
     </script>
   </body>
 </html>

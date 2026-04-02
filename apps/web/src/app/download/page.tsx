@@ -43,18 +43,20 @@ async function DownloadPageInner({
         <div className="max-w-3xl">
           <div className="eyebrow">Launch targets</div>
           <h1 className="mt-5 font-display text-5xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-6xl">
-            Android first. Desktop where it helps. Web stays available.
+            Android, Windows, and Ubuntu are the first wave. Web stays available.
           </h1>
           <p className="mt-5 text-lg leading-8 text-[var(--text-secondary)]">
-            EmberChamber is not treating every surface as equal. The beta ships where the trust
-            model and packaging path are defensible first, then expands from there.
+            The first committed native surfaces are Android, Windows, and Ubuntu. The web app
+            stays available for onboarding, messaging, recovery, and other lighter-weight use when
+            you need access immediately.
           </p>
         </div>
 
         <div className="mt-8 max-w-3xl">
-          <StatusCallout tone="info" title="Use this page to check the preferred native surfaces">
-            If a native build is not posted here yet, the web app still handles messaging and
-            account flows. This page tells you when the preferred client is ready.
+          <StatusCallout tone="info" title="Use this page to check which first-wave builds are posted">
+            If a native build is not posted here yet, the web app still handles onboarding,
+            messaging, invite review, and account flows. This page shows when a first-wave native
+            client is actually downloadable.
           </StatusCallout>
         </div>
 
@@ -155,8 +157,9 @@ async function DownloadPageInner({
           <div className="panel px-6 py-7">
             <h2 className="text-xl font-semibold text-[var(--text-primary)]">What comes after beta</h2>
             <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-              iPhone and macOS stay out of the first beta until the Android and desktop paths are
-              stable enough to justify the extra reliability and review work.
+              iPhone and macOS have build scaffolds in the repo, but they remain later-surface work
+              until Android, Windows, Ubuntu, and web are stable enough to justify the extra
+              reliability and review work.
             </p>
             <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
               Tagged GitHub releases are the source of truth for when public binaries actually
@@ -169,16 +172,17 @@ async function DownloadPageInner({
           <div className="panel px-6 py-7">
             <h2 className="text-xl font-semibold text-[var(--text-primary)]">What the web app can do today</h2>
             <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-              The web app supports messaging, lighter-weight channel use, invite landings, account
-              recovery support, and bootstrap UI. It is not intended to be the highest-throughput
-              or always-on chat surface.
+              The web app supports onboarding, messaging, joined-space search, invite landings,
+              account recovery support, and bootstrap UI. It remains a real secondary
+              surface rather than a dead-end fallback.
             </p>
           </div>
           <div className="panel px-6 py-7">
             <h2 className="text-xl font-semibold text-[var(--text-primary)]">Why download availability is uneven</h2>
             <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
               Android, Windows, and Ubuntu are the first packaging targets, but each one still
-              depends on its own build lane, signing path, and artifact publishing step.
+              depends on its own build lane, bundle preparation, and GitHub release publishing
+              step.
             </p>
           </div>
         </div>

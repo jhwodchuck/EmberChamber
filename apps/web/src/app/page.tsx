@@ -5,16 +5,16 @@ import { faqItems, launchPlatforms, trustFacts } from "@/lib/site";
 
 const productPillars = [
   {
-    title: "Minimal relay, not maximal central visibility",
-    body: "The beta uses Cloudflare Workers, Durable Objects, D1, and R2 to move encrypted traffic without pretending modern phones can operate as an always-on pure mesh.",
+    title: "A relay that delivers, not stores",
+    body: "We use Cloudflare's edge to move encrypted traffic reliably. The relay routes your messages — it cannot read them. Content stays encrypted in transit and at rest on your device.",
   },
   {
-    title: "Invite-only trusted circles",
-    body: "EmberChamber is not a public network. Launch scope is DMs, small groups, encrypted attachments, and controlled onboarding.",
+    title: "Your circle, your terms",
+    body: "No public profiles, no discovery feed, no strangers messaging you cold. Everyone in your circle got there because you or someone you trust let them in.",
   },
   {
-    title: "Local-first message history",
-    body: "Devices keep the authoritative conversation history, local search indexes, and safety state. The relay is there to deliver, not to become your archive.",
+    title: "Your history lives on your device",
+    body: "Message history, search indexes, and private keys stay on-device. The relay handles delivery — your conversation archive is not sitting on a server.",
   },
 ];
 
@@ -30,11 +30,8 @@ export default function HomePage() {
                 Private messaging that admits the hard parts.
               </h1>
               <p className="mt-6 max-w-3xl text-lg leading-8 text-[var(--text-secondary)] sm:text-xl">
-                EmberChamber is being rebuilt as an invite-only encrypted messenger for Android,
-                Windows, and Ubuntu. If you are new here, start with the trust model and launch
-                availability. If you already have an invite or an account, the web app can handle
-                sign-in, messaging, invite review, and recovery. Native clients stay preferred for
-                heavier daily use once a posted build exists.
+                A private space for the people you trust. Invite-only, end-to-end encrypted,
+                adults-only by design — and honest about the infrastructure it runs on.
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -47,11 +44,11 @@ export default function HomePage() {
               </div>
 
               <p className="mt-4 text-sm leading-6 text-[var(--text-secondary)]">
-                Already have beta access?{" "}
+                Already in the beta?{" "}
                 <Link href="/login" className="font-medium text-brand-600 hover:underline">
                   Sign in
                 </Link>
-                . Need a client build first?{" "}
+                . Looking for a native build?{" "}
                 <Link href="/download" className="font-medium text-brand-600 hover:underline">
                   Check downloads
                 </Link>
@@ -75,9 +72,9 @@ export default function HomePage() {
 
       <section className="mx-auto max-w-6xl px-6 py-10 sm:py-14">
         <div className="mb-8">
-          <div className="eyebrow">Launch surfaces</div>
+          <div className="eyebrow">Native clients</div>
           <h2 className="mt-4 font-display text-4xl font-semibold text-[var(--text-primary)] sm:text-5xl">
-            Built for the platforms you can actually ship first.
+            Android, Windows, and Ubuntu first.
           </h2>
         </div>
 
@@ -114,8 +111,7 @@ export default function HomePage() {
             Honest answers before the beta opens wider.
           </h2>
           <p className="mt-4 max-w-xl text-base leading-7 text-[var(--text-secondary)]">
-            The first job of the public site is to explain what EmberChamber is trying to
-            be, what it is deliberately not trying to be, and where the trust boundaries land.
+            The beta is narrow on purpose. These are the honest answers.
           </p>
         </div>
 

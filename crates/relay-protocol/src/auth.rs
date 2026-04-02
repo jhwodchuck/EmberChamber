@@ -3,11 +3,27 @@ use emberchamber_domain::{AccountId, ConversationId, DeviceId, SessionId};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuthStartRequest {
+    pub email: String,
+    pub invite_token: Option<String>,
+    pub group_id: Option<ConversationId>,
+    pub group_invite_token: Option<String>,
+    pub device_label: String,
+    pub age_confirmed_18: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuthCompleteRequest {
+    pub completion_token: String,
+    pub device_label: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MagicLinkChallenge {
     pub id: String,
-    pub email_blind_index: String,
     pub expires_at: DateTime<Utc>,
     pub invite_required: bool,
+    pub debug_completion_token: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -18,6 +34,7 @@ pub struct AuthSession {
     pub access_token: String,
     pub refresh_token: String,
     pub expires_at: DateTime<Utc>,
+    pub passkey_enrollment_suggested: bool,
     pub bootstrap_conversation_id: Option<ConversationId>,
     pub bootstrap_conversation_title: Option<String>,
 }
@@ -52,6 +69,7 @@ pub struct AttachmentTicket {
     pub download_url: String,
     pub expires_at: DateTime<Utc>,
     pub max_bytes: u64,
+    pub encryption_mode: String,
     pub content_class: String,
     pub retention_mode: String,
     pub protection_profile: String,
