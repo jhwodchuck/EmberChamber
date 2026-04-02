@@ -124,9 +124,8 @@ If the key is lost or needs to be set on a new machine:
 2. Run the `wrangler secret put` command above.
 3. Redeploy to activate the new binding.
 
-The sender address is `noreply@emberchamber.com` (set via `EMBERCHAMBER_EMAIL_FROM` in
-`wrangler.jsonc`). Resend requires the sending domain to be verified in your Resend account
-before production emails will be delivered.
+The sender address is `noreply@signup.emberchamber.com` (set via `EMBERCHAMBER_EMAIL_FROM` in
+`wrangler.jsonc`). The `signup.emberchamber.com` domain is verified in Resend.
 
 ## Relay Deploy
 

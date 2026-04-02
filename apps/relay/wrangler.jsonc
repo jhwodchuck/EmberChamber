@@ -161,7 +161,7 @@
         "EMBERCHAMBER_RELAY_PUBLIC_URL": "https://relay.emberchamber.com",
         "EMBERCHAMBER_WEB_PUBLIC_URL": "https://emberchamber.com",
         "EMBERCHAMBER_EMAIL_PROVIDER": "queue",
-        "EMBERCHAMBER_EMAIL_FROM": "noreply@emberchamber.com",
+        "EMBERCHAMBER_EMAIL_FROM": "noreply@signup.emberchamber.com",
         "EMBERCHAMBER_DEV_INVITE_TOKEN": "",
         "EMBERCHAMBER_ALLOWED_ORIGINS": "https://emberchamber.com,https://www.emberchamber.com,https://tauri.localhost,http://tauri.localhost,tauri://localhost"
       },
