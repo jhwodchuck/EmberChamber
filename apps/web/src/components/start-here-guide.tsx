@@ -25,12 +25,12 @@ const startSteps = [
   {
     number: "02",
     title: "Use web for the fastest start",
-    body: "The web app handles onboarding, direct messages, search, invite review, and lighter-weight channel use. It is the easiest way to get moving quickly.",
+    body: "The web app handles onboarding, direct messages, search, invite review, and settings. It is the easiest way to get moving quickly.",
   },
   {
     number: "03",
     title: "Install native for primary use",
-    body: "Once access is set up, move to Android or desktop when you want the preferred daily-use surface for longer sessions and heavier media.",
+    body: "Once access is set up, move to Android, Windows, or Ubuntu when you want the preferred daily-use surface for longer sessions and heavier media.",
   },
 ] as const;
 
@@ -39,7 +39,7 @@ function getStartPaths(): StartPath[] {
     {
       eyebrow: "New Here",
       title: "Understand the trust model first",
-      body: "Read what EmberChamber is, what it is deliberately not, and where the privacy boundaries actually land.",
+      body: "Start with what EmberChamber is, what it isn't, and where your data actually lives.",
       primary: {
         href: "/trust-and-safety",
         label: "Read Trust Model",
@@ -53,7 +53,7 @@ function getStartPaths(): StartPath[] {
       ? {
           eyebrow: "Have An Invite",
           title: "Join beta in web first",
-          body: "Use your invite token, private email, and a readable device label to bootstrap the first session in the web app.",
+          body: "You'll need your invite token and private email address. The whole flow takes a few minutes.",
           primary: {
             href: "/register",
             label: "Join Beta",
@@ -66,7 +66,7 @@ function getStartPaths(): StartPath[] {
       : {
           eyebrow: "Have An Invite",
           title: "Get help before you try to bootstrap",
-          body: "This deployment is not issuing beta email links yet. Confirm your invite and support path first instead of hitting a dead end.",
+          body: "This deployment isn't issuing beta invites yet. Contact support to confirm your invite and next steps.",
           primary: {
             href: "/support",
             label: "Contact Support",
@@ -80,7 +80,7 @@ function getStartPaths(): StartPath[] {
       ? {
           eyebrow: "Already Have Access",
           title: "Return with your private email",
-          body: "Existing beta users should sign in with the same private inbox they used to bootstrap the account.",
+          body: "Sign in with the same private email you used to join.",
           primary: {
             href: "/login",
             label: "Sign In",
@@ -93,7 +93,7 @@ function getStartPaths(): StartPath[] {
       : {
           eyebrow: "Already Have Access",
           title: "Use support if sign-in is not available here",
-          body: "If this deployment is not sending sign-in links yet, use support instead of guessing whether your account is broken.",
+          body: "If sign-in links aren't working here yet, reach out to support rather than wondering if your account is broken.",
           primary: {
             href: "/support",
             label: "Get Recovery Help",
@@ -105,8 +105,8 @@ function getStartPaths(): StartPath[] {
         },
     {
       eyebrow: "Need A Client Build",
-      title: "Check native availability when you want the primary experience",
-      body: "Android, Windows, and Ubuntu are the preferred packaging targets, but public binaries may not exist for every platform yet. If no native build is posted, the web app still remains usable.",
+      title: "Check native availability",
+      body: "See what's posted for Android, Windows, and Ubuntu. The web app stays usable if nothing is listed for your platform yet.",
       primary: {
         href: "/download",
         label: "View Launch Targets",
@@ -126,11 +126,11 @@ export function StartHereSummary() {
     <aside className="panel border-brand-500/15 bg-[linear-gradient(180deg,rgba(200,88,50,0.08),rgba(255,255,255,0.58))] p-6 shadow-[0_20px_60px_rgba(32,19,18,0.12)] dark:bg-[linear-gradient(180deg,rgba(234,111,63,0.16),rgba(27,18,19,0.92))]">
       <div className="eyebrow">Start Here</div>
       <h2 className="mt-5 text-balance font-display text-3xl font-semibold text-[var(--text-primary)]">
-        Pick the path that matches what you need to do first.
+        Where do you want to start?
       </h2>
       <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-        The web app supports bootstrap, messaging, search, and invite review. Native clients remain
-        preferred for heavier daily use, but the browser should still be useful on its own.
+        The web app covers onboarding, messaging, invite review, and settings. Native clients are
+        there when you want the preferred daily experience.
       </p>
 
       <div className="mt-6 space-y-3">
@@ -216,7 +216,7 @@ export function StartHereGuide() {
             <div className="rounded-[1.35rem] border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
               <h3 className="text-base font-semibold text-[var(--text-primary)]">Browser Companion</h3>
               <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                Start here for onboarding, invite review, direct messages, channel reading/posting,
+                Start here for onboarding, invite review, direct messages, joined-space search,
                 account recovery, and settings.
               </p>
             </div>

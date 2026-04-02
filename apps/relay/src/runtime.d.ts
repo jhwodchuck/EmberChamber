@@ -3,6 +3,9 @@ declare interface DurableObjectStorage {
   put<T>(key: string, value: T): Promise<void>;
   delete(key: string): Promise<boolean>;
   list<T>(options?: { prefix?: string }): Promise<Map<string, T>>;
+  getAlarm(): Promise<number | null>;
+  setAlarm(scheduledTime: number | Date): Promise<void>;
+  deleteAlarm(): Promise<void>;
 }
 
 declare interface DurableObjectState {
@@ -25,6 +28,7 @@ declare abstract class DurableObject<Env = unknown> {
   protected readonly ctx: DurableObjectState;
   protected readonly env: Env;
   constructor(ctx: DurableObjectState, env: Env);
+  alarm?(): Promise<void>;
 }
 
 declare module "cloudflare:workers" {
@@ -33,6 +37,17 @@ declare module "cloudflare:workers" {
 
 declare interface Queue<Body = unknown> {
   send(message: Body): Promise<void>;
+}
+
+declare interface Message<Body = unknown> {
+  readonly body: Body;
+  ack(): void;
+  retry(): void;
+}
+
+declare interface MessageBatch<Body = unknown> {
+  readonly messages: Message<Body>[];
+  readonly queue: string;
 }
 
 declare interface D1Result {
@@ -67,6 +82,7 @@ declare interface R2ObjectBody {
 
 declare interface R2Bucket {
   get(key: string): Promise<R2ObjectBody | null>;
+  delete(key: string): Promise<void>;
   put(
     key: string,
     value: ArrayBuffer | ArrayBufferView | ReadableStream | string,

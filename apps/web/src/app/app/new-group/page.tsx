@@ -12,8 +12,7 @@ export default function NewGroupPage() {
     title: "",
     joinRuleText: "",
     memberCap: 12,
-    sensitiveMediaDefault: true,
-    allowMemberInvites: false,
+    sensitiveMediaDefault: false,
   });
   const [createdGroup, setCreatedGroup] = useState<{ id: string; title: string } | null>(null);
   const [createdInvite, setCreatedInvite] = useState<Awaited<
@@ -45,10 +44,9 @@ export default function NewGroupPage() {
         memberCap: form.memberCap,
         sensitiveMediaDefault: form.sensitiveMediaDefault,
         joinRuleText: form.joinRuleText.trim() || undefined,
-        allowMemberInvites: form.allowMemberInvites,
       });
 
-      setCreatedGroup({ id: group.id, title: group.title });
+      setCreatedGroup({ id: group.id, title: group.title ?? form.title.trim() });
       toast.success("Group created");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to create group";
@@ -116,7 +114,7 @@ export default function NewGroupPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">Step 1</p>
             <h3 className="mt-3 text-lg font-semibold text-[var(--text-primary)]">Rules are set</h3>
             <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-              Join rules and sensitive-media defaults are already attached to the group metadata.
+              Join rules and media defaults are already attached to the group metadata.
             </p>
           </div>
           <div className="card">
@@ -178,8 +176,7 @@ export default function NewGroupPage() {
                 title: "",
                 joinRuleText: "",
                 memberCap: 12,
-                sensitiveMediaDefault: true,
-                allowMemberInvites: false,
+                sensitiveMediaDefault: false,
               });
             }}
             className="btn-ghost"
@@ -200,9 +197,8 @@ export default function NewGroupPage() {
         Create a small group with rules and safety defaults first
       </h2>
       <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
-        The browser is for setting the group boundary. Use it to define the cap, decide whether
-        member-created invites are allowed, and make the join rule explicit before the first member
-        arrives.
+        The browser is for setting the group boundary. Use it to define the cap, keep invite
+        control with organizers or admins, and make the join rule explicit before the first member arrives.
       </p>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-5">
@@ -271,8 +267,7 @@ export default function NewGroupPage() {
             <div className="rounded-[1.35rem] border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
               <p className="text-sm font-medium text-[var(--text-primary)]">Beta defaults</p>
               <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                Owner/admin invite creation stays on. Member-created invites stay off unless you
-                deliberately open them up.
+                Owner or admin invite creation stays on. Member-created invites stay off in phase 1.
               </p>
             </div>
           </div>
@@ -288,33 +283,24 @@ export default function NewGroupPage() {
             />
             <span>
               <span className="block text-sm font-medium text-[var(--text-primary)]">
-                Sensitive-media defaults enabled
+                Stronger media protections enabled
               </span>
               <span className="mt-1 block text-sm leading-6 text-[var(--text-secondary)]">
-                New attachments in this group should assume private-vault handling and stronger leak
-                deterrence unless someone opts out later.
+                New attachments use the standard profile by default. Turn this on when the group
+                should begin with blur-and-reveal behavior and stricter handling.
               </span>
             </span>
           </label>
 
-          <label className="flex items-start gap-3 rounded-[1.2rem] border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
-            <input
-              type="checkbox"
-              checked={form.allowMemberInvites}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, allowMemberInvites: event.target.checked }))
-              }
-              className="mt-1"
-            />
-            <span>
-              <span className="block text-sm font-medium text-[var(--text-primary)]">
-                Allow member-created invites
-              </span>
-              <span className="mt-1 block text-sm leading-6 text-[var(--text-secondary)]">
-                Leave this off if you want owner/admins to stay the only gatekeepers during beta.
-              </span>
+          <div className="rounded-[1.2rem] border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
+            <span className="block text-sm font-medium text-[var(--text-primary)]">
+              Organizer-managed invites
             </span>
-          </label>
+            <span className="mt-1 block text-sm leading-6 text-[var(--text-secondary)]">
+              Phase 1 keeps invite creation with organizers and admins only. Member-created invites
+              can return later if a larger community explicitly needs them.
+            </span>
+          </div>
         </div>
 
         <button type="submit" className="btn-primary w-full" disabled={isCreatingGroup}>

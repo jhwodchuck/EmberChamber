@@ -4,13 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { Avatar } from "@/components/avatar";
-import { conversationsApi, usersApi } from "@/lib/api";
+import { relayConversationApi } from "@/lib/relay";
 
 interface User {
-  id: string;
+  accountId: string;
   username: string;
-  display_name: string;
-  avatar_url?: string;
+  displayName: string;
 }
 
 export default function NewDmPage() {
@@ -28,8 +27,8 @@ export default function NewDmPage() {
 
     setIsSearching(true);
     try {
-      const data = await usersApi.search(q);
-      setResults(data as User[]);
+      const data = await relayConversationApi.search(q);
+      setResults(data.accounts as User[]);
     } finally {
       setIsSearching(false);
     }
@@ -37,7 +36,7 @@ export default function NewDmPage() {
 
   async function startDm(userId: string) {
     try {
-      const { id } = (await conversationsApi.getOrCreateDm(userId)) as { id: string };
+      const { id } = await relayConversationApi.openDm(userId);
       router.push(`/app/chat/${id}`);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to start conversation");
@@ -71,15 +70,15 @@ export default function NewDmPage() {
         ) : (
           results.map((user) => (
             <button
-              key={user.id}
+              key={user.accountId}
               type="button"
-              onClick={() => void startDm(user.id)}
+              onClick={() => void startDm(user.accountId)}
               className="w-full rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-[var(--bg-secondary)]"
             >
               <div className="flex items-center gap-3">
-                <Avatar src={user.avatar_url} name={user.display_name} size="sm" />
+                <Avatar name={user.displayName} size="sm" />
                 <div>
-                  <p className="text-sm font-medium text-[var(--text-primary)]">{user.display_name}</p>
+                  <p className="text-sm font-medium text-[var(--text-primary)]">{user.displayName}</p>
                   <p className="text-xs text-[var(--text-secondary)]">@{user.username}</p>
                 </div>
               </div>

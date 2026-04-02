@@ -1861,55 +1861,65 @@ export default {
       }
 
       if (request.method === "POST" && pathname === "/v1/admin/review-session") {
-        const adminSecret = env.EMBERCHAMBER_ADMIN_SECRET;
-        if (!adminSecret) {
-          throw new HttpError(404, "Not found", "NOT_FOUND");
-        }
+        try {
+          const adminSecret = env.EMBERCHAMBER_ADMIN_SECRET;
+          if (!adminSecret) {
+            throw new HttpError(404, "Not found", "NOT_FOUND");
+          }
 
-        const authHeader = request.headers.get("authorization");
-        if (!authHeader || authHeader !== `Bearer ${adminSecret}`) {
-          throw new HttpError(403, "Forbidden", "FORBIDDEN");
-        }
+          const authHeader = request.headers.get("authorization");
+          if (!authHeader || authHeader !== `Bearer ${adminSecret}`) {
+            throw new HttpError(403, "Forbidden", "FORBIDDEN");
+          }
 
-        const reviewEmail = "play-store-reviewer@emberchamber.internal";
-        const emailBlindIndex = await blindIndex(env.EMBERCHAMBER_EMAIL_INDEX_SECRET, reviewEmail);
-        const emailCiphertext = await encryptString(env.EMBERCHAMBER_EMAIL_ENCRYPTION_SECRET, reviewEmail);
+          const reviewEmail = "play-store-reviewer@emberchamber.internal";
+          const emailBlindIndex = await blindIndex(env.EMBERCHAMBER_EMAIL_INDEX_SECRET, reviewEmail);
+          const emailCiphertext = await encryptString(env.EMBERCHAMBER_EMAIL_ENCRYPTION_SECRET, reviewEmail);
 
-        const challengeId = crypto.randomUUID();
-        const completionToken = `${challengeId}.${crypto.randomUUID()}`;
-        const completionTokenHash = await sha256Hex(`completion:${completionToken}`);
-        const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
+          const challengeId = crypto.randomUUID();
+          const completionToken = `${challengeId}.${crypto.randomUUID()}`;
+          const completionTokenHash = await sha256Hex(`completion:${completionToken}`);
+          const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
 
-        await dbRun(
-          env.DB,
-          `INSERT INTO auth_challenges (
-            id, email_ciphertext, email_blind_index, invite_token_hash, completion_token_hash, expires_at, created_at, requested_device_label, pending_group_conversation_id, pending_group_invite_token_hash, age_confirmed_18
-          ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)`,
-          challengeId,
-          emailCiphertext,
-          emailBlindIndex,
-          null,
-          completionTokenHash,
-          expiresAt,
-          new Date().toISOString(),
-          "Play Store Reviewer",
-          null,
-          null,
-          1
-        );
-
-        const completionUrl = `${publicWebUrl(env)}/auth/complete?token=${encodeURIComponent(completionToken)}`;
-
-        console.log(`review_session_created challenge=${challengeId} expires=${expiresAt}`);
-
-        return respond(
-          json({
+          await dbRun(
+            env.DB,
+            `INSERT INTO auth_challenges (
+              id, email_ciphertext, email_blind_index, invite_token_hash, completion_token_hash, expires_at, created_at, requested_device_label, pending_group_conversation_id, pending_group_invite_token_hash, age_confirmed_18
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)`,
             challengeId,
-            completionUrl,
+            emailCiphertext,
+            emailBlindIndex,
+            null,
+            completionTokenHash,
             expiresAt,
-            note: "Provide this URL to the Google Play reviewer. It is single-use and expires in 90 days.",
-          })
-        );
+            new Date().toISOString(),
+            "Play Store Reviewer",
+            null,
+            null,
+            1
+          );
+
+          const completionUrl = `${publicWebUrl(env)}/auth/complete?token=${encodeURIComponent(completionToken)}`;
+
+          console.log(`review_session_created challenge=${challengeId} expires=${expiresAt}`);
+
+          return respond(
+            json({
+              challengeId,
+              completionUrl,
+              expiresAt,
+              note: "Provide this URL to the Google Play reviewer. It is single-use and expires in 90 days.",
+            })
+          );
+        } catch (adminError) {
+          console.error("review_session_error", adminError);
+          return respond(
+            json({
+              error: adminError instanceof Error ? adminError.message : "Unknown error",
+              stack: adminError instanceof Error ? adminError.stack : undefined,
+            }, { status: 500 })
+          );
+        }
       }
 
       if (request.method === "POST" && pathname === "/v1/auth/start") {

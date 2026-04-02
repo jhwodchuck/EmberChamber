@@ -1,6 +1,6 @@
 [package]
 name = "emberchamber-desktop"
-description = "EmberChamber Tauri shell for Windows, Linux, macOS, Android, and iPhone packaging"
+description = "EmberChamber Tauri shell for Windows, Linux, and macOS packaging"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -17,5 +17,5 @@ path = "src/main.rs"
 tauri-build = { workspace = true }
 
 [dependencies]
-tauri = { version = "2.10.3" }
+tauri = { version = "2.10.3", features = [] }
 emberchamber-core = { workspace = true }

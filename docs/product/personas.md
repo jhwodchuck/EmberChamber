@@ -1,43 +1,58 @@
-# Product — Beta Personas and Flows
+# Product — Beta Personas And Current Flows
+
+This document describes the current beta experience in the repo, not just the intended end state.
 
 ## Personas
 
-| Persona | What they need |
+| Persona | Current need |
 | --- | --- |
-| **Trusted-circle organizer** | Runs a small private group, shares invite tokens, removes abusive members, keeps the circle closed. |
-| **Privacy-first member** | Wants encrypted DMs and groups without exposing phone number, Google identity, or public profile. |
-| **Desktop-heavy operator** | Uses Windows or Ubuntu as a daily client and wants the same trust model as mobile. |
-| **Android-first early adopter** | Uses the primary beta client, expects reliable offline delivery and sane recovery. |
-| **Safety reviewer** | Handles disclosure-based abuse reports without routine access to private message content. |
+| **Trusted-circle organizer** | Creates a small private group, sets join rules, mints or revokes invites, and removes members when the boundary changes. |
+| **Privacy-conscious member** | Wants invite-only access without phone-number identity, keeps email private, and expects readable session/privacy controls. |
+| **Android-first beta tester** | Uses the most complete relay-native client and expects local storage, attachment sending, and sane first-session setup. |
+| **Desktop-heavy host** | Uses Windows, macOS, or Linux daily and wants the same relay-native bootstrap and group-management path without loading a hosted web wrapper. |
+| **Safety reviewer** | Handles disclosure-based reports and boundary incidents even though there is no full operator dashboard yet. |
+| **Web companion user** | Uses the browser for onboarding, settings, and invite review while the fully migrated web workspace is still in progress. |
 
-## Core beta flows
+## Current Beta Flows
 
-### Beta onboarding
-1. Receive a beta invite token.
-2. Start email magic-link auth.
-3. Complete the magic link on web, Android, or desktop.
-4. Generate device keys locally and upload the public bundle.
-5. Optionally enroll a passkey later.
+### Bootstrap and first session
 
-### DM flow
-1. Resolve a contact card or deep-link invite.
-2. Open or reuse a DM conversation.
-3. Encrypt one envelope per recipient device.
-4. Relay queues ciphertext until the recipient acks it.
-5. Message history remains local on each device.
+1. Receive either a beta invite token or a full group invite URL.
+2. Start email magic-link auth on web, mobile, or desktop.
+3. Complete the magic link and create a device-bound relay session.
+4. Register device-bundle material if the client supports it.
+5. Review sessions and privacy defaults on the client you just bootstrapped.
 
-### Small-group flow
+Passkeys remain future work. The endpoints exist, but the relay does not complete a passkey flow yet.
+
+### Trusted-circle setup
+
 1. Create a group capped at 12 members.
-2. Mint group invites from an owner/admin device.
-3. Send pairwise encrypted envelopes to member devices.
-4. Rotate conversation epoch when membership changes.
-5. Keep reports disclosure-based rather than routinely inspect content.
+2. Save join rules and decide whether members can mint invites.
+3. Mint one or more shareable invites.
+4. Preview the invite before accepting it on another account or device.
+5. Owners and admins can revoke invites and remove members.
 
-## Beta out of scope
+### Group thread and attachment flow today
 
-- public channels
-- public discovery
-- phone-number social graph
-- large community moderation stacks
+1. Mobile and desktop call the relay group endpoints directly.
+2. Message text is stored in relay-side `conversation_messages`.
+3. Attachments upload to R2 through signed tickets and are linked into the group thread.
+4. Clients can keep local copies and local vault metadata.
+5. This is the working beta flow, but it is not the final end-to-end encrypted group-history design.
+
+### Encrypted-delivery substrate in progress
+
+- The relay already exposes device bundles, contact cards, `dm/open`, `messages/batch`, and mailbox sync/ack endpoints.
+- Those APIs are the basis for a fuller E2EE DM and group-delivery model.
+- The repo does not yet provide a fully migrated user-facing experience on top of that substrate across every client surface.
+
+## Not The Current Beta Direction
+
+- public discovery-first growth
+- phone-number identity and address-book matching
 - voice and video calling
-- web as the only or preferred primary chat runtime
+- store-published signed release channels
+- web as the only or preferred primary client
+- large moderation and operator suites
+- treating legacy public channels and search as the target beta product

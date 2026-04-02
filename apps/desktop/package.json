@@ -2,7 +2,7 @@
   "name": "@emberchamber/desktop",
   "version": "0.1.0",
   "private": true,
-  "description": "EmberChamber native shell for Windows, Linux, macOS, Android, and iPhone packaging",
+  "description": "EmberChamber native desktop shell for Windows, Linux, and macOS packaging",
   "scripts": {
     "dev": "tauri dev",
     "doctor": "tauri info",

@@ -11,8 +11,10 @@ It has two jobs:
 
 The web app is intentionally **secondary, not crippled**.
 
-- It supports real messaging, search, channel reading/posting, invite review, settings, and recovery.
+- It supports real messaging, search, invite review, settings, and recovery.
 - Android and desktop remain the preferred primary-use surfaces for longer sessions, better device integration, and heavier media traffic.
+- The current implementation is relay-first: onboarding, DMs, groups, invite flows, search, settings, and browser mailbox sync all use `apps/relay`.
+- Legacy channel pages are intentionally retired placeholders, not active product dependencies.
 
 ## Responsibilities
 
@@ -27,13 +29,8 @@ The web app is intentionally **secondary, not crippled**.
 
 ### Authenticated `/app/*` routes
 
-- direct messages
-- group creation
-- channel creation
-- channel reading and posting
-- message/channel/user search
-- invite preview and acceptance
-- account settings and session management
+- relay-native: direct messages, groups, invite preview and acceptance, joined-space metadata search, account settings, session management, and browser mailbox sync
+- deferred: community-room and channel-style browser surfaces
 
 ## Route Map
 
@@ -58,8 +55,8 @@ The web app is intentionally **secondary, not crippled**.
 - `/app/new-dm`
 - `/app/chat/[id]`
 - `/app/new-group`
-- `/app/new-channel`
-- `/app/channel/[id]`
+- `/app/new-channel` placeholder for later-beta community rooms
+- `/app/channel/[id]` retired legacy-channel notice
 - `/app/search`
 - `/app/discover`
 - `/app/settings`
@@ -89,7 +86,7 @@ Use Android or desktop when:
 
 `apps/web` depends on:
 
-- `apps/relay` for auth, invite, group, and account flows
+- `apps/relay` for auth, direct messaging, mailbox sync, invite, group, search, and account flows
 - `packages/protocol` for shared TypeScript relay contracts
 
 If `packages/protocol` changes, rebuild it before building the web app:
@@ -149,7 +146,10 @@ npm run build --workspace=apps/web
 
 ## Documentation Links
 
+- Docs index: [`docs/README.md`](/home/jason/gh/PrivateMesh/docs/README.md)
 - Root overview: [`README.md`](/home/jason/gh/PrivateMesh/README.md)
 - Architecture: [`docs/architecture.md`](/home/jason/gh/PrivateMesh/docs/architecture.md)
 - Launch targets: [`docs/launch-targets.md`](/home/jason/gh/PrivateMesh/docs/launch-targets.md)
+- Roadmap: [`docs/roadmap.md`](/home/jason/gh/PrivateMesh/docs/roadmap.md)
+- Relay API: [`docs/api/relay-http.md`](/home/jason/gh/PrivateMesh/docs/api/relay-http.md)
 - Operator playbook: [`docs/operator-playbook.md`](/home/jason/gh/PrivateMesh/docs/operator-playbook.md)

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { InviteExplorer } from "@/components/invite-explorer";
+import { acceptedInviteHref } from "@/lib/conversation-routes";
 
 export default function DiscoverPage() {
   const router = useRouter();
@@ -25,7 +26,7 @@ export default function DiscoverPage() {
       <InviteExplorer
         mode="companion"
         onAccept={(result) => {
-          router.push("/app");
+          router.push(acceptedInviteHref(result));
         }}
       />
     </div>

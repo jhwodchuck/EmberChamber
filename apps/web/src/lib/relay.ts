@@ -1,5 +1,19 @@
 import type {
+  AttachmentTicket,
+  AttachmentEncryptionMode,
+  AuthStartRequest,
   AuthSession,
+  CipherEnvelope,
+  ConversationDetail,
+  ConversationDescriptor,
+  ConversationInviteAcceptance,
+  ConversationInviteDescriptor,
+  ConversationInvitePreview,
+  ConversationSearchResult,
+  ConversationSummary,
+  DeviceKeyBundle,
+  MailboxAck,
+  PrekeyBundle,
   GroupInviteAcceptance,
   GroupInviteDescriptor,
   GroupInvitePreview,
@@ -143,13 +157,7 @@ async function relayFetch<T>(
   throw parseRelayError(response.status, body);
 }
 
-export async function startMagicLink(input: {
-  email: string;
-  inviteToken?: string;
-  groupId?: string;
-  groupInviteToken?: string;
-  deviceLabel: string;
-}): Promise<MagicLinkChallenge> {
+export async function startMagicLink(input: AuthStartRequest): Promise<MagicLinkChallenge> {
   return relayFetch<MagicLinkChallenge>(
     "/v1/auth/start",
     {
@@ -205,20 +213,8 @@ export const relayGroupApi = {
     memberCap?: number;
     sensitiveMediaDefault?: boolean;
     joinRuleText?: string;
-    allowMemberInvites?: boolean;
   }) =>
-    relayFetch<{
-      id: string;
-      kind: "group";
-      title: string;
-      epoch: number;
-      memberAccountIds: string[];
-      memberCap?: number;
-      sensitiveMediaDefault?: boolean;
-      joinRuleText?: string | null;
-      allowMemberInvites?: boolean;
-      createdAt: string;
-    }>("/v1/groups", {
+    relayFetch<ConversationDescriptor>("/v1/groups", {
       method: "POST",
       body: JSON.stringify(data),
     }),
@@ -261,3 +257,204 @@ export const relayGroupApi = {
       { method: "POST" },
     ),
 };
+
+export const relayConversationApi = {
+  list: () => relayFetch<ConversationSummary[]>("/v1/conversations"),
+  get: (conversationId: string) => relayFetch<ConversationDetail>(`/v1/conversations/${conversationId}`),
+  search: (query: string, communityId?: string) =>
+    relayFetch<ConversationSearchResult>(
+      `/v1/search?q=${encodeURIComponent(query)}${
+        communityId ? `&communityId=${encodeURIComponent(communityId)}` : ""
+      }`,
+    ),
+  openDm: (peerAccountId: string) =>
+    relayFetch<ConversationDescriptor>("/v1/dm/open", {
+      method: "POST",
+      body: JSON.stringify({ peerAccountId }),
+    }),
+  createCommunity: (data: {
+    title: string;
+    memberAccountIds?: string[];
+    memberCap?: number;
+    sensitiveMediaDefault?: boolean;
+    joinRuleText?: string;
+    allowMemberInvites?: boolean;
+    defaultRoomTitle?: string;
+  }) =>
+    relayFetch<ConversationDescriptor>("/v1/communities", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  updateCommunityPolicies: (
+    communityId: string,
+    data: { allowMemberInvites?: boolean; inviteFreezeEnabled?: boolean },
+  ) =>
+    relayFetch<ConversationDetail>(`/v1/communities/${communityId}/policies`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+  createRoom: (
+    communityId: string,
+    data: {
+      title: string;
+      joinRuleText?: string;
+      sensitiveMediaDefault?: boolean;
+      roomAccessPolicy?: "all_members" | "restricted";
+      memberAccountIds?: string[];
+    },
+  ) =>
+    relayFetch<ConversationSummary>(`/v1/communities/${communityId}/rooms`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  addRoomMember: (communityId: string, roomId: string, accountId: string) =>
+    relayFetch<{ added: boolean; communityId: string; roomId: string; targetAccountId: string }>(
+      `/v1/communities/${communityId}/rooms/${roomId}/members/${accountId}/add`,
+      { method: "POST" },
+    ),
+  removeRoomMember: (communityId: string, roomId: string, accountId: string) =>
+    relayFetch<{ removed: boolean; communityId: string; roomId: string; targetAccountId: string }>(
+      `/v1/communities/${communityId}/rooms/${roomId}/members/${accountId}/remove`,
+      { method: "POST" },
+    ),
+  removeCommunityMember: (communityId: string, accountId: string) =>
+    relayFetch<{ removed: boolean; communityId: string; targetAccountId: string }>(
+      `/v1/communities/${communityId}/members/${accountId}/remove`,
+      { method: "POST" },
+    ),
+  listMessages: (conversationId: string, limit = 50) =>
+    relayFetch<GroupThreadMessage[]>(
+      `/v1/conversations/${conversationId}/messages?limit=${encodeURIComponent(String(limit))}`,
+    ),
+  sendMessage: (
+    conversationId: string,
+    data: { text?: string; attachmentId?: string; clientMessageId?: string },
+  ) =>
+    relayFetch<GroupThreadMessage>(`/v1/conversations/${conversationId}/messages`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  createInvite: (
+    conversationId: string,
+    data: {
+      maxUses?: number;
+      expiresInHours?: number;
+      note?: string;
+      scope?: "conversation" | "room";
+      roomId?: string;
+    } = {},
+  ) =>
+    relayFetch<ConversationInviteDescriptor>(`/v1/conversations/${conversationId}/invites`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  previewInvite: (conversationId: string, inviteToken: string) =>
+    relayFetch<ConversationInvitePreview>(
+      `/v1/conversations/${conversationId}/invites/${encodeURIComponent(inviteToken)}/preview`,
+      undefined,
+      { auth: false },
+    ),
+  acceptInvite: (conversationId: string, inviteToken: string) =>
+    relayFetch<ConversationInviteAcceptance>(
+      `/v1/conversations/${conversationId}/invites/${encodeURIComponent(inviteToken)}/accept`,
+      { method: "POST" },
+    ),
+  revokeInvite: (conversationId: string, inviteId: string) =>
+    relayFetch<{ revoked: boolean; inviteId: string }>(`/v1/conversations/${conversationId}/invites/${inviteId}`, {
+      method: "DELETE",
+    }),
+};
+
+export const relayDeviceApi = {
+  registerBundle: (bundle: PrekeyBundle) =>
+    relayFetch<{ registered: boolean; deviceId: string }>("/v1/devices/register", {
+      method: "POST",
+      body: JSON.stringify(bundle),
+    }),
+  listBundles: (accountId: string) =>
+    relayFetch<DeviceKeyBundle[]>(`/v1/accounts/${accountId}/device-bundles`),
+};
+
+export const relayMailboxApi = {
+  sendBatch: (data: {
+    conversationId: string;
+    epoch: number;
+    envelopes: Array<{
+      recipientDeviceId: string;
+      ciphertext: string;
+      clientMessageId: string;
+      attachmentIds?: string[];
+    }>;
+  }) =>
+    relayFetch<{
+      acceptedEnvelopeIds: string[];
+      duplicateEnvelopeIds?: string[];
+      blockedRecipients?: string[];
+      rejectedRecipients?: string[];
+    }>("/v1/messages/batch", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  sync: (cursor?: string, limit = 50) =>
+    relayFetch<{
+      cursor: { lastSeenEnvelopeId?: string };
+      envelopes: CipherEnvelope[];
+      stats?: {
+        enqueued: number;
+        acknowledged: number;
+        expired: number;
+        rejected: number;
+        queued: number;
+      };
+    }>(`/v1/mailbox/sync?after=${encodeURIComponent(cursor ?? "")}&limit=${encodeURIComponent(String(limit))}`),
+  ack: (data: MailboxAck) =>
+    relayFetch<{ acknowledged: number }>("/v1/mailbox/ack", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+};
+
+export const relayAttachmentApi = {
+  createTicket: (data: {
+    fileName: string;
+    mimeType: string;
+    byteLength?: number;
+    sha256B64?: string;
+    encryptionMode?: AttachmentEncryptionMode;
+    ciphertextByteLength?: number;
+    ciphertextSha256B64?: string;
+    plaintextByteLength?: number;
+    plaintextSha256B64?: string;
+    conversationId?: string;
+    conversationEpoch?: number;
+    contentClass?: "image" | "video" | "audio" | "file";
+    retentionMode?: "private_vault" | "ephemeral";
+    protectionProfile?: "sensitive_media" | "standard";
+    previewBlurHash?: string;
+  }) =>
+    relayFetch<AttachmentTicket>("/v1/attachments/ticket", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  refreshDownloadUrl: (attachmentId: string) =>
+    relayFetch<{ attachmentId: string; downloadUrl: string; expiresAt: string }>(
+      `/v1/attachments/${attachmentId}/access`,
+    ),
+};
+
+export async function uploadAttachment(uploadUrl: string, body: ArrayBuffer, contentType: string) {
+  const response = await fetch(uploadUrl, {
+    method: "PUT",
+    headers: {
+      "content-type": contentType,
+    },
+    body,
+  });
+
+  if (!response.ok) {
+    const errorBody = ((await response.json().catch(() => ({}))) ?? {}) as RelayErrorBody;
+    throw parseRelayError(response.status, errorBody);
+  }
+
+  return (await response.json().catch(() => ({}))) as { uploaded: boolean };
+}

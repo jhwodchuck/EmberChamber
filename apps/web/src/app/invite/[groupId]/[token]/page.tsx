@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { InviteExplorer } from "@/components/invite-explorer";
 import { MarketingShell } from "@/components/marketing-shell";
+import { acceptedInviteHref } from "@/lib/conversation-routes";
 
 export default function GroupInviteLandingPage() {
   const params = useParams<{ groupId: string; token: string }>();
@@ -18,7 +19,7 @@ export default function GroupInviteLandingPage() {
             EmberChamber Invite
           </p>
           <h1 className="text-balance font-display text-4xl font-semibold text-[var(--text-primary)] sm:text-5xl">
-            Preview the group before you trust the link.
+            Preview the private space before you trust the link.
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-[var(--text-secondary)]">
             Check who issued the invite, how long it lasts, and what boundary rules apply before
@@ -27,11 +28,11 @@ export default function GroupInviteLandingPage() {
         </div>
 
         <InviteExplorer
-          initialGroupId={groupId}
+          initialConversationId={groupId}
           initialToken={token}
           mode="public"
-          onAccept={() => {
-            router.push("/app");
+          onAccept={(result) => {
+            router.push(acceptedInviteHref(result));
           }}
         />
       </section>

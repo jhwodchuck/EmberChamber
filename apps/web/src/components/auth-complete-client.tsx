@@ -36,6 +36,37 @@ export function AuthCompleteClient() {
     ? `emberchamber://auth/complete?token=${encodeURIComponent(completionToken)}`
     : "emberchamber://auth/complete";
 
+  // Attempt an immediate deep-link redirect on mobile. If the app is installed
+  // Android/iOS will open it and the user never sees this page. If it is not
+  // installed (or the scheme is not registered yet) the browser stays put and
+  // after 1.5 s we reveal the manual "Open in App" button so the user is not
+  // left on a blank loading screen.
+  useEffect(() => {
+    if (!completionToken || !prefersAppHandoff || forceBrowser) {
+      return;
+    }
+
+    setState({
+      status: "loading",
+      message: "Opening EmberChamber…",
+    });
+
+    // Fire the deep-link. The browser will hand off to the app if installed.
+    window.location.href = appDeepLink;
+
+    const fallbackTimer = window.setTimeout(() => {
+      setState({
+        status: "handoff",
+        message:
+          "The app did not open automatically. Tap the button below to launch EmberChamber, or finish sign-in in the browser.",
+      });
+    }, 1500);
+
+    return () => {
+      window.clearTimeout(fallbackTimer);
+    };
+  }, [appDeepLink, completionToken, forceBrowser, prefersAppHandoff]);
+
   useEffect(() => {
     if (!completionToken) {
       setState({
@@ -45,12 +76,8 @@ export function AuthCompleteClient() {
       return;
     }
 
+    // Mobile users are handled by the deep-link effect above.
     if (prefersAppHandoff && !forceBrowser) {
-      setState({
-        status: "handoff",
-        message:
-          "Open this link in the EmberChamber app to finish mobile sign-in. If the app does not launch, you can still finish in the browser.",
-      });
       return;
     }
 
