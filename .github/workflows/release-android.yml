@@ -53,21 +53,39 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x apps/mobile/android/gradlew
 
-      - name: Build debug APK
-        run: ./gradlew assembleDebug
+      - name: Decode release keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d \
+            > apps/mobile/android/app/emberchamber-release.keystore
+
+      - name: Build debug APK and signed release AAB
+        env:
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          ./gradlew assembleDebug bundleRelease \
+            -Pandroid.injected.signing.store.file="$GITHUB_WORKSPACE/apps/mobile/android/app/emberchamber-release.keystore" \
+            -Pandroid.injected.signing.store.password="$ANDROID_STORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$ANDROID_KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$ANDROID_KEY_PASSWORD"
         working-directory: apps/mobile/android
 
       - name: Upload Android artifacts
         uses: actions/upload-artifact@v7
         with:
           name: emberchamber-android-beta
-          path: apps/mobile/android/app/build/outputs/apk/debug/*.apk
+          path: |
+            apps/mobile/android/app/build/outputs/apk/debug/*.apk
+            apps/mobile/android/app/build/outputs/bundle/release/*.aab
           retention-days: 30
           if-no-files-found: error
 
-      - name: Publish Android asset to GitHub Release
+      - name: Publish Android assets to GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           prerelease: true
-          files: apps/mobile/android/app/build/outputs/apk/debug/*.apk
+          files: |
+            apps/mobile/android/app/build/outputs/apk/debug/*.apk
+            apps/mobile/android/app/build/outputs/bundle/release/*.aab
