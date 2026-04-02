@@ -71,6 +71,16 @@ jobs:
             -Pandroid.injected.signing.key.password="$ANDROID_KEY_PASSWORD"
         working-directory: apps/mobile/android
 
+      - name: Rename artifacts with version
+        run: |
+          REF="${GITHUB_REF_NAME//\//-}"
+          APK_SRC=apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          AAB_SRC=apps/mobile/android/app/build/outputs/bundle/release/app-release.aab
+          mv "$APK_SRC" \
+            "apps/mobile/android/app/build/outputs/apk/debug/emberchamber-${REF}-debug.apk"
+          mv "$AAB_SRC" \
+            "apps/mobile/android/app/build/outputs/bundle/release/emberchamber-${REF}-release.aab"
+
       - name: Upload Android artifacts
         uses: actions/upload-artifact@v7
         with:
