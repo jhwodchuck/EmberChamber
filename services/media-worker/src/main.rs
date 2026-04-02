@@ -4,5 +4,7 @@ use emberchamber_domain::telemetry::init_tracing;
 async fn main() {
     dotenvy::dotenv().ok();
     init_tracing("media-worker");
-    tracing::info!("media-worker starting — Sprint 2 will wire upload finalization and malware scan");
+    tracing::info!(
+        "media-worker starting — Sprint 2 will wire upload finalization and malware scan"
+    );
 }
