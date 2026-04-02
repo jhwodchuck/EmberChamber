@@ -62,3 +62,4 @@ infra/data/
 *.apk
 *.aab
 .vercel
+apps/mobile/secrets/
