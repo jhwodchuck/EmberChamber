@@ -18,6 +18,5 @@ crates
 packages
 infra
 docs
-brand
 
 *.log
