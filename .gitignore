@@ -61,3 +61,4 @@ infra/data/
 *.deb
 *.apk
 *.aab
+.vercel
