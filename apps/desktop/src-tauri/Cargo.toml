@@ -14,7 +14,7 @@ name = "emberchamber-desktop"
 path = "src/main.rs"
 
 [build-dependencies]
-tauri-build = { version = "2.5.6" }
+tauri-build = { workspace = true }
 
 [dependencies]
 tauri = { version = "2.10.3" }

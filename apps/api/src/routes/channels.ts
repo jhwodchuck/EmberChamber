@@ -375,7 +375,19 @@ router.post("/:id/posts", async (req: AuthRequest, res: Response, next) => {
         [id]
       );
 
-      return rows[0];
+      const author = await client.query(
+        `SELECT username, display_name, avatar_url
+         FROM users
+         WHERE id = $1`,
+        [req.userId]
+      );
+
+      return {
+        ...rows[0],
+        username: author.rows[0]?.username ?? "",
+        display_name: author.rows[0]?.display_name ?? "",
+        avatar_url: author.rows[0]?.avatar_url ?? null,
+      };
     });
 
     // Publish to Redis

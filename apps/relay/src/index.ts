@@ -3,13 +3,28 @@ import type {
   CipherEnvelope,
   ConversationDescriptor,
   ContactCard,
+  DeviceKeyBundle,
+  GroupInviteRecord,
+  GroupInviteDescriptor,
+  GroupMembershipSummary,
+  GroupInvitePreview,
+  GroupThreadMessage,
   MagicLinkChallenge,
+  MeProfile,
+  SessionDescriptor,
 } from "@emberchamber/protocol";
 import { z } from "zod";
 import { DeviceMailboxDO } from "./do/device-mailbox";
 import { GroupCoordinatorDO } from "./do/group-coordinator";
 import { RateLimitDO } from "./do/rate-limit";
-import { blindIndex, encryptString, normalizeEmail, sha256Hex, signValue } from "./lib/crypto";
+import {
+  blindIndex,
+  decryptString,
+  encryptString,
+  normalizeEmail,
+  sha256Hex,
+  signValue,
+} from "./lib/crypto";
 import { dbAll, dbFirst, dbRun } from "./lib/d1";
 import { errorResponse, HttpError, json, preflightResponse, readJson, withCors } from "./lib/http";
 import { signAccessToken, verifyAccessToken } from "./lib/tokens";
@@ -24,6 +39,7 @@ export interface Env {
   PUSH_QUEUE: Queue<unknown>;
   CLEANUP_QUEUE: Queue<unknown>;
   EMBERCHAMBER_RELAY_PUBLIC_URL: string;
+  EMBERCHAMBER_WEB_PUBLIC_URL?: string;
   EMBERCHAMBER_EMAIL_PROVIDER: string;
   EMBERCHAMBER_EMAIL_FROM: string;
   EMBERCHAMBER_DEV_INVITE_TOKEN?: string;
@@ -44,12 +60,14 @@ interface AuthContext {
 const authStartSchema = z.object({
   email: z.string().email(),
   inviteToken: z.string().min(3).max(128).optional(),
+  groupId: z.string().uuid().optional(),
+  groupInviteToken: z.string().min(3).max(256).optional(),
   deviceLabel: z.string().min(1).max(64).default("New device"),
 });
 
 const authCompleteSchema = z.object({
   completionToken: z.string().min(12),
-  deviceLabel: z.string().min(1).max(64).default("Primary device"),
+  deviceLabel: z.string().min(1).max(64).optional(),
 });
 
 const deviceRegisterSchema = z.object({
@@ -66,6 +84,10 @@ const directMessageSchema = z.object({
 const groupSchema = z.object({
   title: z.string().min(1).max(80),
   memberAccountIds: z.array(z.string().uuid()).max(11).default([]),
+  memberCap: z.number().int().min(2).max(12).default(12),
+  sensitiveMediaDefault: z.boolean().default(true),
+  joinRuleText: z.string().min(1).max(500).optional(),
+  allowMemberInvites: z.boolean().default(false),
 });
 
 const messageBatchSchema = z.object({
@@ -93,12 +115,31 @@ const attachmentTicketSchema = z.object({
   mimeType: z.string().min(1).max(120),
   byteLength: z.number().int().positive().max(20 * 1024 * 1024),
   sha256B64: z.string().optional(),
+  conversationId: z.string().uuid().optional(),
+  conversationEpoch: z.number().int().min(1).optional(),
+  contentClass: z.enum(["image", "video", "audio", "file"]).default("image"),
+  retentionMode: z.enum(["private_vault", "ephemeral"]).default("private_vault"),
+  protectionProfile: z.enum(["sensitive_media", "standard"]).default("sensitive_media"),
+  previewBlurHash: z.string().max(120).optional(),
 });
 
 const reportSchema = z.object({
   targetConversationId: z.string().uuid().optional(),
   targetAccountId: z.string().uuid().optional(),
-  reason: z.string().min(3).max(500),
+  targetAttachmentId: z.string().uuid().optional(),
+  reason: z.enum([
+    "spam",
+    "harassment",
+    "illegal_content",
+    "malware",
+    "csam",
+    "non_consensual_intimate_media",
+    "coercion_or_extortion",
+    "impersonation",
+    "underage_risk",
+    "other",
+  ]),
+  evidenceMessageIds: z.array(z.string().min(8)).max(25).optional(),
   disclosedPayload: z.record(z.unknown()),
 });
 
@@ -113,6 +154,25 @@ const deviceLinkConfirmSchema = z.object({
 const conversationInviteSchema = z.object({
   maxUses: z.number().int().min(1).max(100).optional(),
   expiresInHours: z.number().int().min(1).max(24 * 14).optional(),
+  note: z.string().min(1).max(240).optional(),
+});
+
+const groupThreadMessageSchema = z.object({
+  text: z.string().max(2000).optional(),
+  attachmentId: z.string().uuid().optional(),
+  clientMessageId: z.string().min(8).max(120).optional(),
+});
+
+const profileSchema = z.object({
+  displayName: z.string().min(1).max(128).optional(),
+  bio: z.string().max(512).optional(),
+});
+
+const privacySettingsSchema = z.object({
+  notificationPreviewMode: z.enum(["discreet", "expanded", "none"]).default("discreet"),
+  autoDownloadSensitiveMedia: z.boolean().default(false),
+  allowSensitiveExport: z.boolean().default(false),
+  secureAppSwitcher: z.boolean().default(true),
 });
 
 const contactCardSchema = z.object({
@@ -225,7 +285,225 @@ async function requireBetaInvite(env: Env, inviteToken: string | undefined): Pro
   return tokenHash;
 }
 
-async function createSession(env: Env, accountId: string, deviceId: string) {
+async function validateBootstrapGroupInvite(
+  env: Env,
+  conversationId: string,
+  inviteToken: string
+): Promise<{ conversationId: string; tokenHash: string; title: string }> {
+  const tokenHash = await hashInviteToken(inviteToken);
+  const invite = await dbFirst<{
+    title: string | null;
+    revoked_at: string | null;
+    expires_at: string | null;
+    max_uses: number | null;
+    use_count: number;
+    member_cap: number | null;
+    invite_freeze_enabled: number | null;
+    member_count: number;
+  }>(
+    env.DB,
+    `SELECT
+       c.title,
+       ci.revoked_at,
+       ci.expires_at,
+       ci.max_uses,
+       ci.use_count,
+       c.member_cap,
+       c.invite_freeze_enabled,
+       (
+         SELECT COUNT(*)
+           FROM conversation_members cm
+          WHERE cm.conversation_id = c.id AND cm.removed_at IS NULL
+       ) AS member_count
+     FROM conversation_invites ci
+     JOIN conversations c ON c.id = ci.conversation_id
+    WHERE ci.conversation_id = ?1
+      AND ci.token_hash = ?2
+      AND c.kind = 'group'`,
+    conversationId,
+    tokenHash
+  );
+
+  if (!invite) {
+    throw new HttpError(403, "Invalid group invite", "INVALID_INVITE");
+  }
+
+  const status = inviteStatusForRow({
+    revokedAt: invite.revoked_at,
+    expiresAt: invite.expires_at,
+    maxUses: invite.max_uses,
+    useCount: invite.use_count,
+    inviteFrozen: invite.invite_freeze_enabled,
+  });
+
+  if (status !== "active") {
+    throw new HttpError(403, `Group invite is ${status}`, "GROUP_INVITE_UNAVAILABLE");
+  }
+
+  if (invite.member_count >= (invite.member_cap ?? 12)) {
+    throw new HttpError(409, "Group is already at capacity", "GROUP_CAP_EXCEEDED");
+  }
+
+  return {
+    conversationId,
+    tokenHash,
+    title: invite.title ?? "Untitled group",
+  };
+}
+
+async function resolveBootstrapAccess(
+  env: Env,
+  input: z.infer<typeof authStartSchema>,
+  accountExists: boolean
+): Promise<{
+  betaInviteHash: string | null;
+  pendingGroupConversationId: string | null;
+  pendingGroupInviteTokenHash: string | null;
+}> {
+  if (accountExists) {
+    return {
+      betaInviteHash: null,
+      pendingGroupConversationId: null,
+      pendingGroupInviteTokenHash: null,
+    };
+  }
+
+  if (input.inviteToken) {
+    return {
+      betaInviteHash: await requireBetaInvite(env, input.inviteToken),
+      pendingGroupConversationId: null,
+      pendingGroupInviteTokenHash: null,
+    };
+  }
+
+  if (input.groupId || input.groupInviteToken) {
+    if (!input.groupId || !input.groupInviteToken) {
+      throw new HttpError(400, "Group invite bootstrap needs both group id and token", "INVALID_INVITE_REFERENCE");
+    }
+
+    const invite = await validateBootstrapGroupInvite(env, input.groupId, input.groupInviteToken);
+    return {
+      betaInviteHash: null,
+      pendingGroupConversationId: invite.conversationId,
+      pendingGroupInviteTokenHash: invite.tokenHash,
+    };
+  }
+
+  throw new HttpError(403, "Invite token required for beta access", "INVITE_REQUIRED");
+}
+
+async function acceptGroupInviteByTokenHash(
+  env: Env,
+  accountId: string,
+  conversationId: string,
+  tokenHash: string
+): Promise<{ conversationId: string; title: string; epoch: number }> {
+  const invite = await dbFirst<{
+    invite_id: string;
+    revoked_at: string | null;
+    expires_at: string | null;
+    max_uses: number | null;
+    use_count: number;
+    title: string | null;
+    epoch: number;
+    member_cap: number | null;
+    invite_freeze_enabled: number | null;
+  }>(
+    env.DB,
+    `SELECT
+       ci.id AS invite_id,
+       ci.revoked_at,
+       ci.expires_at,
+       ci.max_uses,
+       ci.use_count,
+       c.title,
+       c.epoch,
+       c.member_cap,
+       c.invite_freeze_enabled
+     FROM conversation_invites ci
+     JOIN conversations c ON c.id = ci.conversation_id
+    WHERE ci.conversation_id = ?1
+      AND ci.token_hash = ?2
+      AND c.kind = 'group'`,
+    conversationId,
+    tokenHash
+  );
+
+  if (!invite) {
+    throw new HttpError(404, "Invite not found", "INVITE_NOT_FOUND");
+  }
+
+  const status = inviteStatusForRow({
+    revokedAt: invite.revoked_at,
+    expiresAt: invite.expires_at,
+    maxUses: invite.max_uses,
+    useCount: invite.use_count,
+    inviteFrozen: invite.invite_freeze_enabled,
+  });
+
+  if (status !== "active") {
+    throw new HttpError(410, `Invite is ${status}`, "INVITE_UNAVAILABLE");
+  }
+
+  const existingMember = await dbFirst<{ account_id: string }>(
+    env.DB,
+    `SELECT account_id
+       FROM conversation_members
+      WHERE conversation_id = ?1 AND account_id = ?2 AND removed_at IS NULL`,
+    conversationId,
+    accountId
+  );
+
+  if (!existingMember) {
+    const memberCountRow = await dbFirst<{ member_count: number }>(
+      env.DB,
+      `SELECT COUNT(*) AS member_count
+         FROM conversation_members
+        WHERE conversation_id = ?1 AND removed_at IS NULL`,
+      conversationId
+    );
+
+    if ((memberCountRow?.member_count ?? 0) >= (invite.member_cap ?? 12)) {
+      throw new HttpError(409, "Group is already at capacity", "GROUP_CAP_EXCEEDED");
+    }
+
+    const joinedAt = new Date().toISOString();
+    await dbRun(
+      env.DB,
+      `INSERT INTO conversation_members (conversation_id, account_id, role, joined_at)
+       VALUES (?1, ?2, 'member', ?3)
+       ON CONFLICT(conversation_id, account_id) DO UPDATE SET removed_at = NULL, joined_at = excluded.joined_at, role = 'member'`,
+      conversationId,
+      accountId,
+      joinedAt
+    );
+    await dbRun(
+      env.DB,
+      "UPDATE conversation_invites SET use_count = use_count + 1 WHERE id = ?1",
+      invite.invite_id
+    );
+    await appendConversationMessage(env, {
+      conversationId,
+      senderAccountId: accountId,
+      kind: "system_notice",
+      text: "Joined the group",
+      createdAt: joinedAt,
+    });
+  }
+
+  return {
+    conversationId,
+    title: invite.title ?? "Untitled group",
+    epoch: invite.epoch,
+  };
+}
+
+async function createSession(
+  env: Env,
+  accountId: string,
+  deviceId: string,
+  bootstrapConversation?: { conversationId: string; title: string } | null
+) {
   const sessionId = crypto.randomUUID();
   const refreshToken = `${crypto.randomUUID()}-${crypto.randomUUID()}`;
   const refreshTokenHash = await sha256Hex(`refresh:${refreshToken}`);
@@ -256,6 +534,8 @@ async function createSession(env: Env, accountId: string, deviceId: string) {
     refreshToken,
     expiresAt,
     passkeyEnrollmentSuggested: true,
+    bootstrapConversationId: bootstrapConversation?.conversationId,
+    bootstrapConversationTitle: bootstrapConversation?.title,
   };
 }
 
@@ -287,6 +567,57 @@ async function signAttachmentToken(
   return `${payload}.${signature}`;
 }
 
+async function appendConversationMessage(
+  env: Env,
+  input: {
+    conversationId: string;
+    senderAccountId: string;
+    kind: "text" | "media" | "system_notice";
+    text?: string | null;
+    attachmentId?: string | null;
+    clientMessageId?: string | null;
+    createdAt?: string;
+  }
+) {
+  const messageId = crypto.randomUUID();
+  const createdAt = input.createdAt ?? new Date().toISOString();
+
+  await dbRun(
+    env.DB,
+    `INSERT INTO conversation_messages (
+       id,
+       conversation_id,
+       sender_account_id,
+       kind,
+       body_text,
+       attachment_id,
+       client_message_id,
+       created_at
+     )
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`,
+    messageId,
+    input.conversationId,
+    input.senderAccountId,
+    input.kind,
+    input.text ?? null,
+    input.attachmentId ?? null,
+    input.clientMessageId ?? null,
+    createdAt
+  );
+
+  await dbRun(
+    env.DB,
+    "UPDATE conversations SET updated_at = ?1 WHERE id = ?2",
+    createdAt,
+    input.conversationId
+  );
+
+  return {
+    id: messageId,
+    createdAt,
+  };
+}
+
 async function enqueueEnvelope(env: Env, envelope: CipherEnvelope): Promise<void> {
   const id = env.DEVICE_MAILBOX.idFromName(envelope.recipientDeviceId);
   const stub = env.DEVICE_MAILBOX.get(id);
@@ -298,6 +629,40 @@ async function enqueueEnvelope(env: Env, envelope: CipherEnvelope): Promise<void
 
 function conversationTitleForAccount(accountId: string): string {
   return `Member ${accountId.slice(0, 8)}`;
+}
+
+function accountUsername(accountId: string): string {
+  return `member-${accountId.slice(0, 8)}`;
+}
+
+function publicWebUrl(env: Env): string {
+  return (env.EMBERCHAMBER_WEB_PUBLIC_URL ?? env.EMBERCHAMBER_RELAY_PUBLIC_URL).replace(/\/$/, "");
+}
+
+function inviteStatusForRow(input: {
+  revokedAt?: string | null;
+  expiresAt?: string | null;
+  maxUses?: number | null;
+  useCount?: number;
+  inviteFrozen?: number | boolean | null;
+}): "active" | "revoked" | "expired" | "exhausted" | "frozen" {
+  if (input.revokedAt) {
+    return "revoked";
+  }
+
+  if (input.inviteFrozen) {
+    return "frozen";
+  }
+
+  if (input.expiresAt && input.expiresAt <= new Date().toISOString()) {
+    return "expired";
+  }
+
+  if (input.maxUses !== null && input.maxUses !== undefined && (input.useCount ?? 0) >= input.maxUses) {
+    return "exhausted";
+  }
+
+  return "active";
 }
 
 export default {
@@ -323,6 +688,16 @@ export default {
         );
       }
 
+      if (request.method === "GET" && pathname === "/auth/complete") {
+        const token = url.searchParams.get("token");
+        if (!token) {
+          throw new HttpError(400, "Missing completion token", "MISSING_COMPLETION_TOKEN");
+        }
+
+        const redirectUrl = `${publicWebUrl(env)}/auth/complete?token=${encodeURIComponent(token)}`;
+        return Response.redirect(redirectUrl, 302);
+      }
+
       if (request.method === "POST" && pathname === "/v1/auth/start") {
         const body = authStartSchema.parse(await readJson(request));
         const email = normalizeEmail(body.email);
@@ -333,7 +708,7 @@ export default {
         await enforceRateLimit(env, `auth:start:email:${emailBlindIndex}`, 5, 15 * 60 * 1000);
 
         const accountExists = await isExistingAccount(env, emailBlindIndex);
-        const inviteHash = accountExists ? null : await requireBetaInvite(env, body.inviteToken);
+        const bootstrapAccess = await resolveBootstrapAccess(env, body, accountExists);
 
         const challengeId = crypto.randomUUID();
         const completionToken = `${challengeId}.${crypto.randomUUID()}`;
@@ -344,22 +719,25 @@ export default {
         await dbRun(
           env.DB,
           `INSERT INTO auth_challenges (
-            id, email_ciphertext, email_blind_index, invite_token_hash, completion_token_hash, expires_at, created_at
-          ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
+            id, email_ciphertext, email_blind_index, invite_token_hash, completion_token_hash, expires_at, created_at, requested_device_label, pending_group_conversation_id, pending_group_invite_token_hash
+          ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)`,
           challengeId,
           emailCiphertext,
           emailBlindIndex,
-          inviteHash,
+          bootstrapAccess.betaInviteHash,
           completionTokenHash,
           expiresAt,
-          new Date().toISOString()
+          new Date().toISOString(),
+          body.deviceLabel,
+          bootstrapAccess.pendingGroupConversationId,
+          bootstrapAccess.pendingGroupInviteTokenHash
         );
 
         await env.EMAIL_QUEUE.send({
           type: "magic_link",
           to: email,
           from: env.EMBERCHAMBER_EMAIL_FROM,
-          completionUrl: `${env.EMBERCHAMBER_RELAY_PUBLIC_URL}/v1/auth/complete?token=${encodeURIComponent(completionToken)}`,
+          completionUrl: `${publicWebUrl(env)}/auth/complete?token=${encodeURIComponent(completionToken)}`,
           expiresAt,
         });
 
@@ -381,11 +759,14 @@ export default {
           email_ciphertext: string;
           email_blind_index: string;
           invite_token_hash: string | null;
+          pending_group_conversation_id: string | null;
+          pending_group_invite_token_hash: string | null;
           expires_at: string;
           consumed_at: string | null;
+          requested_device_label: string | null;
         }>(
           env.DB,
-          `SELECT id, email_ciphertext, email_blind_index, invite_token_hash, expires_at, consumed_at
+          `SELECT id, email_ciphertext, email_blind_index, invite_token_hash, pending_group_conversation_id, pending_group_invite_token_hash, expires_at, consumed_at, requested_device_label
              FROM auth_challenges
             WHERE completion_token_hash = ?1`,
           completionTokenHash
@@ -431,13 +812,24 @@ export default {
           account = { account_id: accountId };
         }
 
+        const bootstrapConversation =
+          challenge.pending_group_conversation_id && challenge.pending_group_invite_token_hash
+            ? await acceptGroupInviteByTokenHash(
+                env,
+                account.account_id,
+                challenge.pending_group_conversation_id,
+                challenge.pending_group_invite_token_hash
+              )
+            : null;
+
         const deviceId = crypto.randomUUID();
+        const deviceLabel = body.deviceLabel ?? challenge.requested_device_label ?? "Primary device";
         await dbRun(
           env.DB,
           "INSERT INTO devices (id, account_id, device_label, created_at) VALUES (?1, ?2, ?3, ?4)",
           deviceId,
           account.account_id,
-          body.deviceLabel,
+          deviceLabel,
           new Date().toISOString()
         );
         await dbRun(
@@ -447,7 +839,11 @@ export default {
           challenge.id
         );
 
-        return respond(json(await createSession(env, account.account_id, deviceId)));
+        return respond(
+          json(
+            await createSession(env, account.account_id, deviceId, bootstrapConversation)
+          )
+        );
       }
 
       if (request.method === "POST" && pathname === "/v1/auth/refresh") {
@@ -508,6 +904,163 @@ export default {
             { status: 501 }
           )
         );
+      }
+
+      if (request.method === "GET" && pathname === "/v1/me") {
+        const auth = await requireAuth(request, env);
+        const account = await dbFirst<{
+          display_name: string;
+          bio: string | null;
+          email_ciphertext: string;
+        }>(
+          env.DB,
+          `SELECT a.display_name, a.bio, ae.email_ciphertext
+             FROM accounts a
+             JOIN account_emails ae ON ae.account_id = a.id
+            WHERE a.id = ?1`,
+          auth.accountId
+        );
+
+        if (!account) {
+          throw new HttpError(404, "Account not found", "ACCOUNT_NOT_FOUND");
+        }
+
+        const profile: MeProfile = {
+          id: auth.accountId,
+          username: accountUsername(auth.accountId),
+          displayName: account.display_name,
+          email: await decryptString(env.EMBERCHAMBER_EMAIL_ENCRYPTION_SECRET, account.email_ciphertext),
+          bio: account.bio ?? undefined,
+        };
+
+        return respond(json(profile));
+      }
+
+      if (request.method === "PATCH" && pathname === "/v1/me") {
+        const auth = await requireAuth(request, env);
+        const body = profileSchema.parse(await readJson(request));
+        const existing = await dbFirst<{ display_name: string; bio: string | null }>(
+          env.DB,
+          "SELECT display_name, bio FROM accounts WHERE id = ?1",
+          auth.accountId
+        );
+
+        if (!existing) {
+          throw new HttpError(404, "Account not found", "ACCOUNT_NOT_FOUND");
+        }
+
+        const displayName = body.displayName ?? existing.display_name;
+        const bio = body.bio ?? existing.bio;
+        await dbRun(
+          env.DB,
+          "UPDATE accounts SET display_name = ?1, bio = ?2, updated_at = ?3 WHERE id = ?4",
+          displayName,
+          bio ?? null,
+          new Date().toISOString(),
+          auth.accountId
+        );
+
+        return respond(json({ updated: true, displayName, bio: bio ?? null }));
+      }
+
+      if (request.method === "GET" && pathname === "/v1/me/privacy") {
+        const auth = await requireAuth(request, env);
+        const settings = await dbFirst<{
+          notification_preview_mode: string | null;
+          auto_download_sensitive_media: number | null;
+          allow_sensitive_export: number | null;
+          secure_app_switcher: number | null;
+        }>(
+          env.DB,
+          `SELECT notification_preview_mode, auto_download_sensitive_media, allow_sensitive_export, secure_app_switcher
+             FROM accounts
+            WHERE id = ?1`,
+          auth.accountId
+        );
+
+        if (!settings) {
+          throw new HttpError(404, "Account not found", "ACCOUNT_NOT_FOUND");
+        }
+
+        return respond(
+          json({
+            notificationPreviewMode: settings.notification_preview_mode ?? "discreet",
+            autoDownloadSensitiveMedia: Boolean(settings.auto_download_sensitive_media ?? 0),
+            allowSensitiveExport: Boolean(settings.allow_sensitive_export ?? 0),
+            secureAppSwitcher: Boolean(settings.secure_app_switcher ?? 1),
+          })
+        );
+      }
+
+      if (request.method === "PATCH" && pathname === "/v1/me/privacy") {
+        const auth = await requireAuth(request, env);
+        const body = privacySettingsSchema.parse(await readJson(request));
+        await dbRun(
+          env.DB,
+          `UPDATE accounts
+              SET notification_preview_mode = ?1,
+                  auto_download_sensitive_media = ?2,
+                  allow_sensitive_export = ?3,
+                  secure_app_switcher = ?4,
+                  updated_at = ?5
+            WHERE id = ?6`,
+          body.notificationPreviewMode,
+          body.autoDownloadSensitiveMedia ? 1 : 0,
+          body.allowSensitiveExport ? 1 : 0,
+          body.secureAppSwitcher ? 1 : 0,
+          new Date().toISOString(),
+          auth.accountId
+        );
+
+        return respond(json(body));
+      }
+
+      if (request.method === "GET" && pathname === "/v1/sessions") {
+        const auth = await requireAuth(request, env);
+        const rows = await dbAll<{
+          id: string;
+          device_label: string;
+          created_at: string;
+          last_seen_at: string;
+        }>(
+          env.DB,
+          `SELECT s.id, d.device_label, s.created_at, s.last_seen_at
+             FROM sessions s
+             JOIN devices d ON d.id = s.device_id
+            WHERE s.account_id = ?1
+              AND s.revoked_at IS NULL
+              AND s.expires_at > ?2
+            ORDER BY s.last_seen_at DESC`,
+          auth.accountId,
+          new Date().toISOString()
+        );
+
+        const sessions: SessionDescriptor[] = rows.map((row) => ({
+          id: row.id,
+          deviceLabel: row.device_label,
+          createdAt: row.created_at,
+          lastSeenAt: row.last_seen_at,
+          isCurrent: row.id === auth.sessionId,
+        }));
+
+        return respond(json(sessions));
+      }
+
+      const sessionDeleteMatch = pathname.match(/^\/v1\/sessions\/([0-9a-f-]{36})$/i);
+      if (request.method === "DELETE" && sessionDeleteMatch) {
+        const auth = await requireAuth(request, env);
+        const sessionId = sessionDeleteMatch[1];
+        await dbRun(
+          env.DB,
+          `UPDATE sessions
+              SET revoked_at = ?1
+            WHERE id = ?2 AND account_id = ?3`,
+          new Date().toISOString(),
+          sessionId,
+          auth.accountId
+        );
+
+        return respond(json({ revoked: true, sessionId }));
       }
 
       if (request.method === "POST" && pathname === "/v1/devices/register") {
@@ -616,6 +1169,78 @@ export default {
         );
       }
 
+      const accountDeviceBundlesMatch = pathname.match(/^\/v1\/accounts\/([0-9a-f-]{36})\/device-bundles$/i);
+      if (request.method === "GET" && accountDeviceBundlesMatch) {
+        const auth = await requireAuth(request, env);
+        const targetAccountId = accountDeviceBundlesMatch[1];
+
+        if (targetAccountId !== auth.accountId) {
+          const sharedConversation = await dbFirst<{ conversation_id: string }>(
+            env.DB,
+            `SELECT me.conversation_id
+               FROM conversation_members me
+               JOIN conversation_members peer
+                 ON peer.conversation_id = me.conversation_id
+                AND peer.account_id = ?2
+                AND peer.removed_at IS NULL
+              WHERE me.account_id = ?1
+                AND me.removed_at IS NULL
+              LIMIT 1`,
+            auth.accountId,
+            targetAccountId
+          );
+
+          if (!sharedConversation) {
+            throw new HttpError(403, "No shared conversation with this account", "FORBIDDEN");
+          }
+        }
+
+        const rows = await dbAll<{
+          id: string;
+          device_label: string;
+          public_identity_key: string;
+          signed_prekey: string;
+          signed_prekey_signature: string;
+          one_time_prekeys_json: string | null;
+          uploaded_at: string;
+        }>(
+          env.DB,
+          `SELECT
+             id,
+             device_label,
+             public_identity_key,
+             signed_prekey,
+             signed_prekey_signature,
+             one_time_prekeys_json,
+             COALESCE(verified_at, created_at) AS uploaded_at
+           FROM devices
+          WHERE account_id = ?1
+            AND revoked_at IS NULL
+            AND public_identity_key IS NOT NULL
+            AND signed_prekey IS NOT NULL
+            AND signed_prekey_signature IS NOT NULL
+          ORDER BY created_at ASC`,
+          targetAccountId
+        );
+
+        const bundles: DeviceKeyBundle[] = rows.map((row) => ({
+          accountId: targetAccountId,
+          deviceId: row.id,
+          deviceLabel: row.device_label,
+          uploadedAt: row.uploaded_at,
+          bundle: {
+            identityKeyB64: row.public_identity_key,
+            signedPrekeyB64: row.signed_prekey,
+            signedPrekeySignatureB64: row.signed_prekey_signature,
+            oneTimePrekeysB64: row.one_time_prekeys_json
+              ? (JSON.parse(row.one_time_prekeys_json) as string[])
+              : [],
+          },
+        }));
+
+        return respond(json(bundles));
+      }
+
       if (request.method === "POST" && pathname === "/v1/dm/open") {
         const auth = await requireAuth(request, env);
         const body = directMessageSchema.parse(await readJson(request));
@@ -690,17 +1315,26 @@ export default {
       if (request.method === "POST" && pathname === "/v1/groups") {
         const auth = await requireAuth(request, env);
         const body = groupSchema.parse(await readJson(request));
+        if (body.memberAccountIds.length + 1 > body.memberCap) {
+          throw new HttpError(400, "Initial member list exceeds the group cap", "GROUP_CAP_EXCEEDED");
+        }
         const conversationId = crypto.randomUUID();
         const createdAt = new Date().toISOString();
         const memberAccountIds = Array.from(new Set([auth.accountId, ...body.memberAccountIds]));
 
         await dbRun(
           env.DB,
-          "INSERT INTO conversations (id, kind, title, epoch, created_by, created_at) VALUES (?1, 'group', ?2, 1, ?3, ?4)",
+          `INSERT INTO conversations (
+             id, kind, title, epoch, created_by, created_at, updated_at, member_cap, sensitive_media_default, join_rule_text, allow_member_invites
+           ) VALUES (?1, 'group', ?2, 1, ?3, ?4, ?4, ?5, ?6, ?7, ?8)`,
           conversationId,
           body.title,
           auth.accountId,
-          createdAt
+          createdAt,
+          body.memberCap,
+          body.sensitiveMediaDefault ? 1 : 0,
+          body.joinRuleText ?? null,
+          body.allowMemberInvites ? 1 : 0
         );
 
         for (const [index, memberAccountId] of memberAccountIds.entries()) {
@@ -725,6 +1359,15 @@ export default {
           }),
         });
 
+        await appendConversationMessage(env, {
+          conversationId,
+          senderAccountId: auth.accountId,
+          kind: "system_notice",
+          text: `${body.title} created`,
+          clientMessageId: null,
+          createdAt,
+        });
+
         return respond(
           json({
             id: conversationId,
@@ -732,12 +1375,401 @@ export default {
             title: body.title,
             epoch: 1,
             memberAccountIds,
+            memberCap: body.memberCap,
+            sensitiveMediaDefault: body.sensitiveMediaDefault,
+            joinRuleText: body.joinRuleText ?? null,
+            allowMemberInvites: body.allowMemberInvites,
             createdAt,
           } satisfies ConversationDescriptor)
         );
       }
 
+      if (request.method === "GET" && pathname === "/v1/groups") {
+        const auth = await requireAuth(request, env);
+        const rows = await dbAll<{
+          id: string;
+          title: string | null;
+          epoch: number;
+          member_cap: number | null;
+          sensitive_media_default: number | null;
+          join_rule_text: string | null;
+          allow_member_invites: number | null;
+          invite_freeze_enabled: number | null;
+          created_at: string;
+          updated_at: string;
+          role: string;
+          member_count: number;
+        }>(
+          env.DB,
+          `SELECT
+             c.id,
+             c.title,
+             c.epoch,
+             c.member_cap,
+             c.sensitive_media_default,
+             c.join_rule_text,
+             c.allow_member_invites,
+             c.invite_freeze_enabled,
+             c.created_at,
+             c.updated_at,
+             cm.role,
+             (
+               SELECT COUNT(*)
+                 FROM conversation_members members
+                WHERE members.conversation_id = c.id
+                  AND members.removed_at IS NULL
+             ) AS member_count
+           FROM conversations c
+           JOIN conversation_members cm
+             ON cm.conversation_id = c.id
+          WHERE c.kind = 'group'
+            AND cm.account_id = ?1
+            AND cm.removed_at IS NULL
+          ORDER BY c.updated_at DESC`,
+          auth.accountId
+        );
+
+        const groups: GroupMembershipSummary[] = rows.map((row) => {
+          const allowMemberInvites = Boolean(row.allow_member_invites ?? 0);
+          const inviteFreezeEnabled = Boolean(row.invite_freeze_enabled ?? 0);
+          const canManageMembers = ["owner", "admin"].includes(row.role);
+          const canCreateInvites = canManageMembers || (row.role === "member" && allowMemberInvites);
+
+          return {
+            id: row.id,
+            title: row.title ?? "Untitled group",
+            epoch: row.epoch,
+            memberCount: row.member_count,
+            memberCap: row.member_cap ?? 12,
+            myRole: ["owner", "admin"].includes(row.role) ? (row.role as "owner" | "admin") : "member",
+            sensitiveMediaDefault: Boolean(row.sensitive_media_default ?? 1),
+            joinRuleText: row.join_rule_text,
+            allowMemberInvites,
+            inviteFreezeEnabled,
+            canCreateInvites,
+            canManageMembers,
+            createdAt: row.created_at,
+            updatedAt: row.updated_at,
+          };
+        });
+
+        return respond(json(groups));
+      }
+
+      const groupMessagesMatch = pathname.match(/^\/v1\/groups\/([0-9a-f-]{36})\/messages$/i);
+      if (request.method === "GET" && groupMessagesMatch) {
+        const auth = await requireAuth(request, env);
+        const conversationId = groupMessagesMatch[1];
+        const membership = await dbFirst<{ account_id: string }>(
+          env.DB,
+          `SELECT account_id
+             FROM conversation_members
+            WHERE conversation_id = ?1 AND account_id = ?2 AND removed_at IS NULL`,
+          conversationId,
+          auth.accountId
+        );
+
+        const conversation = await dbFirst<{ id: string }>(
+          env.DB,
+          "SELECT id FROM conversations WHERE id = ?1 AND kind = 'group'",
+          conversationId
+        );
+
+        if (!membership || !conversation) {
+          throw new HttpError(404, "Group not found", "GROUP_NOT_FOUND");
+        }
+
+        const limit = Math.max(1, Math.min(100, Number(url.searchParams.get("limit") ?? "50")));
+        const rows = await dbAll<{
+          id: string;
+          conversation_id: string;
+          sender_account_id: string;
+          sender_display_name: string;
+          kind: "text" | "media" | "system_notice";
+          body_text: string | null;
+          created_at: string;
+          attachment_id: string | null;
+          file_name: string | null;
+          mime_type: string | null;
+          byte_length: number | null;
+          content_class: "image" | "video" | "audio" | "file" | null;
+          retention_mode: "private_vault" | "ephemeral" | null;
+          protection_profile: "sensitive_media" | "standard" | null;
+          preview_blur_hash: string | null;
+        }>(
+          env.DB,
+          `SELECT
+             m.id,
+             m.conversation_id,
+             m.sender_account_id,
+             sender.display_name AS sender_display_name,
+             m.kind,
+             m.body_text,
+             m.created_at,
+             a.id AS attachment_id,
+             a.file_name,
+             a.mime_type,
+             a.byte_length,
+             a.content_class,
+             a.retention_mode,
+             a.protection_profile,
+             a.preview_blur_hash
+           FROM conversation_messages m
+           JOIN accounts sender ON sender.id = m.sender_account_id
+           LEFT JOIN attachments a ON a.id = m.attachment_id
+          WHERE m.conversation_id = ?1
+            AND m.deleted_at IS NULL
+          ORDER BY m.created_at DESC
+          LIMIT ?2`,
+          conversationId,
+          limit
+        );
+
+        const expiresAtMs = Date.now() + 30 * 60 * 1000;
+        const messages: GroupThreadMessage[] = [];
+
+        for (const row of rows.reverse()) {
+          const attachment =
+            row.attachment_id && row.file_name && row.mime_type && row.byte_length !== null && row.content_class && row.retention_mode && row.protection_profile
+              ? {
+                  id: row.attachment_id,
+                  downloadUrl: `${env.EMBERCHAMBER_RELAY_PUBLIC_URL}/v1/attachments/download/${row.attachment_id}?token=${encodeURIComponent(
+                    await signAttachmentToken(env, row.attachment_id, "download", expiresAtMs)
+                  )}`,
+                  fileName: row.file_name,
+                  mimeType: row.mime_type,
+                  byteLength: row.byte_length,
+                  contentClass: row.content_class,
+                  retentionMode: row.retention_mode,
+                  protectionProfile: row.protection_profile,
+                  previewBlurHash: row.preview_blur_hash,
+                }
+              : null;
+
+          messages.push({
+            id: row.id,
+            conversationId: row.conversation_id,
+            senderAccountId: row.sender_account_id,
+            senderDisplayName: row.sender_display_name,
+            kind: row.kind,
+            text: row.body_text,
+            attachment,
+            createdAt: row.created_at,
+          });
+        }
+
+        return respond(json(messages));
+      }
+
+      if (request.method === "POST" && groupMessagesMatch) {
+        const auth = await requireAuth(request, env);
+        const conversationId = groupMessagesMatch[1];
+        const body = groupThreadMessageSchema.parse(await readJson(request));
+        const normalizedText = body.text?.trim() || "";
+
+        if (!normalizedText && !body.attachmentId) {
+          throw new HttpError(400, "Message needs text or an attachment", "MESSAGE_EMPTY");
+        }
+
+        const membership = await dbFirst<{ account_id: string }>(
+          env.DB,
+          `SELECT account_id
+             FROM conversation_members
+            WHERE conversation_id = ?1 AND account_id = ?2 AND removed_at IS NULL`,
+          conversationId,
+          auth.accountId
+        );
+        const sender = await dbFirst<{ display_name: string }>(
+          env.DB,
+          "SELECT display_name FROM accounts WHERE id = ?1",
+          auth.accountId
+        );
+
+        const conversation = await dbFirst<{ id: string }>(
+          env.DB,
+          "SELECT id FROM conversations WHERE id = ?1 AND kind = 'group'",
+          conversationId
+        );
+
+        if (!membership || !conversation) {
+          throw new HttpError(404, "Group not found", "GROUP_NOT_FOUND");
+        }
+
+        let attachment:
+          | {
+              id: string;
+              file_name: string;
+              mime_type: string;
+              byte_length: number;
+              content_class: "image" | "video" | "audio" | "file";
+              retention_mode: "private_vault" | "ephemeral";
+              protection_profile: "sensitive_media" | "standard";
+              preview_blur_hash: string | null;
+              account_id: string;
+              conversation_id: string | null;
+            }
+          | null = null;
+
+        if (body.attachmentId) {
+          attachment = await dbFirst<{
+            id: string;
+            file_name: string;
+            mime_type: string;
+            byte_length: number;
+            content_class: "image" | "video" | "audio" | "file";
+            retention_mode: "private_vault" | "ephemeral";
+            protection_profile: "sensitive_media" | "standard";
+            preview_blur_hash: string | null;
+            account_id: string;
+            conversation_id: string | null;
+          }>(
+            env.DB,
+            `SELECT
+               id,
+               file_name,
+               mime_type,
+               byte_length,
+               content_class,
+               retention_mode,
+               protection_profile,
+               preview_blur_hash,
+               account_id,
+               conversation_id
+             FROM attachments
+            WHERE id = ?1`,
+            body.attachmentId
+          );
+
+          if (!attachment || attachment.account_id !== auth.accountId || attachment.conversation_id !== conversationId) {
+            throw new HttpError(403, "Attachment is not available for this group message", "FORBIDDEN");
+          }
+        }
+
+        const created = await appendConversationMessage(env, {
+          conversationId,
+          senderAccountId: auth.accountId,
+          kind: attachment ? "media" : "text",
+          text: normalizedText || null,
+          attachmentId: attachment?.id ?? null,
+          clientMessageId: body.clientMessageId ?? null,
+        });
+
+        const expiresAtMs = Date.now() + 30 * 60 * 1000;
+        const message: GroupThreadMessage = {
+          id: created.id,
+          conversationId,
+          senderAccountId: auth.accountId,
+          senderDisplayName: sender?.display_name ?? conversationTitleForAccount(auth.accountId),
+          kind: attachment ? "media" : "text",
+          text: normalizedText || null,
+          attachment: attachment
+            ? {
+                id: attachment.id,
+                downloadUrl: `${env.EMBERCHAMBER_RELAY_PUBLIC_URL}/v1/attachments/download/${attachment.id}?token=${encodeURIComponent(
+                  await signAttachmentToken(env, attachment.id, "download", expiresAtMs)
+                )}`,
+                fileName: attachment.file_name,
+                mimeType: attachment.mime_type,
+                byteLength: attachment.byte_length,
+                contentClass: attachment.content_class,
+                retentionMode: attachment.retention_mode,
+                protectionProfile: attachment.protection_profile,
+                previewBlurHash: attachment.preview_blur_hash,
+              }
+            : null,
+          createdAt: created.createdAt,
+        };
+
+        return respond(json(message, { status: 201 }));
+      }
+
       const groupInviteMatch = pathname.match(/^\/v1\/groups\/([0-9a-f-]{36})\/invites$/i);
+      if (request.method === "GET" && groupInviteMatch) {
+        const auth = await requireAuth(request, env);
+        const conversationId = groupInviteMatch[1];
+        const membership = await dbFirst<{ role: string }>(
+          env.DB,
+          `SELECT role
+             FROM conversation_members
+            WHERE conversation_id = ?1 AND account_id = ?2 AND removed_at IS NULL`,
+          conversationId,
+          auth.accountId
+        );
+
+        const conversation = await dbFirst<{
+          invite_freeze_enabled: number;
+          allow_member_invites: number;
+        }>(
+          env.DB,
+          "SELECT invite_freeze_enabled, allow_member_invites FROM conversations WHERE id = ?1 AND kind = 'group'",
+          conversationId
+        );
+
+        if (!membership || !conversation) {
+          throw new HttpError(404, "Group not found", "GROUP_NOT_FOUND");
+        }
+
+        const canViewInvites =
+          ["owner", "admin"].includes(membership.role) ||
+          (membership.role === "member" && Boolean(conversation.allow_member_invites));
+
+        if (!canViewInvites) {
+          throw new HttpError(403, "Only approved members can view invites", "FORBIDDEN");
+        }
+
+        const rows = await dbAll<{
+          id: string;
+          conversation_id: string;
+          created_by: string;
+          created_at: string;
+          expires_at: string | null;
+          max_uses: number | null;
+          use_count: number;
+          note: string | null;
+          revoked_at: string | null;
+          inviter_display_name: string;
+        }>(
+          env.DB,
+          `SELECT
+             ci.id,
+             ci.conversation_id,
+             ci.created_by,
+             ci.created_at,
+             ci.expires_at,
+             ci.max_uses,
+             ci.use_count,
+             ci.note,
+             ci.revoked_at,
+             inviter.display_name AS inviter_display_name
+           FROM conversation_invites ci
+           JOIN accounts inviter ON inviter.id = ci.created_by
+          WHERE ci.conversation_id = ?1
+          ORDER BY ci.created_at DESC`,
+          conversationId
+        );
+
+        const invites: GroupInviteRecord[] = rows.map((row) => ({
+          id: row.id,
+          conversationId: row.conversation_id,
+          createdAt: row.created_at,
+          expiresAt: row.expires_at,
+          maxUses: row.max_uses,
+          useCount: row.use_count,
+          note: row.note,
+          inviterDisplayName: row.inviter_display_name,
+          status: inviteStatusForRow({
+            revokedAt: row.revoked_at,
+            expiresAt: row.expires_at,
+            maxUses: row.max_uses,
+            useCount: row.use_count,
+            inviteFrozen: conversation.invite_freeze_enabled,
+          }),
+          createdByCurrentAccount: row.created_by === auth.accountId,
+        }));
+
+        return respond(json(invites));
+      }
+
       if (request.method === "POST" && groupInviteMatch) {
         const auth = await requireAuth(request, env);
         const body = conversationInviteSchema.parse(await readJson(request));
@@ -751,8 +1783,29 @@ export default {
           auth.accountId
         );
 
-        if (!membership || !["owner", "admin"].includes(membership.role)) {
-          throw new HttpError(403, "Only owners or admins can mint invites", "FORBIDDEN");
+        const conversation = await dbFirst<{
+          invite_freeze_enabled: number;
+          allow_member_invites: number;
+        }>(
+          env.DB,
+          "SELECT invite_freeze_enabled, allow_member_invites FROM conversations WHERE id = ?1 AND kind = 'group'",
+          conversationId
+        );
+
+        if (!membership || !conversation) {
+          throw new HttpError(404, "Group not found", "GROUP_NOT_FOUND");
+        }
+
+        if (conversation.invite_freeze_enabled) {
+          throw new HttpError(409, "Group invites are temporarily frozen", "INVITES_FROZEN");
+        }
+
+        const canMintInvite =
+          ["owner", "admin"].includes(membership.role) ||
+          (membership.role === "member" && Boolean(conversation.allow_member_invites));
+
+        if (!canMintInvite) {
+          throw new HttpError(403, "Only approved members can mint invites", "FORBIDDEN");
         }
 
         const inviteId = crypto.randomUUID();
@@ -764,25 +1817,233 @@ export default {
 
         await dbRun(
           env.DB,
-          `INSERT INTO conversation_invites (id, conversation_id, token_hash, created_by, max_uses, expires_at, created_at)
-           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
+          `INSERT INTO conversation_invites (id, conversation_id, token_hash, created_by, max_uses, expires_at, created_at, note)
+           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`,
           inviteId,
           conversationId,
           tokenHash,
           auth.accountId,
           body.maxUses ?? null,
           expiresAt,
-          new Date().toISOString()
+          new Date().toISOString(),
+          body.note ?? null
+        );
+
+        const inviter = await dbFirst<{ display_name: string }>(
+          env.DB,
+          "SELECT display_name FROM accounts WHERE id = ?1",
+          auth.accountId
         );
 
         return respond(
           json({
             id: inviteId,
+            conversationId,
             inviteToken,
+            inviteUrl: `${publicWebUrl(env)}/invite/${conversationId}/${inviteToken}`,
+            inviterDisplayName: inviter?.display_name ?? conversationTitleForAccount(auth.accountId),
+            note: body.note ?? null,
+            useCount: 0,
+            status: "active",
+            createdAt: new Date().toISOString(),
             expiresAt,
             maxUses: body.maxUses ?? null,
-          })
+          } satisfies GroupInviteDescriptor)
         );
+      }
+
+      const groupInvitePreviewMatch = pathname.match(/^\/v1\/groups\/([0-9a-f-]{36})\/invites\/([^/]+)\/preview$/i);
+      if (request.method === "GET" && groupInvitePreviewMatch) {
+        const conversationId = groupInvitePreviewMatch[1];
+        const inviteToken = groupInvitePreviewMatch[2];
+        const tokenHash = await hashInviteToken(inviteToken);
+        const row = await dbFirst<{
+          invite_id: string;
+          revoked_at: string | null;
+          expires_at: string | null;
+          max_uses: number | null;
+          use_count: number;
+          note: string | null;
+          inviter_display_name: string;
+          title: string | null;
+          member_cap: number | null;
+          join_rule_text: string | null;
+          sensitive_media_default: number | null;
+          invite_freeze_enabled: number | null;
+          member_count: number;
+        }>(
+          env.DB,
+          `SELECT
+             ci.id AS invite_id,
+             ci.revoked_at,
+             ci.expires_at,
+             ci.max_uses,
+             ci.use_count,
+             ci.note,
+             inviter.display_name AS inviter_display_name,
+             c.title,
+             c.member_cap,
+             c.join_rule_text,
+             c.sensitive_media_default,
+             c.invite_freeze_enabled,
+             (
+               SELECT COUNT(*)
+                 FROM conversation_members cm
+                WHERE cm.conversation_id = c.id AND cm.removed_at IS NULL
+             ) AS member_count
+           FROM conversation_invites ci
+           JOIN conversations c ON c.id = ci.conversation_id
+           JOIN accounts inviter ON inviter.id = ci.created_by
+          WHERE ci.conversation_id = ?1 AND ci.token_hash = ?2`,
+          conversationId,
+          tokenHash
+        );
+
+        if (!row) {
+          throw new HttpError(404, "Invite not found", "INVITE_NOT_FOUND");
+        }
+
+        const status = inviteStatusForRow({
+          revokedAt: row.revoked_at,
+          expiresAt: row.expires_at,
+          maxUses: row.max_uses,
+          useCount: row.use_count,
+          inviteFrozen: row.invite_freeze_enabled,
+        });
+
+        return respond(
+          json({
+            invite: {
+              id: row.invite_id,
+              status,
+              inviterDisplayName: row.inviter_display_name,
+              expiresAt: row.expires_at,
+              maxUses: row.max_uses,
+              useCount: row.use_count,
+              note: row.note,
+            },
+            group: {
+              id: conversationId,
+              title: row.title ?? "Untitled group",
+              memberCount: row.member_count,
+              memberCap: row.member_cap ?? 12,
+              joinRuleText: row.join_rule_text,
+              sensitiveMediaDefault: Boolean(row.sensitive_media_default ?? 1),
+            },
+          } satisfies GroupInvitePreview)
+        );
+      }
+
+      const groupInviteAcceptMatch = pathname.match(/^\/v1\/groups\/([0-9a-f-]{36})\/invites\/([^/]+)\/accept$/i);
+      if (request.method === "POST" && groupInviteAcceptMatch) {
+        const auth = await requireAuth(request, env);
+        const conversationId = groupInviteAcceptMatch[1];
+        const inviteToken = groupInviteAcceptMatch[2];
+        const tokenHash = await hashInviteToken(inviteToken);
+        return respond(json(await acceptGroupInviteByTokenHash(env, auth.accountId, conversationId, tokenHash)));
+      }
+
+      const groupInviteDeleteMatch = pathname.match(/^\/v1\/groups\/([0-9a-f-]{36})\/invites\/([0-9a-f-]{36})$/i);
+      if (request.method === "DELETE" && groupInviteDeleteMatch) {
+        const auth = await requireAuth(request, env);
+        const conversationId = groupInviteDeleteMatch[1];
+        const inviteId = groupInviteDeleteMatch[2];
+        const membership = await dbFirst<{ role: string }>(
+          env.DB,
+          `SELECT role
+             FROM conversation_members
+            WHERE conversation_id = ?1 AND account_id = ?2 AND removed_at IS NULL`,
+          conversationId,
+          auth.accountId
+        );
+
+        if (!membership || !["owner", "admin"].includes(membership.role)) {
+          throw new HttpError(403, "Only owners or admins can revoke invites", "FORBIDDEN");
+        }
+
+        await dbRun(
+          env.DB,
+          `UPDATE conversation_invites
+              SET revoked_at = ?1
+            WHERE id = ?2 AND conversation_id = ?3`,
+          new Date().toISOString(),
+          inviteId,
+          conversationId
+        );
+
+        return respond(json({ revoked: true, inviteId }));
+      }
+
+      const groupMemberRemoveMatch = pathname.match(/^\/v1\/groups\/([0-9a-f-]{36})\/members\/([0-9a-f-]{36})\/remove$/i);
+      if (request.method === "POST" && groupMemberRemoveMatch) {
+        const auth = await requireAuth(request, env);
+        const conversationId = groupMemberRemoveMatch[1];
+        const targetAccountId = groupMemberRemoveMatch[2];
+        if (targetAccountId === auth.accountId) {
+          throw new HttpError(400, "Use a separate ownership transfer flow before removing yourself", "SELF_REMOVE_BLOCKED");
+        }
+
+        const membership = await dbFirst<{ role: string }>(
+          env.DB,
+          `SELECT role
+             FROM conversation_members
+            WHERE conversation_id = ?1 AND account_id = ?2 AND removed_at IS NULL`,
+          conversationId,
+          auth.accountId
+        );
+
+        if (!membership || !["owner", "admin"].includes(membership.role)) {
+          throw new HttpError(403, "Only owners or admins can remove members", "FORBIDDEN");
+        }
+
+        const conversation = await dbFirst<{ epoch: number }>(
+          env.DB,
+          "SELECT epoch FROM conversations WHERE id = ?1 AND kind = 'group'",
+          conversationId
+        );
+
+        if (!conversation) {
+          throw new HttpError(404, "Group not found", "GROUP_NOT_FOUND");
+        }
+
+        const removedAt = new Date().toISOString();
+        const nextEpoch = conversation.epoch + 1;
+        await dbRun(
+          env.DB,
+          `UPDATE conversation_members
+              SET removed_at = ?1
+            WHERE conversation_id = ?2 AND account_id = ?3 AND removed_at IS NULL`,
+          removedAt,
+          conversationId,
+          targetAccountId
+        );
+        await dbRun(
+          env.DB,
+          `UPDATE conversations
+              SET epoch = ?1, updated_at = ?2
+            WHERE id = ?3`,
+          nextEpoch,
+          removedAt,
+          conversationId
+        );
+
+        const memberRows = await dbAll<{ account_id: string }>(
+          env.DB,
+          "SELECT account_id FROM conversation_members WHERE conversation_id = ?1 AND removed_at IS NULL",
+          conversationId
+        );
+        const id = env.GROUP_COORDINATOR.idFromName(conversationId);
+        const stub = env.GROUP_COORDINATOR.get(id);
+        await stub.fetch("https://do/rotate", {
+          method: "POST",
+          body: JSON.stringify({
+            conversationId,
+            epoch: nextEpoch,
+            memberAccountIds: memberRows.map((row) => row.account_id),
+          }),
+        });
+
+        return respond(json({ removed: true, conversationId, targetAccountId, epoch: nextEpoch }));
       }
 
       if (request.method === "POST" && pathname === "/v1/messages/batch") {
@@ -900,10 +2161,53 @@ export default {
         const r2Key = `${auth.accountId}/${attachmentId}/${body.fileName}`;
         const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
 
+        if (body.conversationId) {
+          const conversation = await dbFirst<{ epoch: number }>(
+            env.DB,
+            `SELECT epoch
+               FROM conversations
+              WHERE id = ?1`,
+            body.conversationId
+          );
+          const membership = await dbFirst<{ account_id: string }>(
+            env.DB,
+            `SELECT account_id
+               FROM conversation_members
+              WHERE conversation_id = ?1 AND account_id = ?2 AND removed_at IS NULL`,
+            body.conversationId,
+            auth.accountId
+          );
+
+          if (!conversation || !membership) {
+            throw new HttpError(403, "Not allowed to attach media to this conversation", "FORBIDDEN");
+          }
+
+          if (body.conversationEpoch && conversation.epoch !== body.conversationEpoch) {
+            throw new HttpError(409, "Conversation epoch changed", "STALE_EPOCH");
+          }
+        }
+
         await dbRun(
           env.DB,
-          `INSERT INTO attachments (id, account_id, r2_key, file_name, mime_type, byte_length, sha256_b64, created_at, last_accessed_at, expires_at)
-           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9)`,
+          `INSERT INTO attachments (
+             id,
+             account_id,
+             r2_key,
+             file_name,
+             mime_type,
+             byte_length,
+             sha256_b64,
+             created_at,
+             last_accessed_at,
+             expires_at,
+             content_class,
+             retention_mode,
+             protection_profile,
+             preview_blur_hash,
+             conversation_id,
+             conversation_epoch
+           )
+           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)`,
           attachmentId,
           auth.accountId,
           r2Key,
@@ -912,7 +2216,13 @@ export default {
           body.byteLength,
           body.sha256B64 ?? null,
           new Date().toISOString(),
-          new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+          new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          body.contentClass,
+          body.retentionMode,
+          body.protectionProfile,
+          body.previewBlurHash ?? null,
+          body.conversationId ?? null,
+          body.conversationEpoch ?? null
         );
 
         const uploadToken = await signAttachmentToken(env, attachmentId, "upload", expiresAt.getTime());
@@ -924,6 +2234,10 @@ export default {
           downloadUrl: `${env.EMBERCHAMBER_RELAY_PUBLIC_URL}/v1/attachments/download/${attachmentId}?token=${encodeURIComponent(downloadToken)}`,
           expiresAt: expiresAt.toISOString(),
           maxBytes: body.byteLength,
+          contentClass: body.contentClass,
+          retentionMode: body.retentionMode,
+          protectionProfile: body.protectionProfile,
+          previewBlurHash: body.previewBlurHash,
         };
         return respond(json(response, { status: 201 }));
       }
@@ -1001,14 +2315,26 @@ export default {
         const reportId = crypto.randomUUID();
         await dbRun(
           env.DB,
-          `INSERT INTO reports (id, reporter_account_id, target_conversation_id, target_account_id, reason, disclosed_payload_json, created_at)
-           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
+          `INSERT INTO reports (
+             id,
+             reporter_account_id,
+             target_conversation_id,
+             target_account_id,
+             target_attachment_id,
+             reason,
+             disclosed_payload_json,
+             evidence_message_ids_json,
+             created_at
+           )
+           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)`,
           reportId,
           auth.accountId,
           body.targetConversationId ?? null,
           body.targetAccountId ?? null,
+          body.targetAttachmentId ?? null,
           body.reason,
           JSON.stringify(body.disclosedPayload),
+          JSON.stringify(body.evidenceMessageIds ?? []),
           new Date().toISOString()
         );
 

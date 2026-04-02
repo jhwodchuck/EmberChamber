@@ -17,7 +17,7 @@ function normalizeAllowedOrigins(raw: string): string[] {
 
 export function buildCorsHeaders(request: Request, allowedOriginsRaw: string): Record<string, string> {
   const headers: Record<string, string> = {
-    "access-control-allow-methods": "GET,POST,OPTIONS",
+    "access-control-allow-methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
     "access-control-allow-headers": "authorization,content-type",
     "access-control-max-age": "86400",
     vary: "Origin",

@@ -16,6 +16,11 @@
     --scroll-thumb-hover: rgba(141, 102, 89, 0.45);
   }
 
+  html {
+    background-color: var(--bg-primary);
+    -webkit-tap-highlight-color: transparent;
+  }
+
   .dark {
     --bg-primary: #140d0e;
     --bg-secondary: #1b1213;
@@ -27,6 +32,10 @@
     --border: #3a2725;
     --brand: #ea6f3f;
     --scroll-thumb-hover: rgba(199, 168, 154, 0.45);
+  }
+
+  .dark {
+    color-scheme: dark;
   }
 
   * {
@@ -70,7 +79,7 @@
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:pointer-events-none disabled:opacity-50;
   }
 
   .btn-primary {
@@ -126,7 +135,7 @@
   }
 
   .sidebar-item {
-    @apply flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] transition-all duration-100 cursor-pointer;
+    @apply flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] transition-colors duration-100 cursor-pointer;
   }
 
   .sidebar-item.active {

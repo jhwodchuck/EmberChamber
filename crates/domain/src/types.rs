@@ -54,20 +54,23 @@ impl PermissionSet {
 /// User-configurable privacy preferences.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PrivacySettings {
-    /// Whether to send read receipts to other participants.
-    pub send_read_receipts: bool,
-    /// Whether to show online/typing presence.
-    pub show_presence: bool,
-    /// Whether to allow direct messages from non-contacts.
-    pub allow_dm_from_strangers: bool,
+    /// How much notification content should appear outside the app.
+    pub notification_preview_mode: String,
+    /// Whether sensitive media should download automatically.
+    pub auto_download_sensitive_media: bool,
+    /// Whether local exports of sensitive media are allowed.
+    pub allow_sensitive_export: bool,
+    /// Whether the app should request secure-window behavior on supported devices.
+    pub secure_app_switcher: bool,
 }
 
 impl Default for PrivacySettings {
     fn default() -> Self {
         Self {
-            send_read_receipts: true,
-            show_presence: true,
-            allow_dm_from_strangers: false,
+            notification_preview_mode: "discreet".into(),
+            auto_download_sensitive_media: false,
+            allow_sensitive_export: false,
+            secure_app_switcher: true,
         }
     }
 }

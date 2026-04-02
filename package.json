@@ -18,7 +18,7 @@
     "build:desktop": "npm run build --workspace=apps/desktop",
     "dev:mobile": "npm run dev --workspace=apps/mobile",
     "build:android": "npm run build:android --workspace=apps/mobile",
-    "build:ios": "npm run build:ios --workspace=apps/desktop",
+    "build:ios": "npm run build:ios --workspace=apps/mobile",
     "test": "npm run test --workspace=apps/relay && cargo test -p emberchamber-core -p emberchamber-relay-protocol",
     "test:legacy": "npm run test --workspace=apps/api",
     "lint": "npm run lint --workspace=apps/web && npm run lint --workspace=apps/relay",

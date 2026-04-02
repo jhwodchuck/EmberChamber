@@ -9,8 +9,7 @@ license.workspace = true
 emberchamber-domain = { workspace = true }
 emberchamber-relay-protocol = { workspace = true }
 serde = { workspace = true }
-serde_json = { workspace = true }
-uuid = { workspace = true }
 chrono = { workspace = true }
-thiserror = { workspace = true }
 
+[dev-dependencies]
+uuid = { workspace = true }

@@ -3,18 +3,24 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>EmberChamber Desktop Beta</title>
+    <title>EmberChamber Desktop Companion</title>
     <style>
       :root {
         color-scheme: dark;
         --bg: #081015;
-        --panel: rgba(11, 24, 31, 0.88);
-        --panel-strong: #10202a;
-        --line: rgba(139, 198, 205, 0.18);
+        --bg-secondary: #0d181d;
+        --panel: rgba(10, 21, 27, 0.92);
+        --panel-strong: #11212b;
+        --line: rgba(138, 240, 214, 0.18);
+        --line-strong: rgba(138, 240, 214, 0.3);
         --text: #eef6f7;
         --muted: #a5bcc0;
         --accent: #8af0d6;
         --accent-ink: #06242b;
+        --warning: #ffd28b;
+        --error: #fda4af;
+        --success: #7ce6bf;
+        --shadow: 0 24px 80px rgba(0, 0, 0, 0.3);
         font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
         background: var(--bg);
         color: var(--text);
@@ -24,67 +30,69 @@
         box-sizing: border-box;
       }
 
+      html,
       body {
         margin: 0;
-        min-height: 100vh;
+        min-height: 100%;
+      }
+
+      body {
         background:
-          radial-gradient(circle at top left, rgba(138, 240, 214, 0.18), transparent 28%),
-          radial-gradient(circle at bottom right, rgba(76, 118, 255, 0.14), transparent 22%),
+          radial-gradient(circle at top left, rgba(138, 240, 214, 0.15), transparent 24%),
+          radial-gradient(circle at bottom right, rgba(106, 167, 255, 0.16), transparent 26%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 35%),
           var(--bg);
       }
 
-      .app {
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .shell {
         min-height: 100vh;
+        padding: 24px;
+      }
+
+      .auth-layout,
+      .workspace-layout {
         display: grid;
-        grid-template-columns: 320px 1fr;
+        gap: 24px;
       }
 
-      .sidebar,
-      .content {
-        padding: 28px;
+      .auth-layout {
+        grid-template-columns: minmax(0, 1.25fr) minmax(24rem, 32rem);
       }
 
-      .sidebar {
-        border-right: 1px solid var(--line);
-        background: rgba(4, 12, 16, 0.7);
+      .workspace-layout {
+        grid-template-columns: 18rem minmax(0, 1fr);
+        align-items: start;
       }
 
-      .wordmark {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 24px;
+      .panel,
+      .card {
+        border: 1px solid var(--line);
+        background: var(--panel);
+        border-radius: 24px;
+        box-shadow: var(--shadow);
       }
 
-      .logo {
-        width: 44px;
-        height: 44px;
-        border-radius: 14px;
-        display: grid;
-        place-items: center;
-        background: linear-gradient(160deg, #8af0d6, #6aa7ff);
-        color: #041318;
-        font-weight: 700;
+      .panel {
+        padding: 24px;
       }
 
-      .eyebrow {
-        color: var(--accent);
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.18em;
-        margin-bottom: 8px;
-      }
-
-      h1 {
-        margin: 0 0 12px;
-        font-size: 1.9rem;
-        line-height: 1.1;
-      }
-
-      p {
-        margin: 0;
-        color: var(--muted);
-        line-height: 1.6;
+      .panel-strong {
+        background: linear-gradient(180deg, rgba(138, 240, 214, 0.06), transparent 38%), var(--panel-strong);
       }
 
       .stack {
@@ -92,200 +100,3193 @@
         gap: 16px;
       }
 
-      .panel {
-        border: 1px solid var(--line);
-        background: var(--panel);
-        border-radius: 24px;
-        padding: 20px;
-        box-shadow: 0 18px 48px rgba(0, 0, 0, 0.24);
-      }
-
-      .panel strong {
-        display: block;
-        margin-bottom: 8px;
-        font-size: 1rem;
-      }
-
-      .grid {
+      .grid-2,
+      .grid-3 {
         display: grid;
         gap: 16px;
       }
 
-      .content {
-        display: grid;
-        grid-template-rows: auto auto 1fr;
-        gap: 18px;
+      .grid-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
-      .hero {
-        padding: 28px;
-        border: 1px solid var(--line);
-        border-radius: 28px;
-        background: linear-gradient(155deg, rgba(138, 240, 214, 0.08), rgba(29, 54, 63, 0.78));
+      .grid-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
       }
 
-      .hero h2 {
-        margin: 0 0 12px;
-        font-size: 2.4rem;
-        line-height: 1.05;
-        max-width: 12ch;
-      }
-
-      .hero p {
-        max-width: 54ch;
-      }
-
-      .badge-row {
+      .wordmark,
+      .brand-chip {
         display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-top: 18px;
-      }
-
-      .badge {
-        padding: 8px 12px;
-        border-radius: 999px;
-        border: 1px solid var(--line);
-        background: rgba(8, 18, 23, 0.7);
-        color: var(--text);
-        font-size: 0.9rem;
-      }
-
-      .cta {
-        display: inline-flex;
         align-items: center;
-        justify-content: center;
-        margin-top: 22px;
-        padding: 12px 18px;
+        gap: 14px;
+      }
+
+      .logo {
+        width: 52px;
+        height: 52px;
+        border-radius: 18px;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(160deg, #8af0d6, #6aa7ff);
+        color: #041318;
+        font-size: 1.1rem;
+        font-weight: 700;
+      }
+
+      .logo.small {
+        width: 42px;
+        height: 42px;
         border-radius: 14px;
-        border: none;
+      }
+
+      .eyebrow {
+        margin: 0;
+        color: var(--accent);
+        font-size: 0.74rem;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3,
+      h4,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        max-width: 12ch;
+        font-size: clamp(2.6rem, 5vw, 4.8rem);
+        line-height: 0.92;
+        letter-spacing: -0.05em;
+      }
+
+      h2 {
+        font-size: 1.45rem;
+        line-height: 1.15;
+      }
+
+      h3 {
+        font-size: 1rem;
+        line-height: 1.3;
+      }
+
+      .lede {
+        margin-top: 18px;
+        max-width: 56ch;
+        color: var(--muted);
+        line-height: 1.7;
+        font-size: 1.02rem;
+      }
+
+      .highlight {
+        margin-top: 20px;
+        border-radius: 18px;
+        border: 1px solid rgba(138, 240, 214, 0.22);
+        background: rgba(138, 240, 214, 0.08);
+        padding: 16px 18px;
+        line-height: 1.6;
+      }
+
+      .step,
+      .metric,
+      .mini-card {
+        border-radius: 20px;
+        border: 1px solid var(--line);
+        background: var(--bg-secondary);
+        padding: 16px;
+      }
+
+      .step-number,
+      .label {
+        color: var(--accent);
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+
+      .step p,
+      .metric p,
+      .mini-card p,
+      .subtle,
+      .hint,
+      .empty,
+      .group-copy,
+      .session-copy {
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .metric strong {
+        display: block;
+        margin-top: 10px;
+        font-size: 2rem;
+        line-height: 1;
+      }
+
+      .sidebar {
+        position: sticky;
+        top: 24px;
+        display: grid;
+        gap: 16px;
+      }
+
+      .sidebar-nav {
+        display: grid;
+        gap: 8px;
+      }
+
+      .nav-button,
+      .ghost-button,
+      .primary-button,
+      .danger-button,
+      .secondary-button {
+        appearance: none;
+        border-radius: 16px;
+        padding: 13px 15px;
+        border: 1px solid transparent;
+        transition:
+          background-color 120ms ease,
+          border-color 120ms ease,
+          color 120ms ease,
+          opacity 120ms ease;
+      }
+
+      .nav-button {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        background: transparent;
+        border-color: transparent;
+        color: var(--muted);
+        text-align: left;
+      }
+
+      .nav-button.active {
+        background: rgba(138, 240, 214, 0.12);
+        border-color: rgba(138, 240, 214, 0.18);
+        color: var(--text);
+      }
+
+      .nav-button:hover,
+      .ghost-button:hover,
+      .secondary-button:hover {
+        border-color: var(--line-strong);
+        color: var(--text);
+      }
+
+      .ghost-button,
+      .secondary-button {
+        background: rgba(255, 255, 255, 0.02);
+        border-color: var(--line);
+        color: var(--muted);
+      }
+
+      .primary-button {
         background: var(--accent);
+        border-color: transparent;
         color: var(--accent-ink);
         font-weight: 700;
       }
 
-      .meta-grid {
+      .danger-button {
+        background: rgba(239, 68, 68, 0.12);
+        border-color: rgba(239, 68, 68, 0.28);
+        color: #fecaca;
+      }
+
+      .primary-button[disabled],
+      .danger-button[disabled],
+      .ghost-button[disabled],
+      .secondary-button[disabled] {
+        cursor: not-allowed;
+        opacity: 0.58;
+      }
+
+      .field-grid,
+      .field-stack {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 16px;
+        gap: 14px;
       }
 
-      .meta {
-        border: 1px solid var(--line);
-        border-radius: 22px;
-        padding: 18px;
-        background: var(--panel-strong);
+      .field-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
-      .meta label {
-        display: block;
-        margin-bottom: 6px;
-        color: var(--muted);
-        font-size: 0.82rem;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
+      .field {
+        display: grid;
+        gap: 8px;
       }
 
-      .meta span {
-        font-size: 1rem;
+      label {
+        font-size: 0.92rem;
         font-weight: 600;
       }
 
-      @media (max-width: 960px) {
-        .app {
+      input,
+      select,
+      textarea {
+        width: 100%;
+        border-radius: 16px;
+        border: 1px solid #1d3943;
+        background: #091419;
+        color: var(--text);
+        padding: 14px 15px;
+        outline: none;
+      }
+
+      textarea {
+        min-height: 108px;
+        resize: vertical;
+      }
+
+      input:focus,
+      select:focus,
+      textarea:focus {
+        border-color: rgba(138, 240, 214, 0.68);
+        box-shadow: 0 0 0 3px rgba(138, 240, 214, 0.12);
+      }
+
+      .checkbox-row,
+      .toggle-row,
+      .inline-actions,
+      .group-meta,
+      .badge-row,
+      .session-row,
+      .view-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .toggle-row,
+      .session-row,
+      .view-header {
+        justify-content: space-between;
+      }
+
+      .checkbox-row {
+        align-items: flex-start;
+      }
+
+      .checkbox-row input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        margin-top: 2px;
+        padding: 0;
+      }
+
+      .status {
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: var(--bg-secondary);
+        padding: 14px 16px;
+      }
+
+      .status h3 {
+        font-size: 0.98rem;
+      }
+
+      .status p {
+        margin-top: 8px;
+        line-height: 1.6;
+      }
+
+      .status.info {
+        border-color: var(--line);
+      }
+
+      .status.success {
+        border-color: rgba(124, 230, 191, 0.32);
+        background: rgba(12, 43, 34, 0.52);
+      }
+
+      .status.warning {
+        border-color: rgba(255, 210, 139, 0.36);
+        background: rgba(71, 50, 18, 0.44);
+      }
+
+      .status.error {
+        border-color: rgba(253, 164, 175, 0.36);
+        background: rgba(82, 23, 23, 0.42);
+      }
+
+      .status code,
+      .code-block {
+        display: block;
+        margin-top: 10px;
+        padding: 10px 12px;
+        border-radius: 14px;
+        background: rgba(8, 20, 25, 0.88);
+        color: var(--accent);
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
+      }
+
+      .workspace-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+
+      .workspace-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .content {
+        min-width: 0;
+      }
+
+      .section-stack {
+        display: grid;
+        gap: 16px;
+      }
+
+      .group-card,
+      .session-card,
+      .invite-card {
+        border-radius: 20px;
+        border: 1px solid var(--line);
+        background: rgba(11, 24, 31, 0.92);
+        padding: 18px;
+      }
+
+      .group-title-row {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 6px 10px;
+        border: 1px solid var(--line);
+        font-size: 0.75rem;
+        color: var(--muted);
+      }
+
+      .badge.good {
+        border-color: rgba(124, 230, 191, 0.26);
+        color: var(--success);
+      }
+
+      .badge.warn {
+        border-color: rgba(255, 210, 139, 0.28);
+        color: var(--warning);
+      }
+
+      .badge.bad {
+        border-color: rgba(253, 164, 175, 0.26);
+        color: var(--error);
+      }
+
+      .group-copy,
+      .session-copy {
+        margin-top: 8px;
+      }
+
+      .rule-block {
+        margin-top: 14px;
+        border-radius: 16px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.02);
+        padding: 14px;
+      }
+
+      .split-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .divider {
+        height: 1px;
+        background: var(--line);
+      }
+
+      .mono {
+        font-family: "IBM Plex Mono", "SFMono-Regular", "Consolas", monospace;
+      }
+
+      .empty {
+        padding: 18px;
+        border-radius: 20px;
+        border: 1px dashed var(--line);
+        background: rgba(255, 255, 255, 0.02);
+      }
+
+      .section-intro {
+        max-width: 56ch;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .hero-summary {
+        display: grid;
+        gap: 18px;
+      }
+
+      .hero-summary h2 {
+        font-size: clamp(2rem, 4vw, 3.4rem);
+        line-height: 0.96;
+        letter-spacing: -0.04em;
+        max-width: 14ch;
+      }
+
+      .secondary-meta {
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+
+      .group-switcher {
+        display: grid;
+        gap: 8px;
+      }
+
+      .thread-layout {
+        display: grid;
+        gap: 16px;
+      }
+
+      .thread-card {
+        border-radius: 24px;
+        border: 1px solid var(--line);
+        background: rgba(9, 20, 25, 0.94);
+        padding: 18px;
+      }
+
+      .thread-stream {
+        display: grid;
+        gap: 14px;
+        max-height: 36rem;
+        overflow-y: auto;
+        padding-right: 4px;
+      }
+
+      .message-row {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-width: min(40rem, 100%);
+      }
+
+      .message-row.self {
+        justify-self: end;
+      }
+
+      .message-row.system {
+        justify-self: center;
+        max-width: 32rem;
+      }
+
+      .message-bubble {
+        border-radius: 22px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.03);
+        padding: 14px;
+      }
+
+      .message-row.self .message-bubble {
+        background: rgba(138, 240, 214, 0.1);
+        border-color: rgba(138, 240, 214, 0.22);
+      }
+
+      .message-row.system .message-bubble {
+        background: rgba(255, 255, 255, 0.02);
+        text-align: center;
+      }
+
+      .message-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 0.86rem;
+        color: var(--muted);
+      }
+
+      .message-copy {
+        margin-top: 10px;
+        line-height: 1.65;
+        white-space: pre-wrap;
+      }
+
+      .media-shell {
+        position: relative;
+        margin-top: 12px;
+        border-radius: 18px;
+        overflow: hidden;
+        border: 1px solid rgba(138, 240, 214, 0.18);
+        background: rgba(8, 20, 25, 0.96);
+      }
+
+      .media-shell img,
+      .media-shell video {
+        display: block;
+        width: 100%;
+        max-height: 28rem;
+        object-fit: contain;
+        background: #050c10;
+      }
+
+      .media-shell.blurred img {
+        filter: blur(28px) saturate(0.7);
+        transform: scale(1.04);
+      }
+
+      .media-shell.blurred video {
+        filter: blur(22px) saturate(0.7);
+      }
+
+      .media-placeholder {
+        display: grid;
+        gap: 10px;
+        padding: 20px;
+        min-height: 13rem;
+        place-items: center;
+        text-align: center;
+        color: var(--muted);
+      }
+
+      .media-overlay {
+        position: absolute;
+        inset: auto 12px 12px 12px;
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .watermark {
+        max-width: 18rem;
+        border-radius: 999px;
+        background: rgba(8, 20, 25, 0.78);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        padding: 7px 10px;
+        font-size: 0.78rem;
+        color: rgba(238, 246, 247, 0.92);
+        backdrop-filter: blur(8px);
+      }
+
+      .reveal-button {
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+      }
+
+      .composer-grid {
+        display: grid;
+        gap: 16px;
+      }
+
+      .composer-preview {
+        border-radius: 18px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.03);
+        padding: 12px;
+      }
+
+      .composer-preview img,
+      .composer-preview video {
+        display: block;
+        width: 100%;
+        max-height: 20rem;
+        object-fit: contain;
+        border-radius: 14px;
+        background: #050c10;
+      }
+
+      .group-shortcut {
+        width: 100%;
+        text-align: left;
+      }
+
+      @media (max-width: 1180px) {
+        .auth-layout,
+        .workspace-layout {
           grid-template-columns: 1fr;
         }
 
         .sidebar {
-          border-right: 0;
-          border-bottom: 1px solid var(--line);
+          position: static;
+        }
+      }
+
+      @media (max-width: 780px) {
+        .shell {
+          padding: 16px;
         }
 
-        .meta-grid {
+        .grid-2,
+        .grid-3,
+        .field-grid {
           grid-template-columns: 1fr;
+        }
+
+        .workspace-header {
+          flex-direction: column;
+          align-items: flex-start;
         }
       }
     </style>
   </head>
   <body>
-    <div class="app">
-      <aside class="sidebar">
-        <div class="wordmark">
-          <div class="logo">PM</div>
-          <div>
-            <strong>EmberChamber</strong>
-            <p>Desktop beta shell</p>
+    <div id="app-root" class="shell"></div>
+
+    <script>
+      const DEFAULT_RELAY_URL = "https://relay.emberchamber.com";
+      const storageKeys = {
+        relayUrl: "emberchamber.relay-url.override",
+        session: "emberchamber.desktop.relay.session.v1",
+        email: "emberchamber.auth.v1.email",
+        inviteToken: "emberchamber.auth.v1.inviteToken",
+        groupInviteReference: "emberchamber.auth.v1.group-invite-reference",
+        deviceLabel: "emberchamber.auth.v1.deviceLabel",
+        pendingChallenge: "emberchamber.desktop.pending-challenge.v1",
+        createdInvites: "emberchamber.desktop.created-invites.v1",
+      };
+
+      const timeFormatter = new Intl.DateTimeFormat(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short",
+      });
+
+      const root = document.getElementById("app-root");
+
+      const state = {
+        activeView: "thread",
+        activeGroupId: null,
+        relayUrl: readRelayUrl(),
+        session: readJson(storageKeys.session, null),
+        pendingChallenge: readJson(storageKeys.pendingChallenge, null),
+        createdInvites: readJson(storageKeys.createdInvites, {}),
+        authStatus: null,
+        workspaceStatus: null,
+        groupsStatus: null,
+        invitesStatus: null,
+        settingsStatus: null,
+        sessionsStatus: null,
+        threadStatus: null,
+        busyAction: "",
+        isLoadingWorkspace: false,
+        isLoadingThread: false,
+        me: null,
+        privacy: null,
+        sessions: [],
+        groups: [],
+        groupInvites: {},
+        threadMessages: [],
+        revealedMessages: {},
+        authForm: {
+          email: readText(storageKeys.email),
+          inviteToken: readText(storageKeys.inviteToken),
+          groupInviteReference: readText(storageKeys.groupInviteReference),
+          deviceLabel: readText(storageKeys.deviceLabel) || suggestDesktopLabel(),
+          completionInput: readCompletionTokenFromLocation(),
+        },
+        createGroupForm: {
+          title: "",
+          joinRuleText: "",
+          memberCap: "12",
+          sensitiveMediaDefault: true,
+          allowMemberInvites: false,
+        },
+        groupInviteDrafts: {},
+        inviteTools: {
+          input: "",
+          preview: null,
+        },
+        profileForm: {
+          displayName: "",
+          bio: "",
+        },
+        privacyForm: {
+          notificationPreviewMode: "discreet",
+          autoDownloadSensitiveMedia: false,
+          allowSensitiveExport: false,
+          secureAppSwitcher: true,
+        },
+        threadComposer: {
+          text: "",
+          file: null,
+          fileName: "",
+          mimeType: "",
+          previewUrl: "",
+        },
+      };
+
+      function readText(key) {
+        return globalThis.localStorage?.getItem(key) || "";
+      }
+
+      function writeText(key, value) {
+        globalThis.localStorage?.setItem(key, value);
+      }
+
+      function readJson(key, fallback) {
+        const raw = globalThis.localStorage?.getItem(key);
+        if (!raw) {
+          return fallback;
+        }
+
+        try {
+          return JSON.parse(raw);
+        } catch {
+          globalThis.localStorage?.removeItem(key);
+          return fallback;
+        }
+      }
+
+      function writeJson(key, value) {
+        globalThis.localStorage?.setItem(key, JSON.stringify(value));
+      }
+
+      function clearStoredSession() {
+        globalThis.localStorage?.removeItem(storageKeys.session);
+      }
+
+      function clearPendingChallenge() {
+        globalThis.localStorage?.removeItem(storageKeys.pendingChallenge);
+        state.pendingChallenge = null;
+      }
+
+      function readRelayUrl() {
+        const raw = readText(storageKeys.relayUrl);
+        return normalizeRelayUrl(raw || DEFAULT_RELAY_URL);
+      }
+
+      function normalizeRelayUrl(value) {
+        return (value || DEFAULT_RELAY_URL).trim().replace(/\/$/, "");
+      }
+
+      function suggestDesktopLabel() {
+        const agent = [navigator.userAgentData?.platform, navigator.platform, navigator.userAgent]
+          .filter(Boolean)
+          .join(" ");
+
+        if (/win/i.test(agent)) {
+          return "Windows desktop";
+        }
+
+        if (/linux/i.test(agent)) {
+          return "Linux desktop";
+        }
+
+        if (/mac/i.test(agent)) {
+          return "Mac desktop";
+        }
+
+        return "Desktop app";
+      }
+
+      function readCompletionTokenFromLocation() {
+        try {
+          const token = new URL(globalThis.location.href).searchParams.get("token");
+          return token || "";
+        } catch {
+          return "";
+        }
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function formatDateTime(value) {
+        if (!value) {
+          return "Unknown time";
+        }
+
+        const parsed = new Date(value);
+        if (Number.isNaN(parsed.getTime())) {
+          return value;
+        }
+
+        return timeFormatter.format(parsed);
+      }
+
+      function isBusy(action) {
+        return state.busyAction === action;
+      }
+
+      function setBusy(action) {
+        state.busyAction = action;
+        render();
+      }
+
+      function clearBusy() {
+        state.busyAction = "";
+        render();
+      }
+
+      function createStatus(tone, title, body, detail) {
+        return { tone, title, body, detail };
+      }
+
+      function renderStatus(status) {
+        if (!status) {
+          return "";
+        }
+
+        return `
+          <section class="status ${escapeHtml(status.tone || "info")}">
+            <h3>${escapeHtml(status.title)}</h3>
+            <p>${escapeHtml(status.body)}</p>
+            ${status.detail ? `<code>${escapeHtml(status.detail)}</code>` : ""}
+          </section>
+        `;
+      }
+
+      function parseCompletionToken(value) {
+        const trimmed = (value || "").trim();
+        if (!trimmed) {
+          return "";
+        }
+
+        try {
+          const url = new URL(trimmed);
+          const searchToken = url.searchParams.get("token");
+          if (searchToken) {
+            return searchToken;
+          }
+        } catch {
+          // Ignore parse failures and fall back to raw input.
+        }
+
+        const tokenMatch = trimmed.match(/[?&]token=([^&]+)/);
+        if (tokenMatch) {
+          return decodeURIComponent(tokenMatch[1]);
+        }
+
+        return trimmed;
+      }
+
+      function parseInviteReference(value) {
+        const trimmed = (value || "").trim();
+        if (!trimmed) {
+          return null;
+        }
+
+        try {
+          const url = new URL(trimmed);
+          const segments = url.pathname.split("/").filter(Boolean);
+          if (segments[0] === "invite" && segments.length >= 3) {
+            return {
+              groupId: segments[1],
+              inviteToken: segments[2],
+            };
+          }
+        } catch {
+          // Ignore parse failures and fall back to local parsing.
+        }
+
+        const parts = trimmed.split("/").filter(Boolean);
+        if (parts.length >= 2) {
+          return {
+            groupId: parts[parts.length - 2],
+            inviteToken: parts[parts.length - 1],
+          };
+        }
+
+        return null;
+      }
+
+      function rememberInvite(groupId, invite) {
+        const current = Array.isArray(state.createdInvites[groupId]) ? state.createdInvites[groupId] : [];
+        const next = [invite, ...current.filter((entry) => entry.id !== invite.id)].slice(0, 8);
+        state.createdInvites = {
+          ...state.createdInvites,
+          [groupId]: next,
+        };
+        writeJson(storageKeys.createdInvites, state.createdInvites);
+      }
+
+      function cachedInvite(groupId, inviteId) {
+        const items = Array.isArray(state.createdInvites[groupId]) ? state.createdInvites[groupId] : [];
+        return items.find((entry) => entry.id === inviteId) || null;
+      }
+
+      function revokePreviewUrl(url) {
+        if (!url) {
+          return;
+        }
+
+        try {
+          URL.revokeObjectURL(url);
+        } catch {
+          // Ignore preview cleanup failures.
+        }
+      }
+
+      function clearComposerFile() {
+        revokePreviewUrl(state.threadComposer.previewUrl);
+        state.threadComposer.file = null;
+        state.threadComposer.fileName = "";
+        state.threadComposer.mimeType = "";
+        state.threadComposer.previewUrl = "";
+      }
+
+      function setComposerFile(file) {
+        clearComposerFile();
+
+        if (!file) {
+          return;
+        }
+
+        state.threadComposer.file = file;
+        state.threadComposer.fileName = file.name;
+        state.threadComposer.mimeType = file.type || "application/octet-stream";
+        if (file.type.startsWith("image/") || file.type.startsWith("video/")) {
+          state.threadComposer.previewUrl = URL.createObjectURL(file);
+        }
+      }
+
+      function currentGroup() {
+        return state.groups.find((group) => group.id === state.activeGroupId) || null;
+      }
+
+      function viewerIdentityLabel() {
+        if (state.me?.displayName) {
+          return state.me.displayName;
+        }
+
+        if (state.me?.username) {
+          return `@${state.me.username}`;
+        }
+
+        return state.me?.email || "Current member";
+      }
+
+      function pickPreferredGroupId(groups) {
+        if (groups.some((group) => group.id === state.activeGroupId)) {
+          return state.activeGroupId;
+        }
+
+        if (
+          state.session?.bootstrapConversationId &&
+          groups.some((group) => group.id === state.session.bootstrapConversationId)
+        ) {
+          return state.session.bootstrapConversationId;
+        }
+
+        return groups[0]?.id || null;
+      }
+
+      function inferContentClass(file) {
+        if (file.type.startsWith("image/")) {
+          return "image";
+        }
+
+        if (file.type.startsWith("video/")) {
+          return "video";
+        }
+
+        if (file.type.startsWith("audio/")) {
+          return "audio";
+        }
+
+        return "file";
+      }
+
+      function resetThreadState() {
+        state.activeGroupId = null;
+        state.threadMessages = [];
+        state.revealedMessages = {};
+        state.threadStatus = null;
+        state.isLoadingThread = false;
+        state.threadComposer.text = "";
+        clearComposerFile();
+      }
+
+      function ensureInviteDraft(groupId) {
+        if (!state.groupInviteDrafts[groupId]) {
+          state.groupInviteDrafts[groupId] = {
+            note: "",
+            expiresInHours: "72",
+            maxUses: "12",
+          };
+        }
+
+        return state.groupInviteDrafts[groupId];
+      }
+
+      async function refreshRelaySession() {
+        if (!state.session?.refreshToken) {
+          clearStoredSession();
+          state.session = null;
+          return null;
+        }
+
+        const response = await fetch(`${state.relayUrl}/v1/auth/refresh`, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            refreshToken: state.session.refreshToken,
+          }),
+        });
+
+        const body = (await response.json().catch(() => ({}))) || {};
+        if (!response.ok || !body.accessToken) {
+          clearStoredSession();
+          state.session = null;
+          return null;
+        }
+
+        state.session = {
+          ...state.session,
+          accessToken: body.accessToken,
+          sessionId: body.sessionId,
+          deviceId: body.deviceId,
+        };
+        writeJson(storageKeys.session, state.session);
+        return state.session;
+      }
+
+      async function relayFetch(path, options = {}, config = {}) {
+        const { auth = true, retryAfterRefresh = true } = config;
+        const headers = new Headers(options.headers || {});
+        const hasBody = options.body !== undefined && options.body !== null;
+
+        if (auth && state.session?.accessToken) {
+          headers.set("authorization", `Bearer ${state.session.accessToken}`);
+        }
+
+        if (hasBody && !headers.has("content-type")) {
+          headers.set("content-type", "application/json");
+        }
+
+        const response = await fetch(`${state.relayUrl}${path}`, {
+          ...options,
+          headers,
+        });
+
+        const body = (await response.json().catch(() => ({}))) || {};
+        if (response.ok) {
+          return body;
+        }
+
+        if (auth && response.status === 401 && retryAfterRefresh) {
+          const refreshed = await refreshRelaySession();
+          if (refreshed) {
+            return relayFetch(path, options, { auth, retryAfterRefresh: false });
+          }
+        }
+
+        const error = new Error(body.error || "Relay request failed");
+        error.code = body.code;
+        throw error;
+      }
+
+      async function loadWorkspace() {
+        if (!state.session) {
+          state.isLoadingWorkspace = false;
+          render();
+          return;
+        }
+
+        state.isLoadingWorkspace = true;
+        state.workspaceStatus = null;
+        render();
+
+        try {
+          const [me, privacy, sessions, groups] = await Promise.all([
+            relayFetch("/v1/me"),
+            relayFetch("/v1/me/privacy"),
+            relayFetch("/v1/sessions"),
+            relayFetch("/v1/groups"),
+          ]);
+
+          state.me = me;
+          state.privacy = privacy;
+          state.sessions = sessions;
+          state.groups = groups;
+          state.profileForm.displayName = me.displayName || "";
+          state.profileForm.bio = me.bio || "";
+          state.privacyForm = {
+            notificationPreviewMode: privacy.notificationPreviewMode || "discreet",
+            autoDownloadSensitiveMedia: Boolean(privacy.autoDownloadSensitiveMedia),
+            allowSensitiveExport: Boolean(privacy.allowSensitiveExport),
+            secureAppSwitcher: Boolean(privacy.secureAppSwitcher),
+          };
+
+          const inviteLoads = await Promise.allSettled(
+            groups
+              .filter((group) => group.canCreateInvites)
+              .map(async (group) => {
+                ensureInviteDraft(group.id);
+                return [group.id, await relayFetch(`/v1/groups/${group.id}/invites`)];
+              }),
+          );
+
+          const nextInvites = {};
+          for (const result of inviteLoads) {
+            if (result.status === "fulfilled") {
+              nextInvites[result.value[0]] = result.value[1];
+            }
+          }
+          state.groupInvites = nextInvites;
+          state.activeGroupId = pickPreferredGroupId(groups);
+          if (state.activeGroupId) {
+            await loadThread(state.activeGroupId, { preserveStatus: true });
+          } else {
+            resetThreadState();
+          }
+        } catch (error) {
+          if (!state.session) {
+            state.authStatus = createStatus(
+              "warning",
+              "Session expired",
+              "The desktop app signed you out because the relay session could not be refreshed."
+            );
+            resetWorkspaceState();
+          } else {
+            state.workspaceStatus = createStatus(
+              "error",
+              "Workspace failed to load",
+              error instanceof Error ? error.message : "Unknown relay error",
+              state.relayUrl,
+            );
+          }
+        } finally {
+          state.isLoadingWorkspace = false;
+          render();
+        }
+      }
+
+      function resetWorkspaceState() {
+        state.me = null;
+        state.privacy = null;
+        state.sessions = [];
+        state.groups = [];
+        state.groupInvites = {};
+        resetThreadState();
+        state.profileForm = {
+          displayName: "",
+          bio: "",
+        };
+        state.privacyForm = {
+          notificationPreviewMode: "discreet",
+          autoDownloadSensitiveMedia: false,
+          allowSensitiveExport: false,
+          secureAppSwitcher: true,
+        };
+      }
+
+      async function loadThread(groupId, options = {}) {
+        const { preserveStatus = false } = options;
+
+        if (!state.session || !groupId) {
+          state.threadMessages = [];
+          state.activeGroupId = null;
+          state.isLoadingThread = false;
+          render();
+          return;
+        }
+
+        state.activeGroupId = groupId;
+        state.isLoadingThread = true;
+        state.threadMessages = [];
+        state.revealedMessages = {};
+        if (!preserveStatus) {
+          state.threadStatus = null;
+        }
+        render();
+
+        try {
+          state.threadMessages = await relayFetch(`/v1/groups/${groupId}/messages?limit=80`);
+          state.revealedMessages = {};
+        } catch (error) {
+          state.threadStatus = createStatus(
+            "error",
+            "Unable to load the group thread",
+            error instanceof Error ? error.message : "Unknown relay error"
+          );
+        } finally {
+          state.isLoadingThread = false;
+          render();
+        }
+      }
+
+      async function sendThreadMessage() {
+        if (!state.session || !state.activeGroupId) {
+          return;
+        }
+
+        const group = currentGroup();
+        if (!group) {
+          state.threadStatus = createStatus(
+            "warning",
+            "Pick a group first",
+            "This desktop install needs an active group before it can send media."
+          );
+          render();
+          return;
+        }
+
+        const text = state.threadComposer.text.trim();
+        const file = state.threadComposer.file;
+        if (!text && !file) {
+          state.threadStatus = createStatus(
+            "warning",
+            "Add a photo or caption first",
+            "Choose a file, write a caption, or do both before sending."
+          );
+          render();
+          return;
+        }
+
+        if (file && file.size > 20 * 1024 * 1024) {
+          state.threadStatus = createStatus(
+            "error",
+            "File is too large",
+            "The current desktop MVP accepts uploads up to 20 MB per file."
+          );
+          render();
+          return;
+        }
+
+        setBusy("send-message");
+
+        try {
+          let attachmentId;
+
+          if (file) {
+            const contentClass = inferContentClass(file);
+            const protectionProfile =
+              contentClass === "image" || contentClass === "video"
+                ? group.sensitiveMediaDefault
+                  ? "sensitive_media"
+                  : "standard"
+                : "standard";
+
+            const ticket = await relayFetch("/v1/attachments/ticket", {
+              method: "POST",
+              body: JSON.stringify({
+                fileName: file.name,
+                mimeType: file.type || "application/octet-stream",
+                byteLength: file.size,
+                conversationId: group.id,
+                conversationEpoch: group.epoch,
+                contentClass,
+                retentionMode: "private_vault",
+                protectionProfile,
+              }),
+            });
+
+            const uploadResponse = await fetch(ticket.uploadUrl, {
+              method: "PUT",
+              headers: {
+                "content-type": file.type || "application/octet-stream",
+              },
+              body: file,
+            });
+
+            if (!uploadResponse.ok) {
+              throw new Error("Attachment upload failed");
+            }
+
+            attachmentId = ticket.attachmentId;
+          }
+
+          const message = await relayFetch(`/v1/groups/${group.id}/messages`, {
+            method: "POST",
+            body: JSON.stringify({
+              text: text || undefined,
+              attachmentId,
+              clientMessageId: crypto.randomUUID(),
+            }),
+          });
+
+          state.threadMessages = [...state.threadMessages, message];
+          state.threadStatus = createStatus(
+            "success",
+            file ? "Photo sent" : "Message sent",
+            file
+              ? `Delivered into ${group.title}. This desktop install now proves the first-send loop.`
+              : `Delivered into ${group.title}.`
+          );
+          state.threadComposer.text = "";
+          clearComposerFile();
+        } catch (error) {
+          state.threadStatus = createStatus(
+            "error",
+            "Unable to send to the group",
+            error instanceof Error ? error.message : "Unknown relay error"
+          );
+        } finally {
+          clearBusy();
+          render();
+        }
+      }
+
+      async function startMagicLink() {
+        const email = state.authForm.email.trim();
+        const inviteToken = state.authForm.inviteToken.trim();
+        const groupInviteReference = state.authForm.groupInviteReference.trim();
+        const deviceLabel = state.authForm.deviceLabel.trim();
+        const parsedGroupInvite = groupInviteReference ? parseInviteReference(groupInviteReference) : null;
+
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          state.authStatus = createStatus(
+            "error",
+            "Enter a valid email address",
+            "The desktop app needs a real inbox to send the magic link."
+          );
+          render();
+          return;
+        }
+
+        if (!deviceLabel || deviceLabel.length < 3) {
+          state.authStatus = createStatus(
+            "error",
+            "Name this device first",
+            "Use at least 3 characters so session review stays readable."
+          );
+          render();
+          return;
+        }
+
+        if (groupInviteReference && !parsedGroupInvite) {
+          state.authStatus = createStatus(
+            "error",
+            "Paste a valid group invite URL",
+            "Use the full invite URL so this install can land in the right group after sign-in."
+          );
+          render();
+          return;
+        }
+
+        setBusy("start-auth");
+
+        try {
+          const challenge = await relayFetch(
+            "/v1/auth/start",
+            {
+              method: "POST",
+              body: JSON.stringify({
+                email,
+                inviteToken: parsedGroupInvite ? undefined : inviteToken || undefined,
+                groupId: parsedGroupInvite?.groupId,
+                groupInviteToken: parsedGroupInvite?.inviteToken,
+                deviceLabel,
+              }),
+            },
+            { auth: false },
+          );
+
+          state.pendingChallenge = challenge;
+          writeJson(storageKeys.pendingChallenge, challenge);
+          writeText(storageKeys.email, email);
+          writeText(storageKeys.inviteToken, inviteToken);
+          writeText(storageKeys.groupInviteReference, groupInviteReference);
+          writeText(storageKeys.deviceLabel, deviceLabel);
+
+          if (challenge.debugCompletionToken) {
+            state.authForm.completionInput = challenge.debugCompletionToken;
+          }
+
+          state.authStatus = createStatus(
+            challenge.inviteRequired ? "warning" : "success",
+            challenge.inviteRequired ? "Inbox link sent for bootstrap" : "Magic link sent",
+            parsedGroupInvite
+              ? `Open the email, finish sign-in, and this install will land inside the invited group before ${formatDateTime(challenge.expiresAt)}.`
+              : `Open the email, then paste the magic link or completion token here before ${formatDateTime(challenge.expiresAt)}.`,
+            challenge.debugCompletionToken || undefined,
+          );
+        } catch (error) {
+          state.authStatus = createStatus(
+            "error",
+            "Unable to start sign-in",
+            error instanceof Error ? error.message : "Unknown relay error",
+            state.relayUrl,
+          );
+        } finally {
+          clearBusy();
+        }
+      }
+
+      async function completeMagicLink() {
+        const completionToken = parseCompletionToken(state.authForm.completionInput);
+        const deviceLabel = state.authForm.deviceLabel.trim();
+
+        if (!completionToken) {
+          state.authStatus = createStatus(
+            "error",
+            "Paste the magic link or token",
+            "You can paste the full email URL or the raw completion token."
+          );
+          render();
+          return;
+        }
+
+        setBusy("complete-auth");
+
+        try {
+          const session = await relayFetch(
+            "/v1/auth/complete",
+            {
+              method: "POST",
+              body: JSON.stringify({
+                completionToken,
+                deviceLabel: deviceLabel || undefined,
+              }),
+            },
+            { auth: false },
+          );
+
+          state.session = session;
+          writeJson(storageKeys.session, session);
+          clearPendingChallenge();
+          state.authStatus = null;
+          resetWorkspaceState();
+          state.activeView = "thread";
+          state.activeGroupId = session.bootstrapConversationId || null;
+          render();
+          await loadWorkspace();
+        } catch (error) {
+          state.authStatus = createStatus(
+            "error",
+            "Unable to complete sign-in",
+            error instanceof Error ? error.message : "Unknown relay error"
+          );
+        } finally {
+          clearBusy();
+        }
+      }
+
+      async function saveProfile() {
+        if (!state.session) {
+          return;
+        }
+
+        setBusy("save-profile");
+
+        try {
+          await relayFetch("/v1/me", {
+            method: "PATCH",
+            body: JSON.stringify({
+              displayName: state.profileForm.displayName.trim() || undefined,
+              bio: state.profileForm.bio.trim() || "",
+            }),
+          });
+
+          state.settingsStatus = createStatus(
+            "success",
+            "Profile saved",
+            "Display name and bio were updated for this account."
+          );
+          await loadWorkspace();
+        } catch (error) {
+          state.settingsStatus = createStatus(
+            "error",
+            "Unable to save profile",
+            error instanceof Error ? error.message : "Unknown relay error"
+          );
+          render();
+        } finally {
+          clearBusy();
+        }
+      }
+
+      async function savePrivacy() {
+        if (!state.session) {
+          return;
+        }
+
+        setBusy("save-privacy");
+
+        try {
+          const nextPrivacy = await relayFetch("/v1/me/privacy", {
+            method: "PATCH",
+            body: JSON.stringify(state.privacyForm),
+          });
+
+          state.privacy = nextPrivacy;
+          state.privacyForm = {
+            notificationPreviewMode: nextPrivacy.notificationPreviewMode || "discreet",
+            autoDownloadSensitiveMedia: Boolean(nextPrivacy.autoDownloadSensitiveMedia),
+            allowSensitiveExport: Boolean(nextPrivacy.allowSensitiveExport),
+            secureAppSwitcher: Boolean(nextPrivacy.secureAppSwitcher),
+          };
+          state.settingsStatus = createStatus(
+            "success",
+            "Privacy defaults saved",
+            "Desktop notification, media, and app-switcher preferences were updated."
+          );
+        } catch (error) {
+          state.settingsStatus = createStatus(
+            "error",
+            "Unable to save privacy defaults",
+            error instanceof Error ? error.message : "Unknown relay error"
+          );
+        } finally {
+          clearBusy();
+        }
+      }
+
+      async function createGroup() {
+        if (!state.session) {
+          return;
+        }
+
+        const title = state.createGroupForm.title.trim();
+        if (!title) {
+          state.groupsStatus = createStatus(
+            "error",
+            "Name the group first",
+            "A trusted group needs a readable title before the first invite leaves your device."
+          );
+          render();
+          return;
+        }
+
+        setBusy("create-group");
+
+        try {
+          const group = await relayFetch("/v1/groups", {
+            method: "POST",
+            body: JSON.stringify({
+              title,
+              memberCap: Number(state.createGroupForm.memberCap) || 12,
+              joinRuleText: state.createGroupForm.joinRuleText.trim() || undefined,
+              sensitiveMediaDefault: Boolean(state.createGroupForm.sensitiveMediaDefault),
+              allowMemberInvites: Boolean(state.createGroupForm.allowMemberInvites),
+            }),
+          });
+
+          state.createGroupForm = {
+            title: "",
+            joinRuleText: "",
+            memberCap: "12",
+            sensitiveMediaDefault: true,
+            allowMemberInvites: false,
+          };
+          state.groupsStatus = createStatus(
+            "success",
+            "Group created",
+            "The new group is ready. Send the first photo now or mint an invite when you are ready to add members."
+          );
+          state.activeGroupId = group.id;
+          state.activeView = "thread";
+          await loadWorkspace();
+        } catch (error) {
+          state.groupsStatus = createStatus(
+            "error",
+            "Unable to create group",
+            error instanceof Error ? error.message : "Unknown relay error"
+          );
+          render();
+        } finally {
+          clearBusy();
+        }
+      }
+
+      async function createInvite(groupId) {
+        if (!state.session) {
+          return;
+        }
+
+        const draft = ensureInviteDraft(groupId);
+        const action = `create-invite:${groupId}`;
+        setBusy(action);
+
+        try {
+          const invite = await relayFetch(`/v1/groups/${groupId}/invites`, {
+            method: "POST",
+            body: JSON.stringify({
+              note: draft.note.trim() || undefined,
+              expiresInHours: draft.expiresInHours ? Number(draft.expiresInHours) : undefined,
+              maxUses: draft.maxUses ? Number(draft.maxUses) : undefined,
+            }),
+          });
+
+          rememberInvite(groupId, {
+            id: invite.id,
+            inviteUrl: invite.inviteUrl,
+            inviteToken: invite.inviteToken,
+            createdAt: invite.createdAt,
+          });
+          draft.note = "";
+          state.groupsStatus = createStatus(
+            "success",
+            "Invite minted",
+            "The raw invite URL is available on this device now. Historical invite URLs cannot be re-derived from the relay."
+          );
+          await loadWorkspace();
+        } catch (error) {
+          state.groupsStatus = createStatus(
+            "error",
+            "Unable to create invite",
+            error instanceof Error ? error.message : "Unknown relay error"
+          );
+          render();
+        } finally {
+          clearBusy();
+        }
+      }
+
+      async function previewInvite() {
+        const parsed = parseInviteReference(state.inviteTools.input);
+        if (!parsed) {
+          state.invitesStatus = createStatus(
+            "error",
+            "Paste a valid invite URL",
+            "Expected the group invite format /invite/<group-id>/<token>."
+          );
+          render();
+          return;
+        }
+
+        setBusy("preview-invite");
+
+        try {
+          const preview = await relayFetch(
+            `/v1/groups/${parsed.groupId}/invites/${encodeURIComponent(parsed.inviteToken)}/preview`,
+            undefined,
+            { auth: false },
+          );
+
+          state.inviteTools.preview = {
+            ...preview,
+            groupId: parsed.groupId,
+            inviteToken: parsed.inviteToken,
+          };
+          state.invitesStatus = createStatus(
+            "success",
+            "Invite preview loaded",
+            "Review the inviter, group size, rules, and defaults before accepting."
+          );
+        } catch (error) {
+          state.inviteTools.preview = null;
+          state.invitesStatus = createStatus(
+            "error",
+            "Unable to preview invite",
+            error instanceof Error ? error.message : "Unknown relay error"
+          );
+        } finally {
+          clearBusy();
+        }
+      }
+
+      async function acceptInvite() {
+        if (!state.session || !state.inviteTools.preview) {
+          return;
+        }
+
+        setBusy("accept-invite");
+
+        try {
+          const result = await relayFetch(
+            `/v1/groups/${state.inviteTools.preview.groupId}/invites/${encodeURIComponent(state.inviteTools.preview.inviteToken)}/accept`,
+            { method: "POST" },
+          );
+
+          state.invitesStatus = createStatus(
+            "success",
+            "Invite accepted",
+            `You joined ${result.title}. The thread is ready for your first send.`
+          );
+          state.inviteTools.input = "";
+          state.inviteTools.preview = null;
+          state.activeGroupId = result.conversationId;
+          state.activeView = "thread";
+          await loadWorkspace();
+        } catch (error) {
+          state.invitesStatus = createStatus(
+            "error",
+            "Unable to accept invite",
+            error instanceof Error ? error.message : "Unknown relay error"
+          );
+        } finally {
+          clearBusy();
+        }
+      }
+
+      async function revokeSession(sessionId) {
+        if (!state.session) {
+          return;
+        }
+
+        const action = `revoke-session:${sessionId}`;
+        setBusy(action);
+
+        try {
+          await relayFetch(`/v1/sessions/${sessionId}`, {
+            method: "DELETE",
+          });
+
+          state.sessionsStatus = createStatus(
+            "success",
+            "Session revoked",
+            "That device session can no longer refresh access tokens."
+          );
+          await loadWorkspace();
+        } catch (error) {
+          state.sessionsStatus = createStatus(
+            "error",
+            "Unable to revoke session",
+            error instanceof Error ? error.message : "Unknown relay error"
+          );
+          render();
+        } finally {
+          clearBusy();
+        }
+      }
+
+      async function checkRelayHealth() {
+        setBusy("check-relay");
+
+        try {
+          const response = await fetch(`${state.relayUrl}/health`);
+          const body = await response.json();
+          state.settingsStatus = createStatus(
+            "success",
+            "Relay reachable",
+            `Relay responded at ${formatDateTime(body.timestamp)}.`,
+            state.relayUrl,
+          );
+        } catch (error) {
+          state.settingsStatus = createStatus(
+            "error",
+            "Relay health check failed",
+            error instanceof Error ? error.message : "Unknown network error",
+            state.relayUrl,
+          );
+        } finally {
+          clearBusy();
+        }
+      }
+
+      function saveRelayUrl() {
+        state.relayUrl = normalizeRelayUrl(state.relayUrl);
+        writeText(storageKeys.relayUrl, state.relayUrl);
+        state.settingsStatus = createStatus(
+          "success",
+          "Relay URL saved",
+          "New requests will use the updated relay endpoint.",
+          state.relayUrl,
+        );
+        render();
+      }
+
+      function signOut() {
+        clearStoredSession();
+        state.session = null;
+        state.activeView = "thread";
+        state.workspaceStatus = null;
+        resetWorkspaceState();
+        state.authStatus = createStatus(
+          "info",
+          "Signed out",
+          "The desktop app cleared the local relay session for this device."
+        );
+        render();
+      }
+
+      function handleInput(event) {
+        const target = event.target;
+        if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement)) {
+          return;
+        }
+
+        const bind = target.dataset.bind;
+        if (!bind) {
+          return;
+        }
+
+        const value = target.type === "checkbox" ? target.checked : target.value;
+
+        if (bind === "relayUrl") {
+          state.relayUrl = value;
+          return;
+        }
+
+        if (bind === "auth.email") {
+          state.authForm.email = value;
+          writeText(storageKeys.email, value);
+          return;
+        }
+
+        if (bind === "auth.inviteToken") {
+          state.authForm.inviteToken = value;
+          writeText(storageKeys.inviteToken, value);
+          return;
+        }
+
+        if (bind === "auth.groupInviteReference") {
+          state.authForm.groupInviteReference = value;
+          writeText(storageKeys.groupInviteReference, value);
+          return;
+        }
+
+        if (bind === "auth.deviceLabel") {
+          state.authForm.deviceLabel = value;
+          writeText(storageKeys.deviceLabel, value);
+          return;
+        }
+
+        if (bind === "auth.completionInput") {
+          state.authForm.completionInput = value;
+          return;
+        }
+
+        if (bind === "createGroup.title") {
+          state.createGroupForm.title = value;
+          return;
+        }
+
+        if (bind === "createGroup.joinRuleText") {
+          state.createGroupForm.joinRuleText = value;
+          return;
+        }
+
+        if (bind === "createGroup.memberCap") {
+          state.createGroupForm.memberCap = value;
+          return;
+        }
+
+        if (bind === "createGroup.sensitiveMediaDefault") {
+          state.createGroupForm.sensitiveMediaDefault = Boolean(value);
+          return;
+        }
+
+        if (bind === "createGroup.allowMemberInvites") {
+          state.createGroupForm.allowMemberInvites = Boolean(value);
+          return;
+        }
+
+        if (bind === "inviteTools.input") {
+          state.inviteTools.input = value;
+          return;
+        }
+
+        if (bind === "thread.text") {
+          state.threadComposer.text = value;
+          return;
+        }
+
+        if (bind === "thread.file" && target instanceof HTMLInputElement) {
+          setComposerFile(target.files?.[0] || null);
+          render();
+          return;
+        }
+
+        if (bind === "profile.displayName") {
+          state.profileForm.displayName = value;
+          return;
+        }
+
+        if (bind === "profile.bio") {
+          state.profileForm.bio = value;
+          return;
+        }
+
+        if (bind === "privacy.notificationPreviewMode") {
+          state.privacyForm.notificationPreviewMode = value;
+          return;
+        }
+
+        if (bind === "privacy.autoDownloadSensitiveMedia") {
+          state.privacyForm.autoDownloadSensitiveMedia = Boolean(value);
+          return;
+        }
+
+        if (bind === "privacy.allowSensitiveExport") {
+          state.privacyForm.allowSensitiveExport = Boolean(value);
+          return;
+        }
+
+        if (bind === "privacy.secureAppSwitcher") {
+          state.privacyForm.secureAppSwitcher = Boolean(value);
+          return;
+        }
+
+        if (bind.startsWith("groupInvite.")) {
+          const [, groupId, field] = bind.split(".");
+          const draft = ensureInviteDraft(groupId);
+          draft[field] = value;
+        }
+      }
+
+      async function handleClick(event) {
+        const button = event.target.closest("[data-action], [data-nav]");
+        if (!button) {
+          return;
+        }
+
+        const nav = button.dataset.nav;
+        if (nav) {
+          state.activeView = nav;
+          render();
+          return;
+        }
+
+        const action = button.dataset.action;
+        if (!action) {
+          return;
+        }
+
+        if (action === "sign-out") {
+          signOut();
+          return;
+        }
+
+        if (action === "refresh-workspace") {
+          await loadWorkspace();
+          return;
+        }
+
+        if (action === "check-relay") {
+          await checkRelayHealth();
+          return;
+        }
+
+        if (action === "copy-invite") {
+          const groupId = button.dataset.groupId;
+          const inviteId = button.dataset.inviteId;
+          const cached = cachedInvite(groupId, inviteId);
+          if (!cached?.inviteUrl) {
+            state.groupsStatus = createStatus(
+              "warning",
+              "Raw invite URL unavailable",
+              "This device only retains raw invite URLs for invites it minted locally. Create a fresh invite if you need a copyable link."
+            );
+            render();
+            return;
+          }
+
+          try {
+            await navigator.clipboard.writeText(cached.inviteUrl);
+            state.groupsStatus = createStatus(
+              "success",
+              "Invite URL copied",
+              "The latest invite URL is now in your clipboard."
+            );
+          } catch {
+            state.groupsStatus = createStatus(
+              "warning",
+              "Clipboard unavailable",
+              "Copy the invite URL from the code block manually on this device.",
+              cached.inviteUrl,
+            );
+          }
+          render();
+          return;
+        }
+
+        if (action === "revoke-session") {
+          const sessionId = button.dataset.sessionId;
+          if (sessionId) {
+            await revokeSession(sessionId);
+          }
+          return;
+        }
+
+        if (action === "create-invite") {
+          const groupId = button.dataset.groupId;
+          if (groupId) {
+            await createInvite(groupId);
+          }
+          return;
+        }
+
+        if (action === "open-group") {
+          const groupId = button.dataset.groupId;
+          if (groupId) {
+            state.activeView = "thread";
+            await loadThread(groupId);
+          }
+          return;
+        }
+
+        if (action === "clear-composer-file") {
+          clearComposerFile();
+          render();
+          return;
+        }
+
+        if (action === "reveal-message") {
+          const messageId = button.dataset.messageId;
+          if (messageId) {
+            state.revealedMessages[messageId] = true;
+            render();
+          }
+          return;
+        }
+
+        if (action === "accept-preview-invite") {
+          await acceptInvite();
+          return;
+        }
+      }
+
+      async function handleSubmit(event) {
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement)) {
+          return;
+        }
+
+        const name = form.dataset.form;
+        if (!name) {
+          return;
+        }
+
+        event.preventDefault();
+
+        if (name === "start-auth") {
+          await startMagicLink();
+          return;
+        }
+
+        if (name === "complete-auth") {
+          await completeMagicLink();
+          return;
+        }
+
+        if (name === "create-group") {
+          await createGroup();
+          return;
+        }
+
+        if (name === "preview-invite") {
+          await previewInvite();
+          return;
+        }
+
+        if (name === "save-profile") {
+          await saveProfile();
+          return;
+        }
+
+        if (name === "save-privacy") {
+          await savePrivacy();
+          return;
+        }
+
+        if (name === "save-relay-url") {
+          saveRelayUrl();
+          return;
+        }
+
+        if (name === "send-message") {
+          await sendThreadMessage();
+        }
+      }
+
+      function renderAuthView() {
+        const pending = state.pendingChallenge;
+        const completionHint = pending
+          ? `Current link expires ${formatDateTime(pending.expiresAt)}.`
+          : "Paste the full magic link or the raw completion token from your email.";
+
+        return `
+          <div class="auth-layout">
+            <main class="stack">
+              <section class="panel panel-strong">
+                <div class="wordmark">
+                  <div class="logo">EC</div>
+                  <div>
+                    <p class="eyebrow">Ubuntu desktop MVP</p>
+                    <p style="font-size: 1.15rem; font-weight: 700">EmberChamber desktop</p>
+                  </div>
+                </div>
+
+                <h1>Install, sign in, and send the first photo from Ubuntu.</h1>
+                <p class="lede">
+                  This build is now aimed at one proof point: a new user can finish email bootstrap, land in a closed group, and send a photo without bouncing through a separate web client.
+                </p>
+
+                <div class="highlight">
+                  Android is still the long-term target, but Ubuntu now needs to prove the same core loop instead of a companion-only admin flow.
+                </div>
+
+                <div class="grid-3" style="margin-top: 22px">
+                  <section class="step">
+                    <div class="step-number">01</div>
+                    <h3>Paste the group invite</h3>
+                    <p>Start from the actual invite you received so sign-in can drop you into the right group.</p>
+                  </section>
+                  <section class="step">
+                    <div class="step-number">02</div>
+                    <h3>Finish sign-in in-app</h3>
+                    <p>Use the inbox link or raw token from email. The desktop app finishes the magic-link step itself.</p>
+                  </section>
+                  <section class="step">
+                    <div class="step-number">03</div>
+                    <h3>Send the first photo</h3>
+                    <p>Once the session opens, land in the group thread, choose a file, add an optional caption, and send.</p>
+                  </section>
+                </div>
+              </section>
+
+              <section class="panel">
+                <div class="view-header">
+                  <div>
+                    <p class="eyebrow">What this build can do now</p>
+                    <h2>Usable desktop MVP surface</h2>
+                  </div>
+                </div>
+                <div class="grid-2" style="margin-top: 16px">
+                  <section class="mini-card">
+                    <p class="label">Thread-first</p>
+                    <p style="margin-top: 10px">Landing in a group thread is now the primary desktop path, not a side effect of setup screens.</p>
+                  </section>
+                  <section class="mini-card">
+                    <p class="label">Photo send</p>
+                    <p style="margin-top: 10px">Choose a local file, upload it through the relay, and send it into a closed group from this install.</p>
+                  </section>
+                  <section class="mini-card">
+                    <p class="label">Privacy</p>
+                    <p style="margin-top: 10px">Sensitive media stays visually protected by default with reveal controls and watermark overlays.</p>
+                  </section>
+                  <section class="mini-card">
+                    <p class="label">Group setup</p>
+                    <p style="margin-top: 10px">If you are creating the circle yourself, mint the group and first invite from the same desktop build.</p>
+                  </section>
+                </div>
+              </section>
+            </main>
+
+            <aside class="stack">
+              <section class="panel">
+                <div class="brand-chip">
+                  <div class="logo small">EC</div>
+                  <div>
+                    <p class="eyebrow">Desktop bootstrap</p>
+                    <h2>Start from the invite</h2>
+                  </div>
+                </div>
+
+                <p class="section-intro" style="margin-top: 14px">
+                  Paste the group invite URL when you have one. Leave it blank only if this account is already in the beta or you are bootstrapping with a separate beta token.
+                </p>
+
+                ${renderStatus(state.authStatus)}
+
+                <form data-form="start-auth" class="field-stack" style="margin-top: 18px">
+                  <div class="field">
+                    <label for="auth-email">Private email</label>
+                    <input id="auth-email" type="email" data-bind="auth.email" value="${escapeHtml(state.authForm.email)}" autocomplete="email" />
+                    <div class="hint">Used only for bootstrap and recovery.</div>
+                  </div>
+
+                  <div class="field">
+                    <label for="auth-group-invite">Group invite URL</label>
+                    <textarea id="auth-group-invite" data-bind="auth.groupInviteReference" placeholder="https://emberchamber.com/invite/<group-id>/<token>">${escapeHtml(state.authForm.groupInviteReference)}</textarea>
+                    <div class="hint">Recommended for first-time users. After email sign-in, the relay will accept the invite and open that group on this device.</div>
+                  </div>
+
+                  <div class="field">
+                    <label for="auth-invite">Beta invite token</label>
+                    <input id="auth-invite" type="text" data-bind="auth.inviteToken" value="${escapeHtml(state.authForm.inviteToken)}" autocomplete="off" />
+                    <div class="hint">Fallback bootstrap path when you do not already have a group invite URL.</div>
+                  </div>
+
+                  <div class="field">
+                    <label for="auth-device">Device label</label>
+                    <input id="auth-device" type="text" data-bind="auth.deviceLabel" value="${escapeHtml(state.authForm.deviceLabel)}" autocomplete="off" />
+                    <div class="hint">Readable labels make session review and recovery less painful later. The default is already fine for most users.</div>
+                  </div>
+
+                  <button class="primary-button" type="submit" ${isBusy("start-auth") ? "disabled" : ""}>
+                    ${isBusy("start-auth") ? "Sending magic link..." : "Send magic link"}
+                  </button>
+                </form>
+              </section>
+
+              <section class="panel">
+                <div class="view-header">
+                  <div>
+                    <p class="eyebrow">Finish sign-in</p>
+                    <h2>Paste the email link here</h2>
+                  </div>
+                </div>
+
+                ${pending ? `
+                  <section class="status info" style="margin-top: 16px">
+                    <h3>Pending magic link</h3>
+                    <p>${escapeHtml(completionHint)}</p>
+                    ${pending.debugCompletionToken ? `<code>${escapeHtml(pending.debugCompletionToken)}</code>` : ""}
+                  </section>
+                ` : ""}
+
+                <form data-form="complete-auth" class="field-stack" style="margin-top: 18px">
+                  <div class="field">
+                    <label for="completion-input">Magic link or completion token</label>
+                    <textarea id="completion-input" data-bind="auth.completionInput" placeholder="Paste the full /auth/complete link or raw token here">${escapeHtml(state.authForm.completionInput)}</textarea>
+                    <div class="hint">${escapeHtml(completionHint)}</div>
+                  </div>
+
+                  <button class="primary-button" type="submit" ${isBusy("complete-auth") ? "disabled" : ""}>
+                    ${isBusy("complete-auth") ? "Completing sign-in..." : "Complete sign-in"}
+                  </button>
+                </form>
+              </section>
+
+              <section class="panel">
+                <div class="view-header">
+                  <div>
+                    <p class="eyebrow">Relay endpoint</p>
+                    <h2>Desktop diagnostics</h2>
+                  </div>
+                </div>
+
+                <form data-form="save-relay-url" class="field-stack" style="margin-top: 18px">
+                  <div class="field">
+                    <label for="relay-url">Relay URL</label>
+                    <input id="relay-url" type="url" data-bind="relayUrl" value="${escapeHtml(state.relayUrl)}" autocomplete="off" />
+                    <div class="hint">Override the relay endpoint if this install should target staging or local infrastructure.</div>
+                  </div>
+
+                  <div class="inline-actions">
+                    <button class="secondary-button" type="submit">Save relay URL</button>
+                    <button class="ghost-button" type="button" data-action="check-relay" ${isBusy("check-relay") ? "disabled" : ""}>
+                      ${isBusy("check-relay") ? "Checking relay..." : "Check relay"}
+                    </button>
+                  </div>
+                </form>
+              </section>
+            </aside>
           </div>
-        </div>
+        `;
+      }
 
-        <div class="stack">
-          <section class="panel">
-            <span class="eyebrow">Launch scope</span>
-            <strong>Invite-only trusted circles</strong>
-            <p>
-              The desktop app is now a local shell for the new relay-assisted beta, not a wrapper
-              around a hosted web client.
-            </p>
+      function renderOverviewView() {
+        const currentSessionCount = state.sessions.length;
+        const groupCount = state.groups.length;
+        const privacyLabel =
+          state.privacy?.notificationPreviewMode === "expanded"
+            ? "Expanded previews"
+            : state.privacy?.notificationPreviewMode === "none"
+              ? "No previews"
+              : "Discreet previews";
+
+        return `
+          <section class="panel panel-strong">
+            <div class="hero-summary">
+              <div>
+                <p class="eyebrow">Desktop workspace</p>
+                <h2>${escapeHtml(state.me?.displayName || "Member")}</h2>
+                <p class="lede" style="margin-top: 14px">
+                  Signed in as ${escapeHtml(state.me?.email || "")}. This install now gives you a real control surface for small-group setup, invite handling, privacy defaults, and session review.
+                </p>
+              </div>
+
+              <div class="grid-3">
+                <section class="metric">
+                  <p class="label">Current groups</p>
+                  <strong>${groupCount}</strong>
+                  <p>Invite-only groups this account currently belongs to.</p>
+                </section>
+                <section class="metric">
+                  <p class="label">Active sessions</p>
+                  <strong>${currentSessionCount}</strong>
+                  <p>Desktop, mobile, or other live device sessions for this account.</p>
+                </section>
+                <section class="metric">
+                  <p class="label">Privacy posture</p>
+                  <strong style="font-size: 1.2rem; line-height: 1.3">${escapeHtml(privacyLabel)}</strong>
+                  <p>Sensitive media auto-download is ${state.privacy?.autoDownloadSensitiveMedia ? "on" : "off"}.</p>
+                </section>
+              </div>
+            </div>
           </section>
 
-          <section class="panel">
-            <span class="eyebrow">What ships first</span>
-            <p>Windows installer, Ubuntu package, Android app, E2EE DMs, and small groups.</p>
-          </section>
+          <section class="grid-2">
+            <div class="panel">
+              <p class="eyebrow">Account snapshot</p>
+              <h2>Profile and identity</h2>
+              <div class="stack" style="margin-top: 16px">
+                <div class="mini-card">
+                  <p class="label">Display name</p>
+                  <p style="margin-top: 10px">${escapeHtml(state.me?.displayName || "Unset")}</p>
+                </div>
+                <div class="mini-card">
+                  <p class="label">Username</p>
+                  <p class="mono" style="margin-top: 10px">${escapeHtml(state.me?.username || "")}</p>
+                </div>
+                <div class="mini-card">
+                  <p class="label">Email</p>
+                  <p style="margin-top: 10px">${escapeHtml(state.me?.email || "")}</p>
+                </div>
+              </div>
+            </div>
 
-          <section class="panel">
-            <span class="eyebrow">Trust model</span>
-            <p>
-              Email is private and only used for bootstrap and recovery. Message history lives on
-              device. The relay stores ciphertext envelopes and encrypted attachment blobs.
-            </p>
+            <div class="panel">
+              <p class="eyebrow">Use this desktop for</p>
+              <h2>Actual MVP tasks</h2>
+              <div class="stack" style="margin-top: 16px">
+                <section class="step">
+                  <div class="step-number">Groups</div>
+                  <p>Create a small trusted group, set the member cap, and lock the join rules before invites leave your device.</p>
+                </section>
+                <section class="step">
+                  <div class="step-number">Invites</div>
+                  <p>Preview invite boundaries before accepting them, then mint fresh invite URLs when you need a new share path.</p>
+                </section>
+                <section class="step">
+                  <div class="step-number">Privacy and sessions</div>
+                  <p>Review discreet notification defaults and revoke stale device sessions without leaving the desktop install.</p>
+                </section>
+              </div>
+            </div>
           </section>
-        </div>
-      </aside>
+        `;
+      }
 
-      <main class="content">
-        <section class="hero">
-          <span class="eyebrow">Desktop beta</span>
-          <h2>Local-first shell for the new EmberChamber stack</h2>
-          <p>
-            This shell is now bundled locally so the Windows and Ubuntu apps no longer depend on a
-            remote web wrapper. The next integration step is wiring the Rust core into onboarding,
-            mailbox sync, and encrypted local storage.
-          </p>
-          <div class="badge-row">
-            <span class="badge">Email magic link</span>
-            <span class="badge">Optional passkeys</span>
-            <span class="badge">Device mailbox relay</span>
-            <span class="badge">Encrypted attachments</span>
+      function formatByteSize(value) {
+        if (!Number.isFinite(value) || value <= 0) {
+          return "Unknown size";
+        }
+
+        const units = ["B", "KB", "MB", "GB"];
+        let size = value;
+        let unitIndex = 0;
+        while (size >= 1024 && unitIndex < units.length - 1) {
+          size /= 1024;
+          unitIndex += 1;
+        }
+
+        const precision = size >= 10 || unitIndex === 0 ? 0 : 1;
+        return `${size.toFixed(precision)} ${units[unitIndex]}`;
+      }
+
+      function renderAttachmentBlock(message) {
+        const attachment = message.attachment;
+        if (!attachment) {
+          return "";
+        }
+
+        const isSensitive = attachment.protectionProfile === "sensitive_media";
+        const isRevealed = !isSensitive || Boolean(state.revealedMessages[message.id]);
+        const watermark = `${viewerIdentityLabel()} · ${formatDateTime(message.createdAt)}`;
+
+        if (attachment.contentClass === "image") {
+          return `
+            <div class="media-shell ${isRevealed ? "" : "blurred"}">
+              <img src="${escapeHtml(attachment.downloadUrl)}" alt="${escapeHtml(attachment.fileName)}" referrerpolicy="no-referrer" />
+              <div class="media-overlay">
+                <div class="watermark">${escapeHtml(watermark)}</div>
+                ${
+                  isRevealed
+                    ? ""
+                    : `<button class="secondary-button reveal-button" type="button" data-action="reveal-message" data-message-id="${escapeHtml(message.id)}">Reveal image</button>`
+                }
+              </div>
+            </div>
+            <p class="secondary-meta" style="margin-top: 10px">${escapeHtml(attachment.fileName)} · ${escapeHtml(formatByteSize(attachment.byteLength))}</p>
+          `;
+        }
+
+        if (attachment.contentClass === "video") {
+          return isRevealed
+            ? `
+                <div class="media-shell">
+                  <video src="${escapeHtml(attachment.downloadUrl)}" controls controlsList="nodownload noplaybackrate" referrerpolicy="no-referrer"></video>
+                  <div class="media-overlay">
+                    <div class="watermark">${escapeHtml(watermark)}</div>
+                  </div>
+                </div>
+                <p class="secondary-meta" style="margin-top: 10px">${escapeHtml(attachment.fileName)} · ${escapeHtml(formatByteSize(attachment.byteLength))}</p>
+              `
+            : `
+                <div class="media-shell">
+                  <div class="media-placeholder">
+                    <div>
+                      <p class="label">Sensitive video</p>
+                      <p style="margin-top: 10px">${escapeHtml(attachment.fileName)}</p>
+                      <p style="margin-top: 8px">${escapeHtml(formatByteSize(attachment.byteLength))}</p>
+                    </div>
+                    <button class="secondary-button reveal-button" type="button" data-action="reveal-message" data-message-id="${escapeHtml(message.id)}">Reveal video</button>
+                  </div>
+                  <div class="media-overlay">
+                    <div class="watermark">${escapeHtml(watermark)}</div>
+                  </div>
+                </div>
+              `;
+        }
+
+        return `
+          <div class="rule-block">
+            <p class="label">${escapeHtml(attachment.contentClass)}</p>
+            <p class="group-copy" style="margin-top: 10px">${escapeHtml(attachment.fileName)}</p>
+            <p class="secondary-meta" style="margin-top: 8px">${escapeHtml(formatByteSize(attachment.byteLength))}</p>
           </div>
-          <button class="cta" type="button">Closed Beta Build</button>
-        </section>
+        `;
+      }
 
-        <section class="meta-grid">
-          <article class="meta">
-            <label>Client Core</label>
-            <span>Rust local-first state engine</span>
-          </article>
-          <article class="meta">
-            <label>Relay</label>
-            <span>Cloudflare Workers + DO + D1 + R2</span>
-          </article>
-          <article class="meta">
-            <label>Desktop</label>
-            <span>Tauri v2 native packaging</span>
-          </article>
-        </section>
+      function renderThreadMessage(message) {
+        if (message.kind === "system_notice") {
+          return `
+            <article class="message-row system">
+              <div class="message-bubble">
+                <p class="label">System notice</p>
+                <p class="message-copy">${escapeHtml(message.text || "")}</p>
+              </div>
+            </article>
+          `;
+        }
 
-        <section class="panel">
-          <span class="eyebrow">Next implementation slice</span>
-          <strong>Bridge this shell to the Rust core and mailbox APIs</strong>
-          <p>
-            The current repo now contains the relay scaffold, the shared protocol package, and the
-            cross-platform Rust core crate. The next code slice should bind real onboarding and
-            sync flows into this shell instead of expanding the old centralized web runtime.
-          </p>
-        </section>
-      </main>
-    </div>
+        const isSelf = message.senderAccountId === state.me?.id;
+        return `
+          <article class="message-row ${isSelf ? "self" : ""}">
+            <div class="message-bubble">
+              <div class="message-meta">
+                <strong>${escapeHtml(isSelf ? "You" : message.senderDisplayName)}</strong>
+                <span>${escapeHtml(formatDateTime(message.createdAt))}</span>
+              </div>
+              ${message.text ? `<p class="message-copy">${escapeHtml(message.text)}</p>` : ""}
+              ${renderAttachmentBlock(message)}
+            </div>
+          </article>
+        `;
+      }
+
+      function renderThreadView() {
+        const group = currentGroup();
+        const sendDisabled = !state.threadComposer.text.trim() && !state.threadComposer.file;
+
+        if (state.groups.length === 0) {
+          return `
+            ${renderStatus(state.threadStatus)}
+            <section class="panel panel-strong">
+              <div class="hero-summary">
+                <div>
+                  <p class="eyebrow">First send path</p>
+                  <h2>No groups on this account yet</h2>
+                  <p class="lede" style="margin-top: 14px">
+                    To prove the desktop MVP, start by accepting a group invite or create a new closed group from this install. The thread view will become the default landing surface as soon as one exists.
+                  </p>
+                </div>
+                <div class="inline-actions">
+                  <button class="primary-button" type="button" data-nav="invites">Accept invite</button>
+                  <button class="secondary-button" type="button" data-nav="groups">Create group</button>
+                </div>
+              </div>
+            </section>
+          `;
+        }
+
+        if (!group) {
+          return `
+            ${renderStatus(state.threadStatus)}
+            <section class="panel">
+              <div class="empty">Choose a group from the sidebar to open its thread.</div>
+            </section>
+          `;
+        }
+
+        return `
+          ${renderStatus(state.threadStatus)}
+          <section class="thread-layout">
+            <section class="panel panel-strong">
+              <div class="view-header">
+                <div>
+                  <p class="eyebrow">Active group</p>
+                  <h2>${escapeHtml(group.title)}</h2>
+                </div>
+                <div class="badge-row">
+                  <span class="badge">${escapeHtml(String(group.memberCount))} / ${escapeHtml(String(group.memberCap))} members</span>
+                  <span class="badge ${group.sensitiveMediaDefault ? "good" : "warn"}">${group.sensitiveMediaDefault ? "Sensitive media default" : "Standard media default"}</span>
+                </div>
+              </div>
+              <p class="section-intro" style="margin-top: 12px">
+                ${escapeHtml(group.joinRuleText || "No explicit join rule has been saved for this group yet.")}
+              </p>
+            </section>
+
+            <section class="thread-card">
+              <div class="view-header">
+                <div>
+                  <p class="eyebrow">Group thread</p>
+                  <h2>Recent messages</h2>
+                </div>
+                <div class="inline-actions">
+                  <button class="secondary-button" type="button" data-action="open-group" data-group-id="${escapeHtml(group.id)}" ${state.isLoadingThread ? "disabled" : ""}>
+                    ${state.isLoadingThread ? "Refreshing..." : "Refresh thread"}
+                  </button>
+                  <button class="ghost-button" type="button" data-nav="groups">Manage group</button>
+                </div>
+              </div>
+
+              <div class="thread-stream" style="margin-top: 18px">
+                ${
+                  state.isLoadingThread
+                    ? `
+                        <div class="status info">
+                          <h3>Loading thread</h3>
+                          <p>Fetching recent group messages and signed attachment URLs from the relay.</p>
+                        </div>
+                      `
+                    : state.threadMessages.length === 0
+                      ? `
+                          <div class="empty">
+                            The thread is empty. Send a photo from the composer below to prove the first-use loop on Ubuntu.
+                          </div>
+                        `
+                      : state.threadMessages.map((message) => renderThreadMessage(message)).join("")
+                }
+              </div>
+            </section>
+
+            <section class="thread-card">
+              <div class="view-header">
+                <div>
+                  <p class="eyebrow">Send</p>
+                  <h2>Photo-first composer</h2>
+                </div>
+              </div>
+
+              <form data-form="send-message" class="composer-grid" style="margin-top: 18px">
+                <div class="field">
+                  <label for="thread-text">Caption</label>
+                  <textarea id="thread-text" data-bind="thread.text" placeholder="Optional caption">${escapeHtml(state.threadComposer.text)}</textarea>
+                </div>
+
+                <div class="field">
+                  <label for="thread-file">Photo or video</label>
+                  <input id="thread-file" type="file" data-bind="thread.file" accept="image/*,video/*,audio/*" />
+                  <div class="hint">Images and videos inherit the group’s sensitive-media defaults. Files are uploaded through a relay ticket and sent into this thread. Current limit: 20 MB per file.</div>
+                </div>
+
+                ${
+                  state.threadComposer.file
+                    ? `
+                        <div class="composer-preview">
+                          <div class="view-header">
+                            <div>
+                              <p class="label">Selected file</p>
+                              <p style="margin-top: 8px">${escapeHtml(state.threadComposer.fileName)}</p>
+                            </div>
+                            <button class="ghost-button" type="button" data-action="clear-composer-file">Remove file</button>
+                          </div>
+                          ${
+                            state.threadComposer.previewUrl && state.threadComposer.mimeType.startsWith("image/")
+                              ? `<img src="${escapeHtml(state.threadComposer.previewUrl)}" alt="${escapeHtml(state.threadComposer.fileName)}" />`
+                              : state.threadComposer.previewUrl && state.threadComposer.mimeType.startsWith("video/")
+                                ? `<video src="${escapeHtml(state.threadComposer.previewUrl)}" controls controlsList="nodownload noplaybackrate"></video>`
+                                : `<p class="secondary-meta" style="margin-top: 12px">${escapeHtml(state.threadComposer.mimeType || "application/octet-stream")} · ${escapeHtml(formatByteSize(state.threadComposer.file.size))}</p>`
+                          }
+                        </div>
+                      `
+                    : ""
+                }
+
+                <div class="inline-actions">
+                  <button class="primary-button" type="submit" ${isBusy("send-message") || sendDisabled ? "disabled" : ""}>
+                    ${isBusy("send-message") ? "Sending..." : "Send to group"}
+                  </button>
+                  <button class="secondary-button" type="button" data-nav="invites">Open invite tools</button>
+                </div>
+              </form>
+            </section>
+          </section>
+        `;
+      }
+
+      function inviteStatusBadge(status) {
+        if (status === "active") {
+          return "good";
+        }
+
+        if (status === "frozen" || status === "expired" || status === "exhausted") {
+          return "warn";
+        }
+
+        return "bad";
+      }
+
+      function renderGroupInviteRecord(groupId, record) {
+        const cached = cachedInvite(groupId, record.id);
+
+        return `
+          <article class="invite-card">
+            <div class="split-actions">
+              <div>
+                <h4>${escapeHtml(record.note || "Untitled invite")}</h4>
+                <p class="secondary-meta">Created ${escapeHtml(formatDateTime(record.createdAt))} by ${escapeHtml(record.inviterDisplayName)}</p>
+              </div>
+              <span class="badge ${inviteStatusBadge(record.status)}">${escapeHtml(record.status)}</span>
+            </div>
+            <div class="badge-row" style="margin-top: 12px">
+              <span class="badge">Uses ${escapeHtml(String(record.useCount))}${record.maxUses ? ` / ${escapeHtml(String(record.maxUses))}` : ""}</span>
+              <span class="badge">${record.expiresAt ? `Expires ${escapeHtml(formatDateTime(record.expiresAt))}` : "No expiry"}</span>
+              ${record.createdByCurrentAccount ? '<span class="badge">Created by this account</span>' : ""}
+            </div>
+            ${
+              cached?.inviteUrl
+                ? `
+                  <div class="rule-block">
+                    <p class="label">Copyable on this device</p>
+                    <code class="code-block mono">${escapeHtml(cached.inviteUrl)}</code>
+                    <div class="inline-actions" style="margin-top: 12px">
+                      <button class="secondary-button" type="button" data-action="copy-invite" data-group-id="${escapeHtml(groupId)}" data-invite-id="${escapeHtml(record.id)}">Copy invite URL</button>
+                    </div>
+                  </div>
+                `
+                : `
+                  <p class="group-copy">Raw invite URLs are only available on the device that minted them. Create a fresh invite here if you need a shareable link now.</p>
+                `
+            }
+          </article>
+        `;
+      }
+
+      function renderGroupsView() {
+        return `
+          ${renderStatus(state.groupsStatus)}
+          <section class="panel">
+            <div class="view-header">
+              <div>
+                <p class="eyebrow">Create a group</p>
+                <h2>Set the trust boundary before the first invite</h2>
+              </div>
+            </div>
+            <p class="section-intro" style="margin-top: 12px">
+              Small-group defaults are enforced here: maximum 12 members, sensitive media on by default, and member-minted invites off unless you deliberately enable them.
+            </p>
+
+            <form data-form="create-group" class="field-stack" style="margin-top: 18px">
+              <div class="field-grid">
+                <div class="field">
+                  <label for="group-title">Group title</label>
+                  <input id="group-title" type="text" data-bind="createGroup.title" value="${escapeHtml(state.createGroupForm.title)}" maxlength="80" />
+                </div>
+                <div class="field">
+                  <label for="group-cap">Member cap</label>
+                  <input id="group-cap" type="number" min="2" max="12" data-bind="createGroup.memberCap" value="${escapeHtml(state.createGroupForm.memberCap)}" />
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="group-rules">Join rules</label>
+                <textarea id="group-rules" data-bind="createGroup.joinRuleText" placeholder="Share only your own content. No forwarding outside the circle.">${escapeHtml(state.createGroupForm.joinRuleText)}</textarea>
+              </div>
+
+              <div class="grid-2">
+                <label class="checkbox-row">
+                  <input type="checkbox" data-bind="createGroup.sensitiveMediaDefault" ${state.createGroupForm.sensitiveMediaDefault ? "checked" : ""} />
+                  <span>
+                    <strong>Sensitive media defaults on</strong>
+                    <div class="hint">Image and video messages default to the sensitive-media protection profile.</div>
+                  </span>
+                </label>
+
+                <label class="checkbox-row">
+                  <input type="checkbox" data-bind="createGroup.allowMemberInvites" ${state.createGroupForm.allowMemberInvites ? "checked" : ""} />
+                  <span>
+                    <strong>Allow member-minted invites</strong>
+                    <div class="hint">Leave off during beta unless the group really needs decentralized invite issuance.</div>
+                  </span>
+                </label>
+              </div>
+
+              <button class="primary-button" type="submit" ${isBusy("create-group") ? "disabled" : ""}>
+                ${isBusy("create-group") ? "Creating group..." : "Create group"}
+              </button>
+            </form>
+          </section>
+
+          <section class="section-stack">
+            <div class="view-header">
+              <div>
+                <p class="eyebrow">Your groups</p>
+                <h2>Current membership and invite control</h2>
+              </div>
+            </div>
+
+            ${
+              state.groups.length === 0
+                ? '<div class="empty">No groups yet. Create one above or accept an invite from the invite tools view, then come back to the thread tab to send the first photo.</div>'
+                : state.groups
+                    .map((group) => {
+                      const inviteDraft = ensureInviteDraft(group.id);
+                      const invites = Array.isArray(state.groupInvites[group.id]) ? state.groupInvites[group.id] : [];
+                      return `
+                        <article class="group-card">
+                          <div class="group-title-row">
+                            <div>
+                              <h3>${escapeHtml(group.title)}</h3>
+                              <p class="secondary-meta">${escapeHtml(formatDateTime(group.updatedAt))} · role ${escapeHtml(group.myRole)}</p>
+                            </div>
+                            <div class="badge-row">
+                              <span class="badge">${escapeHtml(String(group.memberCount))} / ${escapeHtml(String(group.memberCap))} members</span>
+                              <span class="badge ${group.sensitiveMediaDefault ? "good" : "warn"}">${group.sensitiveMediaDefault ? "Sensitive media default" : "Standard media default"}</span>
+                              ${group.inviteFreezeEnabled ? '<span class="badge warn">Invites frozen</span>' : ""}
+                              <button class="secondary-button" type="button" data-action="open-group" data-group-id="${escapeHtml(group.id)}">Open thread</button>
+                            </div>
+                          </div>
+
+                          <div class="group-copy">
+                            ${escapeHtml(group.joinRuleText || "No explicit join rules saved for this group yet.")}
+                          </div>
+
+                          ${
+                            group.canCreateInvites
+                              ? `
+                                <div class="rule-block">
+                                  <div class="view-header">
+                                    <div>
+                                      <p class="eyebrow">Mint invite</p>
+                                      <h3>Create a fresh share path from this desktop</h3>
+                                    </div>
+                                  </div>
+                                  <div class="field-grid" style="margin-top: 14px">
+                                    <div class="field">
+                                      <label for="invite-note-${escapeHtml(group.id)}">Invite note</label>
+                                      <input id="invite-note-${escapeHtml(group.id)}" type="text" data-bind="groupInvite.${escapeHtml(group.id)}.note" value="${escapeHtml(inviteDraft.note)}" maxlength="240" placeholder="Weekend circle" />
+                                    </div>
+                                    <div class="field">
+                                      <label for="invite-expiry-${escapeHtml(group.id)}">Expiry hours</label>
+                                      <input id="invite-expiry-${escapeHtml(group.id)}" type="number" min="1" max="336" data-bind="groupInvite.${escapeHtml(group.id)}.expiresInHours" value="${escapeHtml(inviteDraft.expiresInHours)}" />
+                                    </div>
+                                  </div>
+                                  <div class="field-grid" style="margin-top: 14px">
+                                    <div class="field">
+                                      <label for="invite-uses-${escapeHtml(group.id)}">Max uses</label>
+                                      <input id="invite-uses-${escapeHtml(group.id)}" type="number" min="1" max="100" data-bind="groupInvite.${escapeHtml(group.id)}.maxUses" value="${escapeHtml(inviteDraft.maxUses)}" />
+                                    </div>
+                                    <div class="field" style="justify-content: end">
+                                      <label>&nbsp;</label>
+                                      <button class="primary-button" type="button" data-action="create-invite" data-group-id="${escapeHtml(group.id)}" ${isBusy(`create-invite:${group.id}`) ? "disabled" : ""}>
+                                        ${isBusy(`create-invite:${group.id}`) ? "Minting invite..." : "Create invite"}
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              `
+                              : `
+                                <div class="rule-block">
+                                  <p class="label">Invite permissions</p>
+                                  <p class="group-copy">This account cannot mint invites for the group from the desktop app right now.</p>
+                                </div>
+                              `
+                          }
+
+                          <div class="divider" style="margin: 16px 0"></div>
+
+                          <div class="view-header">
+                            <div>
+                              <p class="eyebrow">Invite inventory</p>
+                              <h3>Existing invite records</h3>
+                            </div>
+                          </div>
+
+                          ${
+                            invites.length === 0
+                              ? '<div class="empty" style="margin-top: 14px">No invite records loaded for this group yet. Create one above or reload the workspace.</div>'
+                              : `<div class="section-stack" style="margin-top: 14px">${invites.map((invite) => renderGroupInviteRecord(group.id, invite)).join("")}</div>`
+                          }
+                        </article>
+                      `;
+                    })
+                    .join("")
+            }
+          </section>
+        `;
+      }
+
+      function renderInviteToolsView() {
+        const preview = state.inviteTools.preview;
+        return `
+          ${renderStatus(state.invitesStatus)}
+          <section class="panel">
+            <div class="view-header">
+              <div>
+                <p class="eyebrow">Invite tools</p>
+                <h2>Preview or accept an invite</h2>
+              </div>
+            </div>
+            <p class="section-intro" style="margin-top: 12px">
+              Paste the full invite URL from a trusted source. The desktop app will show the inviter, current member count, cap, rules, and media defaults before anything joins your account.
+            </p>
+
+            <form data-form="preview-invite" class="field-stack" style="margin-top: 18px">
+              <div class="field">
+                <label for="invite-input">Invite URL</label>
+                <textarea id="invite-input" data-bind="inviteTools.input" placeholder="https://emberchamber.com/invite/<group-id>/<token>">${escapeHtml(state.inviteTools.input)}</textarea>
+              </div>
+              <button class="primary-button" type="submit" ${isBusy("preview-invite") ? "disabled" : ""}>
+                ${isBusy("preview-invite") ? "Loading preview..." : "Preview invite"}
+              </button>
+            </form>
+          </section>
+
+          ${
+            preview
+              ? `
+                <section class="panel">
+                  <div class="view-header">
+                    <div>
+                      <p class="eyebrow">Invite preview</p>
+                      <h2>${escapeHtml(preview.group.title)}</h2>
+                    </div>
+                    <span class="badge ${inviteStatusBadge(preview.invite.status)}">${escapeHtml(preview.invite.status)}</span>
+                  </div>
+
+                  <div class="grid-2" style="margin-top: 16px">
+                    <section class="mini-card">
+                      <p class="label">Inviter</p>
+                      <p style="margin-top: 10px">${escapeHtml(preview.invite.inviterDisplayName)}</p>
+                    </section>
+                    <section class="mini-card">
+                      <p class="label">Capacity</p>
+                      <p style="margin-top: 10px">${escapeHtml(String(preview.group.memberCount))} / ${escapeHtml(String(preview.group.memberCap))} members</p>
+                    </section>
+                    <section class="mini-card">
+                      <p class="label">Media default</p>
+                      <p style="margin-top: 10px">${preview.group.sensitiveMediaDefault ? "Sensitive media profile" : "Standard media profile"}</p>
+                    </section>
+                    <section class="mini-card">
+                      <p class="label">Invite limits</p>
+                      <p style="margin-top: 10px">
+                        ${preview.invite.maxUses ? `Uses ${escapeHtml(String(preview.invite.useCount))} / ${escapeHtml(String(preview.invite.maxUses))}` : "Unlimited uses"}
+                      </p>
+                    </section>
+                  </div>
+
+                  <div class="rule-block" style="margin-top: 16px">
+                    <p class="label">Join rule</p>
+                    <p class="group-copy" style="margin-top: 10px">${escapeHtml(preview.group.joinRuleText || "No explicit join rule was provided for this invite.")}</p>
+                  </div>
+
+                  ${
+                    preview.invite.note
+                      ? `
+                        <div class="rule-block" style="margin-top: 16px">
+                          <p class="label">Invite note</p>
+                          <p class="group-copy" style="margin-top: 10px">${escapeHtml(preview.invite.note)}</p>
+                        </div>
+                      `
+                      : ""
+                  }
+
+                  <div class="inline-actions" style="margin-top: 18px">
+                    <button class="primary-button" type="button" data-action="accept-preview-invite" ${isBusy("accept-invite") || preview.invite.status !== "active" ? "disabled" : ""}>
+                      ${isBusy("accept-invite") ? "Accepting invite..." : "Accept invite"}
+                    </button>
+                  </div>
+                </section>
+              `
+              : ""
+          }
+        `;
+      }
+
+      function renderSettingsView() {
+        return `
+          ${renderStatus(state.settingsStatus)}
+          <section class="grid-2">
+            <div class="panel">
+              <div class="view-header">
+                <div>
+                  <p class="eyebrow">Profile</p>
+                  <h2>Account profile</h2>
+                </div>
+              </div>
+
+              <form data-form="save-profile" class="field-stack" style="margin-top: 18px">
+                <div class="field">
+                  <label for="display-name">Display name</label>
+                  <input id="display-name" type="text" data-bind="profile.displayName" value="${escapeHtml(state.profileForm.displayName)}" maxlength="128" />
+                </div>
+                <div class="field">
+                  <label for="profile-bio">Bio</label>
+                  <textarea id="profile-bio" data-bind="profile.bio" maxlength="512">${escapeHtml(state.profileForm.bio)}</textarea>
+                </div>
+                <button class="primary-button" type="submit" ${isBusy("save-profile") ? "disabled" : ""}>
+                  ${isBusy("save-profile") ? "Saving profile..." : "Save profile"}
+                </button>
+              </form>
+            </div>
+
+            <div class="panel">
+              <div class="view-header">
+                <div>
+                  <p class="eyebrow">Privacy</p>
+                  <h2>Desktop defaults</h2>
+                </div>
+              </div>
+
+              <form data-form="save-privacy" class="field-stack" style="margin-top: 18px">
+                <div class="field">
+                  <label for="preview-mode">Notification preview mode</label>
+                  <select id="preview-mode" data-bind="privacy.notificationPreviewMode">
+                    <option value="discreet" ${state.privacyForm.notificationPreviewMode === "discreet" ? "selected" : ""}>Discreet</option>
+                    <option value="expanded" ${state.privacyForm.notificationPreviewMode === "expanded" ? "selected" : ""}>Expanded</option>
+                    <option value="none" ${state.privacyForm.notificationPreviewMode === "none" ? "selected" : ""}>None</option>
+                  </select>
+                </div>
+
+                <label class="checkbox-row">
+                  <input type="checkbox" data-bind="privacy.autoDownloadSensitiveMedia" ${state.privacyForm.autoDownloadSensitiveMedia ? "checked" : ""} />
+                  <span>
+                    <strong>Auto-download sensitive media</strong>
+                    <div class="hint">Leave off if this device should only fetch sensitive media on demand.</div>
+                  </span>
+                </label>
+
+                <label class="checkbox-row">
+                  <input type="checkbox" data-bind="privacy.allowSensitiveExport" ${state.privacyForm.allowSensitiveExport ? "checked" : ""} />
+                  <span>
+                    <strong>Allow sensitive export</strong>
+                    <div class="hint">Keep off if sensitive media should remain inside the app by default.</div>
+                  </span>
+                </label>
+
+                <label class="checkbox-row">
+                  <input type="checkbox" data-bind="privacy.secureAppSwitcher" ${state.privacyForm.secureAppSwitcher ? "checked" : ""} />
+                  <span>
+                    <strong>Secure app switcher</strong>
+                    <div class="hint">Signals that app-switcher previews should stay discreet when the native client implements that behavior.</div>
+                  </span>
+                </label>
+
+                <button class="primary-button" type="submit" ${isBusy("save-privacy") ? "disabled" : ""}>
+                  ${isBusy("save-privacy") ? "Saving defaults..." : "Save privacy defaults"}
+                </button>
+              </form>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="view-header">
+              <div>
+                <p class="eyebrow">Diagnostics</p>
+                <h2>Relay endpoint</h2>
+              </div>
+            </div>
+
+            <form data-form="save-relay-url" class="field-stack" style="margin-top: 18px">
+              <div class="field">
+                <label for="workspace-relay-url">Relay URL</label>
+                <input id="workspace-relay-url" type="url" data-bind="relayUrl" value="${escapeHtml(state.relayUrl)}" />
+              </div>
+              <div class="inline-actions">
+                <button class="secondary-button" type="submit">Save relay URL</button>
+                <button class="ghost-button" type="button" data-action="check-relay" ${isBusy("check-relay") ? "disabled" : ""}>
+                  ${isBusy("check-relay") ? "Checking relay..." : "Check relay"}
+                </button>
+              </div>
+            </form>
+          </section>
+        `;
+      }
+
+      function renderSessionsView() {
+        return `
+          ${renderStatus(state.sessionsStatus)}
+          <section class="panel">
+            <div class="view-header">
+              <div>
+                <p class="eyebrow">Sessions</p>
+                <h2>Active device sessions</h2>
+              </div>
+            </div>
+            <p class="section-intro" style="margin-top: 12px">
+              Revoke stale sessions from here if a device is lost, replaced, or no longer trusted.
+            </p>
+
+            <div class="section-stack" style="margin-top: 18px">
+              ${
+                state.sessions.length === 0
+                  ? '<div class="empty">No active sessions were returned by the relay.</div>'
+                  : state.sessions
+                      .map((session) => {
+                        const action = `revoke-session:${session.id}`;
+                        return `
+                          <article class="session-card">
+                            <div class="session-row">
+                              <div>
+                                <h3>${escapeHtml(session.deviceLabel)}</h3>
+                                <p class="session-copy">Created ${escapeHtml(formatDateTime(session.createdAt))}. Last seen ${escapeHtml(formatDateTime(session.lastSeenAt))}.</p>
+                              </div>
+                              <div class="badge-row">
+                                ${session.isCurrent ? '<span class="badge good">Current session</span>' : ""}
+                                <button class="${session.isCurrent ? "ghost-button" : "danger-button"}" type="button" data-action="revoke-session" data-session-id="${escapeHtml(session.id)}" ${session.isCurrent || isBusy(action) ? "disabled" : ""}>
+                                  ${isBusy(action) ? "Revoking..." : session.isCurrent ? "Current session" : "Revoke"}
+                                </button>
+                              </div>
+                            </div>
+                          </article>
+                        `;
+                      })
+                      .join("")
+              }
+            </div>
+          </section>
+        `;
+      }
+
+      function renderWorkspaceView() {
+        const navItems = [
+          ["thread", "Thread"],
+          ["groups", "Groups"],
+          ["invites", "Invite tools"],
+          ["settings", "Settings"],
+          ["sessions", "Sessions"],
+        ];
+
+        let viewContent = "";
+        if (state.isLoadingWorkspace) {
+          viewContent = `
+            <section class="panel">
+              <div class="status info">
+                <h3>Loading workspace</h3>
+                <p>Fetching profile, privacy defaults, sessions, groups, invite records, and the active thread from the relay.</p>
+              </div>
+            </section>
+          `;
+        } else if (state.activeView === "thread") {
+          viewContent = renderThreadView();
+        } else if (state.activeView === "groups") {
+          viewContent = renderGroupsView();
+        } else if (state.activeView === "invites") {
+          viewContent = renderInviteToolsView();
+        } else if (state.activeView === "settings") {
+          viewContent = renderSettingsView();
+        } else if (state.activeView === "sessions") {
+          viewContent = renderSessionsView();
+        } else {
+          viewContent = renderThreadView();
+        }
+
+        return `
+          <div class="workspace-layout">
+            <aside class="sidebar">
+              <section class="panel panel-strong">
+                <div class="brand-chip">
+                  <div class="logo small">EC</div>
+                  <div>
+                    <p class="eyebrow">Signed in</p>
+                    <h2 style="font-size: 1.2rem">${escapeHtml(state.me?.displayName || "Member")}</h2>
+                  </div>
+                </div>
+                <p class="section-intro" style="margin-top: 14px">
+                  ${escapeHtml(state.me?.email || "")}
+                </p>
+                <div class="badge-row" style="margin-top: 14px">
+                  <span class="badge">Relay session</span>
+                  <span class="badge">${escapeHtml(state.groups.length.toString())} groups</span>
+                </div>
+              </section>
+
+              <section class="panel">
+                <div class="sidebar-nav">
+                  ${navItems
+                    .map(
+                      ([id, label]) => `
+                        <button class="nav-button ${state.activeView === id ? "active" : ""}" type="button" data-nav="${escapeHtml(id)}">
+                          <span>${escapeHtml(label)}</span>
+                          <span class="secondary-meta">${state.activeView === id ? "Open" : ""}</span>
+                        </button>
+                      `,
+                    )
+                    .join("")}
+                </div>
+              </section>
+
+              <section class="panel">
+                <p class="eyebrow">Groups</p>
+                <p class="section-intro" style="margin-top: 12px">
+                  Open the active thread directly from here. The first group should lead to the first send, not another setup maze.
+                </p>
+                <div class="group-switcher" style="margin-top: 16px">
+                  ${
+                    state.groups.length === 0
+                      ? '<div class="empty">No groups loaded yet.</div>'
+                      : state.groups
+                          .map(
+                            (group) => `
+                              <button class="nav-button group-shortcut ${state.activeGroupId === group.id && state.activeView === "thread" ? "active" : ""}" type="button" data-action="open-group" data-group-id="${escapeHtml(group.id)}">
+                                <span>${escapeHtml(group.title)}</span>
+                                <span class="secondary-meta">${escapeHtml(String(group.memberCount))} members</span>
+                              </button>
+                            `,
+                          )
+                          .join("")
+                  }
+                </div>
+              </section>
+
+              <section class="panel">
+                <p class="eyebrow">Session controls</p>
+                <p class="section-intro" style="margin-top: 12px">
+                  Use refresh to pull the latest relay state, or sign out to clear the local session from this device.
+                </p>
+                <div class="stack" style="margin-top: 16px">
+                  <button class="secondary-button" type="button" data-action="refresh-workspace">Refresh workspace</button>
+                  <button class="ghost-button" type="button" data-action="check-relay" ${isBusy("check-relay") ? "disabled" : ""}>
+                    ${isBusy("check-relay") ? "Checking relay..." : "Check relay"}
+                  </button>
+                  <button class="danger-button" type="button" data-action="sign-out">Sign out</button>
+                </div>
+              </section>
+            </aside>
+
+            <main class="content">
+              <div class="workspace-header">
+                <div>
+                  <p class="eyebrow">Desktop MVP workspace</p>
+                  <h2 style="font-size: 1.8rem">
+                    ${
+                      state.activeView === "thread" && currentGroup()
+                        ? escapeHtml(currentGroup().title)
+                        : escapeHtml(navItems.find(([id]) => id === state.activeView)?.[1] || "Thread")
+                    }
+                  </h2>
+                </div>
+                <div class="workspace-actions">
+                  <span class="badge">${escapeHtml(state.relayUrl)}</span>
+                </div>
+              </div>
+
+              ${renderStatus(state.workspaceStatus)}
+              <div class="section-stack">
+                ${viewContent}
+              </div>
+            </main>
+          </div>
+        `;
+      }
+
+      function render() {
+        root.innerHTML = state.session ? renderWorkspaceView() : renderAuthView();
+      }
+
+      root.addEventListener("input", handleInput);
+      root.addEventListener("change", handleInput);
+      root.addEventListener("click", (event) => {
+        void handleClick(event);
+      });
+      root.addEventListener("submit", (event) => {
+        void handleSubmit(event);
+      });
+
+      render();
+      if (state.session) {
+        void loadWorkspace();
+      }
+    </script>
   </body>
 </html>

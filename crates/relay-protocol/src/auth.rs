@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use emberchamber_domain::{AccountId, DeviceId, SessionId};
+use emberchamber_domain::{AccountId, ConversationId, DeviceId, SessionId};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -18,6 +18,8 @@ pub struct AuthSession {
     pub access_token: String,
     pub refresh_token: String,
     pub expires_at: DateTime<Utc>,
+    pub bootstrap_conversation_id: Option<ConversationId>,
+    pub bootstrap_conversation_title: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -50,4 +52,26 @@ pub struct AttachmentTicket {
     pub download_url: String,
     pub expires_at: DateTime<Utc>,
     pub max_bytes: u64,
+    pub content_class: String,
+    pub retention_mode: String,
+    pub protection_profile: String,
+    pub preview_blur_hash: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MeProfile {
+    pub id: AccountId,
+    pub username: String,
+    pub display_name: String,
+    pub email: String,
+    pub bio: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionDescriptor {
+    pub id: SessionId,
+    pub device_label: String,
+    pub created_at: DateTime<Utc>,
+    pub last_seen_at: DateTime<Utc>,
+    pub is_current: bool,
 }

@@ -1,13 +1,65 @@
-name: Release - Apple Deferred
+name: Release - Apple Beta
 
 on:
+  push:
+    tags: ["v*"]
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-apple-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  deferred:
-    name: iPhone and macOS are phase 2
-    runs-on: ubuntu-latest
+  build:
+    name: Build iOS beta scaffold
+    runs-on: macos-14
     steps:
-      - run: |
-          echo "EmberChamber beta launch targets are Android, Windows, and Ubuntu."
-          echo "Apple packaging is intentionally deferred until the Android and desktop beta is stable."
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prebuild iOS app
+        run: npm run prebuild:ios --workspace=apps/mobile
+
+      - name: Build simulator app
+        run: |
+          xcodebuild \
+            -workspace apps/mobile/ios/EmberChamber.xcworkspace \
+            -scheme EmberChamber \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -derivedDataPath apps/mobile/ios/build \
+            -quiet \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Package simulator artifact
+        run: |
+          cd apps/mobile/ios/build/Build/Products/Debug-iphonesimulator
+          zip -r "$GITHUB_WORKSPACE/EmberChamber-ios-simulator.zip" EmberChamber.app
+
+      - name: Upload iOS artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: emberchamber-ios-beta
+          path: EmberChamber-ios-simulator.zip
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Publish iOS asset to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          prerelease: true
+          files: EmberChamber-ios-simulator.zip

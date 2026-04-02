@@ -7,17 +7,20 @@ export const authBootstrapEnabled =
 export const githubRepoUrl = "https://github.com/jhwodchuck/EmberChamber";
 export const githubReleasesUrl = `${githubRepoUrl}/releases`;
 export const githubSourceZipUrl = `${githubRepoUrl}/archive/refs/heads/main.zip`;
+export const githubIssuesUrl = `${githubRepoUrl}/issues`;
 
 export const primaryNav = [
+  { href: "/start", label: "Start Here" },
   { href: "/download", label: "Download" },
   { href: "/trust-and-safety", label: "Trust & Safety" },
-  { href: "/privacy", label: "Privacy" },
 ];
 
 export const footerLinks = [
+  { href: "/start", label: "Start Here" },
   { href: "/privacy", label: "Privacy Policy" },
   { href: "/beta-terms", label: "Beta Terms" },
   { href: "/trust-and-safety", label: "Trust & Safety" },
+  { href: "/support", label: "Support" },
   { href: "/download", label: "Launch Targets" },
 ];
 

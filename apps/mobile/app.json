@@ -15,7 +15,27 @@
         "backgroundColor": "#140d10"
       }
     },
+    "ios": {
+      "bundleIdentifier": "com.emberchamber.mobile",
+      "supportsTablet": false,
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "fetch",
+          "remote-notification"
+        ]
+      }
+    },
     "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow EmberChamber to attach photos from your library.",
+          "cameraPermission": "Allow EmberChamber to take a photo for a secure conversation."
+        }
+      ],
       [
         "expo-secure-store",
         {
@@ -28,14 +48,11 @@
         {
           "enableFTS": true
         }
+      ],
+      [
+        "expo-screen-capture"
       ]
     ],
-    "ios": {
-      "supportsTablet": false,
-      "config": {
-        "usesNonExemptEncryption": false
-      }
-    },
     "extra": {
       "relayUrl": "http://10.0.2.2:8787"
     }
