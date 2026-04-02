@@ -2,9 +2,9 @@
 
 ## Runtime Roles
 
-- `apps/mobile`: Android-first beta client with local SQLite and SecureStore
-- `apps/desktop`: Windows and Ubuntu Tauri shell with bundled local frontend
-- `apps/web`: public site, invite landing, and account bootstrap companion
+- `apps/mobile`: Android and iPhone beta client with local SQLite and SecureStore
+- `apps/desktop`: macOS, Windows and Ubuntu Tauri shell with bundled local frontend
+- `apps/web`: public site plus secondary-but-capable web messaging workspace
 - `apps/relay`: Cloudflare Worker edge service for auth, relay APIs, attachment tickets, and metadata
 - `crates/core`: Rust secure-state and sync engine scaffold
 - `crates/relay-protocol` + `packages/protocol`: shared contracts for relay, mailbox, keys, and sessions
@@ -14,9 +14,9 @@
 ```mermaid
 graph LR
     subgraph Clients
-      A[Android App]
+      A[Android + iPhone App]
       D[Desktop App]
-      W[Web Companion]
+      W[Web App Secondary Surface]
     end
 
     subgraph SharedCore
@@ -161,18 +161,29 @@ sequenceDiagram
 - `apps/desktop/shell/index.html` is bundled locally inside Tauri.
 - The next integration step is wiring the desktop shell to the Rust core and relay APIs.
 
+## Web Strategy
+
+- Web remains a real client surface rather than a marketing-only companion.
+- `apps/web` handles onboarding, invite landing, auth bootstrap, direct messages, group setup,
+  channel reading/posting, search, settings, and recovery.
+- Web talks directly to the relay runtime and shared protocol contracts.
+- Android and desktop remain the preferred primary-use surfaces for heavier daily usage and
+  attachment-heavy workflows.
+
 ## Mobile Strategy
 
-- Android is the first-class client.
-- Expo is used for faster native iteration and Android build generation.
+- Android and iPhone are first-class clients.
+- Expo is used for faster native iteration and both Android and iOS build generation.
 - SecureStore is used for bootstrap secrets and session material.
 - SQLite is initialized on-device for local-first state.
+- iPhone uses the same codebase and relay contracts as Android.
 
 ## Explicit Non-Goals for Beta
 
 - public discovery
-- public channels
+- public-discovery-first community growth
 - server-side private-message search
 - pure P2P operation without any hosted relay
 - phone-number identity
 - blanket server-side moderation visibility into encrypted content
+- web as the only or preferred primary runtime

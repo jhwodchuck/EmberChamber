@@ -275,8 +275,16 @@ export const searchApi = {
     }>(`/search?q=${encodeURIComponent(q)}${type ? `&type=${type}` : ""}`),
 };
 
+export const attachmentsApi = {
+  getUrl: (id: string) =>
+    fetchApi<{ url: string; fileName: string; mimeType: string }>(`/attachments/${id}/url`),
+};
+
 // File upload
-export async function uploadFile(file: File): Promise<{
+export async function uploadFile(
+  file: File,
+  options?: { onProgress?: (progress: number) => void }
+): Promise<{
   id: string;
   url: string;
   fileName: string;
@@ -288,17 +296,53 @@ export async function uploadFile(file: File): Promise<{
   const formData = new FormData();
   formData.append("file", file);
 
-  const res = await fetch(`${API_BASE}/api/attachments/upload`, {
-    method: "POST",
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    body: formData,
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${API_BASE}/api/attachments/upload`);
+
+    if (token) {
+      xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    }
+
+    xhr.upload.addEventListener("progress", (event) => {
+      if (!event.lengthComputable) {
+        return;
+      }
+
+      options?.onProgress?.(Math.round((event.loaded / event.total) * 100));
+    });
+
+    xhr.addEventListener("load", () => {
+      const responseText = xhr.responseText || "{}";
+      const body = JSON.parse(responseText) as {
+        data?: { id: string; url: string; file_name?: string; fileName?: string; mime_type?: string; mimeType?: string };
+        error?: string;
+        code?: string;
+      };
+
+      if (xhr.status >= 200 && xhr.status < 300 && body.data) {
+        resolve({
+          id: body.data.id,
+          url: body.data.url,
+          fileName: body.data.fileName ?? body.data.file_name ?? file.name,
+          mimeType: body.data.mimeType ?? body.data.mime_type ?? file.type,
+        });
+        return;
+      }
+
+      if (xhr.status === 401 && typeof window !== "undefined") {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        window.location.href = "/login";
+      }
+
+      reject(new ApiError(xhr.status, body.error ?? "Upload failed", body.code));
+    });
+
+    xhr.addEventListener("error", () => {
+      reject(new ApiError(0, "Upload failed"));
+    });
+
+    xhr.send(formData);
   });
-
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({ error: "Upload failed" }));
-    throw new ApiError(res.status, body.error, body.code);
-  }
-
-  const data = await res.json();
-  return data.data;
 }

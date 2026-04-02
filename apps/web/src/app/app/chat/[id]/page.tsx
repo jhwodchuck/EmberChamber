@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { formatDistanceToNow } from "date-fns";
+import { clsx } from "clsx";
+import toast from "react-hot-toast";
+import { Avatar } from "@/components/avatar";
+import { useWebSocket } from "@/hooks/useWebSocket";
 import { conversationsApi, uploadFile } from "@/lib/api";
 import { useAuthStore } from "@/lib/store";
-import { useWebSocket } from "@/hooks/useWebSocket";
-import { Avatar } from "@/components/avatar";
-import { clsx } from "clsx";
-import { formatDistanceToNow } from "date-fns";
-import toast from "react-hot-toast";
 
 interface Message {
   id: string;
@@ -59,49 +59,56 @@ export default function ChatPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { send } = useWebSocket({
-    onMessage: useCallback((event: unknown) => {
-      const msg = event as { type: string; payload: Record<string, unknown> };
-      if (!msg?.type) return;
+    onMessage: useCallback(
+      (event: unknown) => {
+        const msg = event as { type: string; payload: Record<string, unknown> };
+        if (!msg?.type) return;
 
-      if (msg.type === "message.new") {
-        const newMsg = msg.payload as unknown as Message;
-        if (newMsg.conversation_id === id) {
-          setMessages((prev) => {
-            if (prev.find((m) => m.id === newMsg.id)) return prev;
-            return [...prev, newMsg];
-          });
-          setTimeout(() => {
-            messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-          }, 50);
+        if (msg.type === "message.new") {
+          const newMsg = msg.payload as unknown as Message;
+          if (newMsg.conversation_id === id) {
+            setMessages((prev) => {
+              if (prev.find((message) => message.id === newMsg.id)) return prev;
+              return [...prev, newMsg];
+            });
+            setTimeout(() => {
+              messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+            }, 50);
+          }
+        } else if (msg.type === "message.edited") {
+          const { id: msgId, content: newContent } = msg.payload as unknown as {
+            id: string;
+            content: string;
+          };
+          setMessages((prev) =>
+            prev.map((message) =>
+              message.id === msgId
+                ? { ...message, content: newContent, edited_at: new Date().toISOString() }
+                : message,
+            ),
+          );
+        } else if (msg.type === "message.deleted") {
+          const { id: msgId } = msg.payload as unknown as { id: string };
+          setMessages((prev) =>
+            prev.map((message) =>
+              message.id === msgId
+                ? { ...message, deleted_at: new Date().toISOString(), content: undefined }
+                : message,
+            ),
+          );
+        } else if (msg.type === "user.typing") {
+          const { conversationId, userId, isTyping } = msg.payload as {
+            conversationId: string;
+            userId: string;
+            isTyping: boolean;
+          };
+          if (conversationId === id && userId !== user?.id) {
+            setTypingText(isTyping ? "Someone is typing…" : "");
+          }
         }
-      } else if (msg.type === "message.edited") {
-        const { id: msgId, content: newContent } = msg.payload as unknown as {
-          id: string;
-          content: string;
-        };
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === msgId ? { ...m, content: newContent, edited_at: new Date().toISOString() } : m
-          )
-        );
-      } else if (msg.type === "message.deleted") {
-        const { id: msgId } = msg.payload as unknown as { id: string };
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === msgId ? { ...m, deleted_at: new Date().toISOString(), content: undefined } : m
-          )
-        );
-      } else if (msg.type === "user.typing") {
-        const { conversationId, userId, isTyping } = msg.payload as {
-          conversationId: string;
-          userId: string;
-          isTyping: boolean;
-        };
-        if (conversationId === id && userId !== user?.id) {
-          setTypingText(isTyping ? "Someone is typing..." : "");
-        }
-      }
-    }, [id, user?.id])
+      },
+      [id, user?.id],
+    ),
   });
 
   const loadConversation = useCallback(async () => {
@@ -128,8 +135,8 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (id) {
-      loadConversation();
-      loadMessages();
+      void loadConversation();
+      void loadMessages();
       send({ type: "subscribe.conversation", payload: { conversationId: id } });
     }
   }, [id, loadConversation, loadMessages, send]);
@@ -189,47 +196,42 @@ export default function ChatPage() {
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSend();
+      void handleSend();
     }
   }
 
-  const convName =
+  const conversationName =
     conversation?.type === "dm"
-      ? conversation.members?.find((m) => m.user_id !== user?.id)?.display_name ?? "DM"
+      ? conversation.members?.find((member) => member.user_id !== user?.id)?.display_name ?? "DM"
       : conversation?.name ?? "Group";
   const trustLabel =
-    conversation?.type === "dm"
-      ? "Private direct message"
-      : "Hosted community conversation";
+    conversation?.type === "dm" ? "Private direct message" : "Hosted group conversation";
   const composerPlaceholder =
-    conversation?.type === "dm"
-      ? "Write a private message..."
-      : "Post to the conversation...";
+    conversation?.type === "dm" ? "Write a private message…" : "Post to the conversation…";
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--border)] bg-[var(--bg-primary)] flex-shrink-0">
-        <Avatar src={conversation?.avatar_url} name={convName} size="sm" />
-        <div className="flex-1 min-w-0">
-          <h2 className="font-semibold text-[var(--text-primary)] truncate">{convName}</h2>
-          <span className="text-xs text-[var(--text-secondary)]">{trustLabel}</span>
-          {typingText && (
-            <span className="text-xs text-[var(--text-secondary)] italic">{typingText}</span>
-          )}
+    <div className="flex h-full flex-col">
+      <div className="flex flex-shrink-0 items-start gap-3 border-b border-[var(--border)] bg-[var(--bg-primary)] px-4 py-3">
+        <Avatar src={conversation?.avatar_url} name={conversationName} size="sm" />
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate font-semibold text-[var(--text-primary)]">{conversationName}</h2>
+          <p className="text-xs text-[var(--text-secondary)]">{trustLabel}</p>
+          <p className="mt-1 text-xs text-[var(--text-secondary)]">
+            Web chat works here. Native remains preferred for longer sessions and heavier media.
+          </p>
+          {typingText ? <p className="mt-1 text-xs italic text-[var(--text-secondary)]">{typingText}</p> : null}
         </div>
       </div>
 
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-1">
         {isLoading ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+          <div className="flex h-full items-center justify-center">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
           </div>
         ) : messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
+          <div className="flex h-full items-center justify-center">
             <div className="text-center text-[var(--text-secondary)]">
-              <p>No messages yet. Say hello!</p>
+              <p>No messages yet. Say hello.</p>
             </div>
           </div>
         ) : (
@@ -241,86 +243,91 @@ export default function ChatPage() {
               const isGrouped =
                 prevMsg &&
                 prevMsg.sender_id === msg.sender_id &&
-                new Date(msg.created_at).getTime() - new Date(prevMsg.created_at).getTime() < 60000;
+                new Date(msg.created_at).getTime() - new Date(prevMsg.created_at).getTime() < 60_000;
 
               return (
                 <div
                   key={msg.id}
                   className={clsx(
-                    "flex gap-2 group",
+                    "group flex gap-2",
                     isOwn ? "flex-row-reverse" : "flex-row",
-                    isGrouped ? "mt-0.5" : "mt-3"
+                    isGrouped ? "mt-0.5" : "mt-3",
                   )}
                 >
-                  {!isOwn && (
+                  {!isOwn ? (
                     <div className={clsx("w-8 flex-shrink-0", isGrouped && "invisible")}>
                       <Avatar src={msg.avatar_url} name={msg.display_name} size="sm" />
                     </div>
-                  )}
+                  ) : null}
 
-                  <div className={clsx("flex flex-col max-w-[70%]", isOwn && "items-end")}>
-                    {!isOwn && !isGrouped && conversation?.type !== "dm" && (
-                      <span className="text-xs text-[var(--text-secondary)] mb-1 ml-1">
-                        {msg.display_name}
-                      </span>
-                    )}
+                  <div className={clsx("flex max-w-[70%] flex-col", isOwn && "items-end")}>
+                    {!isOwn && !isGrouped && conversation?.type !== "dm" ? (
+                      <span className="mb-1 ml-1 text-xs text-[var(--text-secondary)]">{msg.display_name}</span>
+                    ) : null}
 
                     <div
                       className={clsx(
                         "message-bubble relative",
                         isOwn ? "own" : "other",
-                        isDeleted && "opacity-50 italic"
+                        isDeleted && "opacity-50 italic",
                       )}
                     >
                       {isDeleted ? (
                         <span className="text-[var(--text-secondary)]">Message deleted</span>
                       ) : (
                         <>
-                          <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                          {msg.edited_at && (
-                            <span className="text-xs opacity-60 ml-2">(edited)</span>
-                          )}
+                          <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
+                          {msg.edited_at ? <span className="ml-2 text-xs opacity-60">(edited)</span> : null}
                         </>
                       )}
                     </div>
 
-                    <div className={clsx("flex items-center gap-2 mt-0.5 px-1", isOwn ? "flex-row-reverse" : "flex-row")}>
+                    <div
+                      className={clsx(
+                        "mt-0.5 flex items-center gap-2 px-1",
+                        isOwn ? "flex-row-reverse" : "flex-row",
+                      )}
+                    >
                       <span className="text-xs text-[var(--text-secondary)]">
                         {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
                       </span>
-                      {!isDeleted && (
-                        <div className="hidden group-hover:flex items-center gap-1">
+                      {!isDeleted ? (
+                        <div className="hidden items-center gap-1 group-hover:flex">
                           <button
+                            type="button"
                             onClick={() => setReplyTo(msg)}
-                            className="p-1 rounded hover:bg-[var(--bg-secondary)] text-[var(--text-secondary)]"
-                            title="Reply"
+                            className="rounded px-1.5 py-1 text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
                           >
-                            ↩
+                            Reply
                           </button>
-                          {isOwn && (
+                          {isOwn ? (
                             <>
                               <button
-                                onClick={() => { setEditingMessage(msg); setContent(msg.content ?? ""); textareaRef.current?.focus(); }}
-                                className="p-1 rounded hover:bg-[var(--bg-secondary)] text-[var(--text-secondary)]"
-                                title="Edit"
+                                type="button"
+                                onClick={() => {
+                                  setEditingMessage(msg);
+                                  setContent(msg.content ?? "");
+                                  textareaRef.current?.focus();
+                                }}
+                                className="rounded px-1.5 py-1 text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
                               >
-                                ✏️
+                                Edit
                               </button>
                               <button
-                                onClick={() => handleDelete(msg.id)}
-                                className="p-1 rounded hover:bg-red-500/10 text-red-400"
-                                title="Delete"
+                                type="button"
+                                onClick={() => void handleDelete(msg.id)}
+                                className="rounded px-1.5 py-1 text-xs text-red-400 hover:bg-red-500/10 hover:text-red-500"
                               >
-                                🗑
+                                Delete
                               </button>
                             </>
-                          )}
+                          ) : null}
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   </div>
 
-                  {isOwn && <div className="w-8 flex-shrink-0" />}
+                  {isOwn ? <div className="w-8 flex-shrink-0" /> : null}
                 </div>
               );
             })}
@@ -329,37 +336,47 @@ export default function ChatPage() {
         )}
       </div>
 
-      {/* Composer */}
       <div className="flex-shrink-0 border-t border-[var(--border)] bg-[var(--bg-primary)] p-3">
-        {(replyTo || editingMessage) && (
-          <div className="flex items-center gap-2 mb-2 px-3 py-1.5 bg-brand-500/10 rounded-lg">
-            <div className="flex-1 min-w-0">
+        {replyTo || editingMessage ? (
+          <div className="mb-2 flex items-center gap-2 rounded-lg bg-brand-500/10 px-3 py-1.5">
+            <div className="min-w-0 flex-1">
               <p className="text-xs font-medium text-brand-500">
                 {editingMessage ? "Editing message" : `Replying to ${replyTo?.display_name}`}
               </p>
-              <p className="text-xs text-[var(--text-secondary)] truncate">
+              <p className="truncate text-xs text-[var(--text-secondary)]">
                 {editingMessage?.content ?? replyTo?.content}
               </p>
             </div>
-            <button onClick={() => { setReplyTo(null); setEditingMessage(null); setContent(""); }}>✕</button>
+            <button
+              type="button"
+              onClick={() => {
+                setReplyTo(null);
+                setEditingMessage(null);
+                setContent("");
+              }}
+              className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              aria-label="Clear reply or edit state"
+            >
+              Clear
+            </button>
           </div>
-        )}
+        ) : null}
 
-        <form onSubmit={handleSend} className="flex items-end gap-2">
+        <form onSubmit={(event) => void handleSend(event)} className="flex items-end gap-2">
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="btn-ghost p-2 flex-shrink-0"
-            title="Attach file"
+            className="btn-ghost flex-shrink-0 px-3 py-2"
+            aria-label="Attach a file"
           >
-            📎
+            Attach
           </button>
           <input
             ref={fileInputRef}
             type="file"
             className="hidden"
             accept="image/*,video/*,audio/*,.pdf,.txt,.zip"
-            onChange={() => handleSend()}
+            onChange={() => void handleSend()}
           />
 
           <textarea
@@ -367,10 +384,10 @@ export default function ChatPage() {
             value={content}
             onChange={(e) => {
               setContent(e.target.value);
-              conversationsApi.sendTyping(id, true).catch(() => {});
+              void conversationsApi.sendTyping(id, true).catch(() => undefined);
             }}
             onKeyDown={handleKeyDown}
-            className="input flex-1 resize-none min-h-[40px] max-h-32 py-2"
+            className="input min-h-[40px] max-h-32 flex-1 resize-none py-2"
             placeholder={`${composerPlaceholder} (Enter to send)`}
             rows={1}
             disabled={isSending}
@@ -378,16 +395,10 @@ export default function ChatPage() {
 
           <button
             type="submit"
-            className="btn-primary p-2.5 flex-shrink-0"
-            disabled={isSending || !content.trim()}
+            className="btn-primary flex-shrink-0 px-4 py-2.5"
+            disabled={isSending || (!content.trim() && !fileInputRef.current?.files?.length)}
           >
-            {isSending ? (
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-              </svg>
-            )}
+            {isSending ? "Sending…" : "Send"}
           </button>
         </form>
       </div>

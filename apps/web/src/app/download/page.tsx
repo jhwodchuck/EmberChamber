@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { MarketingShell } from "@/components/marketing-shell";
+import { StatusCallout } from "@/components/status-callout";
+import { formatUtcDate } from "@/lib/format";
 import { getLatestPlatformRelease } from "@/lib/releases";
 import { githubReleasesUrl, githubSourceZipUrl, launchPlatforms } from "@/lib/site";
 
@@ -41,12 +43,19 @@ async function DownloadPageInner({
         <div className="max-w-3xl">
           <div className="eyebrow">Launch targets</div>
           <h1 className="mt-5 font-display text-5xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-6xl">
-            Android first. Desktop where it helps. Browser for support and bootstrap.
+            Android first. Desktop where it helps. Web stays available.
           </h1>
           <p className="mt-5 text-lg leading-8 text-[var(--text-secondary)]">
             EmberChamber is not treating every surface as equal. The beta ships where the trust
             model and packaging path are defensible first, then expands from there.
           </p>
+        </div>
+
+        <div className="mt-8 max-w-3xl">
+          <StatusCallout tone="info" title="Use this page to check the preferred native surfaces">
+            If a native build is not posted here yet, the web app still handles messaging and
+            account flows. This page tells you when the preferred client is ready.
+          </StatusCallout>
         </div>
 
         <div className="mt-10 grid gap-5 lg:grid-cols-3">
@@ -75,7 +84,7 @@ async function DownloadPageInner({
                         {latestRelease.releaseName}
                       </span>
                       {latestRelease.publishedAt
-                        ? ` published ${new Date(latestRelease.publishedAt).toLocaleDateString()}`
+                        ? ` published ${formatUtcDate(latestRelease.publishedAt)} UTC`
                         : ""}
                       .
                     </p>
@@ -158,10 +167,11 @@ async function DownloadPageInner({
 
         <div className="mt-10 grid gap-5 lg:grid-cols-2">
           <div className="panel px-6 py-7">
-            <h2 className="text-xl font-semibold text-[var(--text-primary)]">What the browser is for now</h2>
+            <h2 className="text-xl font-semibold text-[var(--text-primary)]">What the web app can do today</h2>
             <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-              The web app is the public companion surface: positioning, invite landings, account
-              recovery support, and bootstrap UI. It is not the primary launch chat runtime.
+              The web app supports messaging, lighter-weight channel use, invite landings, account
+              recovery support, and bootstrap UI. It is not intended to be the highest-throughput
+              or always-on chat surface.
             </p>
           </div>
           <div className="panel px-6 py-7">

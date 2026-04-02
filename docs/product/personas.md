@@ -15,7 +15,7 @@
 ### Beta onboarding
 1. Receive a beta invite token.
 2. Start email magic-link auth.
-3. Complete the magic link on Android or desktop.
+3. Complete the magic link on web, Android, or desktop.
 4. Generate device keys locally and upload the public bundle.
 5. Optionally enroll a passkey later.
 
@@ -40,4 +40,4 @@
 - phone-number social graph
 - large community moderation stacks
 - voice and video calling
-- web as a primary chat runtime
+- web as the only or preferred primary chat runtime

@@ -15,12 +15,21 @@ export type ConversationKind = "direct_message" | "group" | "channel";
 
 export type MemberRole = "owner" | "admin" | "mod" | "member";
 
+export type NotificationPreviewMode = "discreet" | "expanded" | "none";
+export type ContentClass = "image" | "video" | "audio" | "file";
+export type RetentionMode = "private_vault" | "ephemeral";
+export type ProtectionProfile = "sensitive_media" | "standard";
+
 export type ReportReason =
   | "spam"
   | "harassment"
   | "illegal_content"
   | "malware"
   | "csam"
+  | "non_consensual_intimate_media"
+  | "coercion_or_extortion"
+  | "impersonation"
+  | "underage_risk"
   | "other";
 
 export type ReportStatus = "open" | "under_review" | "resolved" | "dismissed";
@@ -85,15 +94,20 @@ export interface AttachmentDescriptor {
   encryptionMode: "e2ee" | "server";
   /** SHA-256 hex digest of the plaintext (for dedup/integrity). */
   sha256: string;
+  contentClass: ContentClass;
+  retentionMode: RetentionMode;
+  protectionProfile: ProtectionProfile;
+  previewBlurHash?: string;
   createdAt: string;
 }
 
 // ─── Privacy ─────────────────────────────────────────────────────────────────
 
 export interface PrivacySettings {
-  sendReadReceipts: boolean;
-  showPresence: boolean;
-  allowDmFromStrangers: boolean;
+  notificationPreviewMode: NotificationPreviewMode;
+  autoDownloadSensitiveMedia: boolean;
+  allowSensitiveExport: boolean;
+  secureAppSwitcher: boolean;
 }
 
 // ─── Safety ──────────────────────────────────────────────────────────────────
@@ -105,6 +119,91 @@ export interface ReportSubmission {
   /** IDs of specific messages explicitly selected by the reporter. */
   evidenceMessageIds?: string[];
   notes?: string;
+}
+
+export interface GroupInviteDescriptor {
+  id: string;
+  conversationId: ConversationId;
+  inviteToken: string;
+  inviteUrl: string;
+  inviterDisplayName: string;
+  expiresAt?: string | null;
+  maxUses?: number | null;
+  useCount: number;
+  note?: string | null;
+  status: "active" | "revoked" | "expired" | "exhausted" | "frozen";
+  createdAt: string;
+}
+
+export interface GroupInviteRecord {
+  id: string;
+  conversationId: ConversationId;
+  inviterDisplayName: string;
+  expiresAt?: string | null;
+  maxUses?: number | null;
+  useCount: number;
+  note?: string | null;
+  status: "active" | "revoked" | "expired" | "exhausted" | "frozen";
+  createdAt: string;
+  createdByCurrentAccount: boolean;
+}
+
+export interface GroupInvitePreview {
+  invite: {
+    id: string;
+    status: "active" | "revoked" | "expired" | "exhausted" | "frozen";
+    inviterDisplayName: string;
+    expiresAt?: string | null;
+    maxUses?: number | null;
+    useCount: number;
+    note?: string | null;
+  };
+  group: {
+    id: ConversationId;
+    title: string;
+    memberCount: number;
+    memberCap: number;
+    joinRuleText?: string | null;
+    sensitiveMediaDefault: boolean;
+  };
+}
+
+export interface GroupMembershipSummary {
+  id: ConversationId;
+  title: string;
+  epoch: number;
+  memberCount: number;
+  memberCap: number;
+  myRole: "owner" | "admin" | "member";
+  sensitiveMediaDefault: boolean;
+  joinRuleText?: string | null;
+  allowMemberInvites: boolean;
+  inviteFreezeEnabled: boolean;
+  canCreateInvites: boolean;
+  canManageMembers: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GroupThreadMessage {
+  id: string;
+  conversationId: ConversationId;
+  senderAccountId: UserId;
+  senderDisplayName: string;
+  kind: "text" | "media" | "system_notice";
+  text?: string | null;
+  attachment?: {
+    id: string;
+    downloadUrl: string;
+    fileName: string;
+    mimeType: string;
+    sizeBytes: number;
+    contentClass: ContentClass;
+    retentionMode: RetentionMode;
+    protectionProfile: ProtectionProfile;
+    previewBlurHash?: string | null;
+  } | null;
+  createdAt: string;
 }
 
 // ─── Federation (relay) ──────────────────────────────────────────────────────

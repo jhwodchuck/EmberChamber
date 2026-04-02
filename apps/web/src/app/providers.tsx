@@ -9,6 +9,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <Toaster
         position="top-right"
         toastOptions={{
+          ariaProps: {
+            role: "status",
+            "aria-live": "polite",
+          },
           style: {
             background: "var(--bg-secondary)",
             color: "var(--text-primary)",

@@ -4,7 +4,7 @@
   <img src="brand/emberchamber-lockup.svg" alt="EmberChamber" width="760" />
 </p>
 
-> **Invite-only encrypted messaging for trusted circles.** EmberChamber is being rebuilt as a local-first beta for Android, Windows, and Ubuntu with a minimal hosted relay and private email bootstrap.
+> **Invite-only encrypted messaging for trusted circles.** EmberChamber is being rebuilt as a local-first beta for Android, iPhone, Windows, and Ubuntu with a minimal hosted relay and private email bootstrap.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -19,7 +19,7 @@ The repo now pivots toward:
 - `invite-only beta access`
 - `local-first message history`
 - `Cloudflare Workers + Durable Objects + D1 + R2` as the minimal relay
-- `Android + Windows + Ubuntu` as the first shipping surfaces
+- `Android + iPhone + Windows + Ubuntu + macOS` as the first shipping surfaces
 
 What EmberChamber is not:
 
@@ -34,9 +34,9 @@ What EmberChamber is not:
 Working beta scaffolds now in this repo:
 
 - `apps/relay`: Cloudflare relay/control plane scaffold
-- `apps/mobile`: Expo Android-first client scaffold
+- `apps/mobile`: Expo Android and iPhone client scaffold
 - `apps/desktop`: Tauri desktop beta shell with bundled local frontend
-- `apps/web`: public companion site, invite landing, and auth bootstrap UI
+- `apps/web`: public site plus secondary-but-capable web messaging workspace
 - `crates/core`: Rust local-first sync and secure-state scaffold
 - `crates/relay-protocol`: canonical Rust relay and envelope contracts
 - `packages/protocol`: TypeScript mirror of relay contracts
@@ -54,6 +54,7 @@ Launch beta includes:
 - invite-only signup
 - email magic-link auth
 - optional passkey enrollment later
+- web messaging, search, invite review, and settings as a secondary surface
 - per-device key registration
 - E2EE direct messaging
 - E2EE small groups capped at 12 members
@@ -64,10 +65,9 @@ Launch beta includes:
 
 Deferred beyond first beta:
 
-- public channels
-- public discovery
+- public-discovery-first growth loops
+- large public-community channel strategy
 - phone-number identity
-- iPhone and macOS parity
 - voice/video calling
 - server-side search over private content
 
@@ -76,9 +76,9 @@ Deferred beyond first beta:
 ```mermaid
 graph TB
     subgraph Clients["Client Layer"]
-        MOBILE["Expo Android Client"]
+        MOBILE["Expo Android + iPhone Client"]
         DESKTOP["Tauri Desktop Client"]
-        WEB["Next.js Web Companion"]
+        WEB["Next.js Web App\nSecondary Surface"]
     end
 
     subgraph Core["Shared Secure Core"]
@@ -135,7 +135,7 @@ The relay does not aim to store:
 
 ## Local Development
 
-### Web companion + relay
+### Web app + relay
 
 ```bash
 npm install
@@ -158,7 +158,7 @@ npx wrangler d1 migrations apply emberchamber-relay-dev --local
 npm run dev:desktop
 ```
 
-### Android scaffold
+### Android and iPhone scaffold
 
 ```bash
 npm run dev:mobile
@@ -179,14 +179,35 @@ The new beta scaffold should verify cleanly with:
 
 - Architecture: [`docs/architecture.md`](docs/architecture.md)
 - Launch targets: [`docs/launch-targets.md`](docs/launch-targets.md)
+- Web app: [`apps/web/README.md`](apps/web/README.md)
+- Operator playbook: [`docs/operator-playbook.md`](docs/operator-playbook.md)
 - Legacy prototype API spec: [`docs/openapi.yaml`](docs/openapi.yaml)
 
-## Public Web Companion
+## Web App
 
-The public Next.js surface now includes:
+The Next.js app now includes public and authenticated routes.
+
+Public routes:
 
 - `/` for positioning and launch framing
+- `/start` for first-time routing
 - `/download` for target-platform guidance
 - `/privacy` for high-level privacy commitments
 - `/beta-terms` for controlled-beta expectations
 - `/trust-and-safety` for the anti-abuse boundary model
+- `/support` for recovery and reporting guidance
+- `/login`, `/register`, and `/auth/complete` for bootstrap auth
+- `/invite/[code]` and `/invite/[groupId]/[token]` for invite landing and acceptance
+
+Authenticated web workspace routes:
+
+- `/app` for the web workspace home
+- `/app/new-dm` and `/app/chat/[id]` for direct messaging
+- `/app/new-group` for group creation
+- `/app/new-channel` and `/app/channel/[id]` for lighter-weight channel use
+- `/app/search` for workspace search
+- `/app/discover` for invite preview and join
+- `/app/settings` for account, session, and privacy controls
+
+The web app supports real messaging and account flows, but Android and desktop remain the
+preferred primary-use surfaces.

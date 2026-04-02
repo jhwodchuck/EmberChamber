@@ -46,10 +46,31 @@ pub struct OutboxEntry {
     pub delivered: bool,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MediaVaultEntry {
+    pub attachment_id: String,
+    pub conversation_id: ConversationId,
+    pub file_name: String,
+    pub mime_type: String,
+    pub protection_profile: String,
+    pub retention_mode: String,
+    pub downloaded_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContactLabel {
+    pub account_id: AccountId,
+    pub local_label: String,
+    pub private_note: Option<String>,
+    pub updated_at: DateTime<Utc>,
+}
+
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct ClientState {
     pub conversations: BTreeMap<String, ConversationState>,
     pub outbox: BTreeMap<String, OutboxEntry>,
+    pub media_vault: BTreeMap<String, MediaVaultEntry>,
+    pub contact_labels: BTreeMap<String, ContactLabel>,
 }
 
 impl ClientState {
@@ -76,6 +97,16 @@ impl ClientState {
         if let Some(entry) = self.outbox.get_mut(envelope_id) {
             entry.delivered = true;
         }
+    }
+
+    pub fn remember_media(&mut self, entry: MediaVaultEntry) {
+        self.media_vault
+            .insert(entry.attachment_id.clone(), entry);
+    }
+
+    pub fn label_contact(&mut self, label: ContactLabel) {
+        self.contact_labels
+            .insert(label.account_id.to_string(), label);
     }
 
     pub fn rotate_epoch(&mut self, conversation_id: ConversationId, next_epoch: GroupEpoch) {
@@ -143,5 +174,32 @@ mod tests {
                 .epoch,
             3
         );
+    }
+
+    #[test]
+    fn local_labels_and_media_vault_are_tracked() {
+        let mut state = ClientState::default();
+        let attachment_id = uuid::Uuid::new_v4().to_string();
+        let conversation_id = ConversationId::new();
+        let account_id = AccountId::new();
+
+        state.remember_media(MediaVaultEntry {
+            attachment_id: attachment_id.clone(),
+            conversation_id,
+            file_name: "sample.jpg".into(),
+            mime_type: "image/jpeg".into(),
+            protection_profile: "sensitive_media".into(),
+            retention_mode: "private_vault".into(),
+            downloaded_at: Utc::now(),
+        });
+        state.label_contact(ContactLabel {
+            account_id,
+            local_label: "Trusted host".into(),
+            private_note: Some("Keeps invite boundaries tight".into()),
+            updated_at: Utc::now(),
+        });
+
+        assert!(state.media_vault.contains_key(&attachment_id));
+        assert!(state.contact_labels.contains_key(&account_id.to_string()));
     }
 }

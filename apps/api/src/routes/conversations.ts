@@ -480,7 +480,19 @@ router.post("/:id/messages", async (req: AuthRequest, res: Response, next) => {
         [id]
       );
 
-      return rows[0];
+      const sender = await client.query(
+        `SELECT username, display_name, avatar_url
+         FROM users
+         WHERE id = $1`,
+        [req.userId]
+      );
+
+      return {
+        ...rows[0],
+        username: sender.rows[0]?.username ?? "",
+        display_name: sender.rows[0]?.display_name ?? "",
+        avatar_url: sender.rows[0]?.avatar_url ?? null,
+      };
     });
 
     // Publish to Redis for WebSocket fan-out

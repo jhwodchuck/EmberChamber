@@ -21,6 +21,11 @@ export function Avatar({
     md: "w-10 h-10 text-sm",
     lg: "w-12 h-12 text-base",
   };
+  const dimensions = {
+    sm: 32,
+    md: 40,
+    lg: 48,
+  };
 
   if (src) {
     return (
@@ -28,6 +33,9 @@ export function Avatar({
       <img
         src={src}
         alt={name}
+        width={dimensions[size]}
+        height={dimensions[size]}
+        loading="lazy"
         className={clsx(sizeClasses[size], "rounded-full object-cover flex-shrink-0")}
       />
     );

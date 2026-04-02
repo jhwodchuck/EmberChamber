@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import { authApi } from "@/lib/api";
+import type { AuthSession } from "@emberchamber/protocol";
+import { clearRelaySession, readRelaySession, relayAccountApi, storeRelaySession } from "@/lib/relay";
 
 interface User {
   id: string;
@@ -14,7 +15,7 @@ interface AuthState {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (user: User, accessToken: string, refreshToken: string) => void;
+  setSession: (session: AuthSession) => void;
   logout: () => Promise<void>;
   loadUser: () => Promise<void>;
   updateUser: (updates: Partial<User>) => void;
@@ -25,36 +26,37 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isLoading: true,
   isAuthenticated: false,
 
-  login: (user, accessToken, refreshToken) => {
-    localStorage.setItem("accessToken", accessToken);
-    localStorage.setItem("refreshToken", refreshToken);
-    set({ user, isAuthenticated: true, isLoading: false });
+  setSession: (session) => {
+    storeRelaySession(session);
+    set({ isAuthenticated: true, isLoading: false });
   },
 
   logout: async () => {
-    try {
-      await authApi.logout();
-    } catch {
-      // Ignore errors
+    const session = readRelaySession();
+    if (session?.sessionId) {
+      try {
+        await relayAccountApi.revokeSession(session.sessionId);
+      } catch {
+        // Ignore server revoke failures during sign-out.
+      }
     }
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    set({ user: null, isAuthenticated: false });
+
+    clearRelaySession();
+    set({ user: null, isAuthenticated: false, isLoading: false });
   },
 
   loadUser: async () => {
-    const token = localStorage.getItem("accessToken");
-    if (!token) {
+    const session = readRelaySession();
+    if (!session?.accessToken) {
       set({ isLoading: false });
       return;
     }
 
     try {
-      const user = await authApi.me();
+      const user = await relayAccountApi.me();
       set({ user, isAuthenticated: true, isLoading: false });
     } catch {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
+      clearRelaySession();
       set({ user: null, isAuthenticated: false, isLoading: false });
     }
   },

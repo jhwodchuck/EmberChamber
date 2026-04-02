@@ -5,8 +5,11 @@ pub mod mailbox;
 
 pub use auth::{
     AccessTokenClaims, AttachmentTicket, AuthSession, ContactCard, MagicLinkChallenge,
-    PasskeyCredentialRef,
+    MeProfile, PasskeyCredentialRef, SessionDescriptor,
 };
-pub use conversation::{BlockRule, ConversationDescriptor, GroupEpoch, KeyResetEvent, SafetyEvent};
+pub use conversation::{
+    BlockRule, ConversationDescriptor, GroupEpoch, GroupInviteDescriptor, GroupInvitePreview,
+    KeyResetEvent, SafetyEvent,
+};
 pub use envelope::{CipherEnvelope, DeviceKeyBundle, PrekeyBundle, RelayEnvelope, RelayReceipt};
 pub use mailbox::{EnvelopeBatch, MailboxAck, MailboxCursor};

@@ -4,11 +4,9 @@ import { authBootstrapEnabled, primaryNav } from "@/lib/site";
 
 export function SiteHeader() {
   const secondaryCta = authBootstrapEnabled
-    ? { href: "/login", label: "Request magic link" }
-    : { href: "/download", label: "View launch targets" };
-  const primaryCta = authBootstrapEnabled
-    ? { href: "/register", label: "Join beta" }
-    : { href: "/trust-and-safety", label: "Read trust model" };
+    ? { href: "/login", label: "Sign In" }
+    : { href: "/download", label: "View Downloads" };
+  const primaryCta = { href: "/start", label: "Start Here" };
 
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-[color:var(--bg-overlay)]/85 px-6 py-4 backdrop-blur-xl">

@@ -8,10 +8,7 @@ license.workspace = true
 [dependencies]
 emberchamber-domain = { workspace = true }
 serde = { workspace = true }
-uuid = { workspace = true }
 chrono = { workspace = true }
-thiserror = { workspace = true }
-tracing = { workspace = true }
 anyhow = { workspace = true }
 ring = { workspace = true }
 base64 = { workspace = true }

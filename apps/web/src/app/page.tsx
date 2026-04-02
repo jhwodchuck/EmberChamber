@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { MarketingShell } from "@/components/marketing-shell";
+import { StartHereSummary } from "@/components/start-here-guide";
 import { faqItems, launchPlatforms, trustFacts } from "@/lib/site";
 
 const productPillars = [
@@ -29,20 +30,33 @@ export default function HomePage() {
                 Private messaging that admits the hard parts.
               </h1>
               <p className="mt-6 max-w-3xl text-lg leading-8 text-[var(--text-secondary)] sm:text-xl">
-                EmberChamber is being rebuilt as an invite-only encrypted messenger for
-                Android, Windows, and Ubuntu. It does not pretend phones can be reliably
-                serverless. It uses a minimal relay, local-first history, and explicit privacy
-                boundaries instead.
+                EmberChamber is being rebuilt as an invite-only encrypted messenger for Android,
+                Windows, and Ubuntu. If you are new here, start with the trust model and launch
+                availability. If you already have an invite or an account, the web app can handle
+                sign-in, messaging, invite review, and recovery. Native clients stay preferred for
+                heavier daily use once a posted build exists.
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link href="/download" className="btn-primary px-6 py-3 text-base">
-                  Explore launch targets
+                <Link href="/start" className="btn-primary px-6 py-3 text-base">
+                  Start Here
                 </Link>
                 <Link href="/trust-and-safety" className="btn-ghost px-6 py-3 text-base">
-                  Read the trust model
+                  Read Trust Model
                 </Link>
               </div>
+
+              <p className="mt-4 text-sm leading-6 text-[var(--text-secondary)]">
+                Already have beta access?{" "}
+                <Link href="/login" className="font-medium text-brand-600 hover:underline">
+                  Sign in
+                </Link>
+                . Need a client build first?{" "}
+                <Link href="/download" className="font-medium text-brand-600 hover:underline">
+                  Check downloads
+                </Link>
+                .
+              </p>
 
               <div className="mt-10 grid gap-4 sm:grid-cols-3">
                 {productPillars.map((pillar) => (
@@ -54,27 +68,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            <aside className="panel bg-[linear-gradient(180deg,rgba(255,255,255,0.08),transparent),linear-gradient(160deg,#2a1512,#120a0b)] p-6 text-white shadow-[0_20px_60px_rgba(32,19,18,0.22)]">
-              <div className="text-sm uppercase tracking-[0.22em] text-[#f8bc9c]">Beta snapshot</div>
-              <div className="mt-5 space-y-5">
-                <div>
-                  <div className="text-xs uppercase tracking-[0.18em] text-[#d7a68a]">Scope</div>
-                  <p className="mt-1 text-lg font-medium">E2EE DMs, small groups, encrypted attachments</p>
-                </div>
-                <div>
-                  <div className="text-xs uppercase tracking-[0.18em] text-[#d7a68a]">Bootstrap</div>
-                  <p className="mt-1 text-lg font-medium">Invite-only email magic links, passkeys later</p>
-                </div>
-                <div>
-                  <div className="text-xs uppercase tracking-[0.18em] text-[#d7a68a]">Shipping first</div>
-                  <p className="mt-1 text-lg font-medium">Android, Windows, Ubuntu</p>
-                </div>
-                <div>
-                  <div className="text-xs uppercase tracking-[0.18em] text-[#d7a68a]">Not in beta</div>
-                  <p className="mt-1 text-lg font-medium">Phone numbers, public discovery, fake “no server” claims</p>
-                </div>
-              </div>
-            </aside>
+            <StartHereSummary />
           </div>
         </div>
       </section>

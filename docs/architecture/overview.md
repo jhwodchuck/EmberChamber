@@ -9,7 +9,7 @@ This overview file now exists only as a short redirect because the old centraliz
 - `apps/relay`: Cloudflare Worker relay/control plane
 - `apps/mobile`: Android-first Expo client
 - `apps/desktop`: Windows and Ubuntu Tauri client shell
-- `apps/web`: public companion site and auth bootstrap
+- `apps/web`: public site plus secondary web messaging workspace
 - `crates/core`: Rust local-first secure state engine
 
 ## Legacy runtime
