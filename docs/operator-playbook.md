@@ -104,6 +104,30 @@ npx wrangler d1 execute emberchamber-relay-prod-db --env production --remote \
 ```
 - Do not frame the product as anonymous, uncensorable, or law-proof.
 
+## Email Delivery (Resend)
+
+Magic-link emails are sent via the [Resend](https://resend.com) API. The relay enqueues a
+`magic_link` message to `emberchamber-email-prod`, then consumes it and calls the Resend API.
+
+`RESEND_API_KEY` is stored as a Cloudflare Worker secret on the production worker. To rotate it:
+
+```bash
+cd apps/relay
+npx wrangler secret put RESEND_API_KEY --env production
+# paste the new key at the prompt, then redeploy:
+npx wrangler deploy --env production
+```
+
+If the key is lost or needs to be set on a new machine:
+
+1. Log in to [resend.com](https://resend.com), generate a new API key.
+2. Run the `wrangler secret put` command above.
+3. Redeploy to activate the new binding.
+
+The sender address is `noreply@emberchamber.com` (set via `EMBERCHAMBER_EMAIL_FROM` in
+`wrangler.jsonc`). Resend requires the sending domain to be verified in your Resend account
+before production emails will be delivered.
+
 ## Relay Deploy
 
 1. Use the manual GitHub Actions workflow [deploy-relay.yml](/home/jason/gh/PrivateMesh/.github/workflows/deploy-relay.yml).
