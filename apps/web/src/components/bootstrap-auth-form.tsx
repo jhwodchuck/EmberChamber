@@ -18,6 +18,7 @@ const STORAGE_KEYS = {
   inviteToken: "emberchamber.auth.v1.inviteToken",
   deviceLabel: "emberchamber.auth.v1.deviceLabel",
 } as const;
+const showDebugCompletionToken = process.env.NODE_ENV !== "production";
 
 function readDraft(key: keyof typeof STORAGE_KEYS) {
   if (typeof window === "undefined") {
@@ -485,7 +486,7 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
           <br />
           2. Confirm the link from the device you want to use first.
           <br />
-          3. Finish profile setup with a pseudonymous name, then return later to review devices or enroll a passkey.
+          3. Finish profile setup with a pseudonymous name, then return later to review active devices and privacy settings.
         </StatusCallout>
 
         <StatusCallout tone="info" title="Trust boundary">
@@ -497,7 +498,7 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
           <StatusCallout tone="success" title="Inbox check required">
             The link expires {formatUtcDateTime(challenge.expiresAt)}. Open it from the device you
             named above so the first session and device inventory stay readable.
-            {challenge.debugCompletionToken ? (
+            {showDebugCompletionToken && challenge.debugCompletionToken ? (
               <span className="mt-3 block break-all font-mono text-xs text-brand-500">
                 Dev token: {challenge.debugCompletionToken}
               </span>

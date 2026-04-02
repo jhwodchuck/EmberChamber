@@ -1185,7 +1185,7 @@ async function createSession(
     accessToken,
     refreshToken,
     expiresAt,
-    passkeyEnrollmentSuggested: true,
+    passkeyEnrollmentSuggested: false,
     bootstrapConversationId: bootstrapConversation?.conversationId,
     bootstrapConversationTitle: bootstrapConversation?.title,
   };

@@ -46,9 +46,10 @@ export default function PrivacyPage() {
       <section>
         <h2>Beta caveat</h2>
         <p>
-          This repo is still a serious beta scaffold, not a final audited security product. The
-          production story will keep changing until the mobile and desktop clients are wired fully
-          into the secure core and relay flow.
+          EmberChamber is still a beta product, not a final audited security product. Current
+          production hardening focuses on the relay-first runtime, invite-only onboarding, device
+          review, and honest privacy boundaries while the remaining encrypted-group and recovery
+          work continues.
         </p>
       </section>
     </PolicyPage>

@@ -25,7 +25,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - uses: actions/setup-java@v5
@@ -47,8 +47,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Prebuild Android native project
-        run: npm run prebuild --workspace=apps/mobile
+      - name: Verify Android project
+        run: npm run verify:android --workspace=apps/mobile
 
       - name: Make Gradle wrapper executable
         run: chmod +x apps/mobile/android/gradlew
