@@ -63,3 +63,4 @@ infra/data/
 *.aab
 .vercel
 apps/mobile/secrets/
+apps/relay/.wrangler/

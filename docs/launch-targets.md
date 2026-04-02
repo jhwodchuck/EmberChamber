@@ -6,7 +6,7 @@ This file tracks what the repo can actually build and, where release lanes exist
 
 | Surface | Artifact | Backend path | Current product scope | Automation |
 | --- | --- | --- | --- | --- |
-| Android | Debug `.apk` from `apps/mobile` | Relay | Email bootstrap, sessions, privacy defaults, group invite preview/accept, relay-hosted group threads, attachment upload/download, local SQLite and SecureStore. | `.github/workflows/release-android.yml` |
+| Android | Signed release `.apk` and `.aab` from `apps/mobile` | Relay | Email bootstrap, sessions, privacy defaults, group invite preview/accept, relay-hosted group threads, attachment upload/download, local SQLite and SecureStore. | `.github/workflows/release-android.yml` |
 | iPhone | Simulator `.app` zipped from `apps/mobile` | Relay | Same codebase and runtime scope as Android. No signed TestFlight or App Store lane yet, and not a first-beta commitment. | `.github/workflows/release-apple.yml` |
 | Windows | `.exe` and `.msi` from `apps/desktop` | Relay | Bundled desktop shell for auth, groups, invites, sessions, privacy, and attachment sending. | `.github/workflows/release-windows.yml` |
 | Ubuntu / Debian | `.deb` and `.AppImage` from `apps/desktop` | Relay | Bundled desktop shell for auth, groups, invites, sessions, privacy settings, and attachment sending. | `.github/workflows/release-linux.yml` |
@@ -26,9 +26,9 @@ This file tracks what the repo can actually build and, where release lanes exist
 ### Android
 
 1. Install Node and Android toolchain dependencies.
-2. Run Expo prebuild for Android.
-3. Build a debug APK.
-4. Upload the artifact and optionally attach it to a tagged GitHub Release.
+2. Run mobile verification: Expo doctor, TypeScript checks, and Android prebuild.
+3. Build signed Android release APK and AAB artifacts.
+4. Upload the artifacts and attach them to a tagged GitHub Release.
 
 ### Apple mobile
 
@@ -45,7 +45,8 @@ This file tracks what the repo can actually build and, where release lanes exist
 
 ## Deferred Or Not Yet Productized
 
-- Play Store, App Store, and TestFlight publishing
+- Play Store publishing automation
+- App Store and TestFlight publishing
 - Signed and notarized Apple desktop releases
 - Code-signed Windows desktop releases
 - Auto-update channels

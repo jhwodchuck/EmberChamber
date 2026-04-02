@@ -16,7 +16,7 @@ export default function RegisterPage() {
           eyebrow="Adults-only onboarding"
           title="Join the beta deliberately, not through public discovery."
           description="New accounts still require a trusted invite path, a private email bootstrap, and a clearly named first device. The beta is tuned for trusted circles, not open-network growth mechanics."
-          emphasis="The first-run path stays intentionally short: adults-only affirmation, invite, inbox, then device confirmation. Pseudonymous identity setup and passkeys can follow later."
+          emphasis="The first-run path stays intentionally short: adults-only affirmation, invite, inbox, then device confirmation. Pseudonymous identity setup and device review follow immediately after bootstrap."
         />
 
         <RegisterForm />
