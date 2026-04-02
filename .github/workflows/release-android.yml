@@ -5,6 +5,9 @@ on:
     tags: ["v*"]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 concurrency:
   group: release-android-${{ github.ref }}
   cancel-in-progress: true
@@ -44,3 +47,10 @@ jobs:
           name: emberchamber-android-beta
           path: apps/mobile/android/app/build/outputs/apk/debug/*.apk
           retention-days: 30
+
+      - name: Publish Android asset to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          prerelease: true
+          files: apps/mobile/android/app/build/outputs/apk/debug/*.apk
