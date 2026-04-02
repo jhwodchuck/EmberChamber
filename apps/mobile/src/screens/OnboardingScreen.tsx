@@ -207,7 +207,7 @@ export function OnboardingScreen(props: OnboardingScreenProps) {
           title="Check your inbox"
           body="Open the email link on this phone. If it lands in the browser first, the completion page should hand the token back into EmberChamber."
         >
-          {challenge.debugCompletionToken ? (
+          {__DEV__ && challenge.debugCompletionToken ? (
             <Pressable
               style={styles.devButton}
               onPress={() => onCompleteMagicLink(challenge.debugCompletionToken!)}

@@ -4,13 +4,14 @@
     "slug": "emberchamber-mobile",
     "scheme": "emberchamber",
     "version": "0.1.0",
+    "description": "Invite-only messaging for trusted circles.",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "icon": "./assets/icon.png",
     "android": {
       "package": "com.emberchamber.mobile",
       "versionCode": 1,
+      "blockedPermissions": ["android.permission.RECORD_AUDIO"],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#140d10"
@@ -47,27 +48,19 @@
       "supportsTablet": false,
       "config": {
         "usesNonExemptEncryption": false
-      },
-      "infoPlist": {
-        "UIBackgroundModes": [
-          "fetch",
-          "remote-notification"
-        ]
       }
     },
     "plugins": [
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow EmberChamber to attach photos from your library.",
-          "cameraPermission": "Allow EmberChamber to take a photo for a secure conversation."
+          "photosPermission": "Allow EmberChamber to attach photos from your library."
         }
       ],
       [
         "expo-secure-store",
         {
-          "configureAndroidBackup": true,
-          "faceIDPermission": "Allow EmberChamber to access your Face ID for passkey-protected sessions."
+          "configureAndroidBackup": true
         }
       ],
       [

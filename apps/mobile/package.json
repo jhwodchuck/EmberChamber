@@ -4,23 +4,25 @@
   "private": true,
   "main": "App.tsx",
   "scripts": {
+    "android:patch-build": "node ./scripts/patch-react-native-gradle-plugin.js",
     "dev": "expo start --clear",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "prebuild": "expo prebuild --platform android --clean",
+    "prebuild": "npm run android:patch-build && expo prebuild --platform android --clean",
     "prebuild:ios": "expo prebuild --platform ios --clean",
-    "build:android": "expo prebuild --platform android --non-interactive",
+    "build:android": "npm run android:patch-build && expo prebuild --platform android --non-interactive",
     "build:ios": "expo prebuild --platform ios --non-interactive",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "expo": "~55.0.0",
-    "expo-image-picker": "~55.0.14",
-    "expo-screen-capture": "~8.0.9",
-    "expo-secure-store": "~55.0.9",
-    "expo-sqlite": "~55.0.11",
+    "expo-image-picker": "~55.0.16",
+    "expo-screen-capture": "~55.0.11",
+    "expo-secure-store": "~55.0.11",
+    "expo-sqlite": "~55.0.13",
+    "expo-system-ui": "~55.0.13",
     "react": "19.2.0",
-    "react-native": "0.83.0"
+    "react-native": "0.83.4"
   },
   "devDependencies": {
     "@types/react": "^19.2.2",

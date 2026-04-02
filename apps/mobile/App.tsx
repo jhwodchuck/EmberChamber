@@ -39,8 +39,9 @@ import {
   relayUrl,
 } from "./src/constants";
 import {
-  createPlaceholderDeviceBundle,
+  createDeviceBundleScaffold,
   extractCompletionTokenFromUrl,
+  isDefaultDisplayName,
   isValidEmail,
   makeOpaqueToken,
   normalizeInviteReference,
@@ -49,9 +50,13 @@ import {
 import {
   bootstrapLocalStore,
   countVaultItems,
+  loadCachedGroupMessages,
+  loadCachedGroups,
   loadPrivacyDefaults,
   persistVaultMediaRecord,
   savePrivacyDefault,
+  saveCachedGroupMessages,
+  saveCachedGroups,
 } from "./src/lib/db";
 import {
   clearStoredSession,
@@ -108,10 +113,8 @@ export default function App() {
   const [privacyDefaults, setPrivacyDefaults] = useState<PrivacyDefaults>(defaultPrivacyDefaults);
   const [profileSetupActive, setProfileSetupActive] = useState(false);
   const [profileSetupName, setProfileSetupName] = useState("");
-  const [profileSetupSelfie, setProfileSetupSelfie] = useState<PendingAttachment | null>(null);
   const [isSubmittingProfile, setIsSubmittingProfile] = useState(false);
   const [profileSetupError, setProfileSetupError] = useState<string | null>(null);
-  const [isPickingSelfie, setIsPickingSelfie] = useState(false);
 
   const imageRefreshPendingRef = useRef(false);
 
@@ -123,22 +126,55 @@ export default function App() {
 
   // ---- relay helpers (stay here because they close over setSession) ----
 
+  async function fetchJson<T>(
+    url: string,
+    init?: RequestInit,
+    timeoutMs = 15_000,
+  ): Promise<{ response: Response; body: T & RelayErrorResponse }> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const response = await fetch(url, { ...init, signal: controller.signal });
+      const rawBody = await response.text();
+      let body = {} as T & RelayErrorResponse;
+
+      if (rawBody) {
+        try {
+          body = JSON.parse(rawBody) as T & RelayErrorResponse;
+        } catch {
+          body = { error: rawBody } as T & RelayErrorResponse;
+        }
+      }
+
+      return { response, body };
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new Error("The relay took too long to respond. Check your connection and try again.");
+      }
+
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
   async function relayFetch<T>(
     currentSession: AuthSession,
     path: string,
     init?: RequestInit,
     allowRefresh = true,
   ): Promise<T> {
-    const response = await fetch(`${relayUrl}${path}`, {
-      ...init,
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${currentSession.accessToken}`,
-        ...(init?.headers ?? {}),
-      },
-    });
+    const headers = {
+      authorization: `Bearer ${currentSession.accessToken}`,
+      ...(init?.body ? { "content-type": "application/json" } : {}),
+      ...(init?.headers ?? {}),
+    };
 
-    const body = (await response.json()) as T & RelayErrorResponse;
+    const { response, body } = await fetchJson<T>(`${relayUrl}${path}`, {
+      ...init,
+      headers,
+    });
     if (response.ok) {
       return body;
     }
@@ -154,15 +190,15 @@ export default function App() {
   }
 
   async function refreshRelaySession(currentSession: AuthSession) {
-    const response = await fetch(`${relayUrl}/v1/auth/refresh`, {
+    const { response, body } = await fetchJson<{
+      accessToken: string;
+      deviceId: string;
+      sessionId: string;
+    }>(`${relayUrl}/v1/auth/refresh`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ refreshToken: currentSession.refreshToken }),
     });
-
-    const body = (await response.json()) as
-      | { accessToken: string; deviceId: string; sessionId: string; error?: string }
-      | RelayErrorResponse;
 
     if (!response.ok || !("accessToken" in body)) {
       await clearStoredSession();
@@ -193,7 +229,7 @@ export default function App() {
     }
 
     const localBundle =
-      (await loadStoredDeviceBundle(currentSession.deviceId)) ?? createPlaceholderDeviceBundle();
+      (await loadStoredDeviceBundle(currentSession.deviceId)) ?? createDeviceBundleScaffold();
     await saveStoredDeviceBundle(currentSession.deviceId, localBundle);
 
     await relayFetch<{ registered: boolean }>(currentSession, "/v1/devices/register", {
@@ -237,7 +273,7 @@ export default function App() {
     startTransition(() => {
       void (async () => {
         const nextDb = await bootstrapLocalStore();
-        const [savedEmail, savedInvite, savedDeviceLabel, nextPrivacyDefaults, vaultItems, savedSession, initialUrl, profileSetupDone] =
+        const [savedEmail, savedInvite, savedDeviceLabel, nextPrivacyDefaults, vaultItems, savedSession, initialUrl] =
           await Promise.all([
             SecureStore.getItemAsync(STORAGE_KEYS.email),
             SecureStore.getItemAsync(STORAGE_KEYS.inviteToken),
@@ -246,7 +282,6 @@ export default function App() {
             countVaultItems(nextDb),
             loadStoredSession(),
             Linking.getInitialURL(),
-            SecureStore.getItemAsync(STORAGE_KEYS.profileSetupComplete),
           ]);
 
         if (!mounted) {
@@ -261,9 +296,6 @@ export default function App() {
         setVaultCount(vaultItems);
         setSession(savedSession);
         setIsBooting(false);
-        if (savedSession && !profileSetupDone) {
-          setProfileSetupActive(true);
-        }
         captureIncomingUrl(initialUrl);
       })();
     });
@@ -299,6 +331,9 @@ export default function App() {
       setDeviceBundleReady(false);
       setDeviceBundleCount(0);
       setDeviceBundleError(null);
+      setProfileSetupActive(false);
+      setProfileSetupName("");
+      setProfileSetupError(null);
       return;
     }
 
@@ -306,6 +341,11 @@ export default function App() {
 
     void (async () => {
       setIsLoadingAccount(true);
+      const cachedGroups = db ? await loadCachedGroups(db, session.accountId) : [];
+
+      if (!cancelled && cachedGroups.length) {
+        setGroups(cachedGroups);
+      }
 
       try {
         const registeredBundles = await ensureDeviceBundleRegistered(session);
@@ -318,7 +358,7 @@ export default function App() {
         if (!cancelled) {
           setDeviceBundleReady(false);
           setDeviceBundleError(
-            error instanceof Error ? error.message : "Unable to register this phone's device identity.",
+            error instanceof Error ? error.message : "Unable to register this phone with the relay.",
           );
         }
       }
@@ -337,6 +377,13 @@ export default function App() {
         setProfile(nextProfile);
         setContactCard(nextCard);
         setGroups(nextGroups);
+        setProfileSetupActive(isDefaultDisplayName(nextProfile.displayName));
+        setProfileSetupName(isDefaultDisplayName(nextProfile.displayName) ? "" : nextProfile.displayName);
+
+        if (db) {
+          await saveCachedGroups(db, session.accountId, nextGroups);
+        }
+
         setSessionMessage((current) => {
           if (current?.tone === "error") {
             return current;
@@ -346,7 +393,7 @@ export default function App() {
             return {
               tone: "success",
               title: "You are in",
-              body: `${session.bootstrapConversationTitle} is ready below. Pick a photo or send a short message now.`,
+              body: `${session.bootstrapConversationTitle} is ready below. Send a short message or attach a photo when you are set.`,
             };
           }
 
@@ -355,9 +402,13 @@ export default function App() {
       } catch (error) {
         if (!cancelled) {
           setSessionMessage({
-            tone: "error",
-            title: "Signed in, but account sync failed",
-            body: error instanceof Error ? error.message : "Unable to load account state from the relay.",
+            tone: cachedGroups.length ? "warning" : "error",
+            title: cachedGroups.length ? "Relay sync paused" : "Signed in, but account sync failed",
+            body: cachedGroups.length
+              ? "Showing the last synced groups stored on this phone while the relay is unavailable."
+              : error instanceof Error
+                ? error.message
+                : "Unable to load account state from the relay.",
           });
         }
       } finally {
@@ -370,7 +421,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [session]);
+  }, [db, session]);
 
   useEffect(() => {
     if (!groups.length) {
@@ -401,6 +452,14 @@ export default function App() {
     setIsLoadingThread(true);
 
     void (async () => {
+      const cachedMessages = db
+        ? await loadCachedGroupMessages(db, selectedConversationId)
+        : [];
+
+      if (!cancelled && cachedMessages.length) {
+        setThreadMessages(cachedMessages);
+      }
+
       try {
         const messages = await relayFetch<GroupThreadMessage[]>(
           session,
@@ -410,12 +469,20 @@ export default function App() {
         if (!cancelled) {
           setThreadMessages(messages);
         }
+
+        if (db) {
+          await saveCachedGroupMessages(db, selectedConversationId, messages);
+        }
       } catch (error) {
         if (!cancelled) {
           setSessionMessage({
-            tone: "error",
-            title: "Unable to load this conversation",
-            body: error instanceof Error ? error.message : "Thread sync failed.",
+            tone: cachedMessages.length ? "warning" : "error",
+            title: cachedMessages.length ? "Showing last synced thread" : "Unable to load this conversation",
+            body: cachedMessages.length
+              ? "Relay sync failed. The last thread copy stored on this phone is still available."
+              : error instanceof Error
+                ? error.message
+                : "Thread sync failed.",
           });
         }
       } finally {
@@ -428,7 +495,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [session, selectedConversationId]);
+  }, [db, session, selectedConversationId]);
 
   // ---- handlers ----
 
@@ -485,7 +552,7 @@ export default function App() {
 
     setIsSending(true);
     try {
-      const response = await fetch(`${relayUrl}/v1/auth/start`, {
+      const { response, body } = await fetchJson<MagicLinkResponse>(`${relayUrl}/v1/auth/start`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -497,8 +564,6 @@ export default function App() {
           ageConfirmed18: true,
         }),
       });
-
-      const body = ((await response.json()) as MagicLinkResponse & RelayErrorResponse) ?? {};
       if (!response.ok) {
         if (body.code === "INVITE_REQUIRED") {
           setInviteFieldVisible(true);
@@ -556,7 +621,7 @@ export default function App() {
     });
 
     try {
-      const response = await fetch(`${relayUrl}/v1/auth/complete`, {
+      const { response, body } = await fetchJson<AuthSession>(`${relayUrl}/v1/auth/complete`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -564,17 +629,11 @@ export default function App() {
           deviceLabel: deviceLabel.trim() || suggestMobileDeviceLabel(),
         }),
       });
-
-      const body = ((await response.json()) as AuthSession & RelayErrorResponse) ?? {};
       if (!response.ok || !("accessToken" in body)) {
         throw new Error(body.error ?? "Unable to complete the magic link");
       }
 
       await saveStoredSession(body);
-      const setupDone = await SecureStore.getItemAsync(STORAGE_KEYS.profileSetupComplete);
-      if (!setupDone) {
-        setProfileSetupActive(true);
-      }
       setSession(body);
       setChallenge(null);
       setSessionMessage({
@@ -605,7 +664,6 @@ export default function App() {
     setPendingAttachment(null);
     setProfileSetupActive(false);
     setProfileSetupName("");
-    setProfileSetupSelfie(null);
     setProfileSetupError(null);
     setSessionMessage({
       tone: "info",
@@ -625,10 +683,9 @@ export default function App() {
     setIsPreviewingInvite(true);
     setInvitePreviewError(null);
     try {
-      const response = await fetch(
+      const { response, body } = await fetchJson<GroupInvitePreview>(
         `${relayUrl}/v1/groups/${normalized.groupId}/invites/${encodeURIComponent(normalized.inviteToken)}/preview`,
       );
-      const body = ((await response.json()) as GroupInvitePreview & RelayErrorResponse) ?? {};
       if (!response.ok || !("group" in body)) {
         throw new Error(body.error ?? "Invite preview failed");
       }
@@ -665,6 +722,9 @@ export default function App() {
 
       const nextGroups = await relayFetch<GroupMembershipSummary[]>(session, "/v1/groups");
       setGroups(nextGroups);
+      if (db) {
+        await saveCachedGroups(db, session.accountId, nextGroups);
+      }
       setSelectedConversationId(result.conversationId);
       setInvitePreview(null);
       setSessionMessage({
@@ -804,13 +864,18 @@ export default function App() {
         },
       );
 
-      setThreadMessages((current) => [...current, createdMessage]);
+      const nextThreadMessages = [...threadMessages, createdMessage];
+      setThreadMessages(nextThreadMessages);
       setMessageDraft("");
       setPendingAttachment(null);
 
-      if (db && createdMessage.attachment) {
-        await persistVaultMediaRecord(db, createdMessage, profile?.displayName ?? deviceLabel);
-        setVaultCount(await countVaultItems(db));
+      if (db) {
+        await saveCachedGroupMessages(db, selectedGroup.id, nextThreadMessages);
+
+        if (createdMessage.attachment) {
+          await persistVaultMediaRecord(db, createdMessage, profile?.displayName ?? deviceLabel);
+          setVaultCount(await countVaultItems(db));
+        }
       }
     } catch (error) {
       setSessionMessage({
@@ -847,6 +912,9 @@ export default function App() {
           `/v1/groups/${selectedConversationId}/messages?limit=50`,
         );
         setThreadMessages(messages);
+        if (db) {
+          await saveCachedGroupMessages(db, selectedConversationId, messages);
+        }
       } catch {
         // Silently ignore — the user can pull-to-refresh or re-open the thread.
       } finally {
@@ -855,57 +923,6 @@ export default function App() {
         }, 30_000);
       }
     })();
-  }
-
-  async function pickSelfie() {
-    setIsPickingSelfie(true);
-    setProfileSetupError(null);
-
-    try {
-      const camPermission = await ImagePicker.requestCameraPermissionsAsync();
-      let result: ImagePicker.ImagePickerResult;
-
-      if (camPermission.granted) {
-        result = await ImagePicker.launchCameraAsync({
-          quality: 0.85,
-          allowsEditing: true,
-          aspect: [1, 1],
-        });
-      } else {
-        const galleryPermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (!galleryPermission.granted) {
-          setProfileSetupError(
-            "Camera and gallery access are both blocked. Allow at least one in device settings to add a profile photo.",
-          );
-          return;
-        }
-
-        result = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ["images"],
-          quality: 0.85,
-          allowsEditing: true,
-          aspect: [1, 1],
-        });
-      }
-
-      if (!result.canceled && result.assets.length) {
-        const asset = result.assets[0];
-        setProfileSetupSelfie({
-          uri: asset.uri,
-          fileName: asset.fileName ?? `selfie-${Date.now()}.jpg`,
-          mimeType: asset.mimeType ?? "image/jpeg",
-          byteLength: asset.fileSize ?? 0,
-          width: asset.width,
-          height: asset.height,
-        });
-      }
-    } catch (error) {
-      setProfileSetupError(
-        error instanceof Error ? error.message : "Unable to open the camera or gallery.",
-      );
-    } finally {
-      setIsPickingSelfie(false);
-    }
   }
 
   async function submitProfileSetup() {
@@ -923,13 +940,6 @@ export default function App() {
       return;
     }
 
-    if (!profileSetupSelfie) {
-      setProfileSetupError(
-        "Add a profile photo to continue. It stays private and is only shared when you choose.",
-      );
-      return;
-    }
-
     setIsSubmittingProfile(true);
     setProfileSetupError(null);
 
@@ -938,11 +948,6 @@ export default function App() {
         method: "PATCH",
         body: JSON.stringify({ displayName: profileSetupName.trim() }),
       });
-
-      await Promise.all([
-        SecureStore.setItemAsync(STORAGE_KEYS.selfieUri, profileSetupSelfie.uri),
-        SecureStore.setItemAsync(STORAGE_KEYS.profileSetupComplete, "1"),
-      ]);
 
       const nextProfile = await relayFetch<MeProfile>(session, "/v1/me");
       setProfile(nextProfile);
@@ -962,7 +967,7 @@ export default function App() {
     return (
       <SafeAreaView style={styles.loadingScreen}>
         <ActivityIndicator size="large" color="#91f3d8" />
-        <Text style={styles.loadingText}>Preparing your encrypted local store…</Text>
+        <Text style={styles.loadingText}>Preparing local device storage…</Text>
       </SafeAreaView>
     );
   }
@@ -977,13 +982,13 @@ export default function App() {
           <Text style={styles.eyebrow}>Android beta</Text>
           <Text style={styles.title}>
             {session
-              ? "Send the first real message from this phone"
+              ? "Keep your trusted circles reachable on this phone"
               : "Install to first trusted-circle message should stay under five minutes"}
           </Text>
           <Text style={styles.subtitle}>
             {session
-              ? "This beta now completes sign-in in-app, registers this device identity, and drops into a real group thread with a photo-capable composer."
-              : "The shortest path is now invite link, private email, adults-only confirmation, device label, and inbox confirmation handed back into the app."}
+              ? "This build keeps sign-in, recent group threads, and photo attachments working on Android while the stronger encrypted group model is still rolling out."
+              : "The shortest path is invite, private email, adults-only confirmation, device label, and inbox completion handed back into the app."}
           </Text>
 
           {!session ? (
@@ -1015,12 +1020,9 @@ export default function App() {
               sessionMessage={sessionMessage}
               profileSetupName={profileSetupName}
               setProfileSetupName={setProfileSetupName}
-              profileSetupSelfie={profileSetupSelfie}
               profileSetupError={profileSetupError}
               setProfileSetupError={setProfileSetupError}
-              isPickingSelfie={isPickingSelfie}
               isSubmittingProfile={isSubmittingProfile}
-              onPickSelfie={() => void pickSelfie()}
               onSubmit={() => void submitProfileSetup()}
             />
           ) : (

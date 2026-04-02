@@ -1,4 +1,4 @@
-name: Release - Android Beta
+name: Release - Android
 
 on:
   push:
@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build Android beta scaffold
+    name: Build Android release artifacts
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v6
@@ -58,13 +58,13 @@ jobs:
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d \
             > apps/mobile/android/app/emberchamber-release.keystore
 
-      - name: Build debug APK and signed release AAB
+      - name: Build signed release APK and AAB
         env:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          ./gradlew assembleDebug bundleRelease \
+          ./gradlew assembleRelease bundleRelease \
             -Pandroid.injected.signing.store.file="$GITHUB_WORKSPACE/apps/mobile/android/app/emberchamber-release.keystore" \
             -Pandroid.injected.signing.store.password="$ANDROID_STORE_PASSWORD" \
             -Pandroid.injected.signing.key.alias="$ANDROID_KEY_ALIAS" \
@@ -74,19 +74,19 @@ jobs:
       - name: Rename artifacts with version
         run: |
           REF="${GITHUB_REF_NAME//\//-}"
-          APK_SRC=apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          APK_SRC=apps/mobile/android/app/build/outputs/apk/release/app-release.apk
           AAB_SRC=apps/mobile/android/app/build/outputs/bundle/release/app-release.aab
           mv "$APK_SRC" \
-            "apps/mobile/android/app/build/outputs/apk/debug/emberchamber-${REF}-debug.apk"
+            "apps/mobile/android/app/build/outputs/apk/release/emberchamber-${REF}-release.apk"
           mv "$AAB_SRC" \
             "apps/mobile/android/app/build/outputs/bundle/release/emberchamber-${REF}-release.aab"
 
       - name: Upload Android artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: emberchamber-android-beta
+          name: emberchamber-android-release
           path: |
-            apps/mobile/android/app/build/outputs/apk/debug/*.apk
+            apps/mobile/android/app/build/outputs/apk/release/*.apk
             apps/mobile/android/app/build/outputs/bundle/release/*.aab
           retention-days: 30
           if-no-files-found: error
@@ -95,7 +95,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          prerelease: true
+          prerelease: ${{ contains(github.ref_name, '-beta.') || contains(github.ref_name, '-rc.') }}
           files: |
-            apps/mobile/android/app/build/outputs/apk/debug/*.apk
+            apps/mobile/android/app/build/outputs/apk/release/*.apk
             apps/mobile/android/app/build/outputs/bundle/release/*.aab
