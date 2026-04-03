@@ -52,6 +52,12 @@
     },
     "plugins": [
       [
+        "expo-notifications",
+        {
+          "defaultChannel": "messages"
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "photosPermission": "Allow EmberChamber to attach photos from your library."
@@ -69,6 +75,6 @@
           "enableFTS": true
         }
       ]
-    ],
+    ]
   }
 }

@@ -5,7 +5,8 @@ pub mod mailbox;
 
 pub use auth::{
     AccessTokenClaims, AttachmentTicket, AuthCompleteRequest, AuthSession, AuthStartRequest,
-    ContactCard, MagicLinkChallenge, MeProfile, PasskeyCredentialRef, SessionDescriptor,
+    ContactCard, DevicePushTokenClearResult, DevicePushTokenRegistration, DevicePushTokenStatus,
+    MagicLinkChallenge, MeProfile, PasskeyCredentialRef, SessionDescriptor,
 };
 pub use conversation::{
     BlockRule, ConversationCapabilities, ConversationDescriptor, ConversationDetail,

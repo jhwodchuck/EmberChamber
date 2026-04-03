@@ -1,5 +1,6 @@
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
+import * as Notifications from "expo-notifications";
 import * as ScreenCapture from "expo-screen-capture";
 import * as SecureStore from "expo-secure-store";
 import * as SQLite from "expo-sqlite";
@@ -67,6 +68,12 @@ import {
   saveStoredDeviceBundle,
   saveStoredSession,
 } from "./src/lib/session";
+import {
+  ensurePushRuntimeConfiguredAsync,
+  getNativeDevicePushRegistrationAsync,
+  getNotificationConversationId,
+  getNotificationReason,
+} from "./src/lib/push";
 import { styles, theme } from "./src/styles";
 import { OnboardingScreen } from "./src/screens/OnboardingScreen";
 import { ProfileSetupScreen } from "./src/screens/ProfileSetupScreen";
@@ -131,6 +138,9 @@ export default function App() {
   const [profileSetupError, setProfileSetupError] = useState<string | null>(null);
 
   const imageRefreshPendingRef = useRef(false);
+  const groupsRef = useRef<GroupMembershipSummary[]>([]);
+  const sessionRef = useRef<AuthSession | null>(null);
+  const selectedConversationIdRef = useRef<string | null>(null);
 
   const selectedGroup =
     groups.find((group) => group.id === selectedConversationId) ??
@@ -263,7 +273,64 @@ export default function App() {
     return confirmedBundles;
   }
 
+  async function refreshGroupThread(currentSession: AuthSession, conversationId: string) {
+    const messages = await relayFetch<GroupThreadMessage[]>(
+      currentSession,
+      `/v1/groups/${conversationId}/messages?limit=100`,
+    );
+    setThreadMessages(messages);
+
+    if (db) {
+      await saveCachedGroupMessages(db, conversationId, messages);
+    }
+  }
+
+  async function registerNativePushToken(currentSession: AuthSession) {
+    await ensurePushRuntimeConfiguredAsync();
+    const registration = await getNativeDevicePushRegistrationAsync();
+
+    if (!registration) {
+      try {
+        await relayFetch<{ cleared: boolean }>(currentSession, "/v1/devices/push-token", {
+          method: "DELETE",
+        });
+      } catch {
+        // Ignore cleanup errors if push was never registered server-side.
+      }
+      return false;
+    }
+
+    await relayFetch<{ registered: boolean }>(currentSession, "/v1/devices/push-token", {
+      method: "POST",
+      body: JSON.stringify({
+        ...registration,
+        appId: Platform.OS === "android" ? "com.emberchamber.mobile" : "com.emberchamber.mobile.ios",
+        pushEnvironment: "production",
+      }),
+    });
+
+    return true;
+  }
+
+  async function clearNativePushToken(currentSession: AuthSession) {
+    await relayFetch<{ cleared: boolean }>(currentSession, "/v1/devices/push-token", {
+      method: "DELETE",
+    });
+  }
+
   // ---- effects ----
+
+  useEffect(() => {
+    sessionRef.current = session;
+  }, [session]);
+
+  useEffect(() => {
+    selectedConversationIdRef.current = selectedConversationId;
+  }, [selectedConversationId]);
+
+  useEffect(() => {
+    groupsRef.current = groups;
+  }, [groups]);
 
   useEffect(() => {
     let mounted = true;
@@ -336,6 +403,109 @@ export default function App() {
   useEffect(() => {
     void SystemUI.setBackgroundColorAsync(theme.colors.background).catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    if (!session) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const handleNotificationSelection = (notification: Notifications.Notification) => {
+      const reason = getNotificationReason(notification);
+      const conversationId = getNotificationConversationId(notification);
+      if (conversationId && reason === "relay_hosted_message") {
+        setSelectedConversationId(conversationId);
+        const currentSession = sessionRef.current;
+        if (currentSession) {
+          void refreshGroupThread(currentSession, conversationId).catch(() => undefined);
+        }
+        return;
+      }
+
+      if (reason === "mailbox") {
+        setSessionMessage({
+          tone: "info",
+          title: "New secure message",
+          body: "A secure conversation is waiting to sync on this device.",
+        });
+      }
+    };
+
+    let receivedSubscription: Notifications.EventSubscription | null = null;
+    let responseSubscription: Notifications.EventSubscription | null = null;
+    let pushTokenSubscription: Notifications.EventSubscription | null = null;
+
+    void (async () => {
+      try {
+        await registerNativePushToken(session);
+      } catch (error) {
+        if (!cancelled) {
+          console.warn("mobile_push_registration_failed", error);
+        }
+      }
+
+      if (cancelled) {
+        return;
+      }
+
+      receivedSubscription = Notifications.addNotificationReceivedListener((notification) => {
+        const conversationId = getNotificationConversationId(notification);
+        const reason = getNotificationReason(notification);
+        const currentSession = sessionRef.current;
+
+        if (
+          currentSession &&
+          reason === "relay_hosted_message" &&
+          conversationId &&
+          selectedConversationIdRef.current === conversationId
+        ) {
+          void refreshGroupThread(currentSession, conversationId).catch(() => undefined);
+        }
+      });
+
+      responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
+        handleNotificationSelection(response.notification);
+      });
+
+      pushTokenSubscription = Notifications.addPushTokenListener((token) => {
+        const currentSession = sessionRef.current;
+        if (!currentSession || typeof token.data !== "string" || !token.data) {
+          return;
+        }
+
+        const provider = token.type === "fcm" ? "fcm" : token.type === "apns" ? "apns" : null;
+        if (!provider) {
+          return;
+        }
+
+        void relayFetch<{ registered: boolean }>(currentSession, "/v1/devices/push-token", {
+          method: "POST",
+          body: JSON.stringify({
+            provider,
+            platform: Platform.OS === "android" ? "android" : "ios",
+            token: token.data,
+            appId: Platform.OS === "android" ? "com.emberchamber.mobile" : "com.emberchamber.mobile.ios",
+            pushEnvironment: "production",
+          }),
+        }).catch((error) => {
+          console.warn("mobile_push_token_refresh_failed", error);
+        });
+      });
+
+      const lastResponse = Notifications.getLastNotificationResponse();
+      if (lastResponse?.notification) {
+        handleNotificationSelection(lastResponse.notification);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      receivedSubscription?.remove();
+      responseSubscription?.remove();
+      pushTokenSubscription?.remove();
+    };
+  }, [session]);
 
   useEffect(() => {
     if (!session) {
@@ -724,6 +894,14 @@ export default function App() {
   }
 
   async function signOut() {
+    if (session) {
+      try {
+        await clearNativePushToken(session);
+      } catch {
+        // Ignore logout cleanup failures and clear the local session anyway.
+      }
+    }
+
     await clearStoredSession();
     setSession(null);
     setProfile(null);
@@ -1043,14 +1221,7 @@ export default function App() {
 
     void (async () => {
       try {
-        const messages = await relayFetch<GroupThreadMessage[]>(
-          session,
-          `/v1/groups/${selectedConversationId}/messages?limit=100`,
-        );
-        setThreadMessages(messages);
-        if (db) {
-          await saveCachedGroupMessages(db, selectedConversationId, messages);
-        }
+        await refreshGroupThread(session, selectedConversationId);
       } catch {
         // Silently ignore — the user can pull-to-refresh or re-open the thread.
       } finally {

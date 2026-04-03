@@ -34,6 +34,7 @@ import {
   signValue,
 } from "./lib/crypto";
 import { dbAll, dbFirst, dbRun } from "./lib/d1";
+import { sendFcmNotification } from "./lib/fcm";
 import { errorResponse, HttpError, json, preflightResponse, readJson, withCors } from "./lib/http";
 import { signAccessToken, verifyAccessToken } from "./lib/tokens";
 
@@ -58,6 +59,8 @@ export interface Env {
   EMBERCHAMBER_ATTACHMENT_TOKEN_SECRET: string;
   EMBERCHAMBER_ALLOWED_ORIGINS: string;
   EMBERCHAMBER_ADMIN_SECRET?: string;
+  EMBERCHAMBER_PUSH_TOKEN_SECRET?: string;
+  EMBERCHAMBER_FCM_SERVICE_ACCOUNT_JSON?: string;
   RESEND_API_KEY?: string;
 }
 
@@ -86,6 +89,14 @@ const deviceRegisterSchema = z.object({
   signedPrekeyB64: z.string().min(16),
   signedPrekeySignatureB64: z.string().min(16),
   oneTimePrekeysB64: z.array(z.string().min(16)).max(100).default([]),
+});
+
+const devicePushTokenSchema = z.object({
+  provider: z.enum(["fcm", "apns"]),
+  platform: z.enum(["android", "ios"]),
+  token: z.string().min(16).max(4096),
+  appId: z.string().min(1).max(160).optional(),
+  pushEnvironment: z.enum(["production", "sandbox"]).optional(),
 });
 
 const directMessageSchema = z.object({
@@ -253,7 +264,19 @@ type MagicLinkMessage = {
   expiresAt: string;
 };
 
-type RelayQueueMessage = CleanupMessage | MagicLinkMessage;
+type PushWakeMessage = {
+  type: "push_wake";
+  targetDeviceId: string;
+  reason: "mailbox" | "relay_hosted_message";
+  conversationId?: string;
+  conversationTitle?: string | null;
+  senderDisplayName?: string | null;
+  historyMode?: "device_encrypted" | "relay_hosted";
+  messageKind?: "mailbox" | "text" | "media" | "system_notice";
+  sentAt: string;
+};
+
+type RelayQueueMessage = CleanupMessage | MagicLinkMessage | PushWakeMessage;
 
 type LoadedConversation = {
   summary: ConversationSummary;
@@ -425,6 +448,164 @@ async function scheduleCleanup(env: Env, source: string) {
     source,
     requestedAt: new Date().toISOString(),
   } satisfies CleanupMessage);
+}
+
+function requirePushTokenSecret(env: Env): string {
+  if (!env.EMBERCHAMBER_PUSH_TOKEN_SECRET) {
+    throw new HttpError(503, "Push registration is not configured on this relay.", "PUSH_NOT_CONFIGURED");
+  }
+
+  return env.EMBERCHAMBER_PUSH_TOKEN_SECRET;
+}
+
+async function queuePushWake(
+  env: Env,
+  message: Omit<PushWakeMessage, "type" | "sentAt"> & { sentAt?: string }
+) {
+  await env.PUSH_QUEUE.send({
+    type: "push_wake",
+    ...message,
+    sentAt: message.sentAt ?? new Date().toISOString(),
+  } satisfies PushWakeMessage);
+}
+
+function buildPushWakeNotification(
+  previewMode: string | null | undefined,
+  message: PushWakeMessage
+): { title: string; body: string } {
+  if (previewMode === "expanded") {
+    if (message.reason === "relay_hosted_message") {
+      return {
+        title: message.conversationTitle?.trim() || "Conversation update",
+        body: message.senderDisplayName?.trim()
+          ? `${message.senderDisplayName} sent a message`
+          : "New message waiting in EmberChamber",
+      };
+    }
+
+    return {
+      title: message.senderDisplayName?.trim() || "New secure message",
+      body: "Open EmberChamber to sync",
+    };
+  }
+
+  if (previewMode === "none") {
+    return {
+      title: "EmberChamber",
+      body: "Activity to review",
+    };
+  }
+
+  return {
+    title: "New message",
+    body: "Open EmberChamber to sync",
+  };
+}
+
+async function deliverPushWake(env: Env, message: PushWakeMessage): Promise<void> {
+  if (!env.EMBERCHAMBER_FCM_SERVICE_ACCOUNT_JSON) {
+    return;
+  }
+
+  if (!env.EMBERCHAMBER_PUSH_TOKEN_SECRET) {
+    console.warn("push_delivery_skipped_missing_secret", {
+      deviceId: message.targetDeviceId,
+      reason: message.reason,
+    });
+    return;
+  }
+
+  const registration = await dbFirst<{
+    device_id: string;
+    platform: "android" | "ios";
+    provider: "fcm" | "apns";
+    app_id: string | null;
+    token_ciphertext: string;
+    notification_preview_mode: string | null;
+  }>(
+    env.DB,
+    `SELECT
+       dpt.device_id,
+       dpt.platform,
+       dpt.provider,
+       dpt.app_id,
+       dpt.token_ciphertext,
+       a.notification_preview_mode
+     FROM device_push_tokens dpt
+     JOIN devices d ON d.id = dpt.device_id
+     JOIN accounts a ON a.id = dpt.account_id
+    WHERE dpt.device_id = ?1
+      AND dpt.invalidated_at IS NULL
+      AND d.revoked_at IS NULL`,
+    message.targetDeviceId
+  );
+
+  if (!registration || registration.platform !== "android" || registration.provider !== "fcm") {
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const token = await decryptString(env.EMBERCHAMBER_PUSH_TOKEN_SECRET, registration.token_ciphertext);
+  const alert = buildPushWakeNotification(registration.notification_preview_mode, message);
+  const result = await sendFcmNotification(env.EMBERCHAMBER_FCM_SERVICE_ACCOUNT_JSON, {
+    token,
+    title: alert.title,
+    body: alert.body,
+    collapseKey: message.conversationId ?? `device-${message.targetDeviceId}`,
+    ttlSeconds: 120,
+    restrictedPackageName: registration.app_id ?? "com.emberchamber.mobile",
+    data: {
+      reason: message.reason,
+      conversationId: message.conversationId ?? "",
+      conversationTitle: message.conversationTitle ?? "",
+      senderDisplayName: message.senderDisplayName ?? "",
+      historyMode: message.historyMode ?? "",
+      messageKind: message.messageKind ?? "",
+      sentAt: message.sentAt,
+    },
+  });
+
+  if (result.ok) {
+    await dbRun(
+      env.DB,
+      `UPDATE device_push_tokens
+          SET last_push_attempt_at = ?1,
+              last_push_success_at = ?1,
+              last_push_error = NULL
+        WHERE device_id = ?2`,
+      now,
+      message.targetDeviceId
+    );
+    return;
+  }
+
+  if (result.invalidToken) {
+    await dbRun(
+      env.DB,
+      `UPDATE device_push_tokens
+          SET last_push_attempt_at = ?1,
+              last_push_error = ?2,
+              invalidated_at = ?1
+        WHERE device_id = ?3`,
+      now,
+      `invalid_token:${result.status}`,
+      message.targetDeviceId
+    );
+    return;
+  }
+
+  await dbRun(
+    env.DB,
+    `UPDATE device_push_tokens
+        SET last_push_attempt_at = ?1,
+            last_push_error = ?2
+      WHERE device_id = ?3`,
+    now,
+    `send_failed:${result.status}`,
+    message.targetDeviceId
+  );
+
+  throw new Error(`FCM delivery failed (${result.status}): ${result.bodyText}`);
 }
 
 async function loadAccessibleConversations(
@@ -1624,6 +1805,7 @@ async function createRelayHostedConversationMessage(
   input: {
     conversationId: string;
     senderAccountId: string;
+    senderDeviceId?: string | null;
     text?: string | null;
     attachmentId?: string | null;
     clientMessageId?: string | null;
@@ -1633,6 +1815,11 @@ async function createRelayHostedConversationMessage(
     env.DB,
     "SELECT display_name FROM accounts WHERE id = ?1",
     input.senderAccountId
+  );
+  const conversation = await dbFirst<{ title: string | null }>(
+    env.DB,
+    "SELECT title FROM conversations WHERE id = ?1",
+    input.conversationId
   );
 
   let attachment:
@@ -1731,6 +1918,40 @@ async function createRelayHostedConversationMessage(
     method: "POST",
     body: JSON.stringify(payload)
   }).catch(() => {}); // Fire and forget errors on broadcast
+
+  const recipientDevices = await dbAll<{ id: string }>(
+    env.DB,
+    `SELECT DISTINCT d.id
+       FROM conversation_members cm
+       JOIN devices d ON d.account_id = cm.account_id
+      WHERE cm.conversation_id = ?1
+        AND cm.removed_at IS NULL
+        AND d.revoked_at IS NULL
+        AND (?2 IS NULL OR d.id != ?2)`,
+    input.conversationId,
+    input.senderDeviceId ?? null
+  );
+
+  await Promise.all(
+    recipientDevices.map((device) =>
+      queuePushWake(env, {
+        targetDeviceId: device.id,
+        reason: "relay_hosted_message",
+        conversationId: input.conversationId,
+        conversationTitle: conversation?.title ?? null,
+        senderDisplayName: payload.senderDisplayName,
+        historyMode: "relay_hosted",
+        messageKind: payload.kind,
+        sentAt: payload.createdAt,
+      }).catch((error) => {
+        console.error("push_queue_enqueue_failed", {
+          deviceId: device.id,
+          conversationId: input.conversationId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      })
+    )
+  );
 
   return payload;
 }
@@ -2337,6 +2558,76 @@ export default {
         );
 
         return respond(json({ registered: true, deviceId: auth.deviceId }));
+      }
+
+      if (request.method === "POST" && pathname === "/v1/devices/push-token") {
+        const auth = await requireAuth(request, env);
+        const body = devicePushTokenSchema.parse(await readJson(request));
+        if (
+          (body.platform === "android" && body.provider !== "fcm") ||
+          (body.platform === "ios" && body.provider !== "apns")
+        ) {
+          throw new HttpError(400, "Push provider does not match the target platform", "INVALID_PUSH_PROVIDER");
+        }
+        const pushSecret = requirePushTokenSecret(env);
+        const now = new Date().toISOString();
+        const tokenBlindIndex = await blindIndex(pushSecret, `push:${body.provider}:${body.platform}:${body.token}`);
+        const tokenCiphertext = await encryptString(pushSecret, body.token);
+
+        await dbRun(
+          env.DB,
+          "DELETE FROM device_push_tokens WHERE device_id = ?1 OR token_blind_index = ?2",
+          auth.deviceId,
+          tokenBlindIndex
+        );
+        await dbRun(
+          env.DB,
+          `INSERT INTO device_push_tokens (
+             device_id,
+             account_id,
+             provider,
+             platform,
+             push_environment,
+             app_id,
+             token_ciphertext,
+             token_blind_index,
+             created_at,
+             updated_at,
+             last_registered_at,
+             invalidated_at
+           )
+           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?9, ?9, NULL)`,
+          auth.deviceId,
+          auth.accountId,
+          body.provider,
+          body.platform,
+          body.pushEnvironment ?? null,
+          body.appId ?? null,
+          tokenCiphertext,
+          tokenBlindIndex,
+          now
+        );
+
+        return respond(
+          json({
+            registered: true,
+            deviceId: auth.deviceId,
+            provider: body.provider,
+            platform: body.platform,
+          })
+        );
+      }
+
+      if (request.method === "DELETE" && pathname === "/v1/devices/push-token") {
+        const auth = await requireAuth(request, env);
+        await dbRun(
+          env.DB,
+          "DELETE FROM device_push_tokens WHERE device_id = ?1 AND account_id = ?2",
+          auth.deviceId,
+          auth.accountId
+        );
+
+        return respond(json({ cleared: true, deviceId: auth.deviceId }));
       }
 
       if (request.method === "POST" && pathname === "/v1/devices/link/start") {
@@ -3281,6 +3572,7 @@ export default {
             await createRelayHostedConversationMessage(env, {
               conversationId,
               senderAccountId: auth.accountId,
+              senderDeviceId: auth.deviceId,
               text: normalizedText || null,
               attachmentId: body.attachmentId ?? null,
               clientMessageId: body.clientMessageId ?? null,
@@ -3452,12 +3744,6 @@ export default {
           conversationId,
           auth.accountId
         );
-        const sender = await dbFirst<{ display_name: string }>(
-          env.DB,
-          "SELECT display_name FROM accounts WHERE id = ?1",
-          auth.accountId
-        );
-
         const conversation = await dbFirst<{ id: string; history_mode: string | null }>(
           env.DB,
           "SELECT id, history_mode FROM conversations WHERE id = ?1 AND kind = 'group'",
@@ -3476,93 +3762,19 @@ export default {
           );
         }
 
-        let attachment:
-          | {
-              id: string;
-              file_name: string;
-              mime_type: string;
-              byte_length: number;
-              content_class: "image" | "video" | "audio" | "file";
-              retention_mode: "private_vault" | "ephemeral";
-              protection_profile: "sensitive_media" | "standard";
-              preview_blur_hash: string | null;
-              account_id: string;
-              conversation_id: string | null;
-            }
-          | null = null;
-
-        if (body.attachmentId) {
-          attachment = await dbFirst<{
-            id: string;
-            file_name: string;
-            mime_type: string;
-            byte_length: number;
-            content_class: "image" | "video" | "audio" | "file";
-            retention_mode: "private_vault" | "ephemeral";
-            protection_profile: "sensitive_media" | "standard";
-            preview_blur_hash: string | null;
-            account_id: string;
-            conversation_id: string | null;
-          }>(
-            env.DB,
-            `SELECT
-               id,
-               file_name,
-               mime_type,
-               byte_length,
-               content_class,
-               retention_mode,
-               protection_profile,
-               preview_blur_hash,
-               account_id,
-               conversation_id
-             FROM attachments
-            WHERE id = ?1`,
-            body.attachmentId
-          );
-
-          if (!attachment || attachment.account_id !== auth.accountId || attachment.conversation_id !== conversationId) {
-            throw new HttpError(403, "Attachment is not available for this group message", "FORBIDDEN");
-          }
-        }
-
-        const created = await appendConversationMessage(env, {
-          conversationId,
-          senderAccountId: auth.accountId,
-          kind: attachment ? "media" : "text",
-          text: normalizedText || null,
-          attachmentId: attachment?.id ?? null,
-          clientMessageId: body.clientMessageId ?? null,
-        });
-
-        const expiresAtMs = Date.now() + 30 * 60 * 1000;
-        const message: GroupThreadMessage = {
-          id: created.id,
-          conversationId,
-          historyMode: "relay_hosted",
-          senderAccountId: auth.accountId,
-          senderDisplayName: sender?.display_name ?? conversationTitleForAccount(auth.accountId),
-          kind: attachment ? "media" : "text",
-          text: normalizedText || null,
-          attachment: attachment
-            ? {
-                id: attachment.id,
-                downloadUrl: `${env.EMBERCHAMBER_RELAY_PUBLIC_URL}/v1/attachments/download/${attachment.id}?token=${encodeURIComponent(
-                  await signAttachmentToken(env, attachment.id, "download", expiresAtMs)
-                )}`,
-                fileName: attachment.file_name,
-                mimeType: attachment.mime_type,
-                byteLength: attachment.byte_length,
-                contentClass: attachment.content_class,
-                retentionMode: attachment.retention_mode,
-                protectionProfile: attachment.protection_profile,
-                previewBlurHash: attachment.preview_blur_hash,
-              }
-            : null,
-          createdAt: created.createdAt,
-        };
-
-        return respond(json(message, { status: 201 }));
+        return respond(
+          json(
+            await createRelayHostedConversationMessage(env, {
+              conversationId,
+              senderAccountId: auth.accountId,
+              senderDeviceId: auth.deviceId,
+              text: normalizedText || null,
+              attachmentId: body.attachmentId ?? null,
+              clientMessageId: body.clientMessageId ?? null,
+            }),
+            { status: 201 }
+          )
+        );
       }
 
       const conversationInviteMatch = pathname.match(/^\/v1\/conversations\/([0-9a-f-]{36})\/invites$/i);
@@ -4390,6 +4602,7 @@ export default {
         const memberSet = new Set(memberRows.map((row) => row.account_id));
 
         const accepted: string[] = [];
+        const acceptedPushRecipients = new Set<string>();
         const blockedRecipients: string[] = [];
         const rejectedRecipients: string[] = [];
         const duplicateEnvelopeIds: string[] = [];
@@ -4476,14 +4689,38 @@ export default {
             envelope.expiresAt
           );
           accepted.push(envelope.envelopeId);
+          acceptedPushRecipients.add(item.recipientDeviceId);
         }
 
         if (accepted.length > 0) {
+          const sender = await dbFirst<{ display_name: string }>(
+            env.DB,
+            "SELECT display_name FROM accounts WHERE id = ?1",
+            auth.accountId
+          );
           await updateConversationActivity(env, body.conversationId, {
             at: new Date().toISOString(),
             kind: "mailbox",
           });
           await scheduleCleanup(env, "message_batch");
+          await Promise.all(
+            Array.from(acceptedPushRecipients).map((deviceId) =>
+              queuePushWake(env, {
+                targetDeviceId: deviceId,
+                reason: "mailbox",
+                conversationId: body.conversationId,
+                senderDisplayName: sender?.display_name ?? conversationTitleForAccount(auth.accountId),
+                historyMode: "device_encrypted",
+                messageKind: "mailbox",
+              }).catch((error) => {
+                console.error("push_queue_enqueue_failed", {
+                  deviceId,
+                  conversationId: body.conversationId,
+                  error: error instanceof Error ? error.message : String(error),
+                });
+              })
+            )
+          );
         }
 
         return respond(
@@ -4907,6 +5144,8 @@ export default {
           await runRelayCleanup(env);
         } else if (message.body.type === "magic_link") {
           await deliverMagicLinkEmail(env, message.body);
+        } else if (message.body.type === "push_wake") {
+          await deliverPushWake(env, message.body);
         }
         message.ack();
       } catch (error) {

@@ -12,6 +12,9 @@ export type AttachmentEncryptionMode = "none" | "device_encrypted";
 export type RoomAccessPolicy = "all_members" | "restricted";
 export type ConversationInviteScope = "conversation" | "room";
 export type NotificationPreviewMode = "discreet" | "expanded" | "none";
+export type PushProvider = "fcm" | "apns";
+export type PushPlatform = "android" | "ios";
+export type PushEnvironment = "production" | "sandbox";
 export type ReportReason =
   | "spam"
   | "harassment"
@@ -61,6 +64,26 @@ export interface PasskeyCredentialRef {
   credentialId: string;
   transports: string[];
   createdAt: string;
+}
+
+export interface DevicePushTokenRegistration {
+  provider: PushProvider;
+  platform: PushPlatform;
+  token: string;
+  appId?: string;
+  pushEnvironment?: PushEnvironment;
+}
+
+export interface DevicePushTokenStatus {
+  registered: boolean;
+  deviceId: DeviceId;
+  provider: PushProvider;
+  platform: PushPlatform;
+}
+
+export interface DevicePushTokenClearResult {
+  cleared: boolean;
+  deviceId: DeviceId;
 }
 
 export interface ContactCard {

@@ -22,6 +22,7 @@ const relaySecrets = {
   EMBERCHAMBER_ACCESS_TOKEN_SECRET: "test-access-token-secret",
   EMBERCHAMBER_REFRESH_TOKEN_SECRET: "test-refresh-token-secret",
   EMBERCHAMBER_ATTACHMENT_TOKEN_SECRET: "test-attachment-token-secret",
+  EMBERCHAMBER_PUSH_TOKEN_SECRET: "test-push-token-secret",
 };
 
 let worker: Awaited<ReturnType<typeof unstable_dev>>;
@@ -78,6 +79,28 @@ async function registerOpaqueBundle(session: RelaySession) {
   });
 
   expect(response.status).toBe(200);
+}
+
+async function registerPushToken(session: RelaySession, token = `fcm-${session.deviceId}-registration-token`) {
+  const response = await relayFetch("/v1/devices/push-token", {
+    method: "POST",
+    headers: authHeaders(session),
+    body: JSON.stringify({
+      provider: "fcm",
+      platform: "android",
+      token,
+      appId: "com.emberchamber.mobile",
+      pushEnvironment: "production",
+    }),
+  });
+
+  expect(response.status).toBe(200);
+  return (await response.json()) as {
+    registered: boolean;
+    deviceId: string;
+    provider: string;
+    platform: string;
+  };
 }
 
 async function updateDisplayName(session: RelaySession, displayName: string) {
@@ -316,5 +339,26 @@ describe("relay routes", () => {
 
     expect(sync.envelopes).toHaveLength(1);
     expect(sync.envelopes[0].envelopeId).toBe(firstSend.acceptedEnvelopeIds[0]);
+  });
+
+  it("registers and clears a native push token for the current device", async () => {
+    const alice = await bootstrapAccount("push-alice@example.com", "Push Alice");
+
+    const registered = await registerPushToken(alice);
+    expect(registered.registered).toBe(true);
+    expect(registered.deviceId).toBe(alice.deviceId);
+    expect(registered.provider).toBe("fcm");
+    expect(registered.platform).toBe("android");
+
+    const clearedResponse = await relayFetch("/v1/devices/push-token", {
+      method: "DELETE",
+      headers: { authorization: `Bearer ${alice.accessToken}` },
+    });
+
+    expect(clearedResponse.status).toBe(200);
+    expect(await clearedResponse.json()).toEqual({
+      cleared: true,
+      deviceId: alice.deviceId,
+    });
   });
 });

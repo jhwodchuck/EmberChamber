@@ -11,7 +11,8 @@
     "EMBERCHAMBER_EMAIL_PROVIDER": "log",
     "EMBERCHAMBER_EMAIL_FROM": "noreply@emberchamber.local",
     "EMBERCHAMBER_DEV_INVITE_TOKEN": "dev-beta-invite",
-    "EMBERCHAMBER_ALLOWED_ORIGINS": "http://127.0.0.1:3000,http://localhost:3000,https://tauri.localhost,http://tauri.localhost,tauri://localhost"
+    "EMBERCHAMBER_ALLOWED_ORIGINS": "http://127.0.0.1:3000,http://localhost:3000,https://tauri.localhost,http://tauri.localhost,tauri://localhost",
+    "EMBERCHAMBER_PUSH_TOKEN_SECRET": "dev-push-token-secret"
   },
   "durable_objects": {
     "bindings": [
@@ -74,6 +75,13 @@
       {
         "queue": "emberchamber-email",
         "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 3,
+        "retry_delay": 30
+      },
+      {
+        "queue": "emberchamber-push",
+        "max_batch_size": 25,
         "max_batch_timeout": 5,
         "max_retries": 3,
         "retry_delay": 30
@@ -141,6 +149,13 @@
           {
             "queue": "emberchamber-cleanup-staging",
             "max_batch_size": 10,
+            "max_batch_timeout": 5,
+            "max_retries": 3,
+            "retry_delay": 30
+          },
+          {
+            "queue": "emberchamber-push-staging",
+            "max_batch_size": 25,
             "max_batch_timeout": 5,
             "max_retries": 3,
             "retry_delay": 30
@@ -220,6 +235,13 @@
           {
             "queue": "emberchamber-email-prod",
             "max_batch_size": 10,
+            "max_batch_timeout": 5,
+            "max_retries": 3,
+            "retry_delay": 30
+          },
+          {
+            "queue": "emberchamber-push-prod",
+            "max_batch_size": 25,
             "max_batch_timeout": 5,
             "max_retries": 3,
             "retry_delay": 30

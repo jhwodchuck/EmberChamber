@@ -39,5 +39,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Write Firebase Android app config
+        if: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON != '' }}
+        env:
+          ANDROID_GOOGLE_SERVICES_JSON: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON }}
+        run: |
+          mkdir -p apps/mobile/secrets
+          printf '%s' "$ANDROID_GOOGLE_SERVICES_JSON" > apps/mobile/secrets/google-services.json
+
       - name: Verify Android mobile project
         run: npm run verify:android --workspace=apps/mobile
