@@ -23,6 +23,29 @@ const supportTracks = [
   },
 ];
 
+const quickAnswers = [
+  {
+    question: "Can't access my invite code.",
+    answer:
+      "Invite codes expire and have limited uses. Ask whoever sent yours to confirm it's still active, then email us the code and we'll look it up.",
+  },
+  {
+    question: "Didn't get the magic-link email.",
+    answer:
+      "Check your spam folder first. If it's not there within a few minutes, email support with the address you used and we'll resend manually.",
+  },
+  {
+    question: "Which client should I start with?",
+    answer:
+      "Start with the web app — no install needed, works immediately after onboarding. Move to Android or desktop when you want the preferred daily experience.",
+  },
+  {
+    question: "What data stays on my device?",
+    answer:
+      "Your message history, search index, and private keys. They never leave your device in decryptable form. The relay sees routing metadata, not content.",
+  },
+];
+
 export default function SupportPage() {
   return (
     <MarketingShell>
@@ -32,12 +55,24 @@ export default function SupportPage() {
           <h1 className="mt-5 max-w-3xl text-balance font-display text-5xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-6xl">
             Get help with your beta access.
           </h1>
-          <p className="mt-5 max-w-3xl text-lg leading-8 text-[var(--text-secondary)]">
-            We&apos;re a small team building in the open. Email us directly — it&apos;s the fastest path for
-            invite and access issues. Expect a reply within 1–2 business days.
-          </p>
 
-          <div className="mt-8 flex flex-wrap items-center gap-4">
+          <div className="mt-8 grid gap-4 sm:grid-cols-2">
+            {quickAnswers.map((qa) => (
+              <div key={qa.question} className="rounded-[1.35rem] border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
+                <p className="text-sm font-semibold text-[var(--text-primary)]">{qa.question}</p>
+                <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{qa.answer}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-8 border-t border-[var(--border)] pt-8">
+            <p className="text-base font-semibold text-[var(--text-primary)]">Still need help?</p>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">
+              Email us directly — it&apos;s the fastest path. Expect a reply within 1–2 business days.
+            </p>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-4">
             <a href={`mailto:${supportEmail}`} className="btn-primary">
               Email Support
             </a>

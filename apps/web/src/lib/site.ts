@@ -10,6 +10,69 @@ export const githubSourceZipUrl = `${githubRepoUrl}/archive/refs/heads/main.zip`
 export const githubIssuesUrl = `${githubRepoUrl}/issues`;
 export const supportEmail = "support@emberchamber.com";
 
+export const betaScopeItems = [
+  { feature: "E2EE direct messages", status: "live" as const, detail: "Encrypted end-to-end on every surface" },
+  { feature: "Small group messages", status: "live" as const, detail: "Invite-controlled, pairwise fan-out" },
+  { feature: "Encrypted attachments", status: "live" as const, detail: "Files and media, E2EE in transit" },
+  { feature: "Invite-only onboarding", status: "live" as const, detail: "Email magic-link, no public registration" },
+  { feature: "Device-local search", status: "live" as const, detail: "Index never sent to relay" },
+  { feature: "Account recovery", status: "live" as const, detail: "Private email only" },
+  { feature: "Passkey sign-in", status: "planned" as const, detail: "After email bootstrap stabilises" },
+  { feature: "iPhone client", status: "planned" as const, detail: "After first-wave targets are stable" },
+];
+
+export const surfaceCapabilities = [
+  {
+    name: "Web",
+    badge: "browser",
+    recommended: "Fastest start — no install",
+    capabilities: [
+      "Onboarding & registration",
+      "Direct messages",
+      "Group messages",
+      "Invite review & management",
+      "Device-local search",
+      "Account recovery",
+      "Settings",
+    ],
+    caveat: "No push notifications",
+  },
+  {
+    name: "Android",
+    badge: ".apk",
+    recommended: "Primary daily use",
+    capabilities: [
+      "Everything in web",
+      "Push notifications",
+      "Native device integration",
+      "Background sync",
+    ],
+    caveat: null,
+  },
+  {
+    name: "Windows",
+    badge: ".exe / .msi",
+    recommended: "Desktop daily use",
+    capabilities: [
+      "Everything in web",
+      "Push notifications",
+      "Native desktop shell",
+    ],
+    caveat: null,
+  },
+  {
+    name: "Ubuntu",
+    badge: ".deb / AppImage",
+    recommended: "Linux / operators",
+    capabilities: [
+      "Everything in web",
+      "Push notifications",
+      ".deb and AppImage packaging",
+    ],
+    caveat: null,
+  },
+];
+
 export const primaryNav = [
   { href: "/start", label: "Start Here" },
   { href: "/download", label: "Download" },

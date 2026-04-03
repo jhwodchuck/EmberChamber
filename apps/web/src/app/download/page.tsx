@@ -4,7 +4,7 @@ import { MarketingShell } from "@/components/marketing-shell";
 import { StatusCallout } from "@/components/status-callout";
 import { formatUtcDate } from "@/lib/format";
 import { getLatestPlatformRelease } from "@/lib/releases";
-import { githubReleasesUrl, githubSourceZipUrl, launchPlatforms } from "@/lib/site";
+import { githubReleasesUrl, githubSourceZipUrl, launchPlatforms, surfaceCapabilities } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Launch Targets",
@@ -93,7 +93,7 @@ async function DownloadPageInner({
                     <ul className="space-y-1 text-xs text-[var(--text-secondary)]">
                       {latestRelease.downloadsByPlatform[platform.id].map((download) => (
                         <li key={`${download.url}-meta`}>
-                          {download.label} • {formatBytes(download.size)} • {download.downloadCount} downloads
+                          {download.label} • {formatBytes(download.size)}
                         </li>
                       ))}
                     </ul>
@@ -168,22 +168,34 @@ async function DownloadPageInner({
           </div>
         </div>
 
-        <div className="mt-10 grid gap-5 lg:grid-cols-2">
-          <div className="panel px-6 py-7">
-            <h2 className="text-xl font-semibold text-[var(--text-primary)]">What the web app can do today</h2>
-            <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-              The web app supports onboarding, messaging, joined-space search, invite landings,
-              account recovery support, and bootstrap UI. It remains a real secondary
-              surface rather than a dead-end fallback.
-            </p>
-          </div>
-          <div className="panel px-6 py-7">
-            <h2 className="text-xl font-semibold text-[var(--text-primary)]">Why download availability is uneven</h2>
-            <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-              Android, Windows, and Ubuntu are the first packaging targets, but each one still
-              depends on its own build lane, bundle preparation, and GitHub release publishing
-              step.
-            </p>
+        <div className="mt-10">
+          <h2 className="font-display text-2xl font-semibold text-[var(--text-primary)]">What each surface can do</h2>
+          <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+            All surfaces share the same relay contracts and E2EE. The differences are push notifications,
+            native device integration, and which one you should start with.
+          </p>
+          <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {surfaceCapabilities.map((surface) => (
+              <div key={surface.name} className="panel px-5 py-6">
+                <div className="text-xs uppercase tracking-[0.2em] text-brand-600">{surface.badge}</div>
+                <h3 className="mt-2 text-xl font-semibold text-[var(--text-primary)]">{surface.name}</h3>
+                <p className="mt-1 text-xs font-medium text-[var(--text-secondary)]">{surface.recommended}</p>
+                <ul className="mt-4 space-y-2">
+                  {surface.capabilities.map((cap) => (
+                    <li key={cap} className="flex items-start gap-2 text-sm text-[var(--text-secondary)]">
+                      <span className="mt-0.5 flex-shrink-0 text-green-500">✓</span>
+                      {cap}
+                    </li>
+                  ))}
+                  {surface.caveat ? (
+                    <li className="flex items-start gap-2 text-sm text-[var(--text-secondary)]">
+                      <span className="mt-0.5 flex-shrink-0 text-[var(--border)]">–</span>
+                      {surface.caveat}
+                    </li>
+                  ) : null}
+                </ul>
+              </div>
+            ))}
           </div>
         </div>
 
