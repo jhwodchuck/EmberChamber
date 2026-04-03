@@ -19,13 +19,13 @@ type StartPath = {
 const startSteps = [
   {
     number: "01",
-    title: "Pick the right lane",
-    body: "New visitors should start with the trust model. Invite holders should use the beta onboarding path. Existing users should sign in.",
+    title: "Start with the web app",
+    body: "The browser handles everything you need first: joining an invite, sending messages, and getting a feel for how it works. No install required.",
   },
   {
     number: "02",
-    title: "Use web for the fastest start",
-    body: "The web app handles onboarding, direct messages, search, invite review, and settings. It is the easiest way to get moving quickly.",
+    title: "Get onboarded, then explore",
+    body: "Once your invite is in, set up your first conversation. The web app covers messages, search, and settings without needing a download.",
   },
   {
     number: "03",
@@ -38,11 +38,11 @@ function getStartPaths(): StartPath[] {
   return [
     {
       eyebrow: "New Here",
-      title: "Understand the trust model first",
-      body: "Start with what EmberChamber is, what it isn't, and where your data actually lives.",
+      title: "See how EmberChamber works",
+      body: "Start with what EmberChamber is, what it isn&apos;t, and where your data actually lives. Then decide if it&apos;s right for your circle.",
       primary: {
         href: "/trust-and-safety",
-        label: "Read Trust Model",
+        label: "How It Works",
       },
       secondary: {
         href: "/download",
@@ -100,7 +100,7 @@ function getStartPaths(): StartPath[] {
           },
           secondary: {
             href: "/trust-and-safety",
-            label: "Review Trust Model",
+            label: "How It Works",
           },
         },
     {
@@ -160,7 +160,7 @@ export function StartHereGuide() {
       {!authBootstrapEnabled ? (
         <StatusCallout tone="info" title="Beta access is invite-only and limited right now">
           New sign-in and registration links are not being issued on this deployment yet. You can
-          still read the trust model, check available builds, and email support to coordinate your
+          still explore how it works, check available builds, and email support to coordinate your
           invite.
         </StatusCallout>
       ) : null}

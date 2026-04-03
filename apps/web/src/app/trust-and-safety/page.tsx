@@ -4,51 +4,53 @@ import { PolicyPage } from "@/components/policy-page";
 export const metadata: Metadata = {
   title: "Trust & Safety",
   description:
-    "How EmberChamber intends to balance private encrypted messaging with anti-abuse boundaries.",
+    "How EmberChamber keeps your conversations private — and the platform healthy for everyone in it.",
 };
 
 export default function TrustAndSafetyPage() {
   return (
     <PolicyPage
       eyebrow="Trust & safety"
-      title="Private messaging still needs defensible abuse boundaries."
-      intro="EmberChamber is being designed to reduce unnecessary centralized visibility without turning the product into a platform for clearly illegal abuse or infrastructure attacks."
+      title="Designed to protect your conversations — and keep the platform healthy."
+      intro="End-to-end encryption and invite-only access mean your conversations belong to you, not to us. That design comes with real responsibilities — ours and yours."
     >
       <section>
-        <h2>Private conversations</h2>
+        <h2>Your conversations stay private</h2>
         <p>
-          The target model is end-to-end encrypted DMs and small groups. Those conversations should
-          not be subject to routine blanket inspection by the relay.
+          The model is end-to-end encrypted DMs and small groups. Only participants can read them.
+          The relay routes messages — it does not inspect their content.
         </p>
         <p>
-          The current beta is also adults-only. That boundary is enforced through invite gating,
-          self-attested 18+ onboarding, and organizer-controlled spaces rather than public discovery.
+          EmberChamber is adults-only. That isn&apos;t a compliance checkbox — it&apos;s a social
+          design choice. Invite gating, self-attested 18+ onboarding, and organizer-controlled
+          spaces mean the people in a circle chose each other deliberately.
         </p>
       </section>
 
       <section>
-        <h2>How abuse review is expected to work</h2>
+        <h2>When something needs attention</h2>
         <ul>
-          <li>User reports are the primary trigger for review in private spaces.</li>
-          <li>Reports should be disclosure-based, revealing selected evidence rather than unrelated history.</li>
-          <li>Account bans, invite revocation, session revocation, and rate limiting are platform-level controls for severe abuse.</li>
+          <li>User reports are the primary way serious issues surface in private spaces.</li>
+          <li>Reports are disclosure-based — you share selected evidence, not your full message history.</li>
+          <li>Severe abuse can result in account bans, invite revocation, and session termination.</li>
         </ul>
       </section>
 
       <section>
-        <h2>What EmberChamber does not claim</h2>
+        <h2>What we&apos;re honest about</h2>
         <ul>
-          <li>No promise of “uncensorable forever.”</li>
-          <li>No promise of “no monitoring” in an absolute sense.</li>
-          <li>No framing as law-enforcement proof or anonymity guaranteed.</li>
+          <li>We don&apos;t promise &ldquo;uncensorable forever.&rdquo; That&apos;s not what this is.</li>
+          <li>We don&apos;t promise zero server visibility in an absolute sense.</li>
+          <li>We don&apos;t position EmberChamber as law-enforcement proof or anonymity guaranteed.</li>
         </ul>
       </section>
 
       <section>
-        <h2>Platform protection</h2>
+        <h2>Keeping the platform healthy</h2>
         <p>
-          The relay and clients still need throttling, block rules, invite controls, and platform
-          protection against spam, bot abuse, malware distribution, and coordinated attacks.
+          Invite controls, rate limiting, and block rules protect the platform from spam, bot
+          abuse, and coordinated attacks. These exist to keep the experience good for everyone
+          with legitimate access — not to surveil private conversations.
         </p>
       </section>
     </PolicyPage>
