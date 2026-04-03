@@ -51,6 +51,21 @@ jobs:
       - name: Prebuild iOS app
         run: npm run prebuild:ios --workspace=apps/mobile
 
+      - name: Patch Podfile deployment targets
+        run: |
+          cat >> apps/mobile/ios/Podfile << 'RUBY'
+
+          # Raise all pods below iOS 12.0 to avoid simulator SDK warnings
+          post_install do |installer|
+            installer.pods_project.targets.each do |target|
+              target.build_configurations.each do |config|
+                dt = config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f
+                config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '12.0' if dt < 12.0
+              end
+            end
+          end
+          RUBY
+
       - name: Install CocoaPods dependencies
         run: pod install
         working-directory: apps/mobile/ios
@@ -85,7 +100,10 @@ jobs:
             -quiet \
             CODE_SIGNING_ALLOWED=NO \
             SWIFT_STRICT_CONCURRENCY=minimal \
-            OTHER_SWIFT_FLAGS="-strict-concurrency=minimal"
+            OTHER_SWIFT_FLAGS="-strict-concurrency=minimal" \
+            GCC_WARN_ABOUT_DEPRECATED_FUNCTIONS=NO \
+            CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS=NO \
+            OTHER_CFLAGS="-Wno-deprecated-declarations -Wno-unused-result"
 
       - name: Package simulator artifact
         run: |
