@@ -7,21 +7,22 @@
     <style>
       :root {
         color-scheme: dark;
-        --bg: #081015;
-        --bg-secondary: #0d181d;
-        --panel: rgba(10, 21, 27, 0.92);
-        --panel-strong: #11212b;
-        --line: rgba(138, 240, 214, 0.18);
-        --line-strong: rgba(138, 240, 214, 0.3);
-        --text: #eef6f7;
-        --muted: #a5bcc0;
-        --accent: #8af0d6;
-        --accent-ink: #06242b;
+        --bg: #0d0809;
+        --bg-secondary: #130c0d;
+        --panel: rgba(19, 12, 13, 0.9);
+        --panel-strong: rgba(17, 11, 12, 0.94);
+        --line: rgba(255, 255, 255, 0.08);
+        --line-strong: rgba(255, 184, 144, 0.24);
+        --text: #fcfbfa;
+        --muted: #d7b9ab;
+        --accent: #ffb890;
+        --accent-strong: #ea6f3f;
+        --accent-ink: #fff7f1;
         --warning: #ffd28b;
-        --error: #fda4af;
-        --success: #7ce6bf;
-        --shadow: 0 24px 80px rgba(0, 0, 0, 0.3);
-        font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+        --error: #fecdd3;
+        --success: #98efc5;
+        --shadow: 0 28px 70px rgba(0, 0, 0, 0.34);
+        font-family: "Inter", system-ui, sans-serif;
         background: var(--bg);
         color: var(--text);
       }
@@ -38,8 +39,9 @@
 
       body {
         background:
-          radial-gradient(circle at top left, rgba(138, 240, 214, 0.15), transparent 24%),
-          radial-gradient(circle at bottom right, rgba(106, 167, 255, 0.16), transparent 26%),
+          radial-gradient(circle at top, rgba(255, 191, 146, 0.16), transparent 24%),
+          radial-gradient(circle at 15% 18%, rgba(234, 111, 63, 0.18), transparent 18%),
+          radial-gradient(circle at 85% 16%, rgba(255, 205, 146, 0.08), transparent 20%),
           linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 35%),
           var(--bg);
       }
@@ -82,7 +84,9 @@
       .panel,
       .card {
         border: 1px solid var(--line);
-        background: var(--panel);
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02)),
+          var(--panel);
         border-radius: 24px;
         box-shadow: var(--shadow);
       }
@@ -92,7 +96,7 @@
       }
 
       .panel-strong {
-        background: linear-gradient(180deg, rgba(138, 240, 214, 0.06), transparent 38%), var(--panel-strong);
+        background: linear-gradient(180deg, rgba(255, 171, 120, 0.08), transparent 38%), var(--panel-strong);
       }
 
       .stack {
@@ -127,8 +131,8 @@
         border-radius: 18px;
         display: grid;
         place-items: center;
-        background: linear-gradient(160deg, #8af0d6, #6aa7ff);
-        color: #041318;
+        background: linear-gradient(160deg, #ffb890, #ea6f3f);
+        color: #170c0a;
         font-size: 1.1rem;
         font-weight: 700;
       }
@@ -161,11 +165,13 @@
         font-size: clamp(2.6rem, 5vw, 4.8rem);
         line-height: 0.92;
         letter-spacing: -0.05em;
+        font-family: Georgia, "Times New Roman", serif;
       }
 
       h2 {
         font-size: 1.45rem;
         line-height: 1.15;
+        font-family: Georgia, "Times New Roman", serif;
       }
 
       h3 {
@@ -184,8 +190,8 @@
       .highlight {
         margin-top: 20px;
         border-radius: 18px;
-        border: 1px solid rgba(138, 240, 214, 0.22);
-        background: rgba(138, 240, 214, 0.08);
+        border: 1px solid rgba(255, 184, 144, 0.22);
+        background: rgba(234, 111, 63, 0.1);
         padding: 16px 18px;
         line-height: 1.6;
       }
@@ -267,8 +273,8 @@
       }
 
       .nav-button.active {
-        background: rgba(138, 240, 214, 0.12);
-        border-color: rgba(138, 240, 214, 0.18);
+        background: rgba(234, 111, 63, 0.14);
+        border-color: rgba(255, 184, 144, 0.2);
         color: var(--text);
       }
 
@@ -281,16 +287,17 @@
 
       .ghost-button,
       .secondary-button {
-        background: rgba(255, 255, 255, 0.02);
+        background: rgba(255, 255, 255, 0.03);
         border-color: var(--line);
         color: var(--muted);
       }
 
       .primary-button {
-        background: var(--accent);
+        background: var(--accent-strong);
         border-color: transparent;
         color: var(--accent-ink);
         font-weight: 700;
+        box-shadow: 0 16px 38px rgba(234, 111, 63, 0.28);
       }
 
       .danger-button {
@@ -332,8 +339,8 @@
       textarea {
         width: 100%;
         border-radius: 16px;
-        border: 1px solid #1d3943;
-        background: #091419;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.03);
         color: var(--text);
         padding: 14px 15px;
         outline: none;
@@ -347,8 +354,8 @@
       input:focus,
       select:focus,
       textarea:focus {
-        border-color: rgba(138, 240, 214, 0.68);
-        box-shadow: 0 0 0 3px rgba(138, 240, 214, 0.12);
+        border-color: rgba(255, 184, 144, 0.6);
+        box-shadow: 0 0 0 3px rgba(234, 111, 63, 0.12);
       }
 
       .checkbox-row,
@@ -402,7 +409,7 @@
       }
 
       .status.success {
-        border-color: rgba(124, 230, 191, 0.32);
+        border-color: rgba(152, 239, 197, 0.34);
         background: rgba(12, 43, 34, 0.52);
       }
 
@@ -422,7 +429,7 @@
         margin-top: 10px;
         padding: 10px 12px;
         border-radius: 14px;
-        background: rgba(8, 20, 25, 0.88);
+        background: rgba(13, 8, 9, 0.78);
         color: var(--accent);
         overflow-wrap: anywhere;
         white-space: pre-wrap;
@@ -456,7 +463,7 @@
       .invite-card {
         border-radius: 20px;
         border: 1px solid var(--line);
-        background: rgba(11, 24, 31, 0.92);
+        background: rgba(255, 255, 255, 0.04);
         padding: 18px;
       }
 
@@ -501,7 +508,7 @@
         margin-top: 14px;
         border-radius: 16px;
         border: 1px solid var(--line);
-        background: rgba(255, 255, 255, 0.02);
+        background: rgba(255, 255, 255, 0.03);
         padding: 14px;
       }
 
@@ -526,7 +533,7 @@
         padding: 18px;
         border-radius: 20px;
         border: 1px dashed var(--line);
-        background: rgba(255, 255, 255, 0.02);
+        background: rgba(255, 255, 255, 0.03);
       }
 
       .section-intro {
@@ -565,7 +572,7 @@
       .thread-card {
         border-radius: 24px;
         border: 1px solid var(--line);
-        background: rgba(9, 20, 25, 0.94);
+        background: rgba(17, 11, 12, 0.92);
         padding: 18px;
       }
 
@@ -596,13 +603,13 @@
       .message-bubble {
         border-radius: 22px;
         border: 1px solid var(--line);
-        background: rgba(255, 255, 255, 0.03);
+        background: rgba(255, 255, 255, 0.04);
         padding: 14px;
       }
 
       .message-row.self .message-bubble {
-        background: rgba(138, 240, 214, 0.1);
-        border-color: rgba(138, 240, 214, 0.22);
+        background: rgba(234, 111, 63, 0.12);
+        border-color: rgba(255, 184, 144, 0.2);
       }
 
       .message-row.system .message-bubble {
@@ -630,8 +637,8 @@
         margin-top: 12px;
         border-radius: 18px;
         overflow: hidden;
-        border: 1px solid rgba(138, 240, 214, 0.18);
-        background: rgba(8, 20, 25, 0.96);
+        border: 1px solid var(--line);
+        background: rgba(13, 8, 9, 0.92);
       }
 
       .media-shell img,
@@ -640,7 +647,7 @@
         width: 100%;
         max-height: 28rem;
         object-fit: contain;
-        background: #050c10;
+        background: #120a0a;
       }
 
       .media-shell.blurred img {
@@ -674,11 +681,11 @@
       .watermark {
         max-width: 18rem;
         border-radius: 999px;
-        background: rgba(8, 20, 25, 0.78);
+        background: rgba(13, 8, 9, 0.78);
         border: 1px solid rgba(255, 255, 255, 0.12);
         padding: 7px 10px;
         font-size: 0.78rem;
-        color: rgba(238, 246, 247, 0.92);
+        color: rgba(255, 241, 232, 0.92);
         backdrop-filter: blur(8px);
       }
 
@@ -695,7 +702,7 @@
         border-radius: 18px;
         overflow: hidden;
         border: 1px solid var(--line);
-        background: rgba(255, 255, 255, 0.03);
+        background: rgba(255, 255, 255, 0.04);
         padding: 12px;
       }
 
@@ -706,7 +713,7 @@
         max-height: 20rem;
         object-fit: contain;
         border-radius: 14px;
-        background: #050c10;
+        background: #120a0a;
       }
 
       .group-shortcut {

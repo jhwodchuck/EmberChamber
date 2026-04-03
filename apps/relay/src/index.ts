@@ -1699,13 +1699,13 @@ async function createRelayHostedConversationMessage(
   });
 
   const expiresAtMs = Date.now() + 30 * 60 * 1000;
-  return {
+  const payload = {
     id: created.id,
     conversationId: input.conversationId,
-    historyMode: "relay_hosted",
+    historyMode: "relay_hosted" as const,
     senderAccountId: input.senderAccountId,
     senderDisplayName: sender?.display_name ?? conversationTitleForAccount(input.senderAccountId),
-    kind: attachment ? "media" : "text",
+    kind: attachment ? ("media" as const) : ("text" as const),
     text: input.text ?? null,
     attachment: attachment
       ? {
@@ -1724,6 +1724,15 @@ async function createRelayHostedConversationMessage(
       : null,
     createdAt: created.createdAt,
   };
+
+  const doId = env.GROUP_COORDINATOR.idFromName(input.conversationId);
+  const stub = env.GROUP_COORDINATOR.get(doId);
+  await stub.fetch("http://do/broadcast", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  }).catch(() => {}); // Fire and forget errors on broadcast
+
+  return payload;
 }
 
 function inviteStatusForRow(input: {
@@ -3281,6 +3290,36 @@ export default {
         );
       }
 
+      const conversationWsMatch = pathname.match(/^\/v1\/conversations\/([0-9a-f-]{36})\/ws$/i);
+      if (request.method === "GET" && conversationWsMatch && request.headers.get("Upgrade") === "websocket") {
+        const conversationId = conversationWsMatch[1];
+        const token = url.searchParams.get("token");
+        if (!token) {
+          throw new HttpError(401, "Missing websocket auth token", "INVALID_TOKEN");
+        }
+
+        const payload = await verifyAccessToken(token, env.EMBERCHAMBER_ACCESS_TOKEN_SECRET);
+        if (!payload || !payload.sub) {
+          throw new HttpError(401, "Invalid websocket auth token", "INVALID_TOKEN");
+        }
+
+        const membership = await dbFirst<{ account_id: string }>(
+          env.DB,
+          `SELECT account_id
+             FROM conversation_members
+            WHERE conversation_id = ?1 AND account_id = ?2 AND removed_at IS NULL`,
+          conversationId,
+          payload.sub
+        );
+        if (!membership) {
+          throw new HttpError(403, "Not a member of this conversation", "FORBIDDEN");
+        }
+
+        const doId = env.GROUP_COORDINATOR.idFromName(conversationId);
+        const stub = env.GROUP_COORDINATOR.get(doId);
+        return stub.fetch(new Request("http://do/ws", request));
+      }
+
       const groupMessagesMatch = pathname.match(/^\/v1\/groups\/([0-9a-f-]{36})\/messages$/i);
       if (request.method === "GET" && groupMessagesMatch) {
         const auth = await requireAuth(request, env);
@@ -4471,6 +4510,34 @@ export default {
             `https://do/sync?after=${encodeURIComponent(after ?? "")}&limit=${encodeURIComponent(limit)}`
           )
         );
+      }
+
+      if (request.method === "GET" && pathname === "/v1/mailbox/ws" && request.headers.get("Upgrade") === "websocket") {
+        const token = url.searchParams.get("token");
+        if (!token) {
+          throw new HttpError(401, "Missing websocket auth token", "INVALID_TOKEN");
+        }
+
+        const payload = await verifyAccessToken(token, env.EMBERCHAMBER_ACCESS_TOKEN_SECRET);
+        if (!payload?.sub || !payload.deviceId) {
+          throw new HttpError(401, "Invalid websocket auth token", "INVALID_TOKEN");
+        }
+
+        const device = await dbFirst<{ id: string }>(
+          env.DB,
+          `SELECT id
+             FROM devices
+            WHERE id = ?1 AND account_id = ?2`,
+          payload.deviceId,
+          payload.sub
+        );
+        if (!device) {
+          throw new HttpError(403, "Device is not available for this account", "FORBIDDEN");
+        }
+
+        const id = env.DEVICE_MAILBOX.idFromName(payload.deviceId);
+        const stub = env.DEVICE_MAILBOX.get(id);
+        return stub.fetch(new Request("https://do/ws", request));
       }
 
       if (request.method === "POST" && pathname === "/v1/mailbox/ack") {

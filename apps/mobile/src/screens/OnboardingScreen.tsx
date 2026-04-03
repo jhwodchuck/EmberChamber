@@ -2,7 +2,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import type { Field, FormMessage, MagicLinkResponse } from "../types";
 import { onboardingSteps } from "../constants";
-import { styles } from "../styles";
+import { styles, theme } from "../styles";
 import { StepCard } from "../components/StepCard";
 import { StatusCard } from "../components/StatusCard";
 
@@ -63,7 +63,7 @@ export function OnboardingScreen(props: OnboardingScreenProps) {
           <TextInput
             autoCapitalize="none"
             placeholder="Paste /invite/{groupId}/{token}"
-            placeholderTextColor="#8ba1a3"
+            placeholderTextColor={theme.colors.placeholder}
             style={[styles.input, errors.groupInvite ? styles.inputError : null]}
             value={inviteInput}
             onChangeText={(value) => {
@@ -86,7 +86,7 @@ export function OnboardingScreen(props: OnboardingScreenProps) {
             autoComplete="email"
             keyboardType="email-address"
             placeholder="you@example.com"
-            placeholderTextColor="#8ba1a3"
+            placeholderTextColor={theme.colors.placeholder}
             style={[styles.input, errors.email ? styles.inputError : null]}
             value={email}
             onChangeText={(value) => {
@@ -117,7 +117,7 @@ export function OnboardingScreen(props: OnboardingScreenProps) {
             <TextInput
               autoCapitalize="none"
               placeholder="Paste your beta invite token"
-              placeholderTextColor="#8ba1a3"
+              placeholderTextColor={theme.colors.placeholder}
               style={[styles.input, errors.inviteToken ? styles.inputError : null]}
               value={inviteToken}
               onChangeText={(value) => {
@@ -147,7 +147,7 @@ export function OnboardingScreen(props: OnboardingScreenProps) {
           <Text style={styles.label}>Device label</Text>
           <TextInput
             placeholder="Android phone"
-            placeholderTextColor="#8ba1a3"
+            placeholderTextColor={theme.colors.placeholder}
             style={[styles.input, errors.deviceLabel ? styles.inputError : null]}
             value={deviceLabel}
             onChangeText={(value) => {

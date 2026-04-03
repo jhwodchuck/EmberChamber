@@ -5,13 +5,19 @@ import { useParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import type { ConversationDetail, GroupThreadMessage } from "@emberchamber/protocol";
 import { Avatar } from "@/components/avatar";
-import { relayAttachmentApi, relayConversationApi, uploadAttachment } from "@/lib/relay";
+import { useCompanionShell } from "@/components/companion-shell";
+import {
+  ensureRelayAccessToken,
+  getRelayWebsocketUrl,
+  relayAttachmentApi,
+  relayConversationApi,
+  uploadAttachment,
+} from "@/lib/relay";
 import {
   ensureWorkspaceReady,
   listStoredDmMessages,
   readDmAttachmentBlob,
   sendDirectMessage,
-  syncRelayMailbox,
   type StoredDmMessage,
 } from "@/lib/relay-workspace";
 import { useAuthStore } from "@/lib/store";
@@ -32,11 +38,22 @@ function contentClassForMimeType(mimeType: string) {
   return "image" as const;
 }
 
+function formatBytes(value: number) {
+  if (value >= 1024 * 1024) {
+    return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+  }
+  if (value >= 1024) {
+    return `${Math.round(value / 1024)} KB`;
+  }
+  return `${value} B`;
+}
+
 export default function ChatPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id ?? "";
   const router = useRouter();
   const { user } = useAuthStore();
+  const { mailboxRevision } = useCompanionShell();
   const [conversation, setConversation] = useState<ConversationDetail | null>(null);
   const [groupMessages, setGroupMessages] = useState<GroupThreadMessage[]>([]);
   const [dmMessages, setDmMessages] = useState<StoredDmMessage[]>([]);
@@ -53,11 +70,14 @@ export default function ChatPage() {
     }
   }
 
-  async function loadDmMessages(conversationId: string) {
+  async function loadDmMessages(conversationId: string, options: { syncWorkspace?: boolean } = {}) {
+    const { syncWorkspace = false } = options;
+
     try {
-      await ensureWorkspaceReady();
-      await syncRelayMailbox();
-      setDmMessages(listStoredDmMessages(conversationId));
+      if (syncWorkspace) {
+        await ensureWorkspaceReady();
+      }
+      setDmMessages(await listStoredDmMessages(conversationId));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to sync DM history");
     }
@@ -103,27 +123,127 @@ export default function ChatPage() {
     }
 
     if (conversation.kind === "group" || conversation.kind === "room") {
+      let cancelled = false;
+      let ws: WebSocket | null = null;
+      let reconnectTimer: number | null = null;
+
       void loadRelayHostedMessages(conversation.id);
-      const intervalId = window.setInterval(() => {
-        void loadRelayHostedMessages(conversation.id);
-      }, 10000);
+
+      const clearReconnectTimer = () => {
+        if (reconnectTimer !== null) {
+          window.clearTimeout(reconnectTimer);
+          reconnectTimer = null;
+        }
+      };
+
+      const connectGroupSocket = async () => {
+        const session = await ensureRelayAccessToken();
+        if (cancelled || !session?.accessToken) {
+          return;
+        }
+
+        const wsUrl = `${getRelayWebsocketUrl()}/v1/conversations/${conversation.id}/ws?token=${session.accessToken}`;
+        ws = new WebSocket(wsUrl);
+        ws.onmessage = (event) => {
+          try {
+            const message = JSON.parse(event.data) as GroupThreadMessage;
+            setGroupMessages((prev) => {
+              if (prev.some((m) => m.id === message.id)) return prev;
+              return [message, ...prev].sort(
+                (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+              );
+            });
+          } catch {
+            // Ignore unparseable messages
+          }
+        };
+        ws.onclose = () => {
+          if (!cancelled) {
+            clearReconnectTimer();
+            reconnectTimer = window.setTimeout(() => {
+              reconnectTimer = null;
+              void connectGroupSocket();
+            }, 1500);
+          }
+        };
+        ws.onerror = () => {
+          ws?.close();
+        };
+      };
+
+      void connectGroupSocket();
 
       return () => {
-        window.clearInterval(intervalId);
+        cancelled = true;
+        clearReconnectTimer();
+        ws?.close();
       };
+    }
+  }, [conversation, router]);
+
+  useEffect(() => {
+    if (!conversation || conversation.kind !== "direct_message") {
+      return;
+    }
+
+    void loadDmMessages(conversation.id, { syncWorkspace: true });
+  }, [conversation]);
+
+  useEffect(() => {
+    if (!conversation || conversation.kind !== "direct_message") {
+      return;
+    }
+
+    if (mailboxRevision === 0) {
+      return;
     }
 
     void loadDmMessages(conversation.id);
-    const intervalId = window.setInterval(() => {
-      void loadDmMessages(conversation.id);
-    }, 6000);
+  }, [conversation, mailboxRevision]);
 
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [conversation, router]);
+  async function compressWebImage(file: File): Promise<File> {
+    if (!file.type.startsWith("image/")) return file;
+    
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX_DIM = 1920;
+        let { width, height } = img;
+        if (width > MAX_DIM || height > MAX_DIM) {
+          if (width > height) {
+            height *= MAX_DIM / width;
+            width = MAX_DIM;
+          } else {
+            width *= MAX_DIM / height;
+            height = MAX_DIM;
+          }
+        }
+        
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(new File([blob], file.name, { type: "image/jpeg", lastModified: Date.now() }));
+            } else {
+              resolve(file);
+            }
+          },
+          "image/jpeg",
+          0.8
+        );
+      };
+      img.onerror = () => resolve(file);
+      img.src = URL.createObjectURL(file);
+    });
+  }
 
-  async function uploadGroupAttachment(file: File) {
+  async function uploadGroupAttachment(originalFile: File) {
+    const file = await compressWebImage(originalFile);
     const ticket = await relayAttachmentApi.createTicket({
       fileName: file.name,
       mimeType: file.type || "application/octet-stream",
@@ -249,7 +369,7 @@ export default function ChatPage() {
                 >
                   <div className="max-w-[80%] rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-3">
                     <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-600">
-                      {isOwn ? "You" : message.senderDisplayName}
+                      {isOwn ? "You" : message.senderDisplayName}{isOwn ? "  ✓✓" : ""}
                     </p>
                     {message.text ? (
                       <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--text-primary)]">{message.text}</p>
@@ -282,7 +402,7 @@ export default function ChatPage() {
               >
                 <div className="max-w-[80%] rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-3">
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-600">
-                    {isOwn ? "You" : message.senderDisplayName}
+                    {isOwn ? "You" : message.senderDisplayName}{isOwn ? "  ✓✓" : ""}
                   </p>
                   {message.text ? (
                     <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--text-primary)]">{message.text}</p>
@@ -326,8 +446,20 @@ export default function ChatPage() {
                 onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
               />
             </label>
+            <label className="btn-ghost cursor-pointer">
+              Take Photo
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
+              />
+            </label>
             {selectedFile ? (
-              <span className="text-sm text-[var(--text-secondary)]">{selectedFile.name}</span>
+              <span className="text-sm text-[var(--text-secondary)]">
+                {selectedFile.name} · {formatBytes(selectedFile.size)}
+              </span>
             ) : null}
             <button type="submit" className="btn-primary" disabled={isSending}>
               {isSending ? "Sending…" : "Send"}

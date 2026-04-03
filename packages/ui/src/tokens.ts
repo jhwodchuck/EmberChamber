@@ -1,62 +1,73 @@
 /**
  * EmberChamber design tokens.
  *
- * Visual direction: graphite/ivory base, teal signal colour, restrained motion,
- * dense but calm layouts, editorial display font for headers, neutral sans for UI.
+ * Visual direction: deep obsidian/graphite dark mode base, vibrant ember orange accent,
+ * restrained motion, glassmorphism surface layering, dense but calm layouts, 
+ * modern digital-first typography for headers, neutral sans for UI.
  */
 
 // ─── Colour palette ──────────────────────────────────────────────────────────
 
 export const colors = {
-  // Neutrals — graphite/ivory base
-  graphite: {
-    50:  "#f7f7f8",
-    100: "#eeeef0",
-    200: "#d9d9de",
-    300: "#b8b8c2",
-    400: "#9292a0",
-    500: "#717181",
-    600: "#5a5a6a",
-    700: "#474756",
-    800: "#3a3a47",
-    900: "#2e2e3a",
-    950: "#1a1a24",
+  // Brand — Ember Orange
+  ember: {
+    50:  "#fff3ec",
+    100: "#ffe1d1",
+    200: "#ffc2a2",
+    300: "#ffb890", // Light accent
+    400: "#ff996a",
+    500: "#ea6f3f", // Core Primary
+    600: "#d66034", // Pressed Primary
+    700: "#c85832",
+    800: "#853823",
+    900: "#61281c",
+    950: "#401a14",
   },
 
-  ivory: {
-    50:  "#fdfcfb",
-    100: "#f9f7f4",
-    200: "#f2ede8",
-    300: "#e8e0d8",
+  // Obsidian Neutrals for true premium dark aesthetic
+  obsidian: {
+    50:  "#fcfbfa",
+    100: "#f6d4c5", // Soft text
+    200: "#d7b9ab", // Muted text
+    300: "#b9968f", // Placeholder
+    400: "#a7867d",
+    500: "#716666",
+    600: "#4a3f3f",
+    700: "#322626", // Border
+    800: "#1a1012", // Panel Strong
+    900: "#130c0d", // Panel / Surface
+    950: "#0d0809", // App Background
   },
 
-  // Signal — teal accent
-  teal: {
-    50:  "#effcf9",
-    100: "#d0f5ed",
-    200: "#a4ebdc",
-    300: "#6ddac6",
-    400: "#3bc2ab",
-    500: "#1fa890",  // primary signal colour
-    600: "#178776",
-    700: "#166b5e",
-    800: "#15544b",
-    900: "#12433c",
-    950: "#082924",
+  // Glass/Overlay Variables
+  glass: {
+    surfaceStrong: "rgba(255, 255, 255, 0.06)",
+    surface: "rgba(255, 255, 255, 0.04)",
+    surfaceSubtle: "rgba(255, 255, 255, 0.02)",
+    borderStrong: "rgba(255, 184, 144, 0.2)",
+    border: "rgba(255, 255, 255, 0.09)",
   },
 
-  // Semantic
-  error:   { light: "#fef2f2", DEFAULT: "#dc2626", dark: "#991b1b" },
-  warning: { light: "#fffbeb", DEFAULT: "#d97706", dark: "#92400e" },
-  success: { light: "#f0fdf4", DEFAULT: "#16a34a", dark: "#14532d" },
-  info:    { light: "#eff6ff", DEFAULT: "#2563eb", dark: "#1e3a8a" },
+  // Semantic Colors
+  error:   { border: "rgba(253, 164, 175, 0.36)", background: "rgba(82, 23, 23, 0.44)", text: "#fecdd3" },
+  warning: { border: "rgba(255, 210, 139, 0.36)", background: "rgba(82, 56, 21, 0.44)", text: "#ffd28b" },
+  success: { border: "rgba(124, 230, 191, 0.34)", background: "rgba(21, 67, 50, 0.44)", text: "#98efc5" },
+  info:    { border: "rgba(164, 212, 253, 0.36)", background: "rgba(23, 44, 82, 0.44)", text: "#cddbfe" },
+} as const;
+
+// ─── Shadows ─────────────────────────────────────────────────────────────────
+
+export const shadows = {
+  glass: "0 28px 70px rgba(0, 0, 0, 0.34)",
+  glowEmber: "0 16px 38px rgba(234, 111, 63, 0.28)",
+  inset: "inset 0 1px 0 rgba(255, 255, 255, 0.1)",
 } as const;
 
 // ─── Typography ──────────────────────────────────────────────────────────────
 
 export const typography = {
   fontFamily: {
-    display: ["'Playfair Display'", "Georgia", "serif"],
+    display: ["Georgia", "'Times New Roman'", "serif"],
     sans:    ["'Inter'", "system-ui", "sans-serif"],
     mono:    ["'JetBrains Mono'", "'Fira Code'", "monospace"],
   },
@@ -69,6 +80,8 @@ export const typography = {
     "2xl":["1.5rem",   { lineHeight: "2rem" }],
     "3xl":["1.875rem", { lineHeight: "2.25rem" }],
     "4xl":["2.25rem",  { lineHeight: "2.5rem" }],
+    "5xl":["3rem",     { lineHeight: "1" }],
+    "6xl":["3.75rem",  { lineHeight: "1" }],
   },
 } as const;
 
@@ -100,18 +113,18 @@ export const spacing = {
 // ─── Motion ──────────────────────────────────────────────────────────────────
 
 export const animation = {
-  // Restrained motion — honour prefers-reduced-motion
+  // Premium motion with physical weight
   duration: {
-    fast:   "100ms",
-    base:   "150ms",
-    slow:   "250ms",
-    slower: "400ms",
+    fast:   "120ms",
+    base:   "200ms",
+    slow:   "350ms",
+    slower: "500ms",
   },
   easing: {
-    base:    "cubic-bezier(0.4, 0, 0.2, 1)",
+    default: "cubic-bezier(0.16, 1, 0.3, 1)",
     in:      "cubic-bezier(0.4, 0, 1, 1)",
     out:     "cubic-bezier(0, 0, 0.2, 1)",
-    spring:  "cubic-bezier(0.34, 1.56, 0.64, 1)",
+    spring:  "cubic-bezier(0.34, 1.56, 0.64, 1)", // Bouncy
   },
 } as const;
 
@@ -119,12 +132,13 @@ export const animation = {
 
 export const borderRadius = {
   none:  "0px",
-  sm:    "0.125rem",
-  base:  "0.25rem",
-  md:    "0.375rem",
-  lg:    "0.5rem",
-  xl:    "0.75rem",
-  "2xl": "1rem",
+  sm:    "0.25rem",   // 4px
+  base:  "0.375rem",  // 6px
+  md:    "0.625rem",  // 10px
+  lg:    "0.875rem",  // 14px
+  xl:    "1.125rem",  // 18px
+  "2xl": "1.5rem",    // 24px
+  "3xl": "1.75rem",   // 28px
   full:  "9999px",
 } as const;
 
@@ -140,19 +154,18 @@ export const zIndex = {
 } as const;
 
 // ─── Trust state colours ─────────────────────────────────────────────────────
-// Clear visual separation between secure DM and hosted community trust states.
 
 export const trustState = {
   /** Used for E2EE DM surfaces. */
   secure: {
-    badge:      colors.teal[500],
-    badgeBg:    colors.teal[50],
-    border:     colors.teal[200],
+    badge:      colors.success.text,
+    badgeBg:    colors.success.background,
+    border:     colors.success.border,
   },
   /** Used for hosted group/channel surfaces. */
   hosted: {
-    badge:      colors.graphite[500],
-    badgeBg:    colors.graphite[100],
-    border:     colors.graphite[200],
+    badge:      colors.obsidian[200],
+    badgeBg:    colors.obsidian[800],
+    border:     colors.obsidian[700],
   },
 } as const;

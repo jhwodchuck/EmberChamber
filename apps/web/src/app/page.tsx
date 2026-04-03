@@ -74,7 +74,7 @@ const launchAccent = {
 } as const;
 
 const launchSignals = {
-  android: ["Push notifications", "Background sync", "Primary daily client"],
+  android: ["Installable daily client", "Local SQLite cache", "Native device integration"],
   windows: ["Long sessions", "Native desktop shell", "Full beta surface"],
   ubuntu: ["Linux packaging", "Operator friendly", "Desktop-first flow"],
 } as const;
@@ -91,9 +91,10 @@ export default function HomePage() {
                 Private messaging for your trusted circle.
               </h1>
               <p className="mt-6 max-w-3xl text-lg leading-8 text-[#cdb1a5] sm:text-xl">
-                Invite-only, end-to-end encrypted, and designed so your history never becomes a
-                public profile or a searchable server archive. No feeds. No discovery. No cold
-                messages from strangers.
+                Invite-only, private by design, and built so your conversations do not turn into a
+                public profile or a searchable server archive. End-to-end encrypted direct messages
+                are live now; stronger encrypted-group history is still being finished. No feeds.
+                No discovery. No cold messages from strangers.
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">

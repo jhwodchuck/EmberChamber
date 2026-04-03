@@ -7,6 +7,8 @@ import type {
 } from "../types";
 import { defaultPrivacyDefaults } from "../constants";
 
+const MAX_CACHED_GROUP_MESSAGES = 500;
+
 export async function bootstrapLocalStore() {
   const db = await SQLite.openDatabaseAsync("emberchamber.db");
   await db.execAsync(`
@@ -68,6 +70,8 @@ export async function bootstrapLocalStore() {
     );
     CREATE INDEX IF NOT EXISTS idx_group_messages_cache_conversation
       ON group_messages_cache (conversation_id, created_at ASC);
+    CREATE INDEX IF NOT EXISTS idx_group_messages_cache_conversation_recent
+      ON group_messages_cache (conversation_id, created_at DESC);
   `);
 
   await Promise.all([
@@ -243,12 +247,10 @@ export async function saveCachedGroupMessages(
   conversationId: string,
   messages: GroupThreadMessage[],
 ) {
-  await db.runAsync("DELETE FROM group_messages_cache WHERE conversation_id = ?", conversationId);
-
   const recentMessages = messages
     .slice()
     .sort((left, right) => left.createdAt.localeCompare(right.createdAt))
-    .slice(-100);
+    .slice(-MAX_CACHED_GROUP_MESSAGES);
 
   for (const message of recentMessages) {
     await db.runAsync(
@@ -257,11 +259,28 @@ export async function saveCachedGroupMessages(
          message_id,
          payload,
          created_at
-       ) VALUES (?, ?, ?, ?)`,
+       ) VALUES (?, ?, ?, ?)
+       ON CONFLICT(conversation_id, message_id) DO UPDATE
+         SET payload = excluded.payload,
+             created_at = excluded.created_at`,
       conversationId,
       message.id,
       JSON.stringify(message),
       message.createdAt,
     );
   }
+
+  await db.runAsync(
+    `DELETE FROM group_messages_cache
+      WHERE conversation_id = ?1
+        AND message_id NOT IN (
+          SELECT message_id
+            FROM group_messages_cache
+           WHERE conversation_id = ?1
+           ORDER BY created_at DESC
+           LIMIT ?2
+        )`,
+    conversationId,
+    MAX_CACHED_GROUP_MESSAGES,
+  );
 }

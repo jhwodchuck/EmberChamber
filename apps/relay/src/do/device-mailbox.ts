@@ -18,6 +18,22 @@ interface DeviceMailboxState {
   stats: MailboxStats;
 }
 
+type MailboxStatsSnapshot = MailboxStats & {
+  queued: number;
+};
+
+type MailboxLiveEvent =
+  | {
+      type: "ready";
+      lastQueuedEnvelopeId?: string;
+      stats: MailboxStatsSnapshot;
+    }
+  | {
+      type: "envelope";
+      envelope: CipherEnvelope;
+      stats: MailboxStatsSnapshot;
+    };
+
 function defaultState(): DeviceMailboxState {
   return {
     queue: [],
@@ -41,6 +57,25 @@ export class DeviceMailboxDO extends DurableObject {
 
   private async saveState(state: DeviceMailboxState) {
     await this.ctx.storage.put(STATE_KEY, state);
+  }
+
+  private snapshotStats(state: DeviceMailboxState): MailboxStatsSnapshot {
+    return {
+      ...state.stats,
+      queued: state.queue.length,
+    };
+  }
+
+  private broadcast(payload: MailboxLiveEvent) {
+    const body = JSON.stringify(payload);
+    // @ts-expect-error getWebSockets is available in modern CF DOs
+    for (const ws of this.ctx.getWebSockets()) {
+      try {
+        ws.send(body);
+      } catch {
+        // Ignore closed sockets.
+      }
+    }
   }
 
   private async scheduleNextAlarm(state: DeviceMailboxState) {
@@ -87,6 +122,30 @@ export class DeviceMailboxDO extends DurableObject {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
 
+    if (url.pathname === "/ws") {
+      if (request.headers.get("Upgrade") === "websocket") {
+        const state = await this.loadState();
+        await this.pruneExpired(state);
+        // @ts-expect-error WebSocketPair is globally available in CF Workers
+        const pair = new WebSocketPair();
+        const client = pair[0] as WebSocket;
+        const server = pair[1] as WebSocket;
+        // @ts-expect-error acceptWebSocket is available in modern CF DOs
+        this.ctx.acceptWebSocket(server);
+        server.send(
+          JSON.stringify({
+            type: "ready",
+            lastQueuedEnvelopeId: state.queue[state.queue.length - 1],
+            stats: this.snapshotStats(state),
+          } satisfies MailboxLiveEvent),
+        );
+        // @ts-expect-error webSocket is a valid ResponseInit prop in CF
+        return new Response(null, { status: 101, webSocket: client });
+      }
+
+      return new Response("Expected WebSocket", { status: 426 });
+    }
+
     if (request.method === "POST" && url.pathname === "/enqueue") {
       const { envelope } = (await request.json()) as { envelope: CipherEnvelope };
       const state = await this.loadState();
@@ -114,6 +173,11 @@ export class DeviceMailboxDO extends DurableObject {
       await this.ctx.storage.put(`${ENVELOPE_KEY_PREFIX}${envelope.envelopeId}`, envelope);
       await this.saveState(state);
       await this.scheduleNextAlarm(state);
+      this.broadcast({
+        type: "envelope",
+        envelope,
+        stats: this.snapshotStats(state),
+      });
       return json({ queued: true, envelopeId: envelope.envelopeId });
     }
 
@@ -131,10 +195,7 @@ export class DeviceMailboxDO extends DurableObject {
       return json({
         cursor: { lastSeenEnvelopeId: selectedIds[selectedIds.length - 1] },
         envelopes: envelopes.filter(Boolean),
-        stats: {
-          ...state.stats,
-          queued: state.queue.length,
-        },
+        stats: this.snapshotStats(state),
       });
     }
 
