@@ -137,6 +137,18 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
+      - name: Calculate version code from Unix timestamp
+        run: |
+          VERSION_CODE=$(date +%s)
+          echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
+          echo "Generated versionCode: $VERSION_CODE (Unix timestamp seconds)"
+
+      - name: Inject Android versionCode into Expo config
+        env:
+          VERSION_CODE: ${{ env.VERSION_CODE }}
+        run: |
+          node -e "const fs=require('fs'); const p='apps/mobile/app.json'; const d=JSON.parse(fs.readFileSync(p,'utf8')); d.expo=d.expo||{}; d.expo.android=d.expo.android||{}; d.expo.android.versionCode=Number(process.env.VERSION_CODE); fs.writeFileSync(p, JSON.stringify(d, null, 2)+'\n');"
+
       - name: Write Firebase Android app config
         env:
           ANDROID_GOOGLE_SERVICES_JSON: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON }}
@@ -161,12 +173,6 @@ jobs:
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d \
             > apps/mobile/android/app/emberchamber-release.keystore
 
-      - name: Calculate version code from date and time
-        run: |
-          VERSION_CODE=$(date +%Y%m%d%H%M)
-          echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
-          echo "Generated versionCode: $VERSION_CODE (YYYYMMDDhhmm format)"
-
       - name: Build signed release AAB
         env:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -174,7 +180,6 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           ./gradlew bundleRelease \
-            -PversionCode="$VERSION_CODE" \
             -Pandroid.injected.signing.store.file="$GITHUB_WORKSPACE/apps/mobile/android/app/emberchamber-release.keystore" \
             -Pandroid.injected.signing.store.password="$ANDROID_STORE_PASSWORD" \
             -Pandroid.injected.signing.key.alias="$ANDROID_KEY_ALIAS" \
