@@ -94,7 +94,7 @@ jobs:
               "    # -- CI patches (must run after react_native_post_install) --\n"
               "    installer.pods_project.targets.each do |target|\n"
               "      target.build_configurations.each do |config|\n"
-              '        config.build_settings["SWIFT_VERSION"] = "5"\n'
+              '        config.build_settings["SWIFT_STRICT_CONCURRENCY"] = "minimal"\n'
               '        dt = config.build_settings["IPHONEOS_DEPLOYMENT_TARGET"].to_f\n'
               '        config.build_settings["IPHONEOS_DEPLOYMENT_TARGET"] = "12.0" if dt < 12.0\n'
               '        config.build_settings["GCC_WARN_ABOUT_DEPRECATED_FUNCTIONS"] = "NO"\n'
@@ -145,7 +145,8 @@ jobs:
             -sdk iphonesimulator \
             -derivedDataPath apps/mobile/ios/build \
             -quiet \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            SWIFT_STRICT_CONCURRENCY=minimal
 
       - name: Package simulator artifact
         run: |
