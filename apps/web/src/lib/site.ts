@@ -8,6 +8,7 @@ export const githubRepoUrl = "https://github.com/jhwodchuck/EmberChamber";
 export const githubReleasesUrl = `${githubRepoUrl}/releases`;
 export const githubSourceZipUrl = `${githubRepoUrl}/archive/refs/heads/main.zip`;
 export const githubIssuesUrl = `${githubRepoUrl}/issues`;
+export const supportEmail = "support@emberchamber.com";
 
 export const primaryNav = [
   { href: "/start", label: "Start Here" },

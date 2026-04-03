@@ -27,11 +27,11 @@ export default function HomePage() {
             <div>
               <div className="eyebrow">Closed beta for trusted circles</div>
               <h1 className="mt-6 max-w-4xl font-display text-5xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-7xl">
-                Private messaging that admits the hard parts.
+                Private messaging for your trusted circle.
               </h1>
               <p className="mt-6 max-w-3xl text-lg leading-8 text-[var(--text-secondary)] sm:text-xl">
-                A private space for the people you trust. Invite-only, end-to-end encrypted,
-                adults-only by design — and honest about the infrastructure it runs on.
+                Invite-only, end-to-end encrypted, and designed so your message history never leaves
+                your device. No public feeds, no discovery, no cold messages from strangers.
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -66,6 +66,45 @@ export default function HomePage() {
             </div>
 
             <StartHereSummary />
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-6 py-10 sm:py-14">
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:items-start">
+          <div>
+            <div className="eyebrow">Design decisions</div>
+            <h2 className="mt-4 font-display text-4xl font-semibold text-[var(--text-primary)] sm:text-5xl">
+              Intentionally smaller. Intentionally private.
+            </h2>
+            <p className="mt-4 text-base leading-7 text-[var(--text-secondary)]">
+              Most messaging apps optimise for growth. EmberChamber is optimised for trust.
+              These three constraints are features, not limitations.
+            </p>
+          </div>
+          <div className="grid gap-4">
+            <div className="card">
+              <h3 className="text-lg font-semibold text-[var(--text-primary)]">Invite-only, always</h3>
+              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                No public registration. No discovery feed. No cold messages from strangers.
+                Your inbox stays clean because only people you trust — or people they vouch for — can reach you.
+              </p>
+            </div>
+            <div className="card">
+              <h3 className="text-lg font-semibold text-[var(--text-primary)]">Your history is yours</h3>
+              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                Conversations, search indexes, and private keys live on your device. We can&apos;t search them,
+                sell them, or lose them in a server breach. Delete the app and that history is gone — not
+                sitting in a database somewhere.
+              </p>
+            </div>
+            <div className="card">
+              <h3 className="text-lg font-semibold text-[var(--text-primary)]">Built for real circles</h3>
+              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                Adults only, small groups, people who actually know each other. The beta is intentionally
+                scoped to trusted relationships — not a platform optimising for user count or ad impressions.
+              </p>
+            </div>
           </div>
         </div>
       </section>
