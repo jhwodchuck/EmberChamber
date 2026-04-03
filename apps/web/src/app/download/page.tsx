@@ -1,10 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { MarketingShell } from "@/components/marketing-shell";
-import { StatusCallout } from "@/components/status-callout";
+import { ArrowUpRight, BadgeCheck, Box, Download, MonitorSmartphone } from "lucide-react";
 import { formatUtcDate } from "@/lib/format";
 import { getLatestPlatformRelease } from "@/lib/releases";
-import { githubReleasesUrl, githubSourceZipUrl, launchPlatforms, surfaceCapabilities } from "@/lib/site";
+import {
+  githubReleasesUrl,
+  githubSourceZipUrl,
+  launchPlatforms,
+  surfaceCapabilities,
+} from "@/lib/site";
+import { MarketingShell } from "@/components/marketing-shell";
 
 export const metadata: Metadata = {
   title: "Launch Targets",
@@ -24,6 +29,12 @@ function formatBytes(bytes: number) {
   return `${value >= 10 || exponent === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[exponent]}`;
 }
 
+const platformAccent = {
+  android: "from-brand-500/18 via-brand-500/5 to-transparent",
+  windows: "from-sky-300/14 via-sky-200/4 to-transparent",
+  ubuntu: "from-amber-300/14 via-amber-200/4 to-transparent",
+} as const;
+
 export default function DownloadPage() {
   const latestReleasePromise = getLatestPlatformRelease();
 
@@ -40,175 +51,184 @@ async function DownloadPageInner({
   return (
     <MarketingShell>
       <section className="mx-auto max-w-6xl px-6 py-20 sm:py-24">
-        <div className="max-w-3xl">
-          <div className="eyebrow">Launch targets</div>
-          <h1 className="mt-5 font-display text-5xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-6xl">
-            Android, Windows, and Ubuntu are the first wave. Web stays available.
-          </h1>
-          <p className="mt-5 text-lg leading-8 text-[var(--text-secondary)]">
-            The first committed native surfaces are Android, Windows, and Ubuntu. The web app
-            stays available for onboarding, messaging, recovery, and other lighter-weight use when
-            you need access immediately.
-          </p>
-        </div>
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-end">
+          <div className="section-spotlight relative overflow-hidden rounded-[2.4rem] px-6 py-8 sm:px-8 sm:py-10">
+            <div
+              className="pointer-events-none absolute right-0 top-0 h-72 w-72 bg-[radial-gradient(circle,rgba(255,170,110,0.16),transparent_62%)]"
+              aria-hidden="true"
+            />
+            <div className="relative max-w-3xl">
+              <div className="eyebrow">Launch Targets</div>
+              <h1 className="mt-5 text-balance font-display text-5xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-6xl">
+                Android, Windows, and Ubuntu are the first wave. Web stays available.
+              </h1>
+              <p className="mt-5 text-lg leading-8 text-[var(--text-secondary)]">
+                The first committed native surfaces are Android, Windows, and Ubuntu. The browser
+                still matters for onboarding, lighter sessions, settings, and immediate access when
+                no posted native build exists yet.
+              </p>
 
-        <div className="mt-8 max-w-3xl">
-          <StatusCallout tone="info" title="Use this page to check which first-wave builds are posted">
-            If a native build is not posted here yet, the web app still handles onboarding,
-            messaging, invite review, and account flows. This page shows when a first-wave native
-            client is actually downloadable.
-          </StatusCallout>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <a href={githubReleasesUrl} className="btn-primary">
+                  View GitHub Releases
+                </a>
+                <a href={githubSourceZipUrl} className="btn-ghost">
+                  Download Source Zip
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div className="panel px-6 py-7">
+            <p className="section-kicker">Current Release State</p>
+            {latestRelease ? (
+              <>
+                <h2 className="mt-4 text-2xl font-semibold text-[var(--text-primary)]">
+                  {latestRelease.releaseName}
+                </h2>
+                <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+                  {latestRelease.prerelease ? "Latest prerelease" : "Latest release"}
+                  {latestRelease.publishedAt ? ` published ${formatUtcDate(latestRelease.publishedAt)} UTC.` : "."}
+                </p>
+                <a
+                  href={latestRelease.releaseUrl}
+                  className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-brand-300 transition-colors hover:text-brand-200"
+                >
+                  Open release page
+                  <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+                </a>
+              </>
+            ) : (
+              <>
+                <h2 className="mt-4 text-2xl font-semibold text-[var(--text-primary)]">
+                  No public release posted yet
+                </h2>
+                <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+                  This page reflects posted binaries only. If nothing is attached to a release yet,
+                  use the browser or build from source.
+                </p>
+              </>
+            )}
+          </div>
         </div>
 
         <div className="mt-10 grid gap-5 lg:grid-cols-3">
           {launchPlatforms.map((platform) => (
-            <div key={platform.name} className="card h-full">
-              <div className="text-xs uppercase tracking-[0.2em] text-brand-600">{platform.artifact}</div>
-              <h2 className="mt-3 text-2xl font-semibold text-[var(--text-primary)]">{platform.name}</h2>
-              <p className="mt-2 text-sm font-medium text-brand-700">{platform.status}</p>
-              <p className="mt-4 text-sm leading-6 text-[var(--text-secondary)]">{platform.detail}</p>
+            <div key={platform.name} className="card relative h-full overflow-hidden p-6">
+              <div
+                className={`absolute inset-x-0 top-0 h-24 bg-gradient-to-r ${
+                  platformAccent[platform.id as keyof typeof platformAccent]
+                } opacity-90`}
+              />
+              <div className="relative flex h-full flex-col">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="section-kicker">{platform.artifact}</p>
+                    <h2 className="mt-3 text-2xl font-semibold text-[var(--text-primary)]">{platform.name}</h2>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 text-brand-400">
+                    <MonitorSmartphone aria-hidden="true" className="h-5 w-5" />
+                  </div>
+                </div>
 
-              <div className="mt-6">
-                {latestRelease?.downloadsByPlatform[platform.id]?.length ? (
-                  <div className="space-y-3">
-                    {latestRelease.downloadsByPlatform[platform.id].map((download) => (
-                      <a
-                        key={download.url}
-                        href={download.url}
-                        className="btn-primary inline-flex w-full items-center justify-center"
-                      >
-                        Download {download.label}
-                      </a>
-                    ))}
-                    <p className="text-xs leading-5 text-[var(--text-secondary)]">
-                      {latestRelease.prerelease ? "Latest prerelease" : "Latest release"}{" "}
-                      <span className="font-medium text-[var(--text-primary)]">
-                        {latestRelease.releaseName}
-                      </span>
-                      {latestRelease.publishedAt
-                        ? ` published ${formatUtcDate(latestRelease.publishedAt)} UTC`
-                        : ""}
-                      .
-                    </p>
-                    <ul className="space-y-1 text-xs text-[var(--text-secondary)]">
+                <p className="mt-3 text-sm font-medium text-brand-300">{platform.status}</p>
+                <p className="mt-4 text-sm leading-7 text-[var(--text-secondary)]">{platform.detail}</p>
+
+                <div className="mt-6 space-y-3">
+                  {latestRelease?.downloadsByPlatform[platform.id]?.length ? (
+                    <>
                       {latestRelease.downloadsByPlatform[platform.id].map((download) => (
-                        <li key={`${download.url}-meta`}>
-                          {download.label} • {formatBytes(download.size)}
-                        </li>
+                        <a
+                          key={download.url}
+                          href={download.url}
+                          className="btn-primary inline-flex w-full items-center justify-center"
+                        >
+                          Download {download.label}
+                        </a>
                       ))}
-                    </ul>
-                  </div>
-                ) : (
-                  <div className="rounded-[1.2rem] border border-dashed border-[var(--border)] bg-[var(--bg-secondary)] p-4">
-                    <p className="text-sm font-medium text-[var(--text-primary)]">No public build posted yet</p>
-                    <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                      This platform is part of the beta plan, but there is no downloadable public
-                      binary published for it yet.
-                    </p>
-                  </div>
-                )}
+                      <ul className="space-y-1 text-xs text-[var(--text-secondary)]">
+                        {latestRelease.downloadsByPlatform[platform.id].map((download) => (
+                          <li key={`${download.url}-meta`}>
+                            {download.label} • {formatBytes(download.size)}
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  ) : (
+                    <div className="rounded-[1.3rem] border border-dashed border-white/12 bg-white/[0.03] p-4">
+                      <p className="text-sm font-medium text-[var(--text-primary)]">No public build posted yet</p>
+                      <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                        This surface is part of the beta plan, but no downloadable public binary is
+                        attached to the latest release.
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           ))}
         </div>
 
-        <div className="mt-10 grid gap-5 lg:grid-cols-2">
-          <div className="panel px-6 py-7">
-            <h2 className="text-xl font-semibold text-[var(--text-primary)]">Current release state</h2>
-            {latestRelease ? (
-              <>
-                <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-                  The download buttons above come from the latest GitHub release with platform
-                  assets attached.
-                </p>
-                <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-                  Active release:{" "}
-                  <a
-                    href={latestRelease.releaseUrl}
-                    className="font-medium text-brand-600 hover:underline"
-                  >
-                    {latestRelease.releaseName}
-                  </a>
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-                  No public GitHub release with downloadable binaries exists yet. The site now
-                  reflects that instead of pretending builds are already posted.
-                </p>
-                <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-                  Until the first beta release is published, the only immediate download available
-                  is the source tree.
-                </p>
-              </>
-            )}
+        <div className="mt-10 grid gap-5 lg:grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)]">
+          <div className="section-spotlight rounded-[2.2rem] px-6 py-8 sm:px-8">
+            <div className="section-kicker">Surface Capabilities</div>
+            <h2 className="mt-4 text-balance font-display text-4xl font-semibold text-[var(--text-primary)] sm:text-5xl">
+              What each surface can actually do.
+            </h2>
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
+              All surfaces share the same relay contracts and encryption model. The real differences
+              are device integration, push behavior, and which client should be your default home.
+            </p>
 
-            <div className="mt-5 flex flex-wrap gap-3">
-              <a href={githubReleasesUrl} className="btn-primary">
-                View GitHub releases
-              </a>
-              <a href={githubSourceZipUrl} className="btn-ghost">
-                Download source zip
-              </a>
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              {surfaceCapabilities.map((surface) => (
+                <div key={surface.name} className="rounded-[1.45rem] border border-white/8 bg-white/[0.04] p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="section-kicker">{surface.badge}</p>
+                      <h3 className="mt-2 text-xl font-semibold text-[var(--text-primary)]">{surface.name}</h3>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 text-brand-400">
+                      <Box aria-hidden="true" className="h-4 w-4" />
+                    </div>
+                  </div>
+                  <p className="mt-2 text-xs font-medium uppercase tracking-[0.18em] text-brand-300">
+                    {surface.recommended}
+                  </p>
+                  <ul className="mt-4 space-y-2">
+                    {surface.capabilities.map((capability) => (
+                      <li key={capability} className="flex items-start gap-2 text-sm leading-6 text-[var(--text-secondary)]">
+                        <BadgeCheck aria-hidden="true" className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand-400" />
+                        <span>{capability}</span>
+                      </li>
+                    ))}
+                    {surface.caveat ? (
+                      <li className="text-sm leading-6 text-[var(--text-secondary)]">{surface.caveat}</li>
+                    ) : null}
+                  </ul>
+                </div>
+              ))}
             </div>
           </div>
 
           <div className="panel px-6 py-7">
-            <h2 className="text-xl font-semibold text-[var(--text-primary)]">What comes after beta</h2>
+            <p className="section-kicker">Beyond First Wave</p>
+            <h2 className="mt-4 text-2xl font-semibold text-[var(--text-primary)]">
+              iPhone and macOS remain later-surface work.
+            </h2>
             <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-              iPhone and macOS have build scaffolds in the repo, but they remain later-surface work
-              until Android, Windows, Ubuntu, and web are stable enough to justify the extra
-              reliability and review work.
+              They still exist in the repo, but the first-wave release discipline is focused on
+              Android, Windows, Ubuntu, and the browser companion.
             </p>
-            <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-              Tagged GitHub releases are the source of truth for when public binaries actually
-              exist.
-            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link href="/trust-and-safety" className="btn-ghost">
+                Read The Trust Model
+              </Link>
+              <a href={githubReleasesUrl} className="btn-ghost">
+                Release Feed
+              </a>
+            </div>
           </div>
-        </div>
-
-        <div className="mt-10">
-          <h2 className="font-display text-2xl font-semibold text-[var(--text-primary)]">What each surface can do</h2>
-          <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-            All surfaces share the same relay contracts and E2EE. The differences are push notifications,
-            native device integration, and which one you should start with.
-          </p>
-          <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {surfaceCapabilities.map((surface) => (
-              <div key={surface.name} className="panel px-5 py-6">
-                <div className="text-xs uppercase tracking-[0.2em] text-brand-600">{surface.badge}</div>
-                <h3 className="mt-2 text-xl font-semibold text-[var(--text-primary)]">{surface.name}</h3>
-                <p className="mt-1 text-xs font-medium text-[var(--text-secondary)]">{surface.recommended}</p>
-                <ul className="mt-4 space-y-2">
-                  {surface.capabilities.map((cap) => (
-                    <li key={cap} className="flex items-start gap-2 text-sm text-[var(--text-secondary)]">
-                      <span className="mt-0.5 flex-shrink-0 text-green-500">✓</span>
-                      {cap}
-                    </li>
-                  ))}
-                  {surface.caveat ? (
-                    <li className="flex items-start gap-2 text-sm text-[var(--text-secondary)]">
-                      <span className="mt-0.5 flex-shrink-0 text-[var(--border)]">–</span>
-                      {surface.caveat}
-                    </li>
-                  ) : null}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-10 flex flex-wrap gap-3">
-          <Link href="/trust-and-safety" className="btn-primary">
-            Read the trust model
-          </Link>
-          <a href={githubReleasesUrl} className="btn-ghost">
-            GitHub releases
-          </a>
-          <Link href="/" className="btn-ghost">
-            Back to home
-          </Link>
         </div>
       </section>
     </MarketingShell>
