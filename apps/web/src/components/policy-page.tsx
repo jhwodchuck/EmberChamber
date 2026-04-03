@@ -16,11 +16,12 @@ export function PolicyPage({
   return (
     <MarketingShell>
       <section className="mx-auto max-w-6xl px-6 py-20 sm:py-24">
-        <div className="section-spotlight relative overflow-hidden rounded-[2.4rem] px-6 py-8 sm:px-8 sm:py-10">
+        <div className="cinema-panel relative overflow-hidden rounded-[2.4rem] px-6 py-8 sm:px-8 sm:py-10">
           <div
             className="pointer-events-none absolute inset-y-0 right-0 w-80 bg-[radial-gradient(circle_at_center,rgba(255,170,110,0.16),transparent_62%)]"
             aria-hidden="true"
           />
+          <div className="pointer-events-none absolute inset-0 glow-grid opacity-35" aria-hidden="true" />
           <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-end">
             <div>
               <div className="eyebrow">{eyebrow}</div>
@@ -38,7 +39,7 @@ export function PolicyPage({
               ].map((item) => (
                 <div
                   key={item}
-                  className="rounded-[1.35rem] border border-white/8 bg-white/[0.04] px-4 py-4 text-sm leading-6 text-[#d5b5a7]"
+                  className="showcase-frame rounded-[1.35rem] px-4 py-4 text-sm leading-6 text-[#d5b5a7]"
                 >
                   {item}
                 </div>
@@ -48,7 +49,7 @@ export function PolicyPage({
         </div>
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
-          <aside className="panel h-fit px-6 py-6 lg:sticky lg:top-28">
+          <aside className="cinema-panel h-fit rounded-[2rem] px-6 py-6 lg:sticky lg:top-28">
             <p className="section-kicker">Short Version</p>
             <p className="mt-4 text-balance font-display text-3xl font-semibold text-[var(--text-primary)]">
               This page exists to define the product boundary, not to soften it.

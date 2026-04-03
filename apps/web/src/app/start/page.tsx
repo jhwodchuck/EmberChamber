@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Compass, MonitorSmartphone, ShieldCheck } from "lucide-react";
+import { BadgeCheck, Compass, MonitorSmartphone, ShieldCheck } from "lucide-react";
 import { MarketingShell } from "@/components/marketing-shell";
 import { StartHereGuide } from "@/components/start-here-guide";
 
@@ -13,11 +13,12 @@ export default function StartPage() {
   return (
     <MarketingShell>
       <section className="mx-auto max-w-6xl px-6 py-20 sm:py-24">
-        <div className="section-spotlight relative overflow-hidden rounded-[2.4rem] px-6 py-8 sm:px-8 sm:py-10">
+        <div className="cinema-panel relative overflow-hidden rounded-[2.4rem] px-6 py-8 sm:px-8 sm:py-10">
           <div
             className="pointer-events-none absolute right-0 top-0 h-64 w-64 bg-[radial-gradient(circle,rgba(255,170,110,0.16),transparent_65%)]"
             aria-hidden="true"
           />
+          <div className="pointer-events-none absolute inset-0 glow-grid opacity-35" aria-hidden="true" />
           <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-end">
             <div className="max-w-3xl">
               <div className="eyebrow">Start Here</div>
@@ -28,6 +29,15 @@ export default function StartPage() {
                 EmberChamber is invite-only. Start with the trust model if you&apos;re evaluating it
                 for your circle, or pick the quickest path if you already have an invite or account.
               </p>
+
+              <div className="mt-6 flex flex-wrap gap-3">
+                {["Trust model first", "Browser companion first", "Native once access is stable"].map((item) => (
+                  <div key={item} className="metric-pill">
+                    <BadgeCheck aria-hidden="true" className="h-3.5 w-3.5 text-brand-400" />
+                    {item}
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
@@ -48,7 +58,7 @@ export default function StartPage() {
                   body: "Move to Android or desktop when you want the primary daily surface.",
                 },
               ].map((item) => (
-                <div key={item.label} className="rounded-[1.35rem] border border-white/8 bg-white/[0.04] p-4">
+                <div key={item.label} className="showcase-frame rounded-[1.35rem] p-4">
                   <div className="flex items-center gap-2 text-brand-400">
                     <item.icon aria-hidden="true" className="h-4 w-4" />
                     <span className="section-kicker">{item.label}</span>
