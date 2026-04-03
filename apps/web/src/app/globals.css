@@ -100,6 +100,13 @@
 
   .card {
     @apply rounded-[1.6rem] border border-[var(--border)] bg-[var(--bg-elevated)] p-5 shadow-[0_10px_30px_rgba(32,19,18,0.06)];
+    transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+  }
+
+  .card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(200, 88, 50, 0.22);
+    box-shadow: 0 20px 48px rgba(200, 88, 50, 0.09), 0 8px 20px rgba(32, 19, 18, 0.08);
   }
 
   .panel {
@@ -134,6 +141,13 @@
     background-size: 24px 24px;
   }
 
+  .surface-grid-dark {
+    background-image:
+      linear-gradient(to right, rgba(200, 88, 50, 0.1) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(200, 88, 50, 0.1) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
   .sidebar-item {
     @apply flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] transition-colors duration-100 cursor-pointer;
   }
@@ -153,4 +167,15 @@
   .message-bubble.other {
     @apply bg-[var(--bg-secondary)] text-[var(--text-primary)] rounded-bl-sm;
   }
+}
+
+@keyframes hero-glow-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes live-ping {
+  0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.55); }
+  70% { box-shadow: 0 0 0 7px rgba(34, 197, 94, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
 }

@@ -22,35 +22,46 @@ const productPillars = [
 export default function HomePage() {
   return (
     <MarketingShell>
-      <section className="mx-auto max-w-6xl px-6 pb-16 pt-14 sm:pb-24 sm:pt-20">
-        <div className="panel surface-grid overflow-hidden px-6 py-10 sm:px-10 sm:py-14">
+      {/* ── Cinematic hero ─────────────────────────────────────────── */}
+      <section className="dark relative overflow-hidden bg-[#0d0809] px-6 pb-24 pt-16 sm:pb-32 sm:pt-24">
+        {/* Layered ember atmosphere */}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+          <div className="absolute left-[38%] top-[-8%] h-[640px] w-[640px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(200,88,50,0.26),transparent_55%)] animate-[hero-glow-pulse_7s_ease-in-out_infinite]" />
+          <div className="absolute right-[-4%] top-[20%] h-80 w-80 rounded-full bg-[radial-gradient(circle,rgba(255,140,60,0.13),transparent_60%)]" />
+          <div className="absolute bottom-0 left-[8%] h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(200,88,50,0.09),transparent_65%)]" />
+        </div>
+        <div className="pointer-events-none absolute inset-0 surface-grid-dark opacity-50" aria-hidden="true" />
+
+        <div className="relative mx-auto max-w-6xl">
           <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-end">
             <div>
-              <div className="eyebrow">Closed beta for trusted circles</div>
-              <h1 className="mt-6 max-w-4xl font-display text-5xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-7xl">
+              <div className="inline-flex items-center gap-2 rounded-full border border-brand-500/30 bg-brand-500/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-brand-400">
+                Closed beta for trusted circles
+              </div>
+              <h1 className="mt-6 max-w-4xl font-display text-6xl font-semibold tracking-tight text-[#f0e4dc] sm:text-8xl">
                 Private messaging for your trusted circle.
               </h1>
-              <p className="mt-6 max-w-3xl text-lg leading-8 text-[var(--text-secondary)] sm:text-xl">
+              <p className="mt-6 max-w-3xl text-lg leading-8 text-[#b89690] sm:text-xl">
                 Invite-only, end-to-end encrypted, and designed so your message history never leaves
                 your device. No public feeds, no discovery, no cold messages from strangers.
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link href="/start" className="btn-primary px-6 py-3 text-base">
+                <Link href="/start" className="btn-primary px-6 py-3 text-base shadow-[0_12px_36px_rgba(200,88,50,0.4)]">
                   Start Here
                 </Link>
-                <Link href="/trust-and-safety" className="btn-ghost px-6 py-3 text-base">
-                  Read Trust Model
+                <Link href="/trust-and-safety" className="btn-ghost px-6 py-3 text-base border-white/10 text-[#b89690] hover:text-[#f0e4dc]">
+                  How It Works
                 </Link>
               </div>
 
-              <p className="mt-4 text-sm leading-6 text-[var(--text-secondary)]">
+              <p className="mt-4 text-sm leading-6 text-[#b89690]">
                 Already in the beta?{" "}
-                <Link href="/login" className="font-medium text-brand-600 hover:underline">
+                <Link href="/login" className="font-medium text-brand-400 hover:underline">
                   Sign in
                 </Link>
                 . Looking for a native build?{" "}
-                <Link href="/download" className="font-medium text-brand-600 hover:underline">
+                <Link href="/download" className="font-medium text-brand-400 hover:underline">
                   Check downloads
                 </Link>
                 .
@@ -58,9 +69,9 @@ export default function HomePage() {
 
               <div className="mt-10 grid gap-4 sm:grid-cols-3">
                 {productPillars.map((pillar) => (
-                  <div key={pillar.title} className="card h-full">
-                    <h2 className="text-base font-semibold text-[var(--text-primary)]">{pillar.title}</h2>
-                    <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{pillar.body}</p>
+                  <div key={pillar.title} className="h-full rounded-[1.6rem] border border-white/[0.08] bg-white/[0.04] p-5 backdrop-blur-sm transition-[border-color,background-color] duration-200 hover:border-brand-500/25 hover:bg-white/[0.07]">
+                    <h2 className="text-base font-semibold text-[#f0e4dc]">{pillar.title}</h2>
+                    <p className="mt-2 text-sm leading-6 text-[#b89690]">{pillar.body}</p>
                   </div>
                 ))}
               </div>
@@ -73,7 +84,8 @@ export default function HomePage() {
 
       <section className="mx-auto max-w-6xl px-6 py-10 sm:py-14">
         <div className="grid gap-12 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:items-center">
-          <div className="order-2 lg:order-1">
+          <div className="order-2 lg:order-1 relative">
+            <div className="pointer-events-none absolute inset-x-4 inset-y-8 -z-10 rounded-full bg-[radial-gradient(ellipse,rgba(200,88,50,0.18),transparent_65%)] blur-3xl" aria-hidden="true" />
             <ProductPreview />
           </div>
           <div className="order-1 lg:order-2">
@@ -162,38 +174,43 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-6 py-10 sm:py-14">
-        <div className="panel px-6 py-8 sm:px-8 sm:py-10">
-          <div className="eyebrow">Beta scope</div>
-          <h2 className="mt-4 font-display text-2xl font-semibold text-[var(--text-primary)]">
-            What&apos;s live right now.
-          </h2>
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {betaScopeItems.map((item) => (
-              <div key={item.feature} className="rounded-[1.4rem] border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`h-2 w-2 flex-shrink-0 rounded-full ${
-                      item.status === "live" ? "bg-green-500" : "bg-[var(--border)]"
-                    }`}
-                  />
-                  <span
-                    className={`text-[10px] font-semibold uppercase tracking-[0.15em] ${
-                      item.status === "live" ? "text-green-600 dark:text-green-400" : "text-[var(--text-secondary)]"
-                    }`}
-                  >
-                    {item.status === "live" ? "Live" : "Planned"}
-                  </span>
+      <section className="dark mx-auto max-w-6xl px-6 py-10 sm:py-14">
+        <div className="relative overflow-hidden rounded-[2rem] border border-white/[0.07] bg-[#0e0809] px-6 py-8 sm:px-8 sm:py-10">
+          <div className="pointer-events-none absolute right-0 top-0 h-80 w-80 -translate-y-1/4 translate-x-1/4 rounded-full bg-[radial-gradient(circle,rgba(200,88,50,0.16),transparent_60%)]" aria-hidden="true" />
+          <div className="relative">
+            <div className="eyebrow">Beta scope</div>
+            <h2 className="mt-4 font-display text-2xl font-semibold text-[#f0e4dc]">
+              What&apos;s live right now.
+            </h2>
+            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {betaScopeItems.map((item) => (
+                <div key={item.feature} className="rounded-[1.4rem] border border-white/[0.08] bg-white/[0.04] p-4">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`h-2 w-2 flex-shrink-0 rounded-full ${
+                        item.status === "live"
+                          ? "bg-green-500 animate-[live-ping_2.5s_ease-out_infinite]"
+                          : "bg-[#3a2725]"
+                      }`}
+                    />
+                    <span
+                      className={`text-[10px] font-semibold uppercase tracking-[0.15em] ${
+                        item.status === "live" ? "text-green-400" : "text-[#b89690]"
+                      }`}
+                    >
+                      {item.status === "live" ? "Live" : "Planned"}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm font-semibold text-[#f0e4dc]">{item.feature}</p>
+                  <p className="mt-1 text-xs leading-5 text-[#b89690]">{item.detail}</p>
                 </div>
-                <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">{item.feature}</p>
-                <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">{item.detail}</p>
-              </div>
-            ))}
+              ))}
+            </div>
+            <p className="mt-6 text-sm text-[#b89690]">
+              Full trust model and privacy boundaries —{" "}
+              <a href="/trust-and-safety" className="font-medium text-brand-400 hover:underline">read the trust page</a>.
+            </p>
           </div>
-          <p className="mt-6 text-sm text-[var(--text-secondary)]">
-            Full trust model and relay visibility boundaries —{" "}
-            <a href="/trust-and-safety" className="font-medium text-brand-600 hover:underline">read the trust page</a>.
-          </p>
         </div>
       </section>
 
