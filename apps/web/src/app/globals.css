@@ -4,15 +4,15 @@
 
 @layer base {
   :root {
-    --bg-primary: #fcf7f2;
+    --bg-primary: #fcfbfa;
     --bg-secondary: #fffdf9;
-    --bg-sidebar: #f4ece6;
+    --bg-sidebar: #f6d4c5;
     --bg-elevated: rgba(255, 251, 247, 0.82);
     --bg-overlay: 252 247 242;
-    --text-primary: #201312;
-    --text-secondary: #725852;
-    --border: #e9d8ca;
-    --brand: #c85832;
+    --text-primary: #1a1012;
+    --text-secondary: #4a3f3f;
+    --border: #d7b9ab;
+    --brand: #ea6f3f;
     --scroll-thumb-hover: rgba(141, 102, 89, 0.45);
   }
 
@@ -22,14 +22,14 @@
   }
 
   .dark {
-    --bg-primary: #140d0e;
-    --bg-secondary: #1b1213;
-    --bg-sidebar: #181011;
-    --bg-elevated: rgba(27, 18, 19, 0.86);
-    --bg-overlay: 20 13 14;
-    --text-primary: #f8ede7;
-    --text-secondary: #c7a89a;
-    --border: #3a2725;
+    --bg-primary: #0d0809;
+    --bg-secondary: #130c0d;
+    --bg-sidebar: #1a1012;
+    --bg-elevated: rgba(19, 12, 13, 0.9);
+    --bg-overlay: 13 8 9;
+    --text-primary: #fcfbfa;
+    --text-secondary: #d7b9ab;
+    --border: rgba(255, 255, 255, 0.09);
     --brand: #ea6f3f;
     --scroll-thumb-hover: rgba(199, 168, 154, 0.45);
   }

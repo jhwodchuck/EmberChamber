@@ -1,15 +1,25 @@
 "use client";
 
+import type { CipherEnvelope } from "@emberchamber/protocol";
 import { Compass, LogOut, MessageSquare, PlusSquare, Search, Settings, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { createContext, startTransition, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, startTransition, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { clsx } from "clsx";
 import { Avatar } from "@/components/avatar";
 import { StatusCallout } from "@/components/status-callout";
-import { readRelaySession, relayConversationApi } from "@/lib/relay";
+import {
+  createRelayMailboxWebSocket,
+  ensureRelayAccessToken,
+  readRelaySession,
+  relayConversationApi,
+} from "@/lib/relay";
 import { conversationHref } from "@/lib/conversation-routes";
-import { ensureWorkspaceReady, getConversationPreview, syncRelayMailbox } from "@/lib/relay-workspace";
+import {
+  ensureWorkspaceReady,
+  getConversationPreviews,
+  ingestRelayEnvelopes,
+} from "@/lib/relay-workspace";
 import { useAuthStore } from "@/lib/store";
 
 type LoadState = {
@@ -37,9 +47,20 @@ type CompanionShellContextValue = {
   conversationsState: LoadState;
   channelsState: LoadState;
   isConnected: boolean;
+  mailboxRevision: number;
   userName: string;
   refreshShellData: () => Promise<void>;
 };
+
+type MailboxLiveEvent =
+  | {
+      type: "ready";
+      lastQueuedEnvelopeId?: string;
+    }
+  | {
+      type: "envelope";
+      envelope: CipherEnvelope;
+    };
 
 const CompanionShellContext = createContext<CompanionShellContextValue | null>(null);
 
@@ -59,6 +80,7 @@ const emptyState: CompanionShellContextValue = {
   conversationsState: { status: "ready" },
   channelsState: { status: "ready" },
   isConnected: false,
+  mailboxRevision: 0,
   userName: "Web user",
   refreshShellData: async () => undefined,
 };
@@ -80,6 +102,9 @@ export function CompanionShell({ children }: { children: ReactNode }) {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [conversations, setConversations] = useState<CompanionShellContextValue["conversations"]>([]);
   const [conversationsState, setConversationsState] = useState<LoadState>({ status: "idle" });
+  const [isConnected, setIsConnected] = useState(false);
+  const [mailboxRevision, setMailboxRevision] = useState(0);
+  const mailboxReconnectTimerRef = useRef<number | null>(null);
   const loadUser = useAuthStore((state) => state.loadUser);
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
@@ -95,18 +120,22 @@ export function CompanionShell({ children }: { children: ReactNode }) {
     }
   }, [loadUser]);
 
-  async function refreshShellData() {
+  async function refreshShellData(options: { syncWorkspace?: boolean } = {}) {
+    const { syncWorkspace = true } = options;
     setConversationsState({ status: "loading" });
 
     try {
-      await ensureWorkspaceReady();
-      await syncRelayMailbox();
+      if (syncWorkspace) {
+        await ensureWorkspaceReady();
+      }
+
       const nextConversations = await relayConversationApi.list();
+      const previews = await getConversationPreviews(nextConversations.map((conversation) => conversation.id));
 
       startTransition(() => {
         setConversations(
           nextConversations.map((conversation) => {
-            const preview = getConversationPreview(conversation.id);
+            const preview = previews[conversation.id];
             return {
               id: conversation.id,
               type:
@@ -146,12 +175,110 @@ export function CompanionShell({ children }: { children: ReactNode }) {
     }
 
     void refreshShellData();
-    const intervalId = window.setInterval(() => {
-      void refreshShellData();
-    }, 8000);
+    const handleVisibilityRefresh = () => {
+      if (document.visibilityState === "visible") {
+        void refreshShellData();
+      }
+    };
+    window.addEventListener("focus", handleVisibilityRefresh);
+    document.addEventListener("visibilitychange", handleVisibilityRefresh);
 
     return () => {
-      window.clearInterval(intervalId);
+      window.removeEventListener("focus", handleVisibilityRefresh);
+      document.removeEventListener("visibilitychange", handleVisibilityRefresh);
+    };
+  }, [hasSession, isAuthenticated]);
+
+  useEffect(() => {
+    if (!hasSession || !isAuthenticated) {
+      setIsConnected(false);
+      return;
+    }
+
+    let cancelled = false;
+    let ws: WebSocket | null = null;
+
+    const clearReconnectTimer = () => {
+      if (mailboxReconnectTimerRef.current !== null) {
+        window.clearTimeout(mailboxReconnectTimerRef.current);
+        mailboxReconnectTimerRef.current = null;
+      }
+    };
+
+    const scheduleReconnect = () => {
+      if (cancelled || mailboxReconnectTimerRef.current !== null) {
+        return;
+      }
+
+      mailboxReconnectTimerRef.current = window.setTimeout(() => {
+        mailboxReconnectTimerRef.current = null;
+        void connectMailbox();
+      }, 1500);
+    };
+
+    const connectMailbox = async () => {
+      try {
+        const session = await ensureRelayAccessToken();
+        if (cancelled || !session?.accessToken) {
+          setIsConnected(false);
+          return;
+        }
+
+        ws = createRelayMailboxWebSocket(session.accessToken);
+        ws.onopen = () => {
+          if (!cancelled) {
+            setIsConnected(true);
+          }
+        };
+        ws.onmessage = (event) => {
+          if (cancelled) {
+            return;
+          }
+
+          void (async () => {
+            try {
+              const message = JSON.parse(event.data) as MailboxLiveEvent;
+              if (message.type !== "envelope") {
+                return;
+              }
+
+              const result = await ingestRelayEnvelopes([message.envelope], {
+                cursor: message.envelope.envelopeId,
+              });
+
+              if (result.receivedConversationIds.length) {
+                setMailboxRevision((current) => current + 1);
+                void refreshShellData({ syncWorkspace: false });
+              }
+            } catch {
+              // Ignore malformed live events and keep the socket alive.
+            }
+          })();
+        };
+        ws.onclose = () => {
+          if (!cancelled) {
+            setIsConnected(false);
+            scheduleReconnect();
+          }
+        };
+        ws.onerror = () => {
+          ws?.close();
+        };
+      } catch {
+        if (!cancelled) {
+          setIsConnected(false);
+          scheduleReconnect();
+        }
+      }
+    };
+
+    void connectMailbox();
+
+    return () => {
+      cancelled = true;
+      clearReconnectTimer();
+      ws?.close();
+      setIsConnected(false);
     };
   }, [hasSession, isAuthenticated]);
 
@@ -171,6 +298,8 @@ export function CompanionShell({ children }: { children: ReactNode }) {
     ...emptyState,
     conversations,
     conversationsState,
+    isConnected,
+    mailboxRevision,
     userName: user?.displayName ?? user?.username ?? "Web user",
     refreshShellData,
   };
@@ -238,6 +367,16 @@ export function CompanionShell({ children }: { children: ReactNode }) {
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
+              <div
+                className={clsx(
+                  "hidden rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] sm:block",
+                  isConnected
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : "border-amber-200 bg-amber-50 text-amber-700",
+                )}
+              >
+                {isConnected ? "Live relay link" : "Reconnecting"}
+              </div>
               <div className="hidden text-right sm:block">
                 <p className="text-sm font-medium text-[var(--text-primary)]">{contextValue.userName}</p>
                 <p className="text-xs text-[var(--text-secondary)]">Signed in relay session</p>

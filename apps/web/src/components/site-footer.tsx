@@ -41,8 +41,8 @@ export function SiteFooter() {
           <div className="max-w-sm">
             <p className="font-medium text-[var(--text-primary)]">EmberChamber</p>
             <p className="mt-2 leading-6 text-[#b89690]">
-              Private messaging for the people you trust. Invite-only, end-to-end encrypted, and
-              built so your history stays with you.
+              Private messaging for the people you trust. Invite-only, privacy-first, and built so
+              more of your history stays with you instead of turning into a server archive.
             </p>
           </div>
 

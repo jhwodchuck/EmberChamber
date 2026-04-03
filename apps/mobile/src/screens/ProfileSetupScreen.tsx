@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import type { FormMessage } from "../types";
-import { styles } from "../styles";
+import { styles, theme } from "../styles";
 import { StatusCard } from "../components/StatusCard";
 
 export type ProfileSetupScreenProps = {
@@ -37,7 +37,7 @@ export function ProfileSetupScreen(props: ProfileSetupScreenProps) {
           <TextInput
             autoCapitalize="words"
             placeholder="How you'll appear in conversations"
-            placeholderTextColor="#8ba1a3"
+            placeholderTextColor={theme.colors.placeholder}
             style={styles.input}
             value={profileSetupName}
             onChangeText={(v) => {

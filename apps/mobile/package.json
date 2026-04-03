@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "expo": "~55.0.0",
+    "expo-image-manipulator": "~55.0.13",
     "expo-image-picker": "~55.0.16",
     "expo-screen-capture": "~55.0.11",
     "expo-secure-store": "~55.0.11",

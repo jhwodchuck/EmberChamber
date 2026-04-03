@@ -20,7 +20,7 @@ from target direction so the docs do not overstate privacy, platform maturity, o
 | Surface | Current implementation | Direction |
 | --- | --- | --- |
 | Auth and identity metadata | D1 stores blinded email indexes, encrypted email ciphertext, accounts, adults-only affirmation state, devices, sessions, invites, and reports. | Keep centralized metadata minimal and bounded to bootstrap, routing, and safety workflows. |
-| Cipher mailbox queue | `DeviceMailboxDO` stores ciphertext envelopes written through `/v1/messages/batch`, enforces backlog caps, and deletes them on ack or expiry. | Mature the mailbox path into the default DM and future encrypted-group transport on every client. |
+| Cipher mailbox queue | `DeviceMailboxDO` stores ciphertext envelopes written through `/v1/messages/batch`, fans them out to connected device WebSockets, enforces backlog caps, and deletes them on ack or expiry. | Mature the mailbox path into the default DM and future encrypted-group transport on every client. |
 | Group threads | D1 `conversation_messages` stores group thread text in `body_text` plus attachment references. | Replace relay-hosted readable group history with a stronger end-to-end model. |
 | Attachments | R2 stores uploaded bytes referenced by signed upload/download tickets. The browser DM path now supports client-encrypted uploads, while current mobile and desktop flows still upload raw file bytes. | Move every client to client-side attachment encryption before upload. |
 | Client local state | Mobile persists SQLite, SecureStore, and vault metadata. Desktop persists local shell state. Web persists browser session state. | Push more authoritative history and safety state back onto devices over time. |
@@ -32,7 +32,7 @@ from target direction so the docs do not overstate privacy, platform maturity, o
 - Session listing and self-revocation.
 - Group creation, membership listing, owner or admin invite minting, invite preview/accept, and member removal.
 - Relay-hosted group thread read/write APIs plus attachment ticketing.
-- Device bundle registration, contact-card resolution, `dm/open`, ciphertext batch send, and mailbox sync/ack as the encrypted-delivery substrate.
+- Device bundle registration, contact-card resolution, `dm/open`, ciphertext batch send, and mailbox sync/ack plus live mailbox WebSockets as the encrypted-delivery substrate.
 - Disclosure-based report submission.
 
 ## Present but Not Finished
@@ -58,7 +58,7 @@ from target direction so the docs do not overstate privacy, platform maturity, o
 
 ## Durable Objects and Queues
 
-- `DeviceMailboxDO`: per-device ciphertext queue with backlog caps, ack-based deletion, and alarm-driven expiry.
+- `DeviceMailboxDO`: per-device ciphertext queue with backlog caps, connected-client WebSocket fan-out, ack-based deletion, and alarm-driven expiry.
 - `GroupCoordinatorDO`: stores current group epoch and member set for relay-side coordination.
 - `RateLimitDO`: keyed abuse limiter for auth, invite, and send flows.
 - `EMAIL_QUEUE`: used for magic-link dispatch.

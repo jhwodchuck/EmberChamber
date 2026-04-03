@@ -24,7 +24,7 @@ export function MessageBubble({
     <View style={[styles.messageRow, isOwnMessage ? styles.messageRowOwn : null]}>
       <View style={[styles.messageBubble, isOwnMessage ? styles.messageBubbleOwn : null]}>
         <Text style={styles.messageMeta}>
-          {isOwnMessage ? "You" : message.senderDisplayName} · {new Date(message.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+          {isOwnMessage ? "You" : message.senderDisplayName} · {new Date(message.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}{isOwnMessage ? "  ✓✓" : ""}
         </Text>
         {message.text ? <Text style={styles.messageText}>{message.text}</Text> : null}
         {message.attachment?.contentClass === "image" ? (

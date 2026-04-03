@@ -1,7 +1,9 @@
 import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
 import * as ScreenCapture from "expo-screen-capture";
 import * as SecureStore from "expo-secure-store";
 import * as SQLite from "expo-sqlite";
+import * as SystemUI from "expo-system-ui";
 import { startTransition, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -65,10 +67,22 @@ import {
   saveStoredDeviceBundle,
   saveStoredSession,
 } from "./src/lib/session";
-import { styles } from "./src/styles";
+import { styles, theme } from "./src/styles";
 import { OnboardingScreen } from "./src/screens/OnboardingScreen";
 import { ProfileSetupScreen } from "./src/screens/ProfileSetupScreen";
 import { MainScreen } from "./src/screens/MainScreen";
+
+const onboardingHeroSignals = [
+  "Invite-only onboarding",
+  "Adults-only access",
+  "Local-first history",
+];
+
+const signedInHeroSignals = [
+  "Trusted-circle messaging",
+  "On-device vault defaults",
+  "Relay-native group sync",
+];
 
 // ---------------------------------------------------------------------------
 // App – thin orchestrator
@@ -320,6 +334,10 @@ export default function App() {
   }, [privacyDefaults.secureAppSwitcher]);
 
   useEffect(() => {
+    void SystemUI.setBackgroundColorAsync(theme.colors.background).catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
     if (!session) {
       setProfile(null);
       setContactCard(null);
@@ -450,6 +468,8 @@ export default function App() {
 
     let cancelled = false;
     setIsLoadingThread(true);
+    let ws: WebSocket | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
     void (async () => {
       const cachedMessages = db
@@ -463,7 +483,7 @@ export default function App() {
       try {
         const messages = await relayFetch<GroupThreadMessage[]>(
           session,
-          `/v1/groups/${selectedConversationId}/messages?limit=50`,
+          `/v1/groups/${selectedConversationId}/messages?limit=100`,
         );
 
         if (!cancelled) {
@@ -472,6 +492,49 @@ export default function App() {
 
         if (db) {
           await saveCachedGroupMessages(db, selectedConversationId, messages);
+        }
+
+        if (!cancelled) {
+          const wsUrlBase = relayUrl.replace(/^http/, "ws");
+          const clearReconnectTimer = () => {
+            if (reconnectTimer !== null) {
+              clearTimeout(reconnectTimer);
+              reconnectTimer = null;
+            }
+          };
+
+          const connectSocket = () => {
+            ws = new WebSocket(`${wsUrlBase}/v1/conversations/${selectedConversationId}/ws?token=${session.accessToken}`);
+            ws.onmessage = (event) => {
+              try {
+                const message = JSON.parse(event.data) as GroupThreadMessage;
+                setThreadMessages((prev) => {
+                  if (prev.some((m) => m.id === message.id)) return prev;
+                  const next = [message, ...prev].sort(
+                    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                  );
+                  if (db) saveCachedGroupMessages(db, selectedConversationId, next).catch(() => {});
+                  return next;
+                });
+              } catch {
+                // Ignore unparseable messages
+              }
+            };
+            ws.onclose = () => {
+              if (!cancelled) {
+                clearReconnectTimer();
+                reconnectTimer = setTimeout(() => {
+                  reconnectTimer = null;
+                  connectSocket();
+                }, 1500);
+              }
+            };
+            ws.onerror = () => {
+              ws?.close();
+            };
+          };
+
+          connectSocket();
         }
       } catch (error) {
         if (!cancelled) {
@@ -494,6 +557,12 @@ export default function App() {
 
     return () => {
       cancelled = true;
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+      }
+      if (ws) {
+        ws.close();
+      }
     };
   }, [db, session, selectedConversationId]);
 
@@ -765,7 +834,13 @@ export default function App() {
       }
 
       const asset = result.assets[0];
-      const fileSize = asset.fileSize ?? 0;
+      const manipulated = await ImageManipulator.manipulateAsync(
+        asset.uri,
+        [{ resize: { width: asset.width > asset.height ? 1920 : undefined, height: asset.height >= asset.width ? 1920 : undefined } }],
+        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+      );
+
+      const fileSize = manipulated.width * manipulated.height * 0.3; // Approx estimation since we lose exact filesize on manipulate in EXPO SDK before fetching
       if (fileSize > MAX_ATTACHMENT_BYTES) {
         setSessionMessage({
           tone: "error",
@@ -776,18 +851,79 @@ export default function App() {
       }
 
       setPendingAttachment({
-        uri: asset.uri,
+        uri: manipulated.uri,
         fileName: asset.fileName ?? `photo-${Date.now()}.jpg`,
-        mimeType: asset.mimeType ?? "image/jpeg",
-        byteLength: fileSize,
-        width: asset.width,
-        height: asset.height,
+        mimeType: "image/jpeg",
+        byteLength: Math.floor(fileSize),
+        width: manipulated.width,
+        height: manipulated.height,
       });
     } catch (error) {
       setSessionMessage({
         tone: "error",
         title: "Photo picker failed",
         body: error instanceof Error ? error.message : "Unable to open the image library.",
+      });
+    } finally {
+      setIsPickingPhoto(false);
+    }
+  }
+
+  async function takePhoto() {
+    setIsPickingPhoto(true);
+    setSessionMessage(null);
+
+    try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        setSessionMessage({
+          tone: "warning",
+          title: "Camera access is still blocked",
+          body: "Allow camera access so EmberChamber can take a picture.",
+        });
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ["images"],
+        quality: 0.85,
+        allowsEditing: false,
+      });
+
+      if (result.canceled || !result.assets.length) {
+        return;
+      }
+
+      const asset = result.assets[0];
+      const manipulated = await ImageManipulator.manipulateAsync(
+        asset.uri,
+        [{ resize: { width: asset.width > asset.height ? 1920 : undefined, height: asset.height >= asset.width ? 1920 : undefined } }],
+        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+      );
+
+      const fileSize = manipulated.width * manipulated.height * 0.3; 
+      if (fileSize > MAX_ATTACHMENT_BYTES) {
+        setSessionMessage({
+          tone: "error",
+          title: "That photo is too large",
+          body: "Keep the file under 20 MB for the beta relay path.",
+        });
+        return;
+      }
+
+      setPendingAttachment({
+        uri: manipulated.uri,
+        fileName: asset.fileName ?? `photo-${Date.now()}.jpg`,
+        mimeType: "image/jpeg",
+        byteLength: Math.floor(fileSize),
+        width: manipulated.width,
+        height: manipulated.height,
+      });
+    } catch (error) {
+      setSessionMessage({
+        tone: "error",
+        title: "Taking photo failed",
+        body: error instanceof Error ? error.message : "Unable to take a photo.",
       });
     } finally {
       setIsPickingPhoto(false);
@@ -909,7 +1045,7 @@ export default function App() {
       try {
         const messages = await relayFetch<GroupThreadMessage[]>(
           session,
-          `/v1/groups/${selectedConversationId}/messages?limit=50`,
+          `/v1/groups/${selectedConversationId}/messages?limit=100`,
         );
         setThreadMessages(messages);
         if (db) {
@@ -963,10 +1099,12 @@ export default function App() {
 
   // ---- render ----
 
+  const heroSignals = session ? signedInHeroSignals : onboardingHeroSignals;
+
   if (isBooting) {
     return (
       <SafeAreaView style={styles.loadingScreen}>
-        <ActivityIndicator size="large" color="#91f3d8" />
+        <ActivityIndicator size="large" color={theme.colors.textSoft} />
         <Text style={styles.loadingText}>Preparing local device storage…</Text>
       </SafeAreaView>
     );
@@ -974,22 +1112,43 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.screen}>
+      <View pointerEvents="none" style={styles.backgroundOrbTop} />
+      <View pointerEvents="none" style={styles.backgroundOrbLeft} />
+      <View pointerEvents="none" style={styles.backgroundOrbRight} />
       <KeyboardAvoidingView
         style={styles.keyboardShell}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <ScrollView contentContainerStyle={styles.content}>
-          <Text style={styles.eyebrow}>Android beta</Text>
-          <Text style={styles.title}>
-            {session
-              ? "Keep your trusted circles reachable on this phone"
-              : "Install to first trusted-circle message should stay under five minutes"}
-          </Text>
-          <Text style={styles.subtitle}>
-            {session
-              ? "This build keeps sign-in, recent group threads, and photo attachments working on Android while the stronger encrypted group model is still rolling out."
-              : "The shortest path is invite, private email, adults-only confirmation, device label, and inbox completion handed back into the app."}
-          </Text>
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          <View style={styles.heroCard}>
+            <View pointerEvents="none" style={styles.heroGlow} />
+            <View style={styles.brandRow}>
+              <View style={styles.brandMark}>
+                <Text style={styles.brandMarkText}>EC</Text>
+              </View>
+              <View style={styles.brandCopy}>
+                <Text style={styles.eyebrow}>{session ? "Android companion" : "Android beta"}</Text>
+                <Text style={styles.brandName}>EmberChamber</Text>
+              </View>
+            </View>
+            <Text style={styles.title}>
+              {session
+                ? "Keep your trusted circles reachable on this phone"
+                : "Invite to first trusted-circle message should feel fast and intentional"}
+            </Text>
+            <Text style={styles.subtitle}>
+              {session
+                ? "Android now follows the same ember-toned companion surface as the web app, while keeping relay sign-in, recent group threads, and photo attachments ready on-device."
+                : "The fastest path is still invite, private email, adults-only confirmation, device label, and inbox completion handed straight back into the app."}
+            </Text>
+            <View style={styles.heroSignalRow}>
+              {heroSignals.map((signal) => (
+                <View key={signal} style={styles.heroSignalChip}>
+                  <Text style={styles.heroSignalText}>{signal}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
 
           {!session ? (
             <OnboardingScreen
@@ -1061,6 +1220,7 @@ export default function App() {
               onPreviewInvite={() => void previewInvite()}
               onAcceptInvite={() => void acceptInvite()}
               onPickPhoto={() => void pickPhoto()}
+              onTakePhoto={() => void takePhoto()}
               onSendMessage={() => void sendMessage()}
               onUpdatePrivacy={updatePrivacyDefaults}
               onImageError={handleImageError}

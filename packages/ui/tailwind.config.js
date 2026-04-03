@@ -6,9 +6,9 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        graphite: colors.graphite,
-        ivory:    colors.ivory,
-        teal:     colors.teal,
+        obsidian: colors.obsidian,
+        ember:    colors.ember,
+        glass:    colors.glass,
         error:    colors.error,
         warning:  colors.warning,
         success:  colors.success,

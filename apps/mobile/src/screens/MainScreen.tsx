@@ -12,7 +12,7 @@ import type {
   PrivacyDefaults,
 } from "../types";
 import { formatBytes } from "../lib/utils";
-import { styles } from "../styles";
+import { styles, theme } from "../styles";
 import { StatusCard } from "../components/StatusCard";
 import { MessageBubble } from "../components/MessageBubble";
 import { ToggleRow } from "../components/ToggleRow";
@@ -52,6 +52,7 @@ export type MainScreenProps = {
   onPreviewInvite: () => void;
   onAcceptInvite: () => void;
   onPickPhoto: () => void;
+  onTakePhoto: () => void;
   onSendMessage: () => void;
   onUpdatePrivacy: <K extends keyof PrivacyDefaults>(key: K, value: PrivacyDefaults[K]) => void;
   onImageError: (messageId: string) => void;
@@ -68,7 +69,7 @@ export function MainScreen(props: MainScreenProps) {
     isPickingPhoto, isSendingMessage,
     deviceBundleReady, deviceBundleCount, deviceBundleError,
     vaultCount, privacyDefaults, sessionMessage, email, deviceLabel,
-    onSignOut, onPreviewInvite, onAcceptInvite, onPickPhoto, onSendMessage,
+    onSignOut, onPreviewInvite, onAcceptInvite, onPickPhoto, onTakePhoto, onSendMessage,
     onUpdatePrivacy, onImageError,
   } = props;
 
@@ -80,7 +81,7 @@ export function MainScreen(props: MainScreenProps) {
         <Text style={styles.sectionTitle}>Account ready</Text>
         {isLoadingAccount ? (
           <View style={styles.inlineLoadingRow}>
-            <ActivityIndicator size="small" color="#91f3d8" />
+            <ActivityIndicator size="small" color={theme.colors.textSoft} />
             <Text style={styles.helper}>Loading profile, device state, and current groups…</Text>
           </View>
         ) : (
@@ -190,7 +191,7 @@ export function MainScreen(props: MainScreenProps) {
         <TextInput
           autoCapitalize="none"
           placeholder="Paste an /invite/{groupId}/{token} link"
-          placeholderTextColor="#8ba1a3"
+          placeholderTextColor={theme.colors.placeholder}
           style={styles.input}
           value={inviteInput}
           onChangeText={setInviteInput}
@@ -261,9 +262,10 @@ export function MainScreen(props: MainScreenProps) {
             </View>
 
             {isLoadingThread ? (
-              <View style={styles.inlineLoadingRow}>
-                <ActivityIndicator size="small" color="#91f3d8" />
-                <Text style={styles.helper}>Loading recent messages…</Text>
+              <View style={styles.threadList}>
+                <View style={styles.skeletonBubble} />
+                <View style={[styles.skeletonBubble, styles.skeletonBubbleSoft]} />
+                <View style={[styles.skeletonBubble, styles.skeletonBubbleFaint]} />
               </View>
             ) : threadMessages.length ? (
               <View style={styles.threadList}>
@@ -300,9 +302,7 @@ export function MainScreen(props: MainScreenProps) {
                 />
                 <Text style={styles.helper}>
                   {pendingAttachment.fileName} ·{" "}
-                  {pendingAttachment.byteLength
-                    ? formatBytes(pendingAttachment.byteLength)
-                    : "size will be confirmed on upload"}
+                  {formatBytes(pendingAttachment.byteLength || 0)}
                 </Text>
               </View>
             ) : null}
@@ -310,13 +310,25 @@ export function MainScreen(props: MainScreenProps) {
             <TextInput
               multiline
               placeholder="Write a short message"
-              placeholderTextColor="#8ba1a3"
+              placeholderTextColor={theme.colors.placeholder}
               style={[styles.input, styles.composerInput]}
               value={messageDraft}
               onChangeText={setMessageDraft}
             />
 
             <View style={styles.buttonRow}>
+              <Pressable
+                style={[
+                  styles.secondaryButton,
+                  styles.buttonRowButton,
+                ]}
+                onPress={onTakePhoto}
+                disabled={isPickingPhoto}
+              >
+                <Text style={styles.secondaryButtonLabel}>
+                  {isPickingPhoto ? "Loading…" : "Take Photo"}
+                </Text>
+              </Pressable>
               <Pressable
                 style={[
                   styles.secondaryButton,
@@ -330,6 +342,8 @@ export function MainScreen(props: MainScreenProps) {
                   {isPickingPhoto ? "Opening gallery…" : "Pick photo"}
                 </Text>
               </Pressable>
+            </View>
+            <View style={styles.buttonRow}>
               <Pressable
                 style={[
                   styles.primaryButton,

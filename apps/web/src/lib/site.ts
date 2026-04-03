@@ -11,12 +11,12 @@ export const githubIssuesUrl = `${githubRepoUrl}/issues`;
 export const supportEmail = "support@emberchamber.com";
 
 export const betaScopeItems = [
-  { feature: "E2EE direct messages", status: "live" as const, detail: "Encrypted end-to-end on every surface" },
-  { feature: "Small group messages", status: "live" as const, detail: "Invite-controlled, pairwise fan-out" },
-  { feature: "Encrypted attachments", status: "live" as const, detail: "Files and media, E2EE in transit" },
+  { feature: "E2EE direct messages", status: "live" as const, detail: "Encrypted mailbox delivery across active beta surfaces" },
+  { feature: "Small group messages", status: "live" as const, detail: "Invite-controlled relay-hosted groups while encrypted-group rollout continues" },
+  { feature: "Encrypted attachments", status: "live" as const, detail: "Browser DMs use client-encrypted uploads; native group media is still migrating" },
   { feature: "Invite-only onboarding", status: "live" as const, detail: "Email magic-link, no public registration" },
   { feature: "Device-local search", status: "live" as const, detail: "Index never sent to relay" },
-  { feature: "Account recovery", status: "live" as const, detail: "Private email only" },
+  { feature: "Account recovery", status: "live" as const, detail: "Private email bootstrap with limited total-device-loss recovery" },
   { feature: "Passkey sign-in", status: "planned" as const, detail: "After email bootstrap stabilises" },
   { feature: "iPhone client", status: "planned" as const, detail: "After first-wave targets are stable" },
 ];
@@ -43,11 +43,11 @@ export const surfaceCapabilities = [
     recommended: "Primary daily use",
     capabilities: [
       "Everything in web",
-      "Push notifications",
+      "Local SQLite cache",
       "Native device integration",
-      "Background sync",
+      "Installable daily client",
     ],
-    caveat: null,
+    caveat: "Push is not wired yet",
   },
   {
     name: "Windows",
@@ -55,10 +55,10 @@ export const surfaceCapabilities = [
     recommended: "Desktop daily use",
     capabilities: [
       "Everything in web",
-      "Push notifications",
+      "Longer sessions",
       "Native desktop shell",
     ],
-    caveat: null,
+    caveat: "No desktop push channel yet",
   },
   {
     name: "Ubuntu",
@@ -66,10 +66,10 @@ export const surfaceCapabilities = [
     recommended: "Linux / operators",
     capabilities: [
       "Everything in web",
-      "Push notifications",
+      "Longer sessions",
       ".deb and AppImage packaging",
     ],
-    caveat: null,
+    caveat: "No desktop push channel yet",
   },
 ];
 
@@ -121,11 +121,11 @@ export const trustFacts = [
   },
   {
     title: "What the relay cannot read",
-    body: "Your message content, attachment contents, and private keys never leave your device in decrypted form. A compromised relay still cannot read your conversations.",
+    body: "Direct-message content and browser-DM attachment contents stay encrypted in transit. Relay-hosted group history is still mid-migration and should not be described as fully end-to-end encrypted yet.",
   },
   {
     title: "What stays on your device",
-    body: "Your full conversation history, search index, private keys, and contact trust state. Delete the app and that history is gone — it's not sitting on a server.",
+    body: "Your DM history, search index, private keys, and contact trust state. Current beta groups still use a relay-hosted history path while the stronger model is being finished.",
   },
 ];
 
@@ -148,7 +148,7 @@ export const faqItems = [
   {
     question: "Will group chats be encrypted?",
     answer:
-      "That's the target. The beta starts with E2EE direct messages, then moves to small invite-only groups using the same encryption model.",
+      "That is the target, but not the current claim. Today the beta has E2EE direct messages, while small-group history still uses a relay-hosted path during the encrypted-group migration.",
   },
   {
     question: "Who is this beta for?",

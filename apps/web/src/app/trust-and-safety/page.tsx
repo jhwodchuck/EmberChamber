@@ -38,14 +38,15 @@ export default function TrustAndSafetyPage() {
     <PolicyPage
       eyebrow="Trust & safety"
       title="Designed to protect your conversations — and keep the platform healthy."
-      intro="End-to-end encryption and invite-only access mean your conversations belong to you, not to us. That design still needs clear boundaries, real reporting paths, and honest language about what the platform is and is not."
+      intro="Invite-only access and end-to-end encrypted direct messages are the current privacy floor, not the excuse for inflated claims. The design still needs clear boundaries, real reporting paths, and accurate language about what is already true versus what is still being migrated."
     >
       <section>
         <div className="section-kicker">Private By Default</div>
         <h2 className="mt-3">Your conversations stay private.</h2>
         <p>
-          EmberChamber is built around end-to-end encrypted DMs and small trusted groups. The relay
-          routes messages; it does not inspect the content inside them.
+          EmberChamber is built around end-to-end encrypted DMs and invite-gated trusted circles.
+          The relay routes mailbox traffic without reading DM content, while current small-group
+          history still uses a relay-hosted beta path during the encrypted-group migration.
         </p>
         <p>
           The product is also adults-only by design. Invite gating, self-attested 18+ onboarding,

@@ -28,6 +28,12 @@ import type {
 const relayUrl =
   process.env.NEXT_PUBLIC_RELAY_URL?.replace(/\/$/, "") ?? "http://127.0.0.1:8787";
 
+export function getRelayWebsocketUrl() {
+  const url = new URL(relayUrl);
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+  return url.origin;
+}
+
 const RELAY_SESSION_STORAGE_KEY = "emberchamber.relay.session.v1";
 
 type RelayErrorBody = {
@@ -91,6 +97,30 @@ export function hasRelaySession() {
   return !!readRelaySession();
 }
 
+function decodeTokenPayload(token: string): { exp?: number } | null {
+  const [encoded] = token.split(".");
+  if (!encoded) {
+    return null;
+  }
+
+  try {
+    const normalized = encoded.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+    return JSON.parse(atob(padded)) as { exp?: number };
+  } catch {
+    return null;
+  }
+}
+
+function isAccessTokenNearExpiry(token: string, thresholdSeconds = 60) {
+  const payload = decodeTokenPayload(token);
+  if (!payload?.exp) {
+    return true;
+  }
+
+  return payload.exp <= Math.floor(Date.now() / 1000) + thresholdSeconds;
+}
+
 async function refreshRelaySession(): Promise<RelayStoredSession | null> {
   const current = readRelaySession();
   if (!current?.refreshToken) {
@@ -122,6 +152,19 @@ async function refreshRelaySession(): Promise<RelayStoredSession | null> {
   };
   storeRelaySession(nextSession);
   return nextSession;
+}
+
+export async function ensureRelayAccessToken(minTtlSeconds = 60): Promise<RelayStoredSession | null> {
+  const current = readRelaySession();
+  if (!current) {
+    return null;
+  }
+
+  if (!current.accessToken || isAccessTokenNearExpiry(current.accessToken, minTtlSeconds)) {
+    return refreshRelaySession();
+  }
+
+  return current;
 }
 
 async function relayFetch<T>(
@@ -413,6 +456,12 @@ export const relayMailboxApi = {
       body: JSON.stringify(data),
     }),
 };
+
+export function createRelayMailboxWebSocket(accessToken: string) {
+  return new WebSocket(
+    `${getRelayWebsocketUrl()}/v1/mailbox/ws?token=${encodeURIComponent(accessToken)}`,
+  );
+}
 
 export const relayAttachmentApi = {
   createTicket: (data: {
