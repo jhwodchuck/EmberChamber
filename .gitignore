@@ -63,4 +63,5 @@ infra/data/
 *.aab
 .vercel
 apps/mobile/secrets/
+apps/mobile/secrets/google-play-service-account.json
 apps/relay/.wrangler/
