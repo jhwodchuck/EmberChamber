@@ -1,22 +1,10 @@
 name: Deploy - Web
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "apps/web/**"
-      - "packages/protocol/**"
-      - "packages/shared/**"
-      - "packages/config/**"
-      - "packages/ui/**"
-      - "vercel.json"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/deploy-web.yml"
   workflow_dispatch:
     inputs:
       reason:
-        description: "Reason for manual deploy"
+        description: "Reason for manual deploy (e.g. relay config change, env var update)"
         required: false
         type: string
 
