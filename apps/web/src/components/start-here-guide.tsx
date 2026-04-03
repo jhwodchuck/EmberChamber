@@ -1,11 +1,15 @@
 import Link from "next/link";
 import {
   ArrowRight,
+  BadgeCheck,
   Compass,
   Download,
   KeyRound,
   LifeBuoy,
   MailCheck,
+  MonitorSmartphone,
+  ShieldCheck,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import { StatusCallout } from "@/components/status-callout";
@@ -17,6 +21,8 @@ type StartPath = {
   title: string;
   body: string;
   accent: string;
+  tempo: string;
+  highlights: string[];
   primary: {
     href: string;
     label: string;
@@ -30,18 +36,39 @@ type StartPath = {
 const startSteps = [
   {
     number: "01",
-    title: "Start with the web app",
-    body: "The browser handles everything you need first: joining an invite, sending messages, and getting a feel for how it works. No install required.",
+    title: "Start with the browser companion",
+    body: "Use web first to understand the trust model, accept the invite path, and get your first conversation running without an install.",
   },
   {
     number: "02",
-    title: "Get onboarded, then explore",
-    body: "Once your invite is in, set up your first conversation. The web app covers messages, search, and settings without needing a download.",
+    title: "Confirm the right circle and recovery path",
+    body: "Stay anchored to the same private email, confirm the invite state, and make sure recovery is clear before you treat it as a daily client.",
   },
   {
     number: "03",
-    title: "Install native for primary use",
-    body: "Once access is set up, move to Android, Windows, or Ubuntu when you want the preferred daily-use surface for longer sessions and heavier media.",
+    title: "Move to native when the product becomes home",
+    body: "Once the circle is stable, shift to Android or desktop for longer sessions, notifications, and your preferred day-to-day surface.",
+  },
+] as const;
+
+const surfaceSplit = [
+  {
+    icon: Compass,
+    title: "Browser Companion",
+    eyebrow: "Fastest path",
+    body: "Best for onboarding, invite review, direct messages, group setup, search, recovery, and settings.",
+  },
+  {
+    icon: MonitorSmartphone,
+    title: "Android & Desktop",
+    eyebrow: "Primary use",
+    body: "Move here when you want the preferred daily experience, device integration, and more headroom for heavier media and longer sessions.",
+  },
+  {
+    icon: LifeBuoy,
+    title: "Support",
+    eyebrow: "Clear the edge cases",
+    body: "If invite state, sign-in, or build availability is unclear, ask support directly instead of guessing.",
   },
 ] as const;
 
@@ -51,8 +78,14 @@ function getStartPaths(): StartPath[] {
       icon: Compass,
       eyebrow: "New Here",
       title: "See how EmberChamber works",
-      body: "Start with what EmberChamber is, what it isn&apos;t, and where your data actually lives. Then decide if it&apos;s right for your circle.",
+      body: "Start with what EmberChamber is, what it is not, and where your data actually lives. Then decide if it fits your circle.",
       accent: "from-brand-500/20 via-brand-500/5 to-transparent",
+      tempo: "Best when you are evaluating the boundary",
+      highlights: [
+        "Trust model before signup flow",
+        "Local-history model explained clearly",
+        "Download status stays visible",
+      ],
       primary: {
         href: "/trust-and-safety",
         label: "How It Works",
@@ -66,9 +99,15 @@ function getStartPaths(): StartPath[] {
       ? {
           icon: MailCheck,
           eyebrow: "Have An Invite",
-          title: "Join beta in web first",
-          body: "You&apos;ll need your invite token and private email address. The whole flow takes a few minutes.",
+          title: "Join the beta in web first",
+          body: "You need your invite token and the private email address that will anchor access and recovery. The web flow handles the first entry cleanly.",
           accent: "from-amber-300/20 via-amber-200/5 to-transparent",
+          tempo: "Best when your invite is already live",
+          highlights: [
+            "Invite token and private email",
+            "First message flow in browser",
+            "Move to native after access is stable",
+          ],
           primary: {
             href: "/register",
             label: "Join Beta",
@@ -81,9 +120,15 @@ function getStartPaths(): StartPath[] {
       : {
           icon: LifeBuoy,
           eyebrow: "Have An Invite",
-          title: "Request early access",
-          body: "Beta waves are limited. Email us your invite code and we&apos;ll confirm it&apos;s active and coordinate your onboarding slot.",
+          title: "Coordinate early-access entry",
+          body: "Beta entry is opened in small waves. Email support with your invite code and we will confirm the right path instead of leaving you guessing.",
           accent: "from-amber-300/20 via-amber-200/5 to-transparent",
+          tempo: "Coordinated access while waves stay small",
+          highlights: [
+            "Invite code checked by support",
+            "Onboarding opened in batches",
+            "Web remains the first reliable surface",
+          ],
           primary: {
             href: "/support",
             label: "Request Access",
@@ -98,8 +143,14 @@ function getStartPaths(): StartPath[] {
           icon: KeyRound,
           eyebrow: "Already Have Access",
           title: "Return with your private email",
-          body: "Sign in with the same private email you used to join.",
+          body: "Sign in with the same private email you used to join so the right recovery and device state follow you.",
           accent: "from-rose-300/18 via-rose-200/5 to-transparent",
+          tempo: "Best when your account already exists",
+          highlights: [
+            "Same private email as registration",
+            "Recovery path stays consistent",
+            "Support remains available if state drifts",
+          ],
           primary: {
             href: "/login",
             label: "Sign In",
@@ -112,9 +163,15 @@ function getStartPaths(): StartPath[] {
       : {
           icon: LifeBuoy,
           eyebrow: "Already Have Access",
-          title: "Trouble signing in?",
-          body: "Email support with your device label and the private email you used to register. We&apos;ll get you back in.",
+          title: "Recover the right path quietly",
+          body: "If access feels off, email support with your device label and the private email you used to register. We will help restore the correct route.",
           accent: "from-rose-300/18 via-rose-200/5 to-transparent",
+          tempo: "Recovery and continuity",
+          highlights: [
+            "Share device label if blocked",
+            "Use the original private email",
+            "Support helps restore the right state",
+          ],
           primary: {
             href: "/support",
             label: "Email Support",
@@ -127,9 +184,15 @@ function getStartPaths(): StartPath[] {
     {
       icon: Download,
       eyebrow: "Need A Client Build",
-      title: "Check native availability",
-      body: "See what&apos;s posted for Android, Windows, and Ubuntu. The web app stays usable if nothing is listed for your platform yet.",
+      title: "Pick the surface you want to live in",
+      body: "See what is posted for Android, Windows, and Ubuntu. The web app stays usable if nothing is listed for your platform yet.",
       accent: "from-sky-300/16 via-sky-200/4 to-transparent",
+      tempo: "Best when you want the daily-use surface",
+      highlights: [
+        "Android is the first-wave primary client",
+        "Windows and Ubuntu stay in the release feed",
+        "Web remains the reliable fallback",
+      ],
       primary: {
         href: "/download",
         label: "View Launch Targets",
@@ -167,24 +230,37 @@ export function StartHereSummary() {
           <Link
             key={`${path.eyebrow}-${path.primary.href}`}
             href={path.primary.href}
-            className="group relative block overflow-hidden rounded-[1.45rem] border border-white/8 bg-white/[0.03] px-4 py-4 transition-[border-color,background-color] hover:border-brand-500/25 hover:bg-white/[0.05]"
+            className="group relative block overflow-hidden rounded-[1.45rem] border border-white/8 bg-white/[0.03] px-4 py-4 transition-[border-color,background-color,transform] hover:-translate-y-0.5 hover:border-brand-500/25 hover:bg-white/[0.05]"
           >
             <div className={`absolute inset-x-0 top-0 h-16 bg-gradient-to-r ${path.accent} opacity-80`} />
-            <div className="relative flex items-start gap-3">
-              <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-2.5 text-brand-400">
-                <path.icon aria-hidden="true" className="h-4 w-4" />
+            <div className="relative">
+              <div className="flex items-start gap-3">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-2.5 text-brand-400">
+                  <path.icon aria-hidden="true" className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-400">
+                      {path.eyebrow}
+                    </p>
+                    <span className="metric-pill px-2.5 py-0.5 text-[10px]">{path.tempo}</span>
+                  </div>
+                  <p className="mt-2 text-base font-semibold text-[var(--text-primary)]">{path.primary.label}</p>
+                  <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">{path.body}</p>
+                </div>
+                <ArrowRight
+                  aria-hidden="true"
+                  className="mt-1 h-4 w-4 text-[#b9968f] transition-transform duration-200 group-hover:translate-x-1"
+                />
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-400">
-                  {path.eyebrow}
-                </p>
-                <p className="mt-2 text-base font-semibold text-[var(--text-primary)]">{path.primary.label}</p>
-                <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">{path.body}</p>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                {path.highlights.slice(0, 2).map((item) => (
+                  <span key={item} className="metric-pill">
+                    {item}
+                  </span>
+                ))}
               </div>
-              <ArrowRight
-                aria-hidden="true"
-                className="mt-1 h-4 w-4 text-[#b9968f] transition-transform duration-200 group-hover:translate-x-1"
-              />
             </div>
           </Link>
         ))}
@@ -201,12 +277,12 @@ export function StartHereGuide() {
       {!authBootstrapEnabled ? (
         <StatusCallout
           tone="info"
-          title="Beta access is invite-only and limited right now"
+          title="Entry is coordinated in small beta waves right now"
           className="border-white/10 bg-white/[0.04]"
         >
-          New sign-in and registration links are not being issued on this deployment yet. You can
-          still explore how it works, check available builds, and email support to coordinate your
-          invite.
+          Registration links are not being opened broadly on this deployment yet. You can still
+          review the trust model, check the available builds, and email support with your invite
+          code so the right path can be coordinated.
         </StatusCallout>
       ) : null}
 
@@ -224,10 +300,23 @@ export function StartHereGuide() {
                 </p>
               </div>
 
-              <h2 className="mt-5 text-balance text-2xl font-semibold text-[var(--text-primary)]">
+              <div className="mt-5 flex flex-wrap items-center gap-2">
+                <span className="metric-pill">{path.tempo}</span>
+              </div>
+
+              <h2 className="mt-4 text-balance text-2xl font-semibold text-[var(--text-primary)]">
                 {path.title}
               </h2>
               <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">{path.body}</p>
+
+              <div className="mt-5 space-y-2">
+                {path.highlights.map((item) => (
+                  <div key={item} className="signal-line py-3">
+                    <BadgeCheck aria-hidden="true" className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand-400" />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
 
               <div className="mt-auto pt-6">
                 <div className="flex flex-wrap gap-3">
@@ -253,55 +342,109 @@ export function StartHereGuide() {
             Most people should follow these three moves.
           </h2>
 
-          <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          <div className="mt-6 space-y-4">
             {startSteps.map((step, index) => (
-              <div key={step.number} className="relative rounded-[1.5rem] border border-white/8 bg-white/[0.035] p-4">
-                {index < startSteps.length - 1 ? (
-                  <div
-                    className="pointer-events-none absolute left-[calc(100%-0.75rem)] top-6 hidden h-px w-[calc(100%+0.5rem)] bg-gradient-to-r from-brand-500/30 to-transparent sm:block"
-                    aria-hidden="true"
-                  />
-                ) : null}
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full border border-brand-500/25 bg-brand-500/10 text-sm font-semibold text-brand-300">
+              <div key={step.number} className="grid gap-4 sm:grid-cols-[auto_1fr]">
+                <div className="flex items-start gap-3 sm:flex-col sm:items-center">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full border border-brand-500/25 bg-brand-500/10 text-sm font-semibold text-brand-300">
                     {step.number}
                   </div>
-                  <h3 className="text-base font-semibold text-[var(--text-primary)]">{step.title}</h3>
+                  {index < startSteps.length - 1 ? (
+                    <div className="hidden h-full min-h-10 w-px bg-gradient-to-b from-brand-500/35 to-transparent sm:block" />
+                  ) : null}
                 </div>
-                <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{step.body}</p>
+                <div className="rounded-[1.5rem] border border-white/8 bg-white/[0.035] p-5">
+                  <h3 className="text-base font-semibold text-[var(--text-primary)]">{step.title}</h3>
+                  <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{step.body}</p>
+                </div>
               </div>
             ))}
           </div>
         </section>
 
         <section className="panel px-6 py-7">
-          <div className="eyebrow">Surface Split</div>
+          <div className="eyebrow">Before You Start</div>
           <h2 className="mt-5 text-balance font-display text-4xl font-semibold text-[var(--text-primary)]">
-            Know which surface does what.
+            The cleanest path is the calmest one.
           </h2>
           <div className="mt-6 space-y-4">
             {[
-              {
-                title: "Browser Companion",
-                body: "Best for onboarding, invite review, direct messages, joined-space search, recovery, and settings.",
-              },
-              {
-                title: "Android & Desktop",
-                body: "Move here when you want the preferred primary experience, device integration, and more headroom for longer sessions.",
-              },
-              {
-                title: "Support",
-                body: "If invite state, sign-in, or build availability is unclear, ask support instead of guessing.",
-              },
-            ].map((surface) => (
-              <div key={surface.title} className="rounded-[1.35rem] border border-white/8 bg-white/[0.04] p-4">
-                <h3 className="text-base font-semibold text-[var(--text-primary)]">{surface.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{surface.body}</p>
+              "Keep the same private email attached to invite, sign-in, and recovery.",
+              "Treat web as the first stable surface even if you plan to live in native later.",
+              "If something feels unclear, ask support early instead of forcing the wrong flow.",
+            ].map((item) => (
+              <div key={item} className="signal-line">
+                <span className="signal-dot" />
+                <span>{item}</span>
               </div>
             ))}
           </div>
         </section>
       </div>
+
+      <section className="grid gap-5 xl:grid-cols-3">
+        {surfaceSplit.map((surface) => (
+          <article key={surface.title} className="story-card-muted rounded-[1.8rem] p-6">
+            <div className="flex items-center gap-3">
+              <div className="rounded-[1.1rem] border border-white/10 bg-white/[0.05] p-3 text-brand-400">
+                <surface.icon aria-hidden="true" className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="section-kicker">{surface.eyebrow}</p>
+                <h3 className="mt-2 text-xl font-semibold text-[var(--text-primary)]">{surface.title}</h3>
+              </div>
+            </div>
+            <p className="mt-4 text-sm leading-7 text-[var(--text-secondary)]">{surface.body}</p>
+          </article>
+        ))}
+      </section>
+
+      <section className="cinema-panel relative overflow-hidden rounded-[2rem] px-6 py-7">
+        <div
+          className="pointer-events-none absolute right-[-4%] top-[-10%] h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(255,163,104,0.16),transparent_65%)] blur-3xl"
+          aria-hidden="true"
+        />
+        <div className="relative grid gap-6 lg:grid-cols-[minmax(0,0.84fr)_minmax(0,1.16fr)] lg:items-center">
+          <div>
+            <div className="eyebrow">Native Shift</div>
+            <h2 className="mt-5 text-balance font-display text-4xl font-semibold text-[var(--text-primary)]">
+              Web gets you in. Native is where the product settles.
+            </h2>
+            <p className="mt-4 text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
+              EmberChamber is designed so the browser handles onboarding and recovery without drama.
+              Once that foundation is solid, Android or desktop becomes the better long-session home.
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            {[
+              {
+                icon: Sparkles,
+                title: "Start fast",
+                body: "No install required for the first interaction.",
+              },
+              {
+                icon: ShieldCheck,
+                title: "Stay grounded",
+                body: "Recovery and trust boundaries stay clearer in web first.",
+              },
+              {
+                icon: MonitorSmartphone,
+                title: "Move deeper",
+                body: "Use native when the circle becomes part of daily life.",
+              },
+            ].map((item) => (
+              <div key={item.title} className="rounded-[1.45rem] border border-white/8 bg-white/[0.04] p-4">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 text-brand-400">
+                  <item.icon aria-hidden="true" className="h-4 w-4" />
+                </div>
+                <h3 className="mt-4 text-base font-semibold text-[var(--text-primary)]">{item.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{item.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

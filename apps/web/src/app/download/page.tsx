@@ -1,6 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowUpRight, BadgeCheck, Box, Download, MonitorSmartphone } from "lucide-react";
+import {
+  ArrowUpRight,
+  BadgeCheck,
+  Box,
+  Cloud,
+  Download,
+  MonitorSmartphone,
+  ShieldCheck,
+} from "lucide-react";
 import { formatUtcDate } from "@/lib/format";
 import { getLatestPlatformRelease } from "@/lib/releases";
 import {
@@ -35,6 +43,21 @@ const platformAccent = {
   ubuntu: "from-amber-300/14 via-amber-200/4 to-transparent",
 } as const;
 
+const platformProfiles = {
+  android: {
+    bestFor: "Pocket-first daily use",
+    moments: ["Push + background sync", "Primary mobile client", "Best for staying in the circle all day"],
+  },
+  windows: {
+    bestFor: "Longer sessions and desk-first use",
+    moments: ["Native desktop shell", "Room for longer threads", "Strong default for desktop-heavy testers"],
+  },
+  ubuntu: {
+    bestFor: "Linux operators and native desktop fans",
+    moments: ["AppImage and .deb packaging", "Same runtime capability as desktop", "Useful when Linux is your primary environment"],
+  },
+} as const;
+
 export default function DownloadPage() {
   const latestReleasePromise = getLatestPlatformRelease();
 
@@ -47,23 +70,30 @@ async function DownloadPageInner({
   latestReleasePromise: ReturnType<typeof getLatestPlatformRelease>;
 }) {
   const latestRelease = await latestReleasePromise;
+  const totalPostedAssets = latestRelease
+    ? Object.values(latestRelease.downloadsByPlatform).reduce((count, downloads) => count + downloads.length, 0)
+    : 0;
+  const surfacesWithBuilds = latestRelease
+    ? launchPlatforms.filter((platform) => latestRelease.downloadsByPlatform[platform.id]?.length).length
+    : 0;
 
   return (
     <MarketingShell>
       <section className="mx-auto max-w-6xl px-6 py-20 sm:py-24">
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-end">
-          <div className="section-spotlight relative overflow-hidden rounded-[2.4rem] px-6 py-8 sm:px-8 sm:py-10">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-stretch">
+          <div className="cinema-panel relative overflow-hidden rounded-[2.4rem] px-6 py-8 sm:px-8 sm:py-10">
             <div
               className="pointer-events-none absolute right-0 top-0 h-72 w-72 bg-[radial-gradient(circle,rgba(255,170,110,0.16),transparent_62%)]"
               aria-hidden="true"
             />
+            <div className="pointer-events-none absolute inset-0 glow-grid opacity-35" aria-hidden="true" />
             <div className="relative max-w-3xl">
               <div className="eyebrow">Launch Targets</div>
               <h1 className="mt-5 text-balance font-display text-5xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-6xl">
-                Android, Windows, and Ubuntu are the first wave. Web stays available.
+                Pick the surface you want to live in, then verify the posted build.
               </h1>
               <p className="mt-5 text-lg leading-8 text-[var(--text-secondary)]">
-                The first committed native surfaces are Android, Windows, and Ubuntu. The browser
+                Android, Windows, and Ubuntu are the first committed native surfaces. The browser
                 still matters for onboarding, lighter sessions, settings, and immediate access when
                 no posted native build exists yet.
               </p>
@@ -75,6 +105,15 @@ async function DownloadPageInner({
                 <a href={githubSourceZipUrl} className="btn-ghost">
                   Download Source Zip
                 </a>
+              </div>
+
+              <div className="mt-6 flex flex-wrap gap-3">
+                {["Android first-wave priority", "Desktop clients posted from release feed", "Web remains the fallback surface"].map((item) => (
+                  <span key={item} className="metric-pill">
+                    <BadgeCheck className="h-3.5 w-3.5 text-brand-400" />
+                    {item}
+                  </span>
+                ))}
               </div>
             </div>
           </div>
@@ -90,6 +129,22 @@ async function DownloadPageInner({
                   {latestRelease.prerelease ? "Latest prerelease" : "Latest release"}
                   {latestRelease.publishedAt ? ` published ${formatUtcDate(latestRelease.publishedAt)} UTC.` : "."}
                 </p>
+
+                <div className="mt-6 grid gap-3">
+                  {[
+                    { label: "Posted assets", value: String(totalPostedAssets) },
+                    { label: "Native surfaces live", value: `${surfacesWithBuilds}/3` },
+                    { label: "Fallback surface", value: "Web" },
+                  ].map((item) => (
+                    <div key={item.label} className="rounded-[1.2rem] border border-white/8 bg-white/[0.04] px-4 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#a98982]">
+                        {item.label}
+                      </p>
+                      <p className="mt-2 text-xl font-semibold text-[var(--text-primary)]">{item.value}</p>
+                    </div>
+                  ))}
+                </div>
+
                 <a
                   href={latestRelease.releaseUrl}
                   className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-brand-300 transition-colors hover:text-brand-200"
@@ -112,7 +167,18 @@ async function DownloadPageInner({
           </div>
         </div>
 
-        <div className="mt-10 grid gap-5 lg:grid-cols-3">
+        <div className="mt-10 mb-8 max-w-2xl">
+          <div className="section-kicker">Choose Your Home Surface</div>
+          <h2 className="mt-4 text-balance font-display text-4xl font-semibold text-[var(--text-primary)] sm:text-5xl">
+            Each native client has the same trust model, but a different daily rhythm.
+          </h2>
+          <p className="mt-4 section-copy">
+            The real differences are where you want to live, how much device integration you need,
+            and which posted artifact is available today.
+          </p>
+        </div>
+
+        <div className="grid gap-5 lg:grid-cols-3">
           {launchPlatforms.map((platform) => (
             <div key={platform.name} className="card relative h-full overflow-hidden p-6">
               <div
@@ -133,6 +199,23 @@ async function DownloadPageInner({
 
                 <p className="mt-3 text-sm font-medium text-brand-300">{platform.status}</p>
                 <p className="mt-4 text-sm leading-7 text-[var(--text-secondary)]">{platform.detail}</p>
+
+                <div className="mt-5 showcase-screen rounded-[1.45rem] p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#ffd0b6]">
+                    Best for
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-[#fff1e8]">
+                    {platformProfiles[platform.id as keyof typeof platformProfiles].bestFor}
+                  </p>
+                  <div className="mt-4 space-y-2">
+                    {platformProfiles[platform.id as keyof typeof platformProfiles].moments.map((item) => (
+                      <div key={item} className="signal-line py-2.5 text-xs leading-5">
+                        <span className="signal-dot mt-1.5" />
+                        <span>{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
 
                 <div className="mt-6 space-y-3">
                   {latestRelease?.downloadsByPlatform[platform.id]?.length ? (
@@ -211,22 +294,57 @@ async function DownloadPageInner({
             </div>
           </div>
 
-          <div className="panel px-6 py-7">
-            <p className="section-kicker">Beyond First Wave</p>
-            <h2 className="mt-4 text-2xl font-semibold text-[var(--text-primary)]">
-              iPhone and macOS remain later-surface work.
-            </h2>
-            <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-              They still exist in the repo, but the first-wave release discipline is focused on
-              Android, Windows, Ubuntu, and the browser companion.
-            </p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link href="/trust-and-safety" className="btn-ghost">
-                Read The Trust Model
-              </Link>
-              <a href={githubReleasesUrl} className="btn-ghost">
-                Release Feed
-              </a>
+          <div className="cinema-panel relative overflow-hidden rounded-[2rem] px-6 py-7">
+            <div
+              className="pointer-events-none absolute right-[-8%] top-[-12%] h-52 w-52 rounded-full bg-[radial-gradient(circle,rgba(255,163,104,0.16),transparent_65%)] blur-3xl"
+              aria-hidden="true"
+            />
+            <div className="relative">
+              <p className="section-kicker">Beyond First Wave</p>
+              <h2 className="mt-4 text-2xl font-semibold text-[var(--text-primary)]">
+                iPhone and macOS remain later-surface work.
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+                They still exist in the repo, but the first-wave release discipline is focused on
+                Android, Windows, Ubuntu, and the browser companion.
+              </p>
+
+              <div className="mt-6 space-y-3">
+                {[
+                  {
+                    icon: Cloud,
+                    title: "Same relay model",
+                    body: "Every client follows the same hosted-delivery, narrow-visibility boundary.",
+                  },
+                  {
+                    icon: ShieldCheck,
+                    title: "Same local-history principle",
+                    body: "Keys, search, and archive discipline stay local-first across surfaces.",
+                  },
+                  {
+                    icon: Download,
+                    title: "Release feed stays authoritative",
+                    body: "If a platform build is not posted there, assume web is still the right surface for now.",
+                  },
+                ].map((item) => (
+                  <div key={item.title} className="rounded-[1.35rem] border border-white/8 bg-white/[0.04] p-4">
+                    <div className="flex items-center gap-2 text-brand-400">
+                      <item.icon aria-hidden="true" className="h-4 w-4" />
+                      <span className="section-kicker">{item.title}</span>
+                    </div>
+                    <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{item.body}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link href="/trust-and-safety" className="btn-ghost">
+                  Read The Trust Model
+                </Link>
+                <a href={githubReleasesUrl} className="btn-ghost">
+                  Release Feed
+                </a>
+              </div>
             </div>
           </div>
         </div>

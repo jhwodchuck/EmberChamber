@@ -1,10 +1,13 @@
 import Link from "next/link";
 import {
+  Archive,
   ArrowRight,
   BadgeCheck,
+  BellRing,
   Cloud,
   Download,
   LockKeyhole,
+  MailCheck,
   MonitorSmartphone,
   Search,
   ShieldCheck,
@@ -24,19 +27,24 @@ const heroSignals = [
 
 const heroStats = [
   {
-    title: "Invite-only by default",
+    title: "Trusted circles only",
     body: "No public profiles, no feed, and no cold messages from strangers.",
     icon: Users,
   },
   {
-    title: "A relay with a narrow job",
-    body: "Encrypted traffic moves reliably without turning the relay into your archive.",
+    title: "Hosted delivery, narrow role",
+    body: "The relay keeps packets moving without turning itself into your archive.",
     icon: Cloud,
   },
   {
-    title: "History stays with you",
-    body: "Keys, search, and message history remain local to the device you use.",
+    title: "Local history is the default",
+    body: "Keys, search, and conversation history stay on the device you use.",
     icon: Search,
+  },
+  {
+    title: "Native when you stay",
+    body: "Web gets you in quickly. Android and desktop become the daily-use surfaces.",
+    icon: MonitorSmartphone,
   },
 ];
 
@@ -65,12 +73,18 @@ const launchAccent = {
   ubuntu: "from-amber-300/14 via-amber-200/4 to-transparent",
 } as const;
 
+const launchSignals = {
+  android: ["Push notifications", "Background sync", "Primary daily client"],
+  windows: ["Long sessions", "Native desktop shell", "Full beta surface"],
+  ubuntu: ["Linux packaging", "Operator friendly", "Desktop-first flow"],
+} as const;
+
 export default function HomePage() {
   return (
     <MarketingShell>
       <section className="relative px-6 pb-16 pt-16 sm:pb-24 sm:pt-24">
         <div className="mx-auto max-w-6xl">
-          <div className="grid gap-14 lg:grid-cols-[minmax(0,0.94fr)_minmax(0,1.06fr)] lg:items-center">
+          <div className="grid gap-14 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center">
             <div>
               <div className="eyebrow">Private Messaging For Trusted Circles</div>
               <h1 className="mt-6 max-w-4xl text-balance font-display text-6xl font-semibold tracking-tight text-[#fff1e8] sm:text-7xl lg:text-[5.4rem]">
@@ -100,7 +114,7 @@ export default function HomePage() {
                 ))}
               </div>
 
-              <div className="mt-10 grid gap-4 sm:grid-cols-3">
+              <div className="mt-10 grid gap-4 sm:grid-cols-2">
                 {heroStats.map((stat) => (
                   <div key={stat.title} className="card h-full p-5">
                     <div className="flex items-center gap-2 text-brand-400">
@@ -115,11 +129,135 @@ export default function HomePage() {
             </div>
 
             <div className="relative">
-              <div
-                className="pointer-events-none absolute inset-x-10 top-6 h-48 rounded-full bg-[radial-gradient(circle,rgba(255,163,104,0.16),transparent_60%)] blur-3xl"
-                aria-hidden="true"
-              />
               <ProductPreview />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-6 py-10 sm:py-14">
+        <div className="section-divider mb-10" />
+        <div className="mb-8 max-w-2xl">
+          <div className="section-kicker">Show, Don&apos;t Tell</div>
+          <h2 className="mt-4 text-balance font-display text-4xl font-semibold text-[var(--text-primary)] sm:text-5xl">
+            See the product in three moments instead of thirty disclaimers.
+          </h2>
+          <p className="mt-4 section-copy">
+            Entry is quiet, the conversation stays contained, and history remains device-local. The
+            product feels different because its constraints show up in the interface itself.
+          </p>
+        </div>
+
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1.04fr)_minmax(0,0.96fr)]">
+          <div className="story-card relative overflow-hidden rounded-[2.2rem] p-6 sm:p-7">
+            <div className="pointer-events-none absolute right-[-10%] top-[-6%] h-52 w-52 rounded-full bg-[radial-gradient(circle,rgba(255,163,104,0.18),transparent_65%)] blur-3xl" />
+            <div className="relative">
+              <div className="flex items-center gap-2 text-brand-400">
+                <MailCheck aria-hidden="true" className="h-4 w-4" />
+                <span className="section-kicker">Quiet Entry</span>
+              </div>
+              <h3 className="mt-4 text-balance text-3xl font-semibold text-[var(--text-primary)]">
+                Joining feels deliberate, not viral.
+              </h3>
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
+                The invite flow is designed to confirm the right person and the right circle before
+                the conversation starts. There is no public-facing identity funnel to optimize.
+              </p>
+
+              <div className="mt-6 showcase-frame rounded-[1.7rem] p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#ffcfb6]">
+                      Invite review
+                    </p>
+                    <p className="mt-2 text-lg font-semibold text-[#fff1e8]">Hold the circle boundary before entry.</p>
+                  </div>
+                  <div className="metric-pill">
+                    <BadgeCheck className="h-3.5 w-3.5 text-brand-400" />
+                    Verified path
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-4 sm:grid-cols-[minmax(0,1fr)_14rem]">
+                  <div className="space-y-3">
+                    {[
+                      "Invite token matched to the right circle",
+                      "Adults-only beta with deliberate onboarding",
+                      "Web companion first, native after access is stable",
+                    ].map((item) => (
+                      <div key={item} className="signal-line">
+                        <span className="signal-dot" />
+                        <span>{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="showcase-screen rounded-[1.4rem] p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#ffcfb6]">
+                      Intake snapshot
+                    </p>
+                    <div className="mt-4 space-y-3">
+                      {["Private email confirmed", "Invite code accepted", "Circle access pending"].map((item, index) => (
+                        <div key={item} className="rounded-[1rem] border border-white/8 bg-white/[0.04] px-3 py-2.5">
+                          <p className="text-[10px] uppercase tracking-[0.16em] text-[#a98982]">Step {index + 1}</p>
+                          <p className="mt-1 text-xs font-medium text-[#ecd9ce]">{item}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-5">
+            <div className="story-card-muted rounded-[1.9rem] p-6">
+              <div className="flex items-center gap-2 text-brand-400">
+                <BellRing aria-hidden="true" className="h-4 w-4" />
+                <span className="section-kicker">Daily Rhythm</span>
+              </div>
+              <h3 className="mt-4 text-2xl font-semibold text-[var(--text-primary)]">
+                When the circle becomes real, move to native.
+              </h3>
+              <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">
+                The browser is the fast entry point. Android and desktop are where longer sessions,
+                heavier media, and primary-use habits settle in.
+              </p>
+              <div className="mt-5 grid gap-2 sm:grid-cols-3">
+                {["Android for pocket access", "Desktop for longer threads", "Web for fast recovery"].map((item) => (
+                  <div
+                    key={item}
+                    className="rounded-[1rem] border border-white/8 bg-white/[0.04] px-3 py-3 text-xs leading-5 text-[#d6b6a8]"
+                  >
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="story-card-muted rounded-[1.9rem] p-6">
+              <div className="flex items-center gap-2 text-brand-400">
+                <Archive aria-hidden="true" className="h-4 w-4" />
+                <span className="section-kicker">Local Vault</span>
+              </div>
+              <h3 className="mt-4 text-2xl font-semibold text-[var(--text-primary)]">
+                The archive belongs to the device, not the service.
+              </h3>
+              <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">
+                Search, keys, and message history stay local. That is not a slogan in the footer;
+                it changes what the interface optimizes for and what the relay never becomes.
+              </p>
+              <div className="mt-5 space-y-3">
+                {[
+                  "Search index never leaves the device",
+                  "Private keys stay with the client",
+                  "Deleting the app deletes the local archive",
+                ].map((item) => (
+                  <div key={item} className="signal-line">
+                    <span className="signal-dot" />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -137,6 +275,19 @@ export default function HomePage() {
               quieter by removing the things that make most messaging platforms noisy, public, and
               extractive.
             </p>
+
+            <div className="mt-6 space-y-3">
+              {[
+                "No discovery loops pushing strangers into the room.",
+                "No feed mechanics competing with the actual conversation.",
+                "No requirement to build a public persona to stay reachable.",
+              ].map((item) => (
+                <div key={item} className="signal-line">
+                  <span className="signal-dot" />
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -242,6 +393,14 @@ export default function HomePage() {
                 <p className="mt-3 text-sm font-medium text-brand-300">{platform.status}</p>
                 <p className="mt-4 text-sm leading-7 text-[var(--text-secondary)]">{platform.detail}</p>
 
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {launchSignals[platform.id as keyof typeof launchSignals].map((item) => (
+                    <span key={item} className="metric-pill">
+                      {item}
+                    </span>
+                  ))}
+                </div>
+
                 <div className="mt-auto pt-6">
                   <Link href="/download" className="btn-ghost">
                     See Posted Builds
@@ -259,7 +418,7 @@ export default function HomePage() {
           <div className="section-spotlight rounded-[2.2rem] px-6 py-8 sm:px-8">
             <div className="eyebrow">Beta Scope</div>
             <h2 className="mt-5 text-balance font-display text-4xl font-semibold text-[var(--text-primary)] sm:text-5xl">
-              The beta is intentionally narrow — and that is part of the value.
+              The beta is intentionally narrow, and that is part of the value.
             </h2>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
               Keep the surface tight, keep the trust story honest, and expand only where the runtime
@@ -317,7 +476,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
             {faqItems.map((item) => (
               <div key={item.question} className="card p-6">
                 <div className="flex items-start gap-3">
