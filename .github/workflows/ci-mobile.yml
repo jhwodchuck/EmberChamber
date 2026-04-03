@@ -35,9 +35,10 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --no-audit --no-fund
 
       - name: Write Firebase Android app config
         if: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON != '' }}
