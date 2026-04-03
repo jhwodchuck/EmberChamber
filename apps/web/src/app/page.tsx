@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { MarketingShell } from "@/components/marketing-shell";
+import { ProductPreview } from "@/components/product-mockup";
 import { StartHereSummary } from "@/components/start-here-guide";
-import { faqItems, launchPlatforms, trustFacts } from "@/lib/site";
+import { betaScopeItems, faqItems, launchPlatforms } from "@/lib/site";
 
 const productPillars = [
   {
@@ -71,6 +72,37 @@ export default function HomePage() {
       </section>
 
       <section className="mx-auto max-w-6xl px-6 py-10 sm:py-14">
+        <div className="grid gap-12 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:items-center">
+          <div className="order-2 lg:order-1">
+            <ProductPreview />
+          </div>
+          <div className="order-1 lg:order-2">
+            <div className="eyebrow">The experience</div>
+            <h2 className="mt-4 font-display text-4xl font-semibold text-[var(--text-primary)] sm:text-5xl">
+              A quieter, more intentional inbox.
+            </h2>
+            <p className="mt-4 text-base leading-7 text-[var(--text-secondary)]">
+              Most messaging apps are optimised for engagement. EmberChamber is optimised for
+              the people you actually want to hear from.
+            </p>
+            <ul className="mt-6 space-y-4">
+              {[
+                "No cold messages from people outside your circle",
+                "No algorithmic feed deciding what you see first",
+                "No server storing a searchable copy of your history",
+                "No public profile to maintain or be discovered through",
+              ].map((item) => (
+                <li key={item} className="flex items-start gap-3">
+                  <span className="mt-0.5 h-5 w-5 flex-shrink-0 rounded-full bg-brand-500/15 flex items-center justify-center text-brand-600 text-xs font-bold">✓</span>
+                  <span className="text-sm leading-6 text-[var(--text-secondary)]">{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-6 py-10 sm:py-14">
         <div className="grid gap-10 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:items-start">
           <div>
             <div className="eyebrow">Design decisions</div>
@@ -101,8 +133,9 @@ export default function HomePage() {
             <div className="card">
               <h3 className="text-lg font-semibold text-[var(--text-primary)]">Built for real circles</h3>
               <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                Adults only, small groups, people who actually know each other. The beta is intentionally
-                scoped to trusted relationships — not a platform optimising for user count or ad impressions.
+                Adults-only by design — not as a restriction, but as a social decision. Private adult
+                relationships need tighter trust boundaries, calmer moderation, and fewer exposure
+                risks than any public social platform can offer.
               </p>
             </div>
           </div>
@@ -131,15 +164,36 @@ export default function HomePage() {
 
       <section className="mx-auto max-w-6xl px-6 py-10 sm:py-14">
         <div className="panel px-6 py-8 sm:px-8 sm:py-10">
-          <div className="eyebrow">Visibility boundaries</div>
-          <div className="mt-6 grid gap-6 lg:grid-cols-3">
-            {trustFacts.map((fact) => (
-              <div key={fact.title} className="rounded-[1.4rem] border border-[var(--border)] bg-[var(--bg-secondary)] p-5">
-                <h3 className="text-lg font-semibold text-[var(--text-primary)]">{fact.title}</h3>
-                <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{fact.body}</p>
+          <div className="eyebrow">Beta scope</div>
+          <h2 className="mt-4 font-display text-2xl font-semibold text-[var(--text-primary)]">
+            What&apos;s live right now.
+          </h2>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {betaScopeItems.map((item) => (
+              <div key={item.feature} className="rounded-[1.4rem] border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`h-2 w-2 flex-shrink-0 rounded-full ${
+                      item.status === "live" ? "bg-green-500" : "bg-[var(--border)]"
+                    }`}
+                  />
+                  <span
+                    className={`text-[10px] font-semibold uppercase tracking-[0.15em] ${
+                      item.status === "live" ? "text-green-600 dark:text-green-400" : "text-[var(--text-secondary)]"
+                    }`}
+                  >
+                    {item.status === "live" ? "Live" : "Planned"}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">{item.feature}</p>
+                <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">{item.detail}</p>
               </div>
             ))}
           </div>
+          <p className="mt-6 text-sm text-[var(--text-secondary)]">
+            Full trust model and relay visibility boundaries —{" "}
+            <a href="/trust-and-safety" className="font-medium text-brand-600 hover:underline">read the trust page</a>.
+          </p>
         </div>
       </section>
 

@@ -65,11 +65,11 @@ function getStartPaths(): StartPath[] {
         }
       : {
           eyebrow: "Have An Invite",
-          title: "Have an invite code?",
-          body: "Beta email links are issued in limited waves. Email support with your invite code and we'll confirm it's still active and coordinate your next step.",
+          title: "Request early access",
+          body: "Beta waves are limited. Email us your invite code and we'll confirm it's active and coordinate your onboarding slot.",
           primary: {
             href: "/support",
-            label: "Email Support",
+            label: "Request Access",
           },
           secondary: {
             href: "/download",
