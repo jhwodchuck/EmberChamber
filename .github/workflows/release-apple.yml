@@ -83,7 +83,9 @@ jobs:
             -sdk iphonesimulator \
             -derivedDataPath apps/mobile/ios/build \
             -quiet \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            SWIFT_STRICT_CONCURRENCY=minimal \
+            OTHER_SWIFT_FLAGS="-strict-concurrency=minimal"
 
       - name: Package simulator artifact
         run: |
