@@ -63,15 +63,15 @@ jobs:
         run: |
           mkdir -p apps/mobile/secrets
           printf '%s' "$ANDROID_GOOGLE_SERVICES_JSON" > apps/mobile/secrets/google-services.json
-          mkdir -p apps/mobile/android/app
-          printf '%s' "$ANDROID_GOOGLE_SERVICES_JSON" > apps/mobile/android/app/google-services.json
 
       - name: Validate Android release inputs
         run: |
           npm run verify:google-services --workspace=apps/mobile
           npm run type-check --workspace=apps/mobile
           (cd apps/mobile && npx expo config --json > /tmp/emberchamber-mobile-config.json)
-          npm run android:patch-build --workspace=apps/mobile
+
+      - name: Generate Android native project
+        run: npm run build:android --workspace=apps/mobile
 
       - name: Make Gradle wrapper executable
         run: chmod +x apps/mobile/android/gradlew
