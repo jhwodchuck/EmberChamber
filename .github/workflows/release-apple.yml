@@ -100,10 +100,8 @@ jobs:
             -quiet \
             CODE_SIGNING_ALLOWED=NO \
             SWIFT_STRICT_CONCURRENCY=minimal \
-            OTHER_SWIFT_FLAGS="-strict-concurrency=minimal" \
             GCC_WARN_ABOUT_DEPRECATED_FUNCTIONS=NO \
-            CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS=NO \
-            OTHER_CFLAGS="-Wno-deprecated-declarations -Wno-unused-result"
+            CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS=NO
 
       - name: Package simulator artifact
         run: |
