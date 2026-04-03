@@ -51,23 +51,43 @@ jobs:
       - name: Prebuild iOS app
         run: npm run prebuild:ios --workspace=apps/mobile
 
-      - name: Patch Podfile deployment targets
+      - name: Patch Podfile for CI compatibility
+        shell: bash
         run: |
-          ruby -i -e '
-            src = STDIN.read
-            patch = <<~RUBY
-              \n  # CI patches: raise min deployment target and silence Swift 6 concurrency errors in pods
-                installer.pods_project.targets.each do |target|
-                  target.build_configurations.each do |config|
-                    dt = config.build_settings["IPHONEOS_DEPLOYMENT_TARGET"].to_f
-                    config.build_settings["IPHONEOS_DEPLOYMENT_TARGET"] = "12.0" if dt < 12.0
-                    config.build_settings["SWIFT_STRICT_CONCURRENCY"] = "minimal"
-                    config.build_settings["GCC_WARN_ABOUT_DEPRECATED_FUNCTIONS"] = "NO"
-                  end
-                end
-            RUBY
-            print src.sub(/^(post_install do \|installer\|)/, "\\1\n#{patch}")
-          ' apps/mobile/ios/Podfile
+          python3 << 'PYEOF'
+          import sys, os
+
+          path = "apps/mobile/ios/Podfile"
+          with open(path) as f:
+              src = f.read()
+
+          patch = (
+              "\n"
+              "    # -- CI patches inserted by release-apple workflow --\n"
+              "    installer.pods_project.targets.each do |target|\n"
+              "      target.build_configurations.each do |config|\n"
+              '        config.build_settings["SWIFT_VERSION"] = "5"\n'
+              '        dt = config.build_settings["IPHONEOS_DEPLOYMENT_TARGET"].to_f\n'
+              '        config.build_settings["IPHONEOS_DEPLOYMENT_TARGET"] = "12.0" if dt < 12.0\n'
+              '        config.build_settings["GCC_WARN_ABOUT_DEPRECATED_FUNCTIONS"] = "NO"\n'
+              "      end\n"
+              "    end\n"
+              "    # -- end CI patches --\n"
+          )
+
+          marker = "post_install do |installer|"
+          if marker not in src:
+              print("ERROR: could not find post_install hook in Podfile", file=sys.stderr)
+              sys.exit(1)
+
+          patched = src.replace(marker, marker + patch, 1)
+          with open(path, "w") as f:
+              f.write(patched)
+
+          print("Podfile patched successfully")
+          PYEOF
+          echo "--- Podfile post_install section ---"
+          grep -A 25 'post_install' apps/mobile/ios/Podfile | head -30
 
       - name: Install CocoaPods dependencies
         run: pod install
@@ -101,8 +121,7 @@ jobs:
             -sdk iphonesimulator \
             -derivedDataPath apps/mobile/ios/build \
             -quiet \
-            CODE_SIGNING_ALLOWED=NO \
-            SWIFT_STRICT_CONCURRENCY=minimal
+            CODE_SIGNING_ALLOWED=NO
 
       - name: Package simulator artifact
         run: |
