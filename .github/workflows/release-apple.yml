@@ -56,15 +56,16 @@ jobs:
           ruby -i -e '
             src = STDIN.read
             patch = <<~RUBY
-              \n  # Raise all pods below iOS 12.0 to avoid simulator SDK warnings
+              \n  # CI patches: raise min deployment target and silence Swift 6 concurrency errors in pods
                 installer.pods_project.targets.each do |target|
                   target.build_configurations.each do |config|
                     dt = config.build_settings["IPHONEOS_DEPLOYMENT_TARGET"].to_f
                     config.build_settings["IPHONEOS_DEPLOYMENT_TARGET"] = "12.0" if dt < 12.0
+                    config.build_settings["SWIFT_STRICT_CONCURRENCY"] = "minimal"
+                    config.build_settings["GCC_WARN_ABOUT_DEPRECATED_FUNCTIONS"] = "NO"
                   end
                 end
             RUBY
-            # Inject just before the first "end" that closes post_install
             print src.sub(/^(post_install do \|installer\|)/, "\\1\n#{patch}")
           ' apps/mobile/ios/Podfile
 
@@ -101,9 +102,7 @@ jobs:
             -derivedDataPath apps/mobile/ios/build \
             -quiet \
             CODE_SIGNING_ALLOWED=NO \
-            SWIFT_STRICT_CONCURRENCY=minimal \
-            GCC_WARN_ABOUT_DEPRECATED_FUNCTIONS=NO \
-            CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS=NO
+            SWIFT_STRICT_CONCURRENCY=minimal
 
       - name: Package simulator artifact
         run: |
