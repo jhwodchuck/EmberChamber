@@ -161,6 +161,12 @@ jobs:
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d \
             > apps/mobile/android/app/emberchamber-release.keystore
 
+      - name: Calculate version code from date and time
+        run: |
+          VERSION_CODE=$(date +%Y%m%d%H%M)
+          echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
+          echo "Generated versionCode: $VERSION_CODE (YYYYMMDDhhmm format)"
+
       - name: Build signed release AAB
         env:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -168,6 +174,7 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           ./gradlew bundleRelease \
+            -PversionCode="$VERSION_CODE" \
             -Pandroid.injected.signing.store.file="$GITHUB_WORKSPACE/apps/mobile/android/app/emberchamber-release.keystore" \
             -Pandroid.injected.signing.store.password="$ANDROID_STORE_PASSWORD" \
             -Pandroid.injected.signing.key.alias="$ANDROID_KEY_ALIAS" \
