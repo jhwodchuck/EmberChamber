@@ -79,6 +79,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: package-lock.json
 
       - uses: actions/setup-java@v5
         with:
@@ -134,7 +135,7 @@ jobs:
           fi
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --no-audit --no-fund
 
       - name: Write Firebase Android app config
         env:
@@ -143,8 +144,14 @@ jobs:
           mkdir -p apps/mobile/secrets
           printf '%s' "$ANDROID_GOOGLE_SERVICES_JSON" > apps/mobile/secrets/google-services.json
 
-      - name: Verify Android project
-        run: npm run verify:android --workspace=apps/mobile
+      - name: Validate Android release inputs
+        run: |
+          npm run verify:google-services --workspace=apps/mobile
+          npm run type-check --workspace=apps/mobile
+          (cd apps/mobile && npx expo config --json > /tmp/emberchamber-mobile-config.json)
+
+      - name: Generate Android native project
+        run: npm run build:android --workspace=apps/mobile
 
       - name: Make Gradle wrapper executable
         run: chmod +x apps/mobile/android/gradlew
