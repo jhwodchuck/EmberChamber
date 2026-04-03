@@ -53,18 +53,20 @@ jobs:
 
       - name: Patch Podfile deployment targets
         run: |
-          cat >> apps/mobile/ios/Podfile << 'RUBY'
-
-          # Raise all pods below iOS 12.0 to avoid simulator SDK warnings
-          post_install do |installer|
-            installer.pods_project.targets.each do |target|
-              target.build_configurations.each do |config|
-                dt = config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f
-                config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '12.0' if dt < 12.0
-              end
-            end
-          end
-          RUBY
+          ruby -i -e '
+            src = STDIN.read
+            patch = <<~RUBY
+              \n  # Raise all pods below iOS 12.0 to avoid simulator SDK warnings
+                installer.pods_project.targets.each do |target|
+                  target.build_configurations.each do |config|
+                    dt = config.build_settings["IPHONEOS_DEPLOYMENT_TARGET"].to_f
+                    config.build_settings["IPHONEOS_DEPLOYMENT_TARGET"] = "12.0" if dt < 12.0
+                  end
+                end
+            RUBY
+            # Inject just before the first "end" that closes post_install
+            print src.sub(/^(post_install do \|installer\|)/, "\\1\n#{patch}")
+          ' apps/mobile/ios/Podfile
 
       - name: Install CocoaPods dependencies
         run: pod install
