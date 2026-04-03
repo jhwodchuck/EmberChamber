@@ -41,10 +41,13 @@ jobs:
         run: npm ci --no-audit --no-fund
 
       - name: Write Firebase Android app config
-        if: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON != '' }}
         env:
           ANDROID_GOOGLE_SERVICES_JSON: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON }}
         run: |
+          if [ -z "$ANDROID_GOOGLE_SERVICES_JSON" ]; then
+            echo "ANDROID_GOOGLE_SERVICES_JSON is not configured; continuing without google-services.json"
+            exit 0
+          fi
           mkdir -p apps/mobile/secrets
           printf '%s' "$ANDROID_GOOGLE_SERVICES_JSON" > apps/mobile/secrets/google-services.json
 
