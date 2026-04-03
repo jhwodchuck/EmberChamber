@@ -1,0 +1,14 @@
+{
+  "name": "emberchamber-wiki",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "fast-glob": "^3.2.12",
+    "markdown-it": "^13.0.1",
+    "markdown-it-anchor": "^8.0.0"
+  },
+  "scripts": {
+    "build": "node build.js"
+  }
+}

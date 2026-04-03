@@ -1,0 +1,81 @@
+name: Deploy Wiki
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/wiki-site/**'
+
+  # Allow manual trigger from the Actions tab
+  workflow_dispatch:
+
+# Allow writing to GitHub Pages and the wiki
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+# Only one deploy at a time
+concurrency:
+  group: wiki-deploy
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build VitePress site
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Enable corepack / pnpm
+        run: corepack enable
+
+      - name: Install wiki dependencies
+        run: pnpm --dir docs/wiki-site install --ignore-workspace --frozen-lockfile
+
+      - name: Build VitePress site
+        run: pnpm --dir docs/wiki-site exec vitepress build .
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/wiki-site/.vitepress/dist
+
+  deploy-pages:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  sync-wiki:
+    name: Sync markdown to GitHub Wiki
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Push markdown pages to GitHub Wiki
+        uses: Andrew-Chen-Wang/github-wiki-action@v4
+        with:
+          path: docs/wiki-site
+          ignore: |
+            .vitepress/**
+            node_modules/**
+            .pnpm-lock.yaml
+            package.json
+            README.md
+            .gitignore
+          token: ${{ secrets.GITHUB_TOKEN }}

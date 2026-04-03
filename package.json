@@ -13,6 +13,8 @@
     "build": "npm run build --workspace=packages/shared && npm run build --workspace=packages/protocol && npm run build --workspace=apps/relay && npm run build --workspace=apps/web",
     "build:web": "npm run build --workspace=apps/web",
     "build:relay": "npm run build --workspace=apps/relay",
+    "build:wiki": "corepack pnpm --dir docs/wiki-site exec vitepress build .",
+    "dev:wiki": "corepack pnpm --dir docs/wiki-site exec vitepress dev .",
     "dev:desktop": "npm run dev --workspace=apps/desktop",
     "doctor:desktop": "npm run doctor --workspace=apps/desktop",
     "build:desktop": "npm run build --workspace=apps/desktop",
