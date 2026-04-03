@@ -38,11 +38,30 @@ jobs:
         run: pod install
         working-directory: apps/mobile/ios
 
+      - name: Detect Xcode workspace and scheme
+        run: |
+          IOS_WORKSPACE=$(find apps/mobile/ios -maxdepth 1 -name '*.xcworkspace' | head -n 1)
+          if [ -z "$IOS_WORKSPACE" ]; then
+            echo "No .xcworkspace found under apps/mobile/ios" >&2
+            exit 1
+          fi
+
+          IOS_SCHEME=$(xcodebuild -workspace "$IOS_WORKSPACE" -list -json | python3 -c "import json,sys; d=json.load(sys.stdin); s=(d.get('workspace',{}).get('schemes') or d.get('project',{}).get('schemes') or []); print(s[0] if s else '')")
+          if [ -z "$IOS_SCHEME" ]; then
+            echo "No build scheme found for workspace $IOS_WORKSPACE" >&2
+            exit 1
+          fi
+
+          echo "IOS_WORKSPACE=$IOS_WORKSPACE" >> "$GITHUB_ENV"
+          echo "IOS_SCHEME=$IOS_SCHEME" >> "$GITHUB_ENV"
+          echo "Using workspace: $IOS_WORKSPACE"
+          echo "Using scheme: $IOS_SCHEME"
+
       - name: Build simulator app
         run: |
           xcodebuild \
-            -workspace apps/mobile/ios/EmberChamber.xcworkspace \
-            -scheme EmberChamber \
+            -workspace "$IOS_WORKSPACE" \
+            -scheme "$IOS_SCHEME" \
             -configuration Debug \
             -sdk iphonesimulator \
             -derivedDataPath apps/mobile/ios/build \
@@ -51,8 +70,16 @@ jobs:
 
       - name: Package simulator artifact
         run: |
-          cd apps/mobile/ios/build/Build/Products/Debug-iphonesimulator
-          zip -r "$GITHUB_WORKSPACE/EmberChamber-ios-simulator.zip" EmberChamber.app
+          PRODUCT_DIR=apps/mobile/ios/build/Build/Products/Debug-iphonesimulator
+          APP_PATH=$(find "$PRODUCT_DIR" -maxdepth 1 -name '*.app' | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "No simulator .app found in $PRODUCT_DIR" >&2
+            exit 1
+          fi
+
+          APP_NAME=$(basename "$APP_PATH")
+          cd "$PRODUCT_DIR"
+          zip -r "$GITHUB_WORKSPACE/EmberChamber-ios-simulator.zip" "$APP_NAME"
 
       - name: Upload iOS artifacts
         uses: actions/upload-artifact@v7
