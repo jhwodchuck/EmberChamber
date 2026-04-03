@@ -4,11 +4,13 @@
   "private": true,
   "type": "module",
   "devDependencies": {
-    "fast-glob": "^3.2.12",
-    "markdown-it": "^13.0.1",
-    "markdown-it-anchor": "^8.0.0"
+    "vitepress": "^1.6.4",
+    "vue": "^3.5.32",
+    "@vue/server-renderer": "^3.5.32"
   },
   "scripts": {
-    "build": "node build.js"
+    "dev": "vitepress dev .",
+    "build": "vitepress build .",
+    "serve": "vitepress serve ."
   }
 }
