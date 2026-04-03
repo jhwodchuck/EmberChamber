@@ -100,8 +100,7 @@ impl ClientState {
     }
 
     pub fn remember_media(&mut self, entry: MediaVaultEntry) {
-        self.media_vault
-            .insert(entry.attachment_id.clone(), entry);
+        self.media_vault.insert(entry.attachment_id.clone(), entry);
     }
 
     pub fn label_contact(&mut self, label: ContactLabel) {
