@@ -15,13 +15,11 @@ export default function StartPage() {
         <div className="max-w-3xl">
           <div className="eyebrow">Start Here</div>
           <h1 className="mt-5 text-balance font-display text-5xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-6xl">
-            Pick the path that matches what you need to do first.
+            New here, or ready to join?
           </h1>
           <p className="mt-5 text-lg leading-8 text-[var(--text-secondary)]">
-            EmberChamber does not ask every visitor to do the same thing. Start with trust and
-            download availability if you are evaluating the product. Use the web app for onboarding,
-            messaging, search, and invite review when you want the fastest path. Move to native
-            when you want the preferred primary-use surface.
+            EmberChamber is invite-only. Browse below if you&apos;re evaluating whether it&apos;s right for
+            your circle — or pick your path directly if you already have an invite or account.
           </p>
         </div>
 

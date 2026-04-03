@@ -65,11 +65,11 @@ function getStartPaths(): StartPath[] {
         }
       : {
           eyebrow: "Have An Invite",
-          title: "Get help before you try to bootstrap",
-          body: "This deployment isn't issuing beta invites yet. Contact support to confirm your invite and next steps.",
+          title: "Have an invite code?",
+          body: "Beta email links are issued in limited waves. Email support with your invite code and we'll confirm it's still active and coordinate your next step.",
           primary: {
             href: "/support",
-            label: "Contact Support",
+            label: "Email Support",
           },
           secondary: {
             href: "/download",
@@ -92,11 +92,11 @@ function getStartPaths(): StartPath[] {
         }
       : {
           eyebrow: "Already Have Access",
-          title: "Use support if sign-in is not available here",
-          body: "If sign-in links aren't working here yet, reach out to support rather than wondering if your account is broken.",
+          title: "Trouble signing in?",
+          body: "Email support with your device label and the private email you used to register. We'll get you back in.",
           primary: {
             href: "/support",
-            label: "Get Recovery Help",
+            label: "Email Support",
           },
           secondary: {
             href: "/trust-and-safety",
@@ -158,9 +158,10 @@ export function StartHereGuide() {
   return (
     <div className="space-y-6">
       {!authBootstrapEnabled ? (
-        <StatusCallout tone="warning" title="Account bootstrap is not live on this deployment">
-          You can still review the trust model, check whether any native builds are posted, and
-          contact support. New sign-in and join-beta email links are not being issued here yet.
+        <StatusCallout tone="info" title="Beta access is invite-only and limited right now">
+          New sign-in and registration links are not being issued on this deployment yet. You can
+          still read the trust model, check available builds, and email support to coordinate your
+          invite.
         </StatusCallout>
       ) : null}
 
