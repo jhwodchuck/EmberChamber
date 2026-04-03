@@ -1,0 +1,210 @@
+name: Deploy - Android to Play Store
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to deploy, usually a tag like v0.1.0-beta.8"
+        required: true
+        type: string
+      track:
+        description: "Google Play track"
+        required: true
+        default: internal
+        type: choice
+        options:
+          - internal
+          - alpha
+          - beta
+          - production
+      release_status:
+        description: "Release status for the uploaded bundle"
+        required: true
+        default: completed
+        type: choice
+        options:
+          - completed
+          - draft
+          - halted
+          - inProgress
+      rollout:
+        description: "Rollout fraction from 0.0 to 1.0 when release_status is inProgress"
+        required: false
+        type: string
+      in_app_update_priority:
+        description: "In-app update priority from 0 to 5"
+        required: true
+        default: "2"
+        type: choice
+        options:
+          - "0"
+          - "1"
+          - "2"
+          - "3"
+          - "4"
+          - "5"
+      changes_not_sent_for_review:
+        description: "Create the edit without sending it for review"
+        required: true
+        default: false
+        type: boolean
+      validate_only:
+        description: "Validate with Google Play without publishing"
+        required: true
+        default: false
+        type: boolean
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  EXPO_NO_TELEMETRY: "1"
+  PLAY_PACKAGE_NAME: com.emberchamber.mobile
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-play-store-${{ github.event.inputs.track }}-${{ github.event.inputs.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build signed AAB and upload to Google Play
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.ref }}
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v5
+        with:
+          java-version: 17
+          distribution: temurin
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      - name: Validate Play Store input
+        env:
+          PLAY_RELEASE_STATUS: ${{ github.event.inputs.release_status }}
+          PLAY_ROLLOUT: ${{ github.event.inputs.rollout }}
+        run: |
+          if [ "$PLAY_RELEASE_STATUS" = "inProgress" ] && [ -z "$PLAY_ROLLOUT" ]; then
+            echo "rollout is required when release_status is inProgress" >&2
+            exit 1
+          fi
+
+          if [ -n "$PLAY_ROLLOUT" ] && ! printf '%s' "$PLAY_ROLLOUT" | grep -Eq '^(0(\.[0-9]+)?|1(\.0+)?)$'; then
+            echo "rollout must be between 0.0 and 1.0" >&2
+            exit 1
+          fi
+
+      - name: Assert Play Store credentials are configured
+        env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -z "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" ]; then
+            echo "Missing GitHub Actions secret GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" >&2
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify Android project
+        run: npm run verify:android --workspace=apps/mobile
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x apps/mobile/android/gradlew
+
+      - name: Decode release keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d \
+            > apps/mobile/android/app/emberchamber-release.keystore
+
+      - name: Build signed release AAB
+        env:
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          ./gradlew bundleRelease \
+            -Pandroid.injected.signing.store.file="$GITHUB_WORKSPACE/apps/mobile/android/app/emberchamber-release.keystore" \
+            -Pandroid.injected.signing.store.password="$ANDROID_STORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$ANDROID_KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$ANDROID_KEY_PASSWORD"
+        working-directory: apps/mobile/android
+
+      - name: Rename AAB with ref
+        run: |
+          SAFE_REF=$(printf '%s' "${{ github.event.inputs.ref }}" | tr '/:@' '-')
+          SRC=apps/mobile/android/app/build/outputs/bundle/release/app-release.aab
+          DEST="apps/mobile/android/app/build/outputs/bundle/release/emberchamber-${SAFE_REF}-release.aab"
+          mv "$SRC" "$DEST"
+          echo "AAB_PATH=$DEST" >> "$GITHUB_ENV"
+
+      - name: Upload signed AAB artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: emberchamber-play-store-aab
+          path: ${{ env.AAB_PATH }}
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Install fastlane
+        run: gem install fastlane --no-document
+
+      - name: Write Google Play service account key
+        env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          KEY_PATH="$RUNNER_TEMP/google-play-service-account.json"
+          printf '%s' "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" > "$KEY_PATH"
+          echo "PLAY_JSON_KEY=$KEY_PATH" >> "$GITHUB_ENV"
+
+      - name: Upload AAB to Google Play
+        env:
+          PLAY_TRACK: ${{ github.event.inputs.track }}
+          PLAY_RELEASE_STATUS: ${{ github.event.inputs.release_status }}
+          PLAY_ROLLOUT: ${{ github.event.inputs.rollout }}
+          PLAY_UPDATE_PRIORITY: ${{ github.event.inputs.in_app_update_priority }}
+          PLAY_VALIDATE_ONLY: ${{ github.event.inputs.validate_only }}
+          PLAY_CHANGES_NOT_SENT_FOR_REVIEW: ${{ github.event.inputs.changes_not_sent_for_review }}
+        run: |
+          cmd=(
+            fastlane run upload_to_play_store
+            "json_key:$PLAY_JSON_KEY"
+            "package_name:$PLAY_PACKAGE_NAME"
+            "aab:$AAB_PATH"
+            "track:$PLAY_TRACK"
+            "release_status:$PLAY_RELEASE_STATUS"
+            "in_app_update_priority:$PLAY_UPDATE_PRIORITY"
+            "validate_only:$PLAY_VALIDATE_ONLY"
+            "skip_upload_metadata:true"
+            "skip_upload_changelogs:true"
+            "skip_upload_images:true"
+            "skip_upload_screenshots:true"
+            "changes_not_sent_for_review:$PLAY_CHANGES_NOT_SENT_FOR_REVIEW"
+          )
+
+          if [ -n "$PLAY_ROLLOUT" ]; then
+            cmd+=("rollout:$PLAY_ROLLOUT")
+          fi
+
+          "${cmd[@]}"

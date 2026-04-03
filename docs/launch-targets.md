@@ -4,14 +4,14 @@ This file tracks what the repo can actually build and, where release lanes exist
 
 ## Current Buildable Surfaces
 
-| Surface | Artifact | Backend path | Current product scope | Automation |
-| --- | --- | --- | --- | --- |
-| Android | Signed release `.apk` and `.aab` from `apps/mobile` | Relay | Email bootstrap, sessions, privacy defaults, group invite preview/accept, relay-hosted group threads, attachment upload/download, local SQLite and SecureStore. | `.github/workflows/release-android.yml` |
-| iPhone | Simulator `.app` zipped from `apps/mobile` | Relay | Same codebase and runtime scope as Android. No signed TestFlight or App Store lane yet, and not a first-beta commitment. | `.github/workflows/release-apple.yml` |
-| Windows | `.exe` and `.msi` from `apps/desktop` | Relay | Bundled desktop shell for auth, groups, invites, sessions, privacy, and attachment sending. | `.github/workflows/release-windows.yml` |
-| Ubuntu / Debian | `.deb` and `.AppImage` from `apps/desktop` | Relay | Bundled desktop shell for auth, groups, invites, sessions, privacy settings, and attachment sending. | `.github/workflows/release-linux.yml` |
-| macOS | `.app` and `.dmg` from `apps/desktop` | Relay | Same bundled desktop shell as Windows/Linux, but signed distribution and launch commitment remain later work. | `.github/workflows/release-macos.yml` |
-| Web | Next.js deployment from `apps/web` | Relay | Public site, onboarding, DM/chat, groups, invite flows, joined-space metadata search, and settings on relay. Legacy channel routes are retired placeholders only. | `.github/workflows/ci-web.yml` |
+| Surface         | Artifact                                                                                     | Backend path | Current product scope                                                                                                                                             | Automation                                                                         |
+| --------------- | -------------------------------------------------------------------------------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Android         | Signed release `.apk` and `.aab` from `apps/mobile`, plus Play deployment from signed `.aab` | Relay        | Email bootstrap, sessions, privacy defaults, group invite preview/accept, relay-hosted group threads, attachment upload/download, local SQLite and SecureStore.   | `.github/workflows/release-android.yml`, `.github/workflows/deploy-play-store.yml` |
+| iPhone          | Simulator `.app` zipped from `apps/mobile`                                                   | Relay        | Same codebase and runtime scope as Android. No signed TestFlight or App Store lane yet, and not a first-beta commitment.                                          | `.github/workflows/release-apple.yml`                                              |
+| Windows         | `.exe` and `.msi` from `apps/desktop`                                                        | Relay        | Bundled desktop shell for auth, groups, invites, sessions, privacy, and attachment sending.                                                                       | `.github/workflows/release-windows.yml`                                            |
+| Ubuntu / Debian | `.deb` and `.AppImage` from `apps/desktop`                                                   | Relay        | Bundled desktop shell for auth, groups, invites, sessions, privacy settings, and attachment sending.                                                              | `.github/workflows/release-linux.yml`                                              |
+| macOS           | `.app` and `.dmg` from `apps/desktop`                                                        | Relay        | Same bundled desktop shell as Windows/Linux, but signed distribution and launch commitment remain later work.                                                     | `.github/workflows/release-macos.yml`                                              |
+| Web             | Next.js deployment from `apps/web`                                                           | Relay        | Public site, onboarding, DM/chat, groups, invite flows, joined-space metadata search, and settings on relay. Legacy channel routes are retired placeholders only. | `.github/workflows/ci-web.yml`                                                     |
 
 ## What Counts As Primary Right Now
 
@@ -45,7 +45,6 @@ This file tracks what the repo can actually build and, where release lanes exist
 
 ## Deferred Or Not Yet Productized
 
-- Play Store publishing automation
 - App Store and TestFlight publishing
 - Signed and notarized Apple desktop releases
 - Code-signed Windows desktop releases

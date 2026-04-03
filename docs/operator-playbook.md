@@ -7,14 +7,14 @@ supports today and calls out where engineering or direct database access is stil
 
 ## Tool Reality
 
-| Need | Current path | Notes |
-| --- | --- | --- |
-| Review or revoke your own sessions | Web, mobile, or desktop settings backed by relay `/v1/sessions` | Self-service only. |
-| Create or revoke group invites | Relay group surfaces for owners/admins, or members if `allowMemberInvites` is enabled | There is no global invite-freeze UI. |
-| Remove a group member | Relay group surface for owners/admins | Bumps relay-side group epoch. |
-| Submit a disclosure-based report | Relay `/v1/reports` | Stored for follow-up, but there is no operator inbox or dashboard yet. |
-| Issue bootstrap beta invite tokens | Manual today | Use direct D1 access to `beta_invites` or the configured dev token in development. There is no operator UI. |
-| Suspend an account, revoke all sessions for another user, or bulk-review reports | Not implemented in the relay runtime | Requires engineering or direct infrastructure/database intervention. |
+| Need                                                                             | Current path                                                                          | Notes                                                                                                       |
+| -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Review or revoke your own sessions                                               | Web, mobile, or desktop settings backed by relay `/v1/sessions`                       | Self-service only.                                                                                          |
+| Create or revoke group invites                                                   | Relay group surfaces for owners/admins, or members if `allowMemberInvites` is enabled | There is no global invite-freeze UI.                                                                        |
+| Remove a group member                                                            | Relay group surface for owners/admins                                                 | Bumps relay-side group epoch.                                                                               |
+| Submit a disclosure-based report                                                 | Relay `/v1/reports`                                                                   | Stored for follow-up, but there is no operator inbox or dashboard yet.                                      |
+| Issue bootstrap beta invite tokens                                               | Manual today                                                                          | Use direct D1 access to `beta_invites` or the configured dev token in development. There is no operator UI. |
+| Suspend an account, revoke all sessions for another user, or bulk-review reports | Not implemented in the relay runtime                                                  | Requires engineering or direct infrastructure/database intervention.                                        |
 
 ## Invite Defaults
 
@@ -64,12 +64,12 @@ supports today and calls out where engineering or direct database access is stil
 Every Play Store update must be signed with the same keystore. Losing it means Google will not
 allow any future updates to the app under the same package name.
 
-| Property | Value |
-| --- | --- |
-| Keystore file | `apps/mobile/secrets/emberchamber-release.keystore` |
-| Store password | `ember-release-store` |
-| Key alias | `emberchamber` |
-| Key password | same as store password (`ember-release-store`) |
+| Property       | Value                                               |
+| -------------- | --------------------------------------------------- |
+| Keystore file  | `apps/mobile/secrets/emberchamber-release.keystore` |
+| Store password | `ember-release-store`                               |
+| Key alias      | `emberchamber`                                      |
+| Key password   | same as store password (`ember-release-store`)      |
 
 The keystore file is gitignored and must never be committed to the repo. The credentials are
 stored as GitHub Actions secrets (`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEY_ALIAS`,
@@ -91,6 +91,37 @@ gh secret set ANDROID_STORE_PASSWORD --body "ember-release-store"
 gh secret set ANDROID_KEY_PASSWORD   --body "ember-release-store"
 ```
 
+## Google Play Deployment Credentials
+
+Play deployment uses a separate GitHub Actions secret:
+
+| Secret                             | Purpose                                                                                                    |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` | Raw JSON key for the Google Cloud service account allowed to manage releases for `com.emberchamber.mobile` |
+
+Set it up once:
+
+1. In Google Play Console, note the linked Google Cloud project for the app.
+2. In that Google Cloud project, enable the Google Play Developer API.
+3. Create a service account JSON key for the release automation account.
+4. In Google Play Console `Users and permissions`, invite that service account email and grant the release permissions needed for the target tracks.
+5. Store the raw JSON as a GitHub Actions secret:
+
+```bash
+gh secret set GOOGLE_PLAY_SERVICE_ACCOUNT_JSON < path/to/google-play-service-account.json
+```
+
+The GitHub Actions workflow
+[`deploy-play-store.yml`](/home/jason/gh/PrivateMesh/.github/workflows/deploy-play-store.yml)
+builds a signed AAB and uploads it to the chosen Play track.
+
+Keep the Play API key separate from the Android signing keystore. They solve different problems:
+the keystore proves the app update is yours, while the service account is what authorizes the
+GitHub Actions runner to talk to Google Play.
+
+Google Play may still require the listing to exist and the first upload to be created manually
+before API-only updates work smoothly.
+
 To mint a beta invite token for a new user when there is no operator UI:
 
 ```bash
@@ -102,6 +133,7 @@ npx wrangler d1 execute emberchamber-relay-prod-db --env production --remote \
     (token_hash, created_at, expires_at, max_uses, use_count, created_by, revoked_at) \
     VALUES ('$HASH', datetime('now'), NULL, 10, 0, 'operator', NULL);"
 ```
+
 - Do not frame the product as anonymous, uncensorable, or law-proof.
 
 ## Email Delivery (Resend)
