@@ -13,6 +13,7 @@
     "prebuild:ios": "expo prebuild --platform ios --clean",
     "build:android": "npm run android:patch-build && expo prebuild --platform android --non-interactive",
     "build:ios": "expo prebuild --platform ios --non-interactive",
+    "verify:google-services": "node ./scripts/verify-google-services-file.js",
     "verify:android": "npm run doctor && npm run type-check && npm run prebuild",
     "type-check": "tsc --noEmit"
   },
@@ -20,10 +21,12 @@
     "expo": "~55.0.0",
     "expo-image-manipulator": "~55.0.13",
     "expo-image-picker": "~55.0.16",
+    "expo-notifications": "~55.0.16",
     "expo-screen-capture": "~55.0.11",
     "expo-secure-store": "~55.0.11",
     "expo-sqlite": "~55.0.13",
     "expo-system-ui": "~55.0.13",
+    "expo-task-manager": "~55.0.12",
     "react": "19.2.0",
     "react-native": "0.83.4"
   },

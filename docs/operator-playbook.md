@@ -73,8 +73,9 @@ allow any future updates to the app under the same package name.
 
 The keystore file is gitignored and must never be committed to the repo. The credentials are
 stored as GitHub Actions secrets (`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEY_ALIAS`,
-`ANDROID_STORE_PASSWORD`, `ANDROID_KEY_PASSWORD`) so the CI workflow can sign builds without
-exposing the raw file.
+`ANDROID_STORE_PASSWORD`, `ANDROID_KEY_PASSWORD`, `ANDROID_GOOGLE_SERVICES_JSON`) so the CI
+workflows can sign builds and include the Firebase Android app config without exposing the raw
+files.
 
 **Back up the keystore.** Copy `apps/mobile/secrets/emberchamber-release.keystore` to a
 secure location outside the repo (password manager, encrypted cloud backup). If it is lost
@@ -89,6 +90,7 @@ base64 -w 0 apps/mobile/secrets/emberchamber-release.keystore \
 gh secret set ANDROID_KEY_ALIAS    --body "emberchamber"
 gh secret set ANDROID_STORE_PASSWORD --body "ember-release-store"
 gh secret set ANDROID_KEY_PASSWORD   --body "ember-release-store"
+gh secret set ANDROID_GOOGLE_SERVICES_JSON < apps/mobile/secrets/google-services.json
 ```
 
 ## Google Play Deployment Credentials
@@ -118,6 +120,10 @@ builds a signed AAB and uploads it to the chosen Play track.
 Keep the Play API key separate from the Android signing keystore. They solve different problems:
 the keystore proves the app update is yours, while the service account is what authorizes the
 GitHub Actions runner to talk to Google Play.
+
+Firebase is not the Play deployment path. Firebase is only needed for Android push configuration
+and runtime messaging. The Play upload lane still goes through Google Play Console permissions plus
+the Play Developer API service account.
 
 Google Play may still require the listing to exist and the first upload to be created manually
 before API-only updates work smoothly.

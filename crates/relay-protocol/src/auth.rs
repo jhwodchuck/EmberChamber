@@ -56,6 +56,29 @@ pub struct PasskeyCredentialRef {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DevicePushTokenRegistration {
+    pub provider: String,
+    pub platform: String,
+    pub token: String,
+    pub app_id: Option<String>,
+    pub push_environment: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DevicePushTokenStatus {
+    pub registered: bool,
+    pub device_id: DeviceId,
+    pub provider: String,
+    pub platform: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DevicePushTokenClearResult {
+    pub cleared: bool,
+    pub device_id: DeviceId,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContactCard {
     pub account_id: AccountId,
     pub label: String,

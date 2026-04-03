@@ -124,8 +124,24 @@ jobs:
             exit 1
           fi
 
+      - name: Assert Firebase Android app config is configured
+        env:
+          ANDROID_GOOGLE_SERVICES_JSON: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -z "$ANDROID_GOOGLE_SERVICES_JSON" ]; then
+            echo "Missing GitHub Actions secret ANDROID_GOOGLE_SERVICES_JSON" >&2
+            exit 1
+          fi
+
       - name: Install dependencies
         run: npm ci
+
+      - name: Write Firebase Android app config
+        env:
+          ANDROID_GOOGLE_SERVICES_JSON: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON }}
+        run: |
+          mkdir -p apps/mobile/secrets
+          printf '%s' "$ANDROID_GOOGLE_SERVICES_JSON" > apps/mobile/secrets/google-services.json
 
       - name: Verify Android project
         run: npm run verify:android --workspace=apps/mobile

@@ -50,6 +50,8 @@ GitHub Actions builds the signed release APK and release AAB from
 
 The workflow expects the release keystore secrets described in
 [`docs/operator-playbook.md`](/home/jason/gh/PrivateMesh/docs/operator-playbook.md).
+It also expects `ANDROID_GOOGLE_SERVICES_JSON` so CI can write
+`apps/mobile/secrets/google-services.json` before Expo prebuild and Gradle release builds.
 
 GitHub Actions can also upload a signed AAB to Google Play through
 [`.github/workflows/deploy-play-store.yml`](/home/jason/gh/PrivateMesh/.github/workflows/deploy-play-store.yml).
@@ -57,7 +59,8 @@ That workflow is manual by design: the operator chooses the exact `ref`, track, 
 release status instead of silently pushing every Android tag into Play Console.
 
 The Play deployment workflow additionally expects the `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` GitHub
-Actions secret described in [`docs/operator-playbook.md`](/home/jason/gh/PrivateMesh/docs/operator-playbook.md).
+Actions secret described in [`docs/operator-playbook.md`](/home/jason/gh/PrivateMesh/docs/operator-playbook.md),
+plus `ANDROID_GOOGLE_SERVICES_JSON` for the Firebase Android app config file.
 
 Run it from GitHub Actions or from the CLI, for example:
 

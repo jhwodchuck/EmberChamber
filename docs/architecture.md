@@ -39,20 +39,20 @@ from target direction so the docs do not overstate privacy, platform maturity, o
 
 - Passkey endpoints exist but currently return `501`.
 - Device-link start/confirm exists, but the full user-facing recovery and trusted-device flow is not complete.
-- `PUSH_QUEUE` is provisioned in config but not yet consumed by worker code.
+- Android FCM token registration, encrypted token storage, and `PUSH_QUEUE` delivery are now wired for the mobile client, but production push still depends on deployed Cloudflare secrets plus Apple-side APNS work for iPhone.
 - The encrypted mailbox/device-bundle path now powers the browser DM flow, but the repo does not yet expose a fully migrated encrypted-group experience on top of it across every client surface.
 
 ## Current Client Surface Matrix
 
 | Surface | Relay-native today | Still legacy or missing |
 | --- | --- | --- |
-| Android and iPhone | Bootstrap, adults-only affirmation, sessions, privacy defaults, contact card, device bundle registration, group invite preview/accept, group threads, attachment upload/download, local cache. | Real production key handling and final E2EE UX are still scaffolded rather than complete. |
+| Android and iPhone | Bootstrap, adults-only affirmation, sessions, privacy defaults, contact card, device bundle registration, group invite preview/accept, group threads, attachment upload/download, local cache, and Android-native FCM token registration. | Real production key handling, final E2EE UX, and APNS/iPhone push delivery are still scaffolded rather than complete. |
 | Desktop | Bootstrap, adults-only affirmation, sessions, privacy defaults, group creation, group invite management, invite preview/accept, group threads, attachment upload/download. | Passkeys, polished recovery, and deeper Rust-core integration are incomplete. |
 | Web | Public site, invite landing, magic-link bootstrap, profile/privacy settings, relay-native DM/chat, joined-space metadata search, group creation, relay-hosted group threads, and invite preview/accept. | Encrypted-group rollout, universal encrypted attachments, and passkey/recovery maturity are still incomplete. |
 
 ## D1 Schema Summary
 
-- Bootstrap and auth: `beta_invites`, `accounts`, `account_emails`, `auth_challenges`, `devices`, `sessions`, `passkeys`, `device_links`
+- Bootstrap and auth: `beta_invites`, `accounts`, `account_emails`, `auth_challenges`, `devices`, `sessions`, `passkeys`, `device_links`, `device_push_tokens`
 - Conversations and membership: `conversations`, `conversation_members`, `conversation_invites`, `conversation_messages`, `blocks`
 - Media and safety: `attachments`, `reports`
 
@@ -62,7 +62,7 @@ from target direction so the docs do not overstate privacy, platform maturity, o
 - `GroupCoordinatorDO`: stores current group epoch and member set for relay-side coordination.
 - `RateLimitDO`: keyed abuse limiter for auth, invite, and send flows.
 - `EMAIL_QUEUE`: used for magic-link dispatch.
-- `PUSH_QUEUE`: declared but not yet wired into runtime logic.
+- `PUSH_QUEUE`: used for Android wake notifications backed by direct FCM delivery when the worker has the required secrets.
 - `CLEANUP_QUEUE`: wired into runtime logic for retention cleanup work.
 
 ## Architectural Gaps To Close
@@ -70,5 +70,6 @@ from target direction so the docs do not overstate privacy, platform maturity, o
 - Finish the migration from relay-hosted readable group threads to an end-to-end encrypted group-history model.
 - Add client-side attachment encryption before upload and document ciphertext retention precisely.
 - Wire passkeys, safer recovery/device-link flows, and safety-number style change handling end to end.
+- Finish APNS delivery plus more capable background sync and inbox surfacing on mobile for the encrypted mailbox path.
 - Finish the remaining removal of legacy `apps/api` dependencies outside retired placeholder routes and docs.
 - Add automated cleanup for mailbox envelopes and expired attachment records.
