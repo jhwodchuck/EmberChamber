@@ -35,6 +35,12 @@ export type PlatformReleaseAvailability = {
 
 const RELEASES_API_URL = "https://api.github.com/repos/jhwodchuck/EmberChamber/releases";
 
+const PLATFORM_SUFFIXES = {
+  android: [".apk", ".aab"],
+  windows: [".msi", ".exe"],
+  ubuntu: [".deb", ".appimage"],
+} as const;
+
 function matchesAsset(name: string, suffixes: string[]) {
   const lowerName = name.toLowerCase();
   return suffixes.some((suffix) => lowerName.endsWith(suffix));
@@ -69,23 +75,49 @@ export async function getLatestPlatformRelease(): Promise<PlatformReleaseAvailab
     }
 
     const releases = (await response.json()) as GitHubRelease[];
-    const latestRelease = releases.find((release) => release.assets.length > 0);
+    const downloadsByPlatform: Record<string, PlatformDownload[]> = {
+      android: [],
+      windows: [],
+      ubuntu: [],
+    };
 
-    if (!latestRelease) {
+    let latestNativeRelease: GitHubRelease | null = null;
+
+    for (const release of releases) {
+      let releaseHasNativeAssets = false;
+
+      for (const [platform, suffixes] of Object.entries(PLATFORM_SUFFIXES)) {
+        if (downloadsByPlatform[platform].length > 0) {
+          continue;
+        }
+
+        const platformDownloads = pickPlatformDownloads(release, [...suffixes]);
+        if (platformDownloads.length > 0) {
+          downloadsByPlatform[platform] = platformDownloads;
+          releaseHasNativeAssets = true;
+        }
+      }
+
+      if (!latestNativeRelease && releaseHasNativeAssets) {
+        latestNativeRelease = release;
+      }
+
+      if (Object.values(downloadsByPlatform).every((downloads) => downloads.length > 0)) {
+        break;
+      }
+    }
+
+    if (!latestNativeRelease) {
       return null;
     }
 
     return {
-      releaseName: latestRelease.name ?? latestRelease.tag_name,
-      releaseTag: latestRelease.tag_name,
-      releaseUrl: latestRelease.html_url,
-      prerelease: latestRelease.prerelease,
-      publishedAt: latestRelease.published_at,
-      downloadsByPlatform: {
-        android: pickPlatformDownloads(latestRelease, [".apk", ".aab"]),
-        windows: pickPlatformDownloads(latestRelease, [".msi", ".exe"]),
-        ubuntu: pickPlatformDownloads(latestRelease, [".deb", ".appimage"]),
-      },
+      releaseName: latestNativeRelease.name ?? latestNativeRelease.tag_name,
+      releaseTag: latestNativeRelease.tag_name,
+      releaseUrl: latestNativeRelease.html_url,
+      prerelease: latestNativeRelease.prerelease,
+      publishedAt: latestNativeRelease.published_at,
+      downloadsByPlatform,
     };
   } catch {
     return null;
