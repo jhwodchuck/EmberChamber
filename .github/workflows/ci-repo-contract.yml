@@ -40,6 +40,9 @@ concurrency:
 jobs:
   verify:
     name: Verify repo contracts and doc/runtime alignment
+    permissions:
+      id-token: write
+      contents: read
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v6
@@ -50,3 +53,7 @@ jobs:
 
       - name: Check repo contracts
         run: npm run check:repo-contracts
+
+      - name: Fix failing repo-contract checks
+        uses: fly-ci/wingman-action@v1
+        if: ${{ failure() && github.event.pull_request != null }}
