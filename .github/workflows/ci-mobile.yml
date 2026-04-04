@@ -8,6 +8,7 @@ on:
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/ci-mobile.yml"
+      - ".github/workflows/build-android.yml"
       - ".github/workflows/release-android.yml"
   pull_request:
     paths:
@@ -15,6 +16,7 @@ on:
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/ci-mobile.yml"
+      - ".github/workflows/build-android.yml"
       - ".github/workflows/release-android.yml"
 
 concurrency:
@@ -54,10 +56,20 @@ jobs:
       - name: Verify Android mobile project
         run: npm run verify:android --workspace=apps/mobile
 
+  build-android-release:
+    name: Build Android release APK for screenshots
+    needs: verify-android
+    uses: ./.github/workflows/build-android.yml
+    with:
+      build_type: release
+      sign: false
+      artifact_name: emberchamber-android-release-screenshots
+    secrets: inherit
+
   android-screenshots:
     name: Capture Android screenshots (${{ matrix.device_class }})
     runs-on: ubuntu-22.04
-    needs: verify-android
+    needs: build-android-release
     strategy:
       fail-fast: false
       matrix:
@@ -71,46 +83,23 @@ jobs:
           - device_class: chromebook
             wm_size: 1366x768
             wm_density: 160
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-      EXPO_NO_TELEMETRY: "1"
     steps:
       - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v6
+      - name: Download release APK artifact
+        uses: actions/download-artifact@v6
         with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: package-lock.json
+          name: ${{ needs.build-android-release.outputs.artifact_name }}
+          path: apps/mobile/artifacts/android-build
 
-      - uses: actions/setup-java@v5
-        with:
-          java-version: 17
-          distribution: temurin
-
-      - uses: android-actions/setup-android@v3
-
-      - name: Cache Gradle packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: gradle-${{ runner.os }}-
-
-      - name: Install dependencies
-        run: npm ci --no-audit --no-fund
-
-      - name: Generate Android native project
-        run: npm run build:android --workspace=apps/mobile
-
-      - name: Make Gradle wrapper executable
-        run: chmod +x apps/mobile/android/gradlew
-
-      - name: Build Android debug APK
-        run: ./gradlew assembleDebug
-        working-directory: apps/mobile/android
+      - name: Resolve APK path
+        run: |
+          APK_PATH=$(find apps/mobile/artifacts/android-build -name '*.apk' | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            echo "No APK found in downloaded build artifacts" >&2
+            exit 1
+          fi
+          echo "APK_PATH=$APK_PATH" >> "$GITHUB_ENV"
 
       - name: Capture emulator screenshots
         uses: reactivecircus/android-emulator-runner@v2
@@ -122,7 +111,7 @@ jobs:
           avd-name: ci-screenshot-avd-${{ matrix.device_class }}
           disable-animations: true
           script: |
-            adb install -r apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+            adb install -r "$APK_PATH"
             bash apps/mobile/scripts/capture-android-screenshots.sh \
               "apps/mobile/artifacts/android-screenshots/${{ matrix.device_class }}" \
               "com.emberchamber.mobile" \
