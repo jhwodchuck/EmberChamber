@@ -2,7 +2,7 @@ name: CI - Relay and Companion Apps
 
 on:
   push:
-    branches: [main, "copilot/**"]
+    branches: [main]
     paths:
       - "apps/relay/**"
       - "apps/web/**"
