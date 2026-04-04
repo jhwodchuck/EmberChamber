@@ -1,25 +1,31 @@
-import type {
-  AttachmentTicket,
-  ConversationDetail,
-  ConversationInviteAcceptance,
-  ConversationInviteDescriptor,
-  ConversationInvitePreview,
-  ConversationKind,
-  CipherEnvelope,
-  ConversationDescriptor,
-  ConversationSearchResult,
-  ConversationSummary,
-  ContactCard,
-  DeviceKeyBundle,
-  GroupInviteRecord,
-  GroupInviteDescriptor,
-  GroupMembershipSummary,
-  GroupInvitePreview,
-  GroupThreadMessage,
-  MagicLinkChallenge,
-  MeProfile,
-  RoomAccessPolicy,
-  SessionDescriptor,
+import {
+  encodeDeviceLinkQrPayload,
+  parseDeviceLinkQrPayload,
+  relayOriginsMatch,
+  type AttachmentTicket,
+  type ConversationDetail,
+  type ConversationInviteAcceptance,
+  type ConversationInviteDescriptor,
+  type ConversationInvitePreview,
+  type ConversationKind,
+  type CipherEnvelope,
+  type ConversationDescriptor,
+  type ConversationSearchResult,
+  type ConversationSummary,
+  type ContactCard,
+  type DeviceKeyBundle,
+  type DeviceLinkConfirmResponse,
+  type DeviceLinkStartResponse,
+  type DeviceLinkStatus,
+  type GroupInviteRecord,
+  type GroupInviteDescriptor,
+  type GroupMembershipSummary,
+  type GroupInvitePreview,
+  type GroupThreadMessage,
+  type MagicLinkChallenge,
+  type MeProfile,
+  type RoomAccessPolicy,
+  type SessionDescriptor,
 } from "@emberchamber/protocol";
 import { z } from "zod";
 import { DeviceMailboxDO } from "./do/device-mailbox";
@@ -216,11 +222,30 @@ const reportSchema = z.object({
 });
 
 const deviceLinkStartSchema = z.object({
+  deviceLabel: z.string().min(1).max(64).default("Current device"),
+});
+
+const deviceLinkScanSchema = z.object({
+  qrPayload: z.string().min(16),
+});
+
+const deviceLinkClaimSchema = z.object({
+  qrPayload: z.string().min(16),
   deviceLabel: z.string().min(1).max(64),
+});
+
+const deviceLinkStatusQuerySchema = z.object({
+  token: z.string().min(16),
+  qrMode: z.enum(["source_display", "target_display"]),
 });
 
 const deviceLinkConfirmSchema = z.object({
   linkId: z.string().uuid(),
+});
+
+const deviceLinkCompleteSchema = z.object({
+  linkToken: z.string().min(16),
+  qrMode: z.enum(["source_display", "target_display"]),
 });
 
 const conversationInviteSchema = z.object({
@@ -240,6 +265,7 @@ const groupThreadMessageSchema = z.object({
 const profileSchema = z.object({
   displayName: z.string().min(1).max(128).optional(),
   bio: z.string().max(512).optional(),
+  avatarAttachmentId: z.string().uuid().optional().nullable(),
 });
 
 const privacySettingsSchema = z.object({
@@ -1375,6 +1401,88 @@ async function createSession(
   };
 }
 
+type DeviceLinkRow = {
+  id: string;
+  account_id: string;
+  requester_label: string;
+  qr_mode: "source_display" | "target_display";
+  created_at: string;
+  expires_at: string;
+  claimed_at: string | null;
+  approved_at: string | null;
+  approved_by_device_id: string | null;
+  consumed_at: string | null;
+  completed_device_id: string | null;
+  completed_session_id: string | null;
+};
+
+function relayPublicOrigin(env: Env) {
+  return new URL(env.EMBERCHAMBER_RELAY_PUBLIC_URL).origin;
+}
+
+async function hashDeviceLinkToken(linkToken: string) {
+  return sha256Hex(`device-link:${linkToken}`);
+}
+
+async function findDeviceLinkByToken(env: Env, linkToken: string) {
+  return dbFirst<DeviceLinkRow>(
+    env.DB,
+    `SELECT
+       id,
+       account_id,
+       requester_label,
+       qr_mode,
+       created_at,
+       expires_at,
+       claimed_at,
+       approved_at,
+       approved_by_device_id,
+       consumed_at,
+       completed_device_id,
+       completed_session_id
+     FROM device_links
+    WHERE link_token_hash = ?1`,
+    await hashDeviceLinkToken(linkToken)
+  );
+}
+
+function getDeviceLinkState(row: DeviceLinkRow): DeviceLinkStatus["state"] {
+  const now = new Date().toISOString();
+  if (row.expires_at <= now) {
+    return "expired";
+  }
+  if (row.consumed_at) {
+    return "consumed";
+  }
+  if (!row.claimed_at) {
+    return row.qr_mode === "target_display" ? "waiting_for_source" : "pending_claim";
+  }
+  if (!row.approved_at) {
+    return "pending_approval";
+  }
+  return "approved";
+}
+
+function buildDeviceLinkStatus(env: Env, row: DeviceLinkRow): DeviceLinkStatus {
+  const state = getDeviceLinkState(row);
+  return {
+    linkId: row.id,
+    relayOrigin: relayPublicOrigin(env),
+    qrMode: row.qr_mode,
+    state,
+    requesterLabel: row.requester_label,
+    expiresAt: row.expires_at,
+    createdAt: row.created_at,
+    claimedAt: row.claimed_at,
+    approvedAt: row.approved_at,
+    approvedByDeviceId: row.approved_by_device_id,
+    consumedAt: row.consumed_at,
+    completedDeviceId: row.completed_device_id,
+    completedSessionId: row.completed_session_id,
+    canComplete: state === "approved",
+  };
+}
+
 async function parseAttachmentToken(env: Env, token: string, attachmentId: string, action: "upload" | "download") {
   const [payload, signature] = token.split(".");
   if (!payload || !signature) {
@@ -1772,7 +1880,8 @@ async function buildRelayHostedAttachment(
 async function loadRelayHostedConversationMessages(
   env: Env,
   conversationId: string,
-  limit: number
+  limit: number,
+  requestingAccountId?: string
 ): Promise<GroupThreadMessage[]> {
   const rows = await dbAll<{
     id: string;
@@ -1782,6 +1891,8 @@ async function loadRelayHostedConversationMessages(
     kind: "text" | "media" | "system_notice";
     body_text: string | null;
     created_at: string;
+    edited_at: string | null;
+    read_by_count: number;
   } & RelayHostedAttachmentRow>(
     env.DB,
     `SELECT
@@ -1792,6 +1903,7 @@ async function loadRelayHostedConversationMessages(
        m.kind,
        m.body_text,
        m.created_at,
+       m.edited_at,
        a.id AS attachment_id,
        a.file_name,
        a.mime_type,
@@ -1803,7 +1915,14 @@ async function loadRelayHostedConversationMessages(
        a.preview_blur_hash,
        a.encryption_mode,
        a.attachment_key_box,
-       a.attachment_iv_box
+       a.attachment_iv_box,
+       (
+         SELECT COUNT(*)
+           FROM message_reads r
+          WHERE r.conversation_id = m.conversation_id
+            AND r.last_read_at >= m.created_at
+            AND r.account_id != m.sender_account_id
+       ) AS read_by_count
      FROM conversation_messages m
      JOIN accounts sender ON sender.id = m.sender_account_id
      LEFT JOIN attachments a ON a.id = m.attachment_id
@@ -1831,6 +1950,8 @@ async function loadRelayHostedConversationMessages(
       text: row.body_text,
       attachment,
       createdAt: row.created_at,
+      editedAt: row.edited_at ?? null,
+      readByCount: row.read_by_count ?? 0,
     });
   }
 
@@ -2439,9 +2560,10 @@ export default {
           display_name: string;
           bio: string | null;
           email_ciphertext: string;
+          avatar_attachment_id: string | null;
         }>(
           env.DB,
-          `SELECT a.display_name, a.bio, ae.email_ciphertext
+          `SELECT a.display_name, a.bio, ae.email_ciphertext, a.avatar_attachment_id
              FROM accounts a
              JOIN account_emails ae ON ae.account_id = a.id
             WHERE a.id = ?1`,
@@ -2452,12 +2574,20 @@ export default {
           throw new HttpError(404, "Account not found", "ACCOUNT_NOT_FOUND");
         }
 
+        let avatarUrl: string | undefined;
+        if (account.avatar_attachment_id) {
+          const expiresAtMs = Date.now() + 60 * 60 * 1000; // 1 hour for avatar
+          const token = await signAttachmentToken(env, account.avatar_attachment_id, "download", expiresAtMs);
+          avatarUrl = `${env.EMBERCHAMBER_RELAY_PUBLIC_URL}/v1/attachments/download/${account.avatar_attachment_id}?token=${encodeURIComponent(token)}`;
+        }
+
         const profile: MeProfile = {
           id: auth.accountId,
           username: accountUsername(auth.accountId),
           displayName: account.display_name,
           email: await decryptString(env.EMBERCHAMBER_EMAIL_ENCRYPTION_SECRET, account.email_ciphertext),
           bio: account.bio ?? undefined,
+          avatarUrl,
         };
 
         return respond(json(profile));
@@ -2466,9 +2596,9 @@ export default {
       if (request.method === "PATCH" && pathname === "/v1/me") {
         const auth = await requireAuth(request, env);
         const body = profileSchema.parse(await readJson(request));
-        const existing = await dbFirst<{ display_name: string; bio: string | null }>(
+        const existing = await dbFirst<{ display_name: string; bio: string | null; avatar_attachment_id: string | null }>(
           env.DB,
-          "SELECT display_name, bio FROM accounts WHERE id = ?1",
+          "SELECT display_name, bio, avatar_attachment_id FROM accounts WHERE id = ?1",
           auth.accountId
         );
 
@@ -2478,11 +2608,15 @@ export default {
 
         const displayName = body.displayName ?? existing.display_name;
         const bio = body.bio ?? existing.bio;
+        // null explicitly clears the avatar; undefined means no change
+        const avatarAttachmentId =
+          body.avatarAttachmentId !== undefined ? body.avatarAttachmentId : existing.avatar_attachment_id;
         await dbRun(
           env.DB,
-          "UPDATE accounts SET display_name = ?1, bio = ?2, updated_at = ?3 WHERE id = ?4",
+          "UPDATE accounts SET display_name = ?1, bio = ?2, avatar_attachment_id = ?3, updated_at = ?4 WHERE id = ?5",
           displayName,
           bio ?? null,
+          avatarAttachmentId,
           new Date().toISOString(),
           auth.accountId
         );
@@ -2688,49 +2822,332 @@ export default {
       if (request.method === "POST" && pathname === "/v1/devices/link/start") {
         const auth = await requireAuth(request, env);
         const body = deviceLinkStartSchema.parse(await readJson(request));
+        const now = new Date().toISOString();
         const linkId = crypto.randomUUID();
         const linkToken = `${linkId}.${crypto.randomUUID()}`;
-        const tokenHash = await sha256Hex(`device-link:${linkToken}`);
+        const tokenHash = await hashDeviceLinkToken(linkToken);
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+        const qrPayload = encodeDeviceLinkQrPayload({
+          relayOrigin: relayPublicOrigin(env),
+          qrMode: "source_display",
+          linkToken,
+          requesterLabel: body.deviceLabel,
+        });
 
         await dbRun(
           env.DB,
-          `INSERT INTO device_links (id, account_id, requester_label, link_token_hash, created_at, expires_at)
-           VALUES (?1, ?2, ?3, ?4, ?5, ?6)`,
+          `INSERT INTO device_links (id, account_id, requester_label, link_token_hash, qr_mode, created_at, expires_at)
+           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
           linkId,
           auth.accountId,
           body.deviceLabel,
           tokenHash,
-          new Date().toISOString(),
+          "source_display",
+          now,
           expiresAt
         );
         await scheduleCleanup(env, "device_link_start");
 
+        const createdRow: DeviceLinkRow = {
+          id: linkId,
+          account_id: auth.accountId,
+          requester_label: body.deviceLabel,
+          qr_mode: "source_display",
+          created_at: now,
+          expires_at: expiresAt,
+          claimed_at: null,
+          approved_at: null,
+          approved_by_device_id: null,
+          consumed_at: null,
+          completed_device_id: null,
+          completed_session_id: null,
+        };
+
         return respond(
           json({
+            ...buildDeviceLinkStatus(env, createdRow),
             linkId,
-            qrPayload: linkToken,
-            expiresAt,
-          })
+            qrPayload,
+          } satisfies DeviceLinkStartResponse)
         );
+      }
+
+      if (request.method === "POST" && pathname === "/v1/devices/link/scan") {
+        const auth = await requireAuth(request, env);
+        const body = deviceLinkScanSchema.parse(await readJson(request));
+        const parsed = parseDeviceLinkQrPayload(body.qrPayload);
+        if (parsed.qrMode !== "target_display") {
+          throw new HttpError(400, "That QR is meant for a new device, not a signed-in device.", "DEVICE_LINK_QR_MODE_INVALID");
+        }
+        if (!relayOriginsMatch(relayPublicOrigin(env), parsed.relayOrigin)) {
+          throw new HttpError(400, "That QR belongs to a different relay environment.", "DEVICE_LINK_RELAY_MISMATCH");
+        }
+
+        const requesterLabel = parsed.requesterLabel?.trim() || "New device";
+        const now = new Date().toISOString();
+        const existing = await findDeviceLinkByToken(env, parsed.linkToken);
+        if (existing) {
+          if (existing.account_id !== auth.accountId) {
+            throw new HttpError(403, "This QR is already attached to a different account.", "FORBIDDEN");
+          }
+          if (existing.qr_mode !== "target_display") {
+            throw new HttpError(409, "This device-link QR is for the opposite flow.", "DEVICE_LINK_QR_MODE_INVALID");
+          }
+          if (!existing.claimed_at || existing.requester_label !== requesterLabel) {
+            await dbRun(
+              env.DB,
+              `UPDATE device_links
+                  SET requester_label = ?1,
+                      claimed_at = COALESCE(claimed_at, ?2)
+                WHERE id = ?3`,
+              requesterLabel,
+              now,
+              existing.id
+            );
+          }
+
+          return respond(
+            json(
+              buildDeviceLinkStatus(env, {
+                ...existing,
+                requester_label: requesterLabel,
+                claimed_at: existing.claimed_at ?? now,
+              })
+            )
+          );
+        }
+
+        const linkId = crypto.randomUUID();
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+        await dbRun(
+          env.DB,
+          `INSERT INTO device_links (
+             id,
+             account_id,
+             requester_label,
+             link_token_hash,
+             qr_mode,
+             created_at,
+             expires_at,
+             claimed_at
+           )
+           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?6)`,
+          linkId,
+          auth.accountId,
+          requesterLabel,
+          await hashDeviceLinkToken(parsed.linkToken),
+          "target_display",
+          now,
+          expiresAt
+        );
+        await scheduleCleanup(env, "device_link_scan");
+
+        return respond(
+          json(
+            buildDeviceLinkStatus(env, {
+              id: linkId,
+              account_id: auth.accountId,
+              requester_label: requesterLabel,
+              qr_mode: "target_display",
+              created_at: now,
+              expires_at: expiresAt,
+              claimed_at: now,
+              approved_at: null,
+              approved_by_device_id: null,
+              consumed_at: null,
+              completed_device_id: null,
+              completed_session_id: null,
+            })
+          )
+        );
+      }
+
+      if (request.method === "POST" && pathname === "/v1/devices/link/claim") {
+        const body = deviceLinkClaimSchema.parse(await readJson(request));
+        const parsed = parseDeviceLinkQrPayload(body.qrPayload);
+        if (parsed.qrMode !== "source_display") {
+          throw new HttpError(400, "That QR is meant to be scanned by a signed-in device.", "DEVICE_LINK_QR_MODE_INVALID");
+        }
+        if (!relayOriginsMatch(relayPublicOrigin(env), parsed.relayOrigin)) {
+          throw new HttpError(400, "That QR belongs to a different relay environment.", "DEVICE_LINK_RELAY_MISMATCH");
+        }
+
+        const row = await findDeviceLinkByToken(env, parsed.linkToken);
+        if (!row) {
+          throw new HttpError(404, "Device-link request not found", "DEVICE_LINK_NOT_FOUND");
+        }
+        if (row.qr_mode !== "source_display") {
+          throw new HttpError(409, "This device-link QR is for the opposite flow.", "DEVICE_LINK_QR_MODE_INVALID");
+        }
+
+        const now = new Date().toISOString();
+        const status = buildDeviceLinkStatus(env, row);
+        if (status.state === "approved" || status.state === "consumed" || status.state === "expired") {
+          return respond(json(status));
+        }
+
+        const normalizedDeviceLabel = body.deviceLabel.trim();
+        if (row.claimed_at && row.requester_label !== normalizedDeviceLabel) {
+          throw new HttpError(
+            409,
+            "This device-link request was already claimed by another device.",
+            "DEVICE_LINK_ALREADY_CLAIMED"
+          );
+        }
+
+        await dbRun(
+          env.DB,
+          `UPDATE device_links
+              SET requester_label = ?1,
+                  claimed_at = COALESCE(claimed_at, ?2)
+            WHERE id = ?3`,
+          normalizedDeviceLabel,
+          now,
+          row.id
+        );
+
+        return respond(
+          json(
+            buildDeviceLinkStatus(env, {
+              ...row,
+              requester_label: normalizedDeviceLabel,
+              claimed_at: row.claimed_at ?? now,
+            })
+          )
+        );
+      }
+
+      if (request.method === "GET" && pathname === "/v1/devices/link/status") {
+        const query = deviceLinkStatusQuerySchema.parse({
+          token: url.searchParams.get("token") ?? undefined,
+          qrMode: url.searchParams.get("qrMode") ?? undefined,
+        });
+        const row = await findDeviceLinkByToken(env, query.token);
+        if (!row) {
+          throw new HttpError(404, "Device-link request not found", "DEVICE_LINK_NOT_FOUND");
+        }
+        if (row.qr_mode !== query.qrMode) {
+          throw new HttpError(409, "This device-link QR is for the opposite flow.", "DEVICE_LINK_QR_MODE_INVALID");
+        }
+
+        return respond(json(buildDeviceLinkStatus(env, row)));
       }
 
       if (request.method === "POST" && pathname === "/v1/devices/link/confirm") {
         const auth = await requireAuth(request, env);
         const body = deviceLinkConfirmSchema.parse(await readJson(request));
-
-        await dbRun(
+        const row = await dbFirst<DeviceLinkRow>(
           env.DB,
-          `UPDATE device_links
-              SET approved_at = ?1, approved_by_device_id = ?2
-            WHERE id = ?3 AND account_id = ?4`,
-          new Date().toISOString(),
-          auth.deviceId,
+          `SELECT
+             id,
+             account_id,
+             requester_label,
+             qr_mode,
+             created_at,
+             expires_at,
+             claimed_at,
+             approved_at,
+             approved_by_device_id,
+             consumed_at,
+             completed_device_id,
+             completed_session_id
+           FROM device_links
+          WHERE id = ?1
+            AND account_id = ?2`,
           body.linkId,
           auth.accountId
         );
+        if (!row) {
+          throw new HttpError(404, "Device-link request not found", "DEVICE_LINK_NOT_FOUND");
+        }
 
-        return respond(json({ confirmed: true, linkId: body.linkId }));
+        const currentStatus = buildDeviceLinkStatus(env, row);
+        if (currentStatus.state !== "pending_approval" && currentStatus.state !== "approved") {
+          return respond(
+            json({
+              ...currentStatus,
+              linkId: row.id,
+              confirmed: true,
+            } satisfies DeviceLinkConfirmResponse)
+          );
+        }
+
+        const approvedAt = row.approved_at ?? new Date().toISOString();
+        if (!row.approved_at) {
+          await dbRun(
+            env.DB,
+            `UPDATE device_links
+                SET approved_at = ?1, approved_by_device_id = ?2
+              WHERE id = ?3 AND account_id = ?4`,
+            approvedAt,
+            auth.deviceId,
+            body.linkId,
+            auth.accountId
+          );
+        }
+
+        return respond(
+          json({
+            ...buildDeviceLinkStatus(env, {
+              ...row,
+              approved_at: approvedAt,
+              approved_by_device_id: row.approved_by_device_id ?? auth.deviceId,
+            }),
+            linkId: row.id,
+            confirmed: true,
+          } satisfies DeviceLinkConfirmResponse)
+        );
+      }
+
+      if (request.method === "POST" && pathname === "/v1/devices/link/complete") {
+        const body = deviceLinkCompleteSchema.parse(await readJson(request));
+        const row = await findDeviceLinkByToken(env, body.linkToken);
+        if (!row) {
+          throw new HttpError(404, "Device-link request not found", "DEVICE_LINK_NOT_FOUND");
+        }
+        if (row.qr_mode !== body.qrMode) {
+          throw new HttpError(409, "This device-link QR is for the opposite flow.", "DEVICE_LINK_QR_MODE_INVALID");
+        }
+
+        const status = buildDeviceLinkStatus(env, row);
+        if (status.state === "expired") {
+          throw new HttpError(410, "This device-link request expired. Start a fresh QR.", "DEVICE_LINK_EXPIRED");
+        }
+        if (status.state === "consumed") {
+          throw new HttpError(409, "This device-link request was already used.", "DEVICE_LINK_CONSUMED");
+        }
+        if (status.state !== "approved") {
+          throw new HttpError(409, "This device-link request is not approved yet.", "DEVICE_LINK_NOT_APPROVED");
+        }
+
+        const now = new Date().toISOString();
+        const deviceId = crypto.randomUUID();
+        await dbRun(
+          env.DB,
+          `INSERT INTO devices (id, account_id, device_label, linked_from_device_id, created_at)
+           VALUES (?1, ?2, ?3, ?4, ?5)`,
+          deviceId,
+          row.account_id,
+          row.requester_label,
+          row.approved_by_device_id,
+          now
+        );
+
+        const session = await createSession(env, row.account_id, deviceId);
+        await dbRun(
+          env.DB,
+          `UPDATE device_links
+              SET consumed_at = ?1,
+                  completed_device_id = ?2,
+                  completed_session_id = ?3
+            WHERE id = ?4`,
+          now,
+          deviceId,
+          session.sessionId,
+          row.id
+        );
+
+        return respond(json(session));
       }
 
       if (request.method === "POST" && pathname === "/v1/contacts/card/resolve") {
@@ -3573,7 +3990,7 @@ export default {
         }
 
         const limit = Math.max(1, Math.min(100, Number(url.searchParams.get("limit") ?? "50")));
-        return respond(json(await loadRelayHostedConversationMessages(env, conversationId, limit)));
+        return respond(json(await loadRelayHostedConversationMessages(env, conversationId, limit, auth.accountId)));
       }
 
       if (request.method === "POST" && conversationMessagesMatch) {
@@ -3693,7 +4110,7 @@ export default {
         }
 
         const limit = Math.max(1, Math.min(100, Number(url.searchParams.get("limit") ?? "50")));
-        return respond(json(await loadRelayHostedConversationMessages(env, conversationId, limit)));
+        return respond(json(await loadRelayHostedConversationMessages(env, conversationId, limit, auth.accountId)));
       }
 
       if (request.method === "POST" && groupMessagesMatch) {
@@ -3745,6 +4162,113 @@ export default {
             { status: 201 }
           )
         );
+      }
+
+      // PATCH /v1/groups/{id} – update group title or sensitive-media default
+      const groupPatchMatch = pathname.match(/^\/v1\/groups\/([0-9a-f-]{36})$/i);
+      if (request.method === "PATCH" && groupPatchMatch) {
+        const auth = await requireAuth(request, env);
+        const conversationId = groupPatchMatch[1];
+        const body = z.object({
+          title: z.string().min(1).max(80).optional(),
+          sensitiveMediaDefault: z.boolean().optional(),
+        }).parse(await readJson(request));
+
+        const membership = await dbFirst<{ role: string }>(
+          env.DB,
+          `SELECT role FROM conversation_members WHERE conversation_id = ?1 AND account_id = ?2 AND removed_at IS NULL`,
+          conversationId,
+          auth.accountId
+        );
+
+        if (!membership) {
+          throw new HttpError(404, "Group not found", "GROUP_NOT_FOUND");
+        }
+        if (!["owner", "admin"].includes(membership.role)) {
+          throw new HttpError(403, "Only owners or admins can update group settings", "FORBIDDEN");
+        }
+
+        const fields: string[] = [];
+        const values: unknown[] = [];
+        if (body.title !== undefined) { fields.push("title = ?"); values.push(body.title); }
+        if (body.sensitiveMediaDefault !== undefined) { fields.push("sensitive_media_default = ?"); values.push(body.sensitiveMediaDefault ? 1 : 0); }
+        if (fields.length) {
+          fields.push("updated_at = ?");
+          values.push(new Date().toISOString());
+          values.push(conversationId);
+          // D1 doesn't support prepared statement reuse with dynamic columns; build the SQL manually
+          const sql = `UPDATE conversations SET ${fields.join(", ").replace(/\?/g, (_, i) => `?${i + 1}`)} WHERE id = ?${values.length}`;
+          await dbRun(env.DB, sql, ...values);
+        }
+
+        return respond(json({ updated: true, conversationId }));
+      }
+
+      // POST /v1/groups/{id}/messages/ack – mark messages as read up to a cursor
+      const groupMessagesAckMatch = pathname.match(/^\/v1\/groups\/([0-9a-f-]{36})\/messages\/ack$/i);
+      if (request.method === "POST" && groupMessagesAckMatch) {
+        const auth = await requireAuth(request, env);
+        const conversationId = groupMessagesAckMatch[1];
+        const body = z.object({ lastReadMessageCreatedAt: z.string() }).parse(await readJson(request));
+
+        // Must be a member
+        const membership = await dbFirst<{ role: string }>(
+          env.DB,
+          `SELECT role FROM conversation_members WHERE conversation_id = ?1 AND account_id = ?2 AND removed_at IS NULL`,
+          conversationId,
+          auth.accountId
+        );
+        if (!membership) throw new HttpError(404, "Conversation not found", "CONVERSATION_NOT_FOUND");
+
+        const now = new Date().toISOString();
+        await dbRun(
+          env.DB,
+          `INSERT INTO message_reads (conversation_id, account_id, last_read_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4)
+             ON CONFLICT (conversation_id, account_id)
+             DO UPDATE SET
+               last_read_at = MAX(excluded.last_read_at, message_reads.last_read_at),
+               updated_at   = ?4`,
+          conversationId,
+          auth.accountId,
+          body.lastReadMessageCreatedAt,
+          now
+        );
+
+        return respond(json({ acked: true }));
+      }
+
+      // PATCH /v1/groups/{id}/messages/{messageId} – edit own relay-hosted message
+      const groupMessageEditMatch = pathname.match(/^\/v1\/groups\/([0-9a-f-]{36})\/messages\/([0-9a-f-]{36})$/i);
+      if (request.method === "PATCH" && groupMessageEditMatch) {
+        const auth = await requireAuth(request, env);
+        const conversationId = groupMessageEditMatch[1];
+        const messageId = groupMessageEditMatch[2];
+        const body = z.object({ text: z.string().max(2000) }).parse(await readJson(request));
+
+        const msg = await dbFirst<{ sender_account_id: string; conversation_id: string }>(
+          env.DB,
+          `SELECT sender_account_id, conversation_id FROM conversation_messages WHERE id = ?1 AND deleted_at IS NULL`,
+          messageId
+        );
+
+        if (!msg || msg.conversation_id !== conversationId) {
+          throw new HttpError(404, "Message not found", "MESSAGE_NOT_FOUND");
+        }
+        if (msg.sender_account_id !== auth.accountId) {
+          throw new HttpError(403, "You can only edit your own messages", "FORBIDDEN");
+        }
+
+        const editedAt = new Date().toISOString();
+        await dbRun(
+          env.DB,
+          "UPDATE conversation_messages SET body_text = ?1, edited_at = ?2 WHERE id = ?3",
+          body.text,
+          editedAt,
+          messageId
+        );
+
+        return respond(json({ updated: true, messageId, text: body.text, editedAt }));
       }
 
       const conversationInviteMatch = pathname.match(/^\/v1\/conversations\/([0-9a-f-]{36})\/invites$/i);

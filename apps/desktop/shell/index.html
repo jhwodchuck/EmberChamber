@@ -707,6 +707,58 @@
         background: #120a0a;
       }
 
+      .media-shell img:not(.no-zoom) {
+        cursor: zoom-in;
+      }
+
+      .lightbox-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        background: rgba(0, 0, 0, 0.92);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: zoom-out;
+      }
+
+      .lightbox-overlay img {
+        max-width: 92vw;
+        max-height: 88vh;
+        object-fit: contain;
+        border-radius: 8px;
+        cursor: default;
+        box-shadow: 0 0 80px rgba(0, 0, 0, 0.6);
+      }
+
+      .lightbox-close {
+        position: absolute;
+        top: 20px;
+        right: 24px;
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: #fff;
+        border-radius: 8px;
+        padding: 8px 16px;
+        cursor: pointer;
+        font-size: 0.9rem;
+      }
+
+      .lightbox-close:hover {
+        background: rgba(255, 255, 255, 0.22);
+      }
+
+      .read-receipt {
+        font-size: 0.82rem;
+        opacity: 0.7;
+        margin-left: 4px;
+      }
+
+      .read-receipt.read {
+        color: var(--accent);
+        opacity: 1;
+      }
+
       .media-shell.blurred img {
         filter: blur(28px) saturate(0.7);
         transform: scale(1.04);
@@ -778,6 +830,164 @@
         text-align: left;
       }
 
+      /* ── Chat list ─────────────────────────────────────────── */
+      .search-input {
+        width: 100%;
+        border-radius: 16px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text);
+        padding: 11px 16px;
+        font: inherit;
+        outline: none;
+      }
+      .search-input:focus { border-color: var(--line-strong); }
+
+      .filter-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+        margin-bottom: 14px;
+      }
+      .filter-chip {
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.03);
+        color: var(--muted);
+        padding: 7px 12px;
+        font: inherit;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        text-transform: capitalize;
+      }
+      .filter-chip.active {
+        border-color: var(--line-strong);
+        background: rgba(234, 111, 63, 0.14);
+        color: var(--text);
+      }
+
+      .chat-list { display: grid; gap: 4px; margin-top: 6px; }
+
+      .chat-row {
+        display: flex;
+        width: 100%;
+        text-align: left;
+        gap: 12px;
+        align-items: flex-start;
+        padding: 12px 14px;
+        border-radius: 16px;
+        border: 1px solid transparent;
+        cursor: pointer;
+        font: inherit;
+        background: none;
+        color: var(--text);
+      }
+      .chat-row:hover { background: rgba(255,255,255,0.04); border-color: var(--line); }
+      .chat-row.active { background: rgba(234,111,63,0.08); border-color: rgba(255,184,144,0.18); }
+
+      .chat-avatar {
+        flex-shrink: 0;
+        width: 46px;
+        height: 46px;
+        border-radius: 16px;
+        background: rgba(234,111,63,0.16);
+        border: 1px solid rgba(234,111,63,0.22);
+        display: grid;
+        place-items: center;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--accent);
+      }
+      .chat-row-info { flex: 1; min-width: 0; display: grid; gap: 4px; }
+      .chat-row-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+      .chat-row-title { font-size: 0.95rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+      .chat-row-time { font-size: 0.78rem; color: var(--muted); flex-shrink: 0; }
+      .chat-row-preview { font-size: 0.85rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .chat-meta-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+      .chat-badge {
+        border-radius: 999px;
+        padding: 2px 7px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        border: 1px solid var(--line);
+        color: var(--muted);
+      }
+      .chat-badge.locked { border-color: rgba(152,239,197,0.26); color: var(--success); }
+      .chat-badge.sensitive { border-color: rgba(255,210,139,0.28); color: var(--warning); }
+      .chat-member-count { font-size: 0.78rem; color: var(--muted); margin-left: auto; }
+
+      /* ── Settings ──────────────────────────────────────────── */
+      .settings-avatar {
+        width: 52px;
+        height: 52px;
+        border-radius: 999px;
+        background: rgba(234,111,63,0.16);
+        border: 1px solid rgba(234,111,63,0.24);
+        display: grid;
+        place-items: center;
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: var(--accent);
+        flex-shrink: 0;
+      }
+      .settings-account-row { display: flex; align-items: center; gap: 14px; margin: 14px 0; }
+
+      .metric-tile {
+        flex: 1;
+        min-width: 130px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: rgba(255,255,255,0.03);
+        padding: 12px;
+        display: grid;
+        gap: 5px;
+      }
+      .metric-tile-label { font-size: 0.71rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+      .metric-tile-value { font-size: 0.95rem; font-weight: 700; }
+      .metric-tile-hint { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+      .metric-tile-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+      .toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+      .toggle-row:last-child { border-bottom: none; }
+      .toggle-text { flex: 1; display: grid; gap: 3px; }
+      .toggle-title { font-size: 0.9rem; font-weight: 600; }
+      .toggle-description { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+      .toggle-track {
+        flex-shrink: 0;
+        width: 46px;
+        height: 26px;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.12);
+        padding: 3px;
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        border: none;
+        transition: background 0.15s;
+      }
+      .toggle-track.on { background: rgba(234,111,63,0.38); }
+      .toggle-thumb { width: 20px; height: 20px; border-radius: 999px; background: #f0dbd0; transition: transform 0.15s; }
+      .toggle-track.on .toggle-thumb { transform: translateX(20px); background: #ffffff; }
+
+      .back-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font: inherit;
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--muted);
+        background: none;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 6px 12px;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+      .back-button:hover { color: var(--text); border-color: var(--line-strong); }
+
       @media (max-width: 1180px) {
         .auth-layout,
         .workspace-layout {
@@ -844,6 +1054,10 @@
       const state = {
         activeView: "thread",
         activeGroupId: null,
+        chatSearch: "",
+        chatFilter: "all",
+        chatListOpen: true,
+        lightboxMessageId: null,
         relayUrl: readRelayUrl(),
         session: null,
         pendingChallenge: null,
@@ -878,6 +1092,7 @@
           groupInviteReference: "",
           deviceLabel: suggestDesktopLabel(),
           ageConfirmed18: false,
+          inviteTokenVisible: false,
           completionInput: readCompletionTokenFromLocation(),
         },
         deviceLink: {
@@ -1293,6 +1508,17 @@
         }
 
         return timeFormatter.format(parsed);
+      }
+
+      function formatChatTimestamp(value) {
+        if (!value) { return ""; }
+        const parsed = new Date(value);
+        if (Number.isNaN(parsed.getTime())) { return ""; }
+        const now = new Date();
+        const sameDay = parsed.getFullYear() === now.getFullYear() && parsed.getMonth() === now.getMonth() && parsed.getDate() === now.getDate();
+        return sameDay
+          ? parsed.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+          : parsed.toLocaleDateString([], { month: "short", day: "numeric" });
       }
 
       function encodeBytes(bytes) {
@@ -2283,6 +2509,10 @@
         state.mailboxCursor = "";
         clearCachedThreadMessages();
         resetThreadState();
+        state.chatSearch = "";
+        state.chatFilter = "all";
+        state.chatListOpen = true;
+        state.lightboxMessageId = null;
         state.profileForm = {
           displayName: "",
           bio: "",
@@ -2614,6 +2844,7 @@
         state.authStatus = null;
         resetWorkspaceState();
         state.activeView = "thread";
+        state.chatListOpen = true;
         state.activeGroupId = session.bootstrapConversationId || null;
         render();
         await loadWorkspace();
@@ -3367,6 +3598,7 @@
         clearPendingChallenge();
         clearDeviceLinkState();
         state.authForm.mode = "magic-link";
+        state.authForm.inviteTokenVisible = false;
         await clearPersistedSecureState();
         state.activeView = "thread";
         state.workspaceStatus = null;
@@ -3463,6 +3695,19 @@
           return;
         }
 
+        if (bind === "chatSearch") {
+          const selStart = target.selectionStart;
+          const selEnd = target.selectionEnd;
+          state.chatSearch = value;
+          render();
+          const restoredInput = root.querySelector("[data-bind='chatSearch']");
+          if (restoredInput) {
+            restoredInput.focus();
+            restoredInput.setSelectionRange(selStart, selEnd);
+          }
+          return;
+        }
+
         if (bind === "thread.text") {
           state.threadComposer.text = value;
           return;
@@ -3520,6 +3765,7 @@
         const nav = button.dataset.nav;
         if (nav) {
           state.activeView = nav;
+          if (nav === "thread") state.chatListOpen = true;
           render();
           return;
         }
@@ -3537,6 +3783,15 @@
         if (action === "set-auth-mode") {
           state.authForm.mode = button.dataset.authMode === "device-link" ? "device-link" : "magic-link";
           clearDeviceLinkState();
+          render();
+          return;
+        }
+
+        if (action === "toggle-invite-token") {
+          state.authForm.inviteTokenVisible = !state.authForm.inviteTokenVisible;
+          if (!state.authForm.inviteTokenVisible) {
+            state.authForm.inviteToken = "";
+          }
           render();
           return;
         }
@@ -3627,10 +3882,59 @@
           return;
         }
 
+        if (action === "open-chat-list") {
+          state.chatListOpen = true;
+          render();
+          return;
+        }
+
+        if (action === "set-chat-filter") {
+          const filter = button.dataset.filter;
+          if (filter === "all" || filter === "sensitive" || filter === "encrypted") {
+            state.chatFilter = filter;
+            render();
+          }
+          return;
+        }
+
+        if (action === "view-image") {
+          const messageId = button.dataset.messageId;
+          if (messageId) {
+            state.lightboxMessageId = messageId;
+            render();
+          }
+          return;
+        }
+
+        if (action === "close-lightbox") {
+          state.lightboxMessageId = null;
+          render();
+          return;
+        }
+
+        if (action === "toggle-privacy-pref") {
+          const pref = button.dataset.pref;
+          if (pref === "autoDownloadSensitiveMedia" || pref === "allowSensitiveExport" || pref === "secureAppSwitcher") {
+            state.privacyForm[pref] = !state.privacyForm[pref];
+            await savePrivacy();
+          }
+          return;
+        }
+
+        if (action === "set-notification-preview") {
+          const mode = button.dataset.mode;
+          if (mode === "discreet" || mode === "expanded" || mode === "none") {
+            state.privacyForm.notificationPreviewMode = mode;
+            await savePrivacy();
+          }
+          return;
+        }
+
         if (action === "open-group") {
           const groupId = button.dataset.groupId;
           if (groupId) {
             state.activeView = "thread";
+            state.chatListOpen = false;
             await loadThread(groupId);
           }
           return;
@@ -3929,12 +4233,14 @@
                   <div class="logo small">EC</div>
                   <div>
                     <p class="eyebrow">Desktop bootstrap</p>
-                    <h2>Use the invite you are testing</h2>
+                    <h2>${state.authForm.mode === "device-link" ? "Link this desktop" : "Start sign-in"}</h2>
                   </div>
                 </div>
 
                 <p class="section-intro" style="margin-top: 14px">
-                  Paste the group invite URL when you have one. If the local Ubuntu relay is already running, this install can also use a reusable real beta invite token without switching into a separate test lane.
+                  ${state.authForm.mode === "device-link"
+                    ? "Use a signed-in device to approve this desktop. Name it, show or scan a QR, then approve."
+                    : "Focus on the next action only: name this desktop, confirm adults-only access, and open the magic link from your inbox."}
                 </p>
 
                 ${renderStatus(state.authStatus)}
@@ -3955,64 +4261,82 @@
                   </button>
                 </div>
 
-                ${
-                  state.authForm.mode === "magic-link"
+                ${state.authForm.mode === "magic-link"
+                  ? `<section class="status info" style="margin-top: 16px">
+                       <h3>Next step</h3>
+                       <p>If you have a trusted group invite, paste it now. Otherwise the email path still gets this desktop signed in.</p>
+                     </section>`
+                  : `<section class="status info" style="margin-top: 16px">
+                       <h3>Use a trusted device</h3>
+                       <p>QR linking adds this desktop to an existing account. For a brand-new account, switch back to the magic-link path.</p>
+                     </section>`
+                }
+
+                <div class="field-stack" style="margin-top: 18px">
+                  <div class="field">
+                    <label for="auth-device">Device label</label>
+                    <input id="auth-device" type="text" data-bind="auth.deviceLabel" value="${escapeHtml(state.authForm.deviceLabel)}" autocomplete="off" />
+                    <div class="hint">This is what your signed-in device sees before approving this desktop.</div>
+                  </div>
+
+                  ${state.authForm.mode === "magic-link"
                     ? `
-                        <form data-form="start-auth" class="field-stack" style="margin-top: 18px">
+                        <form data-form="start-auth" class="field-stack">
+                          <div class="field">
+                            <label for="auth-group-invite">Group invite link</label>
+                            <textarea id="auth-group-invite" data-bind="auth.groupInviteReference" placeholder="/invite/{groupId}/{token}">${escapeHtml(state.authForm.groupInviteReference)}</textarea>
+                            <div class="hint">Optional, but it can drop you into the right circle right away.</div>
+                          </div>
+
                           <div class="field">
                             <label for="auth-email">Private email</label>
                             <input id="auth-email" type="email" data-bind="auth.email" value="${escapeHtml(state.authForm.email)}" autocomplete="email" />
                             <div class="hint">Used only for bootstrap and recovery.</div>
                           </div>
 
-                          <div class="field">
-                            <label for="auth-group-invite">Group invite URL</label>
-                            <textarea id="auth-group-invite" data-bind="auth.groupInviteReference" placeholder="https://emberchamber.com/invite/<group-id>/<token>">${escapeHtml(state.authForm.groupInviteReference)}</textarea>
-                            <div class="hint">Recommended for first-time users. After email sign-in, the relay will accept the invite and open that group on this device.</div>
-                          </div>
-
-                          <div class="field">
-                            <label for="auth-invite">Beta invite token</label>
-                            <input id="auth-invite" type="text" data-bind="auth.inviteToken" value="${escapeHtml(state.authForm.inviteToken)}" autocomplete="off" />
-                            <div class="hint">Fallback bootstrap path when you do not already have a group invite URL. Local Ubuntu test setups prefill a reusable real beta invite here.</div>
-                          </div>
-
-                          <div class="field">
-                            <label for="auth-device">Device label</label>
-                            <input id="auth-device" type="text" data-bind="auth.deviceLabel" value="${escapeHtml(state.authForm.deviceLabel)}" autocomplete="off" />
-                            <div class="hint">Readable labels make session review and recovery less painful later. The default is already fine for most users.</div>
-                          </div>
+                          ${state.authForm.inviteTokenVisible
+                            ? `
+                                <div class="field">
+                                  <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+                                    <label for="auth-invite">Beta invite token</label>
+                                    <button class="ghost-button" type="button" data-action="toggle-invite-token" style="padding: 3px 10px; font-size: 0.8rem">Hide</button>
+                                  </div>
+                                  <input id="auth-invite" type="text" data-bind="auth.inviteToken" value="${escapeHtml(state.authForm.inviteToken)}" autocomplete="off" />
+                                  <div class="hint">Only needed when the relay asks for broader beta access.</div>
+                                </div>
+                              `
+                            : `
+                                <section class="status info">
+                                  <h3>No beta token on hand?</h3>
+                                  <p>Returning users can continue with email alone. Some new accounts can also bootstrap directly from a valid group invite.</p>
+                                  <button class="ghost-button" type="button" data-action="toggle-invite-token" style="margin-top: 8px">Add beta invite token</button>
+                                </section>
+                              `
+                          }
 
                           <label class="checkbox-row">
                             <input id="auth-age-confirmed" type="checkbox" data-bind="auth.ageConfirmed18" ${state.authForm.ageConfirmed18 ? "checked" : ""} />
                             <span>
                               <strong>I confirm I am at least 18 years old</strong>
-                              <div class="hint">EmberChamber beta access is adults-only. This is a self-attested gate, not heavy identity verification.</div>
+                              <div class="hint">Adults-only access is a permanent product rule.</div>
                             </span>
                           </label>
 
                           <button class="primary-button" type="submit" ${isBusy("start-auth") ? "disabled" : ""}>
-                            ${isBusy("start-auth") ? "Sending magic link..." : "Send magic link"}
+                            ${isBusy("start-auth") ? "Sending magic link…" : "Continue"}
                           </button>
                         </form>
                       `
                     : `
-                        <div class="field-stack" style="margin-top: 18px">
-                          <div class="field">
-                            <label for="auth-device">Device label</label>
-                            <input id="auth-device" type="text" data-bind="auth.deviceLabel" value="${escapeHtml(state.authForm.deviceLabel)}" autocomplete="off" />
-                            <div class="hint">This is what the signed-in device sees before approving the desktop handoff.</div>
-                          </div>
+                        ${renderDeviceLinkPanel({ signedIn: false })}
 
-                          <section class="status info">
-                            <h3>Existing account only</h3>
-                            <p>QR linking adds this desktop to an account that already has a signed-in device. It does not replace invite-only account creation or email recovery for the first device.</p>
-                          </section>
-
-                          ${renderDeviceLinkPanel({ signedIn: false })}
-                        </div>
+                        <section class="status info">
+                          <h3>Fallback stays available</h3>
+                          <p>If the QR expires, the scanner is unavailable, or this is your first device on a new account, switch back to the magic-link path.</p>
+                        </section>
                       `
-                }
+                  }
+                </div>
               </section>
 
               <section class="panel">
@@ -4275,12 +4599,17 @@
 
           return `
             <div class="media-shell ${isRevealed ? "" : "blurred"}">
-              <img src="${escapeHtml(mediaUrl)}" alt="${escapeHtml(attachment.fileName)}" referrerpolicy="no-referrer" />
+              <img
+                src="${escapeHtml(mediaUrl)}"
+                alt="${escapeHtml(attachment.fileName)}"
+                referrerpolicy="no-referrer"
+                ${isRevealed ? `data-action="view-image" data-message-id="${escapeHtml(message.id)}"` : "class=\"no-zoom\""}
+              />
               <div class="media-overlay">
                 <div class="watermark">${escapeHtml(watermark)}</div>
                 ${
                   isRevealed
-                    ? ""
+                    ? `<button class="secondary-button" type="button" data-action="view-image" data-message-id="${escapeHtml(message.id)}" style="font-size:0.82rem;padding:6px 12px">⛶ Full screen</button>`
                     : `<button class="secondary-button reveal-button" type="button" data-action="reveal-message" data-message-id="${escapeHtml(message.id)}">Reveal image</button>`
                 }
               </div>
@@ -4361,12 +4690,20 @@
         }
 
         const isSelf = message.senderAccountId === state.me?.id;
+        const readCount = message.readByCount ?? 0;
+        const receiptMark = isSelf
+          ? readCount >= 1
+            ? `<span class="read-receipt read" title="Read by ${readCount}">✓✓</span>`
+            : `<span class="read-receipt" title="Delivered">✓</span>`
+          : "";
         return `
           <article class="message-row ${isSelf ? "self" : ""}">
             <div class="message-bubble">
               <div class="message-meta">
                 <strong>${escapeHtml(isSelf ? "You" : message.senderDisplayName)}</strong>
                 <span>${escapeHtml(formatDateTime(message.createdAt))}</span>
+                ${message.editedAt ? `<span style="opacity:0.55;font-size:0.8rem">edited</span>` : ""}
+                ${receiptMark}
               </div>
               ${message.text ? `<p class="message-copy">${escapeHtml(message.text)}</p>` : ""}
               ${renderAttachmentBlock(message)}
@@ -4375,7 +4712,105 @@
         `;
       }
 
+      function renderLightbox() {
+        if (!state.lightboxMessageId) return "";
+        const message = state.threadMessages.find((m) => m.id === state.lightboxMessageId);
+        if (!message?.attachment) return "";
+        const attachment = message.attachment;
+        const encryptedAttachment = attachment.encryptionMode === "device_encrypted";
+        const attachmentAsset = attachmentMediaEntry(attachment.id);
+        const mediaUrl = encryptedAttachment
+          ? attachmentAsset?.objectUrl || ""
+          : attachment.downloadUrl || "";
+        if (!mediaUrl) return "";
+        return `
+          <div class="lightbox-overlay" data-action="close-lightbox">
+            <button class="lightbox-close" type="button" data-action="close-lightbox">✕ Close</button>
+            <img src="${escapeHtml(mediaUrl)}" alt="${escapeHtml(attachment.fileName)}" referrerpolicy="no-referrer" />
+          </div>
+        `;
+      }
+
+      function renderChatListView() {
+        const normalizedSearch = state.chatSearch.trim().toLowerCase();
+        const filtered = state.groups
+          .filter((group) => {
+            if (state.chatFilter === "sensitive" && !group.sensitiveMediaDefault) return false;
+            if (state.chatFilter === "encrypted" && group.historyMode !== "device_encrypted") return false;
+            if (normalizedSearch && !group.title.toLowerCase().includes(normalizedSearch)) return false;
+            return true;
+          })
+          .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+
+        return `
+          <section class="panel">
+            <div class="view-header">
+              <div>
+                <p class="eyebrow">Chats</p>
+                <h2>${state.me?.displayName ? escapeHtml(state.me.displayName) + "'s circles" : "Your circles"}</h2>
+              </div>
+            </div>
+
+            <div style="margin-top: 14px">
+              <input class="search-input" type="text" data-bind="chatSearch" placeholder="Search conversations" value="${escapeHtml(state.chatSearch)}" />
+            </div>
+
+            <div class="filter-row">
+              ${["all", "sensitive", "encrypted"].map((f) => `
+                <button class="filter-chip ${state.chatFilter === f ? "active" : ""}" type="button" data-action="set-chat-filter" data-filter="${f}">${f}</button>
+              `).join("")}
+            </div>
+
+            ${filtered.length === 0 ? `
+              <div class="empty">
+                ${state.groups.length === 0
+                  ? "No groups yet. Accept an invite or create a group to start the first circle."
+                  : "No conversations match the current filter."}
+              </div>
+              ${state.groups.length === 0 ? `
+                <div class="inline-actions" style="margin-top: 14px">
+                  <button class="primary-button" type="button" data-nav="invites">Accept invite</button>
+                  <button class="secondary-button" type="button" data-nav="groups">Create group</button>
+                </div>
+              ` : ""}
+            ` : `
+              <div class="chat-list">
+                ${filtered.map((group) => {
+                  const initial = group.title.trim().charAt(0).toUpperCase() || "#";
+                  const preview = group.historyMode === "device_encrypted"
+                    ? "New encrypted messages will appear here."
+                    : group.joinRuleText
+                      ? (group.joinRuleText.length > 80 ? group.joinRuleText.slice(0, 80) + "\u2026" : group.joinRuleText)
+                      : "Start the conversation.";
+                  return `
+                    <button class="chat-row ${state.activeGroupId === group.id ? "active" : ""}" type="button" data-action="open-group" data-group-id="${escapeHtml(group.id)}">
+                      <div class="chat-avatar">${escapeHtml(initial)}</div>
+                      <div class="chat-row-info">
+                        <div class="chat-row-top">
+                          <span class="chat-row-title">${escapeHtml(group.title)}</span>
+                          <span class="chat-row-time">${escapeHtml(formatChatTimestamp(group.updatedAt))}</span>
+                        </div>
+                        <div class="chat-row-preview">${escapeHtml(preview)}</div>
+                        <div class="chat-meta-row">
+                          ${group.historyMode === "device_encrypted" ? '<span class="chat-badge locked">Locked</span>' : ""}
+                          ${group.sensitiveMediaDefault ? '<span class="chat-badge sensitive">Sensitive</span>' : ""}
+                          <span class="chat-member-count">${escapeHtml(String(group.memberCount))}/${escapeHtml(String(group.memberCap))}</span>
+                        </div>
+                      </div>
+                    </button>
+                  `;
+                }).join("")}
+              </div>
+            `}
+          </section>
+        `;
+      }
+
       function renderThreadView() {
+        if (state.chatListOpen) {
+          return renderChatListView();
+        }
+
         const group = currentGroup();
         const sendDisabled = !state.threadComposer.text.trim() && !state.threadComposer.file;
 
@@ -4802,17 +5237,95 @@
       }
 
       function renderSettingsView() {
+        const initials = state.me?.displayName
+          ? state.me.displayName.trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase()
+          : "?";
+        const bundleReady = Boolean(state.deviceBundle);
+
         return `
           ${renderStatus(state.settingsStatus)}
+
+          <section class="panel">
+            <p class="eyebrow">Account</p>
+            <div class="settings-account-row">
+              <div class="settings-avatar">${escapeHtml(initials)}</div>
+              <div style="flex: 1; display: grid; gap: 3px">
+                <strong>${escapeHtml(state.me?.displayName || "Loading\u2026")}</strong>
+                <span class="secondary-meta">${escapeHtml(state.me?.email || "")}</span>
+              </div>
+            </div>
+            <div class="metric-tile-row">
+              <div class="metric-tile">
+                <span class="metric-tile-label">Display name</span>
+                <span class="metric-tile-value">${escapeHtml(state.me?.displayName || "\u2014")}</span>
+              </div>
+              <div class="metric-tile">
+                <span class="metric-tile-label">Device</span>
+                <span class="metric-tile-value">${escapeHtml(state.authForm.deviceLabel || suggestDesktopLabel())}</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <p class="eyebrow">Devices</p>
+            <div class="metric-tile-row" style="margin-top: 14px">
+              <div class="metric-tile">
+                <span class="metric-tile-label">Registration</span>
+                <span class="metric-tile-value">${bundleReady ? "Synced" : "Pending"}</span>
+                <span class="metric-tile-hint">${bundleReady ? "Device key bundle registered with the relay." : "Key bundle not yet registered."}</span>
+              </div>
+              <div class="metric-tile">
+                <span class="metric-tile-label">Key bundle</span>
+                <span class="metric-tile-value">${bundleReady ? "1" : "0"}</span>
+                <span class="metric-tile-hint">Registered device bundle${bundleReady ? "" : "s"} on relay.</span>
+              </div>
+            </div>
+            ${renderDeviceLinkPanel({ signedIn: true })}
+          </section>
+
+          <section class="panel">
+            <p class="eyebrow">Privacy</p>
+            <div style="margin-top: 14px">
+              <div class="field" style="margin-bottom: 14px">
+                <label>Notification preview mode</label>
+                <div class="auth-mode-row" style="margin-top: 8px">
+                  ${["discreet", "expanded", "none"].map((mode) => `
+                    <button class="auth-mode-button ${state.privacyForm.notificationPreviewMode === mode ? "active" : ""}" type="button" data-action="set-notification-preview" data-mode="${mode}">${mode}</button>
+                  `).join("")}
+                </div>
+              </div>
+              <div class="toggle-row">
+                <div class="toggle-text">
+                  <span class="toggle-title">Auto-download sensitive media</span>
+                  <span class="toggle-description">Keep this off so intimate media does not silently accumulate on the device.</span>
+                </div>
+                <button class="toggle-track ${state.privacyForm.autoDownloadSensitiveMedia ? "on" : ""}" type="button" data-action="toggle-privacy-pref" data-pref="autoDownloadSensitiveMedia"><div class="toggle-thumb"></div></button>
+              </div>
+              <div class="toggle-row">
+                <div class="toggle-text">
+                  <span class="toggle-title">Allow sensitive export</span>
+                  <span class="toggle-description">Keep this off to discourage saving media outside the private vault.</span>
+                </div>
+                <button class="toggle-track ${state.privacyForm.allowSensitiveExport ? "on" : ""}" type="button" data-action="toggle-privacy-pref" data-pref="allowSensitiveExport"><div class="toggle-thumb"></div></button>
+              </div>
+              <div class="toggle-row">
+                <div class="toggle-text">
+                  <span class="toggle-title">Secure app switcher</span>
+                  <span class="toggle-description">Request screenshot and app-switcher protection on supported platforms.</span>
+                </div>
+                <button class="toggle-track ${state.privacyForm.secureAppSwitcher ? "on" : ""}" type="button" data-action="toggle-privacy-pref" data-pref="secureAppSwitcher"><div class="toggle-thumb"></div></button>
+              </div>
+            </div>
+          </section>
+
           <section class="grid-2">
             <div class="panel">
               <div class="view-header">
                 <div>
                   <p class="eyebrow">Profile</p>
-                  <h2>Account profile</h2>
+                  <h2>Edit profile</h2>
                 </div>
               </div>
-
               <form data-form="save-profile" class="field-stack" style="margin-top: 18px">
                 <div class="field">
                   <label for="display-name">Display name</label>
@@ -4831,81 +5344,28 @@
             <div class="panel">
               <div class="view-header">
                 <div>
-                  <p class="eyebrow">Privacy</p>
-                  <h2>Desktop defaults</h2>
+                  <p class="eyebrow">Diagnostics</p>
+                  <h2>Relay endpoint</h2>
                 </div>
               </div>
-
-              <form data-form="save-privacy" class="field-stack" style="margin-top: 18px">
-                <div class="field">
-                  <label for="preview-mode">Notification preview mode</label>
-                  <select id="preview-mode" data-bind="privacy.notificationPreviewMode">
-                    <option value="discreet" ${state.privacyForm.notificationPreviewMode === "discreet" ? "selected" : ""}>Discreet</option>
-                    <option value="expanded" ${state.privacyForm.notificationPreviewMode === "expanded" ? "selected" : ""}>Expanded</option>
-                    <option value="none" ${state.privacyForm.notificationPreviewMode === "none" ? "selected" : ""}>None</option>
-                  </select>
+              <form data-form="save-relay-url" class="field-stack" style="margin-top: 18px">
+                <div class="rule-block">
+                  <p class="label">Desktop storage</p>
+                  <p class="group-copy" style="margin-top: 10px">${escapeHtml(secureStorageModeLabel())}</p>
+                  ${state.secureStorageDetail ? `<p class="secondary-meta" style="margin-top: 8px">${escapeHtml(state.secureStorageDetail)}</p>` : ""}
                 </div>
-
-                <label class="checkbox-row">
-                  <input type="checkbox" data-bind="privacy.autoDownloadSensitiveMedia" ${state.privacyForm.autoDownloadSensitiveMedia ? "checked" : ""} />
-                  <span>
-                    <strong>Auto-download sensitive media</strong>
-                    <div class="hint">Leave off if this device should only fetch sensitive media on demand.</div>
-                  </span>
-                </label>
-
-                <label class="checkbox-row">
-                  <input type="checkbox" data-bind="privacy.allowSensitiveExport" ${state.privacyForm.allowSensitiveExport ? "checked" : ""} />
-                  <span>
-                    <strong>Allow sensitive export</strong>
-                    <div class="hint">Keep off if sensitive media should stay inside the app by default. This desktop build still cannot stop operating-system capture outside the app.</div>
-                  </span>
-                </label>
-
-                <label class="checkbox-row">
-                  <input type="checkbox" data-bind="privacy.secureAppSwitcher" ${state.privacyForm.secureAppSwitcher ? "checked" : ""} />
-                  <span>
-                    <strong>Secure app switcher</strong>
-                    <div class="hint">Applies the native desktop content-protection flag on supported platforms so app-switcher and screenshot previews stay more discreet.</div>
-                  </span>
-                </label>
-
-                <button class="primary-button" type="submit" ${isBusy("save-privacy") ? "disabled" : ""}>
-                  ${isBusy("save-privacy") ? "Saving defaults..." : "Save privacy defaults"}
-                </button>
+                <div class="field">
+                  <label for="workspace-relay-url">Relay URL</label>
+                  <input id="workspace-relay-url" type="url" data-bind="relayUrl" value="${escapeHtml(state.relayUrl)}" />
+                </div>
+                <div class="inline-actions">
+                  <button class="secondary-button" type="submit">Save relay URL</button>
+                  <button class="ghost-button" type="button" data-action="check-relay" ${isBusy("check-relay") ? "disabled" : ""}>
+                    ${isBusy("check-relay") ? "Checking relay..." : "Check relay"}
+                  </button>
+                </div>
               </form>
             </div>
-          </section>
-
-          <section class="panel">
-            <div class="view-header">
-              <div>
-                <p class="eyebrow">Diagnostics</p>
-                <h2>Relay endpoint</h2>
-              </div>
-            </div>
-
-            <form data-form="save-relay-url" class="field-stack" style="margin-top: 18px">
-              <div class="rule-block">
-                <p class="label">Desktop storage</p>
-                <p class="group-copy" style="margin-top: 10px">${escapeHtml(secureStorageModeLabel())}</p>
-                ${
-                  state.secureStorageDetail
-                    ? `<p class="secondary-meta" style="margin-top: 8px">${escapeHtml(state.secureStorageDetail)}</p>`
-                    : ""
-                }
-              </div>
-              <div class="field">
-                <label for="workspace-relay-url">Relay URL</label>
-                <input id="workspace-relay-url" type="url" data-bind="relayUrl" value="${escapeHtml(state.relayUrl)}" />
-              </div>
-              <div class="inline-actions">
-                <button class="secondary-button" type="submit">Save relay URL</button>
-                <button class="ghost-button" type="button" data-action="check-relay" ${isBusy("check-relay") ? "disabled" : ""}>
-                  ${isBusy("check-relay") ? "Checking relay..." : "Check relay"}
-                </button>
-              </div>
-            </form>
           </section>
         `;
       }
@@ -4925,7 +5385,6 @@
             </p>
 
             <div class="section-stack" style="margin-top: 18px">
-              ${renderDeviceLinkPanel({ signedIn: true })}
               ${
                 state.sessions.length === 0
                   ? '<div class="empty">No active sessions were returned by the relay.</div>'
@@ -4958,7 +5417,7 @@
 
       function renderWorkspaceView() {
         const navItems = [
-          ["thread", "Thread"],
+          ["thread", "Chats"],
           ["groups", "Groups"],
           ["invites", "Invite tools"],
           ["settings", "Settings"],
@@ -5002,8 +5461,8 @@
                 </div>
                 <p class="secondary-meta" style="margin-top: 12px">${escapeHtml(state.me?.email || "")}</p>
                 <div class="badge-row" style="margin-top: 14px">
-                  <span class="badge">Relay session</span>
-                  <span class="badge">${escapeHtml(state.groups.length.toString())} groups</span>
+                  <span class="badge">${escapeHtml(state.authForm.deviceLabel || "This device")}</span>
+                  <span class="badge">${escapeHtml(state.groups.length.toString())} group${state.groups.length === 1 ? "" : "s"}</span>
                 </div>
               </section>
 
@@ -5014,7 +5473,6 @@
                       ([id, label]) => `
                         <button class="nav-button ${state.activeView === id ? "active" : ""}" type="button" data-nav="${escapeHtml(id)}">
                           <span>${escapeHtml(label)}</span>
-                          <span class="secondary-meta">${state.activeView === id ? "Open" : ""}</span>
                         </button>
                       `,
                     )
@@ -5056,15 +5514,20 @@
 
             <main class="content">
               <div class="workspace-header">
-                <div>
-                  <p class="eyebrow">Workspace</p>
-                  <h2 style="font-size: 1.8rem">
-                    ${
-                      state.activeView === "thread" && currentGroup()
-                        ? escapeHtml(currentGroup().title)
-                        : escapeHtml(navItems.find(([id]) => id === state.activeView)?.[1] || "Thread")
-                    }
-                  </h2>
+                <div style="display: flex; align-items: center; gap: 12px">
+                  ${state.activeView === "thread" && !state.chatListOpen && state.activeGroupId ? `
+                    <button class="back-button" type="button" data-action="open-chat-list">← Chats</button>
+                  ` : ""}
+                  <div>
+                    <p class="eyebrow">Workspace</p>
+                    <h2 style="font-size: 1.8rem">
+                      ${
+                        state.activeView === "thread" && !state.chatListOpen && currentGroup()
+                          ? escapeHtml(currentGroup().title)
+                          : escapeHtml(navItems.find(([id]) => id === state.activeView)?.[1] || "Chats")
+                      }
+                    </h2>
+                  </div>
                 </div>
                 <div class="workspace-actions">
                   <span class="badge">${escapeHtml(state.relayUrl)}</span>
@@ -5206,11 +5669,11 @@
       }
 
       function render() {
-        root.innerHTML = state.isHydrating
+        root.innerHTML = (state.isHydrating
           ? renderHydratingView()
           : state.session
             ? renderWorkspaceView()
-            : renderAuthView();
+            : renderAuthView()) + renderLightbox();
         syncDeviceLinkUiAfterRender();
       }
 

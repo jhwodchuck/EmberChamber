@@ -31,7 +31,7 @@ export default function StartPage() {
               </p>
 
               <div className="mt-6 flex flex-wrap gap-3">
-                {["Web = fastest start", "Native = best daily home"].map((item) => (
+                {["Invite-only access", "Adults-only beta"].map((item) => (
                   <div key={item} className="metric-pill">
                     <BadgeCheck aria-hidden="true" className="h-3.5 w-3.5 text-brand-400" />
                     {item}
@@ -44,18 +44,18 @@ export default function StartPage() {
               {[
                 {
                   icon: Compass,
-                  label: "Web First",
-                  body: "Use the browser for onboarding, invite review, and first contact.",
+                  label: "Evaluate",
+                  body: "Review the trust model, relay boundary, and current beta scope in one pass.",
                 },
                 {
                   icon: ShieldCheck,
-                  label: "Invite-Only",
-                  body: "No public registration path and no discovery feed.",
+                  label: "Join",
+                  body: "Invite-only onboarding and sign-in both start here without public discovery.",
                 },
                 {
                   icon: MonitorSmartphone,
-                  label: "Native Later",
-                  body: "Move to Android or desktop when you want the primary daily surface.",
+                  label: "Continue",
+                  body: "Check the posted Android and desktop builds when you want a longer-session client.",
                 },
               ].map((item) => (
                 <div key={item.label} className="showcase-frame rounded-[1.35rem] p-4">

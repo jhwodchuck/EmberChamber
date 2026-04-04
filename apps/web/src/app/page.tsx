@@ -31,9 +31,9 @@ const liveTodayCards = [
     icon: Users,
   },
   {
-    title: "Web is the fast start. Native is the daily home.",
-    body: "Use the browser for first access and recovery, then move to Android or desktop when the circle becomes part of daily life.",
-    icon: MonitorSmartphone,
+    title: "Invite-only onboarding is live",
+    body: "Magic-link access, adults-only confirmation, and device naming now happen in a short staged flow.",
+    icon: Sparkles,
   },
 ];
 
@@ -62,9 +62,8 @@ export default function HomePage() {
               </h1>
               <p className="mt-6 max-w-3xl text-lg leading-8 text-[#cdb1a5] sm:text-xl">
                 Invite-only, private by design, and built so your conversations do not turn into a
-                public profile or a searchable archive. Direct messages are live now, new groups
-                start device-encrypted, and the remaining compatibility-path cleanup is called out
-                plainly instead of hidden in marketing language.
+                public profile or a searchable archive. Direct messages and new device-encrypted
+                groups are live now, and the remaining compatibility paths are called out plainly.
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -119,10 +118,9 @@ export default function HomePage() {
                 A relay that delivers without pretending to disappear.
               </h2>
               <p className="mt-4 section-copy">
-                Reliable delivery matters. So does keeping the relay&apos;s role narrow. EmberChamber
-                uses a hosted edge relay for metadata, mailbox delivery, and attachment storage,
-                while private keys, DM history, and private-content search stay local to the people
-                in the circle.
+                EmberChamber uses a hosted edge relay for metadata, mailbox delivery, and
+                attachment storage. Private keys, DM history, and private-content search stay with
+                the people in the circle.
               </p>
 
               <div className="mt-6 rounded-[1.7rem] border border-white/8 bg-white/[0.04] p-5">
@@ -162,11 +160,11 @@ export default function HomePage() {
         <div className="mb-8 max-w-2xl">
           <div className="section-kicker">First-Wave Surfaces</div>
           <h2 className="mt-4 text-balance font-display text-4xl font-semibold text-[var(--text-primary)] sm:text-5xl">
-            Native clients first. Web always available.
+            Choose the surface that fits the session.
           </h2>
           <p className="mt-4 section-copy">
-            Android, Windows, and Ubuntu are the first committed native surfaces. The browser still
-            matters for onboarding, lighter sessions, settings, and immediate access.
+            Android, Windows, and Ubuntu are the first posted native clients. The browser covers
+            onboarding, messaging, search, and settings when you need immediate access.
           </p>
         </div>
 

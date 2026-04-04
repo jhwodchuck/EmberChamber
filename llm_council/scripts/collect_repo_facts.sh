@@ -12,6 +12,7 @@ OUT="${1:-repo-facts.md}"
   if [ -f package.json ]; then
     grep -n '"packageManager"' package.json || true
     grep -n '"workspaces"' package.json || true
+    grep -n '"check:repo-contracts"' package.json || true
   else
     echo "package.json not found"
   fi
@@ -22,6 +23,15 @@ OUT="${1:-repo-facts.md}"
     grep -n 'services/' Cargo.toml || true
   else
     echo "Cargo.toml not found"
+  fi
+  echo
+  echo "## repo-map ownership signals"
+  if [ -f repo-map.yaml ]; then
+    grep -n 'owner:' repo-map.yaml || true
+    grep -n 'risk:' repo-map.yaml || true
+    grep -n 'change_routes:' repo-map.yaml || true
+  else
+    echo "repo-map.yaml not found"
   fi
   echo
   echo "## Active runtime docs"

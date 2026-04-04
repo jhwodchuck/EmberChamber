@@ -28,6 +28,7 @@ export type MeProfile = {
   displayName: string;
   email: string;
   bio?: string;
+  avatarUrl?: string;
 };
 
 export type ContactCard = {
@@ -78,6 +79,21 @@ export type GroupThreadMessage = {
     fileIvB64?: string | null;
   } | null;
   createdAt: string;
+  editedAt?: string | null;
+  readByCount?: number;
+};
+
+export type GroupInviteRecord = {
+  id: string;
+  conversationId: string;
+  createdAt: string;
+  expiresAt?: string | null;
+  maxUses?: number | null;
+  useCount: number;
+  note?: string | null;
+  inviterDisplayName: string;
+  status: "active" | "revoked" | "expired" | "exhausted" | "frozen";
+  createdByCurrentAccount: boolean;
 };
 
 export type GroupInvitePreview = {
@@ -156,6 +172,14 @@ export type PrivacyDefaults = {
   autoDownloadSensitiveMedia: boolean;
   allowSensitiveExport: boolean;
   secureAppSwitcher: boolean;
+};
+
+export type ConversationPreference = {
+  conversationId: string;
+  isArchived: boolean;
+  isPinned: boolean;
+  isMuted: boolean;
+  lastReadAt: string | null;
 };
 
 export type InviteReference = {

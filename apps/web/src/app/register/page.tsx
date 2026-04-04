@@ -14,9 +14,9 @@ export default function RegisterPage() {
       <section className="mx-auto grid max-w-6xl gap-8 px-6 py-16 sm:py-20 lg:grid-cols-[minmax(0,0.95fr)_28rem] lg:items-start">
         <AuthPageIntro
           eyebrow="Adults-only onboarding"
-          title="Join the beta deliberately, not through public discovery."
-          description="New accounts still require a trusted invite path, a private email bootstrap, and a clearly named first device. The beta is tuned for trusted circles, not open-network growth mechanics."
-          emphasis="The first-run path stays intentionally short: adults-only affirmation, invite, inbox, then device confirmation. Pseudonymous identity setup and device review follow immediately after bootstrap."
+          title="Join the beta with an invite and a private inbox."
+          description="New accounts still need a trusted invite path, a private email, and an adults-only confirmation."
+          emphasis="Confirm access, name the device, then finish from the inbox."
         />
 
         <RegisterForm />

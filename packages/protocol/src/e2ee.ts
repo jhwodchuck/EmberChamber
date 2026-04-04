@@ -4,6 +4,9 @@ import type { AttachmentEncryptionMode, ContentClass, PrekeyBundle, ProtectionPr
 
 const utf8Encoder = new TextEncoder();
 const utf8Decoder = new TextDecoder();
+const MAX_PRNG_CHUNK_BYTES = 65_536;
+
+let naclPrngConfigured = false;
 
 export type StoredDeviceBundle = PrekeyBundle & {
   privateKeyB64: string;
@@ -41,6 +44,46 @@ type BoxEnvelope = {
   nonceB64: string;
   boxB64: string;
 };
+
+function ensureNaclPrng() {
+  if (naclPrngConfigured) {
+    return;
+  }
+
+  const cryptoObject = globalThis.crypto as
+    | {
+        getRandomValues?: (array: Uint8Array) => Uint8Array | void;
+      }
+    | undefined;
+
+  if (!cryptoObject?.getRandomValues) {
+    return;
+  }
+
+  nacl.setPRNG((target, size) => {
+    for (let offset = 0; offset < size; offset += MAX_PRNG_CHUNK_BYTES) {
+      const chunk = new Uint8Array(Math.min(size - offset, MAX_PRNG_CHUNK_BYTES));
+      cryptoObject.getRandomValues?.(chunk);
+      target.set(chunk, offset);
+    }
+  });
+
+  naclPrngConfigured = true;
+}
+
+function withSecureRandom<T>(operation: () => T): T {
+  ensureNaclPrng();
+
+  try {
+    return operation();
+  } catch (error) {
+    if (error instanceof Error && error.message === "no PRNG") {
+      throw new Error("Secure random number generation is unavailable in this runtime.");
+    }
+
+    throw error;
+  }
+}
 
 function base64FromBinary(binary: string): string {
   if (typeof btoa === "function") {
@@ -108,7 +151,7 @@ export function hashSha256B64(value: ArrayBuffer | Uint8Array | string): string 
 }
 
 export function createStoredDeviceBundle(): StoredDeviceBundle {
-  const keyPair = nacl.box.keyPair();
+  const keyPair = withSecureRandom(() => nacl.box.keyPair());
   const publicKeyB64 = encodeBytes(keyPair.publicKey);
 
   return {
@@ -149,7 +192,7 @@ export function encryptConversationPayload(
   recipientIdentityKeyB64: string,
   senderPrivateKeyB64: string,
 ): string {
-  const nonce = nacl.randomBytes(nacl.box.nonceLength);
+  const nonce = withSecureRandom(() => nacl.randomBytes(nacl.box.nonceLength));
   const ciphertext = nacl.box(
     utf8Encoder.encode(JSON.stringify(payload)),
     nonce,
@@ -188,8 +231,8 @@ export function decryptConversationPayload<T>(
 
 export function encryptAttachmentBytes(value: ArrayBuffer | Uint8Array) {
   const plaintext = toUint8Array(value);
-  const fileKey = nacl.randomBytes(nacl.secretbox.keyLength);
-  const fileIv = nacl.randomBytes(nacl.secretbox.nonceLength);
+  const fileKey = withSecureRandom(() => nacl.randomBytes(nacl.secretbox.keyLength));
+  const fileIv = withSecureRandom(() => nacl.randomBytes(nacl.secretbox.nonceLength));
   const ciphertext = nacl.secretbox(plaintext, fileIv, fileKey);
 
   return {

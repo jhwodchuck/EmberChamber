@@ -1,5 +1,6 @@
 import * as SQLite from "expo-sqlite";
 import type {
+  ConversationPreference,
   GroupMembershipSummary,
   GroupThreadMessage,
   NotificationPreviewMode,
@@ -72,6 +73,18 @@ export async function bootstrapLocalStore() {
       ON group_messages_cache (conversation_id, created_at ASC);
     CREATE INDEX IF NOT EXISTS idx_group_messages_cache_conversation_recent
       ON group_messages_cache (conversation_id, created_at DESC);
+    CREATE TABLE IF NOT EXISTS conversation_preferences (
+      account_id TEXT NOT NULL,
+      conversation_id TEXT NOT NULL,
+      is_archived INTEGER NOT NULL DEFAULT 0,
+      is_pinned INTEGER NOT NULL DEFAULT 0,
+      is_muted INTEGER NOT NULL DEFAULT 0,
+      last_read_at TEXT,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (account_id, conversation_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_conversation_preferences_account
+      ON conversation_preferences (account_id, updated_at DESC);
   `);
 
   await Promise.all([
@@ -238,6 +251,68 @@ export async function saveCachedGroups(
   }
 }
 
+export async function loadConversationPreferences(
+  db: SQLite.SQLiteDatabase,
+  accountId: string,
+): Promise<Record<string, ConversationPreference>> {
+  const rows = await db.getAllAsync<{
+    conversation_id: string;
+    is_archived: number;
+    is_pinned: number;
+    is_muted: number;
+    last_read_at: string | null;
+  }>(
+    `SELECT conversation_id, is_archived, is_pinned, is_muted, last_read_at
+       FROM conversation_preferences
+      WHERE account_id = ?`,
+    accountId,
+  );
+
+  return Object.fromEntries(
+    rows.map((row) => [
+      row.conversation_id,
+      {
+        conversationId: row.conversation_id,
+        isArchived: row.is_archived === 1,
+        isPinned: row.is_pinned === 1,
+        isMuted: row.is_muted === 1,
+        lastReadAt: row.last_read_at,
+      } satisfies ConversationPreference,
+    ]),
+  );
+}
+
+export async function saveConversationPreference(
+  db: SQLite.SQLiteDatabase,
+  accountId: string,
+  preference: ConversationPreference,
+) {
+  await db.runAsync(
+    `INSERT INTO conversation_preferences (
+       account_id,
+       conversation_id,
+       is_archived,
+       is_pinned,
+       is_muted,
+       last_read_at,
+       updated_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(account_id, conversation_id) DO UPDATE SET
+       is_archived = excluded.is_archived,
+       is_pinned = excluded.is_pinned,
+       is_muted = excluded.is_muted,
+       last_read_at = excluded.last_read_at,
+       updated_at = excluded.updated_at`,
+    accountId,
+    preference.conversationId,
+    preference.isArchived ? 1 : 0,
+    preference.isPinned ? 1 : 0,
+    preference.isMuted ? 1 : 0,
+    preference.lastReadAt,
+    new Date().toISOString(),
+  );
+}
+
 export async function loadCachedGroupMessages(
   db: SQLite.SQLiteDatabase,
   conversationId: string,
@@ -257,6 +332,30 @@ export async function loadCachedGroupMessages(
       return [];
     }
   });
+}
+
+export async function loadLatestCachedGroupMessage(
+  db: SQLite.SQLiteDatabase,
+  conversationId: string,
+): Promise<GroupThreadMessage | null> {
+  const row = await db.getFirstAsync<{ payload: string }>(
+    `SELECT payload
+       FROM group_messages_cache
+      WHERE conversation_id = ?
+      ORDER BY created_at DESC
+      LIMIT 1`,
+    conversationId,
+  );
+
+  if (!row) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(row.payload) as GroupThreadMessage;
+  } catch {
+    return null;
+  }
 }
 
 export async function saveCachedGroupMessages(

@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { createContext, startTransition, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { clsx } from "clsx";
 import { Avatar } from "@/components/avatar";
-import { StatusCallout } from "@/components/status-callout";
+import { conversationDefaultTitle, conversationTypeLabel } from "@/lib/conversation-labels";
 import {
   createRelayMailboxWebSocket,
   ensureRelayAccessToken,
@@ -66,11 +66,11 @@ const CompanionShellContext = createContext<CompanionShellContextValue | null>(n
 
 const primaryLinks = [
   { href: "/app", label: "Overview", icon: Compass },
-  { href: "/app/new-dm", label: "New Message", icon: MessageSquare },
+  { href: "/app/new-dm", label: "New DM", icon: MessageSquare },
   { href: "/app/search", label: "Search", icon: Search },
   { href: "/app/new-group", label: "New Group", icon: PlusSquare },
   { href: "/app/new-community", label: "New Community", icon: PlusSquare },
-  { href: "/app/discover", label: "Join with Invite", icon: ShieldCheck },
+  { href: "/app/discover", label: "Review Invite", icon: ShieldCheck },
   { href: "/app/settings", label: "Settings", icon: Settings },
 ] as const;
 
@@ -326,8 +326,8 @@ export function CompanionShell({ children }: { children: ReactNode }) {
             Confirm the email link before using the web app.
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-[var(--text-secondary)]">
-            The browser supports messaging, invites, joined-space search, recovery, and settings.
-            Android and desktop remain the preferred surfaces for always-on use and heavier media traffic.
+            The browser covers onboarding, messaging, invite review, search, and settings. Confirm
+            the email link to continue.
           </p>
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
             <Link href="/login" className="card transition-colors hover:border-brand-500">
@@ -404,7 +404,7 @@ export function CompanionShell({ children }: { children: ReactNode }) {
                     {contextValue.userName}
                   </p>
                   <p className="text-xs text-[var(--text-secondary)]">
-                    Messaging, invites, search, settings, and account recovery
+                    Messaging, invite review, search, and settings
                   </p>
                 </div>
               </div>
@@ -436,12 +436,35 @@ export function CompanionShell({ children }: { children: ReactNode }) {
 
             <div className="panel p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">
-                Surface Split
+                Workspace Status
               </p>
-              <div className="mt-4 space-y-3 text-sm leading-6 text-[var(--text-secondary)]">
-                <p>The web app supports real messaging, joined-space search, invite review, and settings.</p>
-                <p>Android and desktop stay preferred for primary daily use and heavier media traffic.</p>
-                <p>Use whichever surface fits the moment without pretending they must all be equal.</p>
+              <div className="mt-4 grid gap-3">
+                <div className="rounded-[1.2rem] border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-600">
+                    Relay link
+                  </p>
+                  <p className="mt-2 text-sm font-medium text-[var(--text-primary)]">
+                    {isConnected ? "Live" : "Reconnecting"}
+                  </p>
+                </div>
+                <div className="rounded-[1.2rem] border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-600">
+                    Mailbox activity
+                  </p>
+                  <p className="mt-2 text-sm font-medium text-[var(--text-primary)]">
+                    {mailboxRevision === 0
+                      ? "Waiting for first update"
+                      : `${mailboxRevision} update${mailboxRevision === 1 ? "" : "s"} seen`}
+                  </p>
+                </div>
+                <div className="rounded-[1.2rem] border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-600">
+                    Workspace scope
+                  </p>
+                  <p className="mt-2 text-sm font-medium text-[var(--text-primary)]">
+                    Messaging, invite review, search, and settings
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -464,7 +487,7 @@ export function CompanionShell({ children }: { children: ReactNode }) {
                   </p>
                 ) : conversations.length === 0 ? (
                   <p className="text-sm text-[var(--text-secondary)]">
-                    No relay conversations yet. Start a DM, group, or community.
+                    No conversations yet. Start a DM, create a Group, or review an Invite.
                   </p>
                 ) : (
                   conversations.slice(0, 6).map((conversation) => (
@@ -475,23 +498,10 @@ export function CompanionShell({ children }: { children: ReactNode }) {
                     >
                       <div className="flex items-center justify-between gap-3">
                         <p className="truncate text-sm font-medium text-[var(--text-primary)]">
-                          {conversation.name ??
-                            (conversation.type === "dm"
-                              ? "Direct message"
-                              : conversation.type === "community"
-                                ? "Community"
-                                : conversation.type === "room"
-                                  ? "Room"
-                                  : "Group")}
+                          {conversation.name ?? conversationDefaultTitle(conversation.type)}
                         </p>
                         <span className="text-[11px] uppercase tracking-[0.14em] text-[var(--text-secondary)]">
-                          {conversation.type === "dm"
-                            ? "DM"
-                            : conversation.type === "community"
-                              ? "Community"
-                              : conversation.type === "room"
-                                ? "Room"
-                                : "Group"}
+                          {conversationTypeLabel(conversation.type)}
                         </span>
                       </div>
                       <p className="mt-1 truncate text-xs text-[var(--text-secondary)]">
@@ -502,12 +512,6 @@ export function CompanionShell({ children }: { children: ReactNode }) {
                 )}
               </div>
             </div>
-
-            <StatusCallout tone="info" title="What this workspace is for">
-              Use web when it is the fastest or lightest way to message, search, review invites,
-              or manage settings. Shift sustained heavier usage to native when capacity and device
-              affordances matter more.
-            </StatusCallout>
           </aside>
 
           <main id="main-content" className="min-w-0">

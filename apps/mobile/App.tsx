@@ -1,6 +1,7 @@
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as Notifications from "expo-notifications";
+import { File as ExpoFile } from "expo-file-system";
 import * as ScreenCapture from "expo-screen-capture";
 import * as SecureStore from "expo-secure-store";
 import * as SQLite from "expo-sqlite";
@@ -11,11 +12,11 @@ import {
   KeyboardAvoidingView,
   Linking,
   Platform,
-  SafeAreaView,
   ScrollView,
   Text,
   View,
 } from "react-native";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import type { EncryptedConversationPayload } from "@emberchamber/protocol";
 import {
   createDeviceLinkToken,
@@ -35,11 +36,13 @@ import type {
   AttachmentTicket,
   AuthSession,
   ContactCard,
+  ConversationPreference,
   DeviceKeyBundle,
   Field,
   FormMessage,
   GroupInviteAcceptance,
   GroupInvitePreview,
+  GroupInviteRecord,
   GroupMembershipSummary,
   GroupThreadMessage,
   MagicLinkResponse,
@@ -48,6 +51,7 @@ import type {
   PrivacyDefaults,
   RelayErrorResponse,
 } from "./src/types";
+import type { ContextMenuAction } from "./src/components/MessageContextMenu";
 import {
   MAX_ATTACHMENT_BYTES,
   STORAGE_KEYS,
@@ -69,9 +73,12 @@ import {
   countVaultItems,
   loadCachedGroupMessages,
   loadCachedGroups,
+  loadConversationPreferences,
+  loadLatestCachedGroupMessage,
   loadRelayStateValue,
   loadPrivacyDefaults,
   persistVaultMediaRecord,
+  saveConversationPreference,
   saveRelayStateValue,
   savePrivacyDefault,
   saveCachedGroupMessages,
@@ -91,7 +98,6 @@ import {
   getNotificationReason,
 } from "./src/lib/push";
 import { styles, theme } from "./src/styles";
-import { DeviceLinkCard } from "./src/components/DeviceLinkCard";
 import { OnboardingScreen } from "./src/screens/OnboardingScreen";
 import { ProfileSetupScreen } from "./src/screens/ProfileSetupScreen";
 import { MainScreen } from "./src/screens/MainScreen";
@@ -102,12 +108,6 @@ const onboardingHeroSignals = [
   "Local-first history",
 ];
 
-const signedInHeroSignals = [
-  "Trusted-circle messaging",
-  "On-device vault defaults",
-  "Relay-native group sync",
-];
-
 const MAILBOX_CURSOR_STATE_KEY = "mailbox_cursor";
 
 type AuthMethod = "magic-link" | "device-link";
@@ -116,6 +116,16 @@ type ActiveDeviceLink = {
   linkToken: string;
   qrMode: DeviceLinkQrMode;
 };
+
+function createConversationPreference(conversationId: string): ConversationPreference {
+  return {
+    conversationId,
+    isArchived: false,
+    isPinned: false,
+    isMuted: false,
+    lastReadAt: null,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // App – thin orchestrator
@@ -148,6 +158,15 @@ export default function App() {
   const [groups, setGroups] = useState<GroupMembershipSummary[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [threadMessages, setThreadMessages] = useState<GroupThreadMessage[]>([]);
+  const [conversationPreviews, setConversationPreviews] = useState<
+    Record<string, GroupThreadMessage | null>
+  >({});
+  const [conversationPreferences, setConversationPreferences] = useState<
+    Record<string, ConversationPreference>
+  >({});
+  const [unreadConversationCounts, setUnreadConversationCounts] = useState<Record<string, number>>(
+    {},
+  );
   const [invitePreview, setInvitePreview] = useState<GroupInvitePreview | null>(null);
   const [invitePreviewError, setInvitePreviewError] = useState<string | null>(null);
   const [inviteFieldVisible, setInviteFieldVisible] = useState(false);
@@ -170,6 +189,8 @@ export default function App() {
   const [isApprovingDeviceLink, setIsApprovingDeviceLink] = useState(false);
   const [activeDeviceLink, setActiveDeviceLink] = useState<ActiveDeviceLink | null>(null);
   const [completedDeviceLinkSessionId, setCompletedDeviceLinkSessionId] = useState<string | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   const imageRefreshPendingRef = useRef(false);
   const groupsRef = useRef<GroupMembershipSummary[]>([]);
@@ -182,6 +203,12 @@ export default function App() {
     (session?.bootstrapConversationId
       ? groups.find((group) => group.id === session.bootstrapConversationId) ?? null
       : null);
+
+  const unreadConversationIds = new Set(
+    Object.entries(unreadConversationCounts)
+      .filter(([, count]) => count > 0)
+      .map(([conversationId]) => conversationId),
+  );
 
   // ---- relay helpers (stay here because they close over setSession) ----
 
@@ -291,6 +318,75 @@ export default function App() {
     setCompletedDeviceLinkSessionId(null);
   }
 
+  async function loadPendingAttachmentFile(attachment: PendingAttachment) {
+    const file = new ExpoFile(attachment.uri);
+    if (!file.exists) {
+      throw new Error("That photo is no longer available on this device.");
+    }
+
+    return file;
+  }
+
+  async function uploadAttachmentBytes(uploadUrl: string, mimeType: string, bytes: ArrayBuffer) {
+    // Hermes does not support new Blob([ArrayBuffer | ArrayBufferView]), so we
+    // pass an ArrayBuffer directly as the fetch body instead.
+    const uploadResponse = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "content-type": mimeType },
+      body: bytes,
+    });
+
+    if (!uploadResponse.ok) {
+      const uploadError = await uploadResponse.text();
+      throw new Error(uploadError || "Attachment upload failed.");
+    }
+  }
+
+  function normalizeStartedSourceDeviceLink(
+    response: DeviceLinkStartResponse,
+    requesterLabel: string,
+  ): {
+    legacy: boolean;
+    qrPayload: string;
+    parsed: ReturnType<typeof parseDeviceLinkQrPayload>;
+    status: DeviceLinkStatus;
+  } {
+    try {
+      return {
+        legacy: false,
+        qrPayload: response.qrPayload,
+        parsed: parseDeviceLinkQrPayload(response.qrPayload),
+        status: response,
+      };
+    } catch {
+      if (!response.linkId || !response.qrPayload?.trim()) {
+        throw new Error("The relay returned an unreadable device-link QR payload.");
+      }
+
+      const qrPayload = encodeDeviceLinkQrPayload({
+        relayOrigin: getRelayOrigin(),
+        qrMode: "source_display",
+        linkToken: response.qrPayload.trim(),
+        requesterLabel,
+      });
+
+      return {
+        legacy: true,
+        qrPayload,
+        parsed: parseDeviceLinkQrPayload(qrPayload),
+        status: {
+          linkId: response.linkId,
+          relayOrigin: getRelayOrigin(),
+          qrMode: "source_display",
+          state: "pending_claim",
+          requesterLabel,
+          expiresAt: response.expiresAt,
+          canComplete: false,
+        },
+      };
+    }
+  }
+
   function buildSessionReadyMessage(nextSession: AuthSession, source: "magic-link" | "device-link"): FormMessage {
     if (nextSession.bootstrapConversationTitle) {
       return {
@@ -339,15 +435,27 @@ export default function App() {
     setCompletedDeviceLinkSessionId(null);
 
     try {
+      const normalizedDeviceLabel = deviceLabel.trim() || suggestMobileDeviceLabel();
       const response = await relayFetch<DeviceLinkStartResponse>(currentSession, "/v1/devices/link/start", {
         method: "POST",
-        body: JSON.stringify({}),
+        body: JSON.stringify({ deviceLabel: normalizedDeviceLabel }),
       });
-      const parsed = parseDeviceLinkQrPayload(response.qrPayload);
+      const normalized = normalizeStartedSourceDeviceLink(response, normalizedDeviceLabel);
 
-      setActiveDeviceLink({ linkToken: parsed.linkToken, qrMode: parsed.qrMode });
-      setDeviceLinkQrValue(response.qrPayload);
-      setDeviceLinkStatus(response);
+      setActiveDeviceLink(
+        normalized.legacy
+          ? null
+          : { linkToken: normalized.parsed.linkToken, qrMode: normalized.parsed.qrMode },
+      );
+      setDeviceLinkQrValue(normalized.qrPayload);
+      setDeviceLinkStatus(normalized.status);
+      if (normalized.legacy) {
+        setDeviceLinkMessage({
+          tone: "warning",
+          title: "Relay rollout still pending",
+          body: "This QR is displayed using the older relay contract. Completing the full device-link handoff still requires the relay update.",
+        });
+      }
     } catch (error) {
       setDeviceLinkMessage({
         tone: "error",
@@ -689,6 +797,15 @@ export default function App() {
     if (db) {
       await saveCachedGroupMessages(db, conversationId, messages);
     }
+
+    // Ack the latest message so other members' ✓✓ updates
+    const latest = messages[messages.length - 1];
+    if (latest) {
+      void relayFetch<{ acked: boolean }>(currentSession, `/v1/groups/${conversationId}/messages/ack`, {
+        method: "POST",
+        body: JSON.stringify({ lastReadMessageCreatedAt: latest.createdAt }),
+      }).catch(() => undefined);
+    }
   }
 
   async function registerNativePushToken(currentSession: AuthSession) {
@@ -724,6 +841,32 @@ export default function App() {
     });
   }
 
+  function updateConversationPreference(
+    conversationId: string,
+    patch: Partial<ConversationPreference>,
+  ) {
+    let nextPreference = createConversationPreference(conversationId);
+
+    setConversationPreferences((currentPreferences) => {
+      const current =
+        currentPreferences[conversationId] ?? createConversationPreference(conversationId);
+      nextPreference = {
+        ...current,
+        ...patch,
+        conversationId,
+      };
+
+      return {
+        ...currentPreferences,
+        [conversationId]: nextPreference,
+      };
+    });
+
+    if (db && session) {
+      void saveConversationPreference(db, session.accountId, nextPreference).catch(() => undefined);
+    }
+  }
+
   // ---- effects ----
 
   useEffect(() => {
@@ -732,11 +875,113 @@ export default function App() {
 
   useEffect(() => {
     selectedConversationIdRef.current = selectedConversationId;
+    if (selectedConversationId) {
+      updateConversationPreference(selectedConversationId, {
+        lastReadAt: new Date().toISOString(),
+      });
+    }
   }, [selectedConversationId]);
 
   useEffect(() => {
     groupsRef.current = groups;
   }, [groups]);
+
+  useEffect(() => {
+    if (!db || !session) {
+      setConversationPreferences({});
+      return;
+    }
+
+    let cancelled = false;
+
+    void (async () => {
+      const preferences = await loadConversationPreferences(db, session.accountId);
+      if (!cancelled) {
+        setConversationPreferences(preferences);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [db, session]);
+
+  useEffect(() => {
+    if (!db || !groups.length) {
+      setConversationPreviews({});
+      return;
+    }
+
+    let cancelled = false;
+
+    void (async () => {
+      const entries = await Promise.all(
+        groups.map(async (group) => [
+          group.id,
+          await loadLatestCachedGroupMessage(db, group.id),
+        ] as const),
+      );
+
+      if (!cancelled) {
+        setConversationPreviews(Object.fromEntries(entries));
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [db, groups]);
+
+  useEffect(() => {
+    if (!selectedConversationId) {
+      return;
+    }
+
+    setConversationPreviews((current) => ({
+      ...current,
+      [selectedConversationId]: threadMessages[threadMessages.length - 1] ?? current[selectedConversationId] ?? null,
+    }));
+  }, [selectedConversationId, threadMessages]);
+
+  useEffect(() => {
+    if (!db || !session || !groups.length) {
+      setUnreadConversationCounts({});
+      return;
+    }
+
+    let cancelled = false;
+
+    void (async () => {
+      const counts = await Promise.all(
+        groups.map(async (group) => {
+          const preference =
+            conversationPreferences[group.id] ?? createConversationPreference(group.id);
+          const messages = await loadCachedGroupMessages(db, group.id);
+          const unreadCount = messages.filter((message) => {
+            if (message.senderAccountId === session.accountId) {
+              return false;
+            }
+
+            if (!preference.lastReadAt) {
+              return true;
+            }
+
+            return message.createdAt > preference.lastReadAt;
+          }).length;
+
+          return [group.id, unreadCount] as const;
+        }),
+      );
+
+      if (!cancelled) {
+        setUnreadConversationCounts(Object.fromEntries(counts));
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [conversationPreviews, conversationPreferences, db, groups, session]);
 
   useEffect(() => {
     if (!activeDeviceLink || completedDeviceLinkSessionId) {
@@ -752,21 +997,28 @@ export default function App() {
           `${relayUrl}/v1/devices/link/status?token=${encodeURIComponent(activeDeviceLink.linkToken)}&qrMode=${encodeURIComponent(activeDeviceLink.qrMode)}`,
         );
         if (!response.ok) {
-          throw new Error(body.error ?? "Unable to refresh device-link status.");
-        }
-        if (cancelled) {
-          return;
-        }
+          const awaitingSourceScan =
+            !sessionRef.current &&
+            activeDeviceLink.qrMode === "target_display" &&
+            body.code === "DEVICE_LINK_NOT_FOUND";
+          if (!awaitingSourceScan) {
+            throw new Error(body.error ?? "Unable to refresh device-link status.");
+          }
+        } else {
+          if (cancelled) {
+            return;
+          }
 
-        setDeviceLinkStatus(body);
+          setDeviceLinkStatus(body);
 
-        if (!sessionRef.current && body.state === "approved") {
-          await completeDeviceLink(activeDeviceLink.linkToken, activeDeviceLink.qrMode);
-          return;
-        }
+          if (!sessionRef.current && body.state === "approved") {
+            await completeDeviceLink(activeDeviceLink.linkToken, activeDeviceLink.qrMode);
+            return;
+          }
 
-        if (body.state === "consumed" || body.state === "expired") {
-          return;
+          if (body.state === "consumed" || body.state === "expired") {
+            return;
+          }
         }
       } catch (error) {
         if (!cancelled) {
@@ -1160,6 +1412,15 @@ export default function App() {
             await saveCachedGroupMessages(db, selectedConversationId, messages);
           }
 
+          // Ack so other members' ✓✓ updates
+          const latestOnLoad = messages[messages.length - 1];
+          if (latestOnLoad) {
+            void relayFetch<{ acked: boolean }>(session, `/v1/groups/${selectedConversationId}/messages/ack`, {
+              method: "POST",
+              body: JSON.stringify({ lastReadMessageCreatedAt: latestOnLoad.createdAt }),
+            }).catch(() => undefined);
+          }
+
           if (!cancelled) {
           const wsUrlBase = relayUrl.replace(/^http/, "ws");
           const clearReconnectTimer = () => {
@@ -1182,6 +1443,13 @@ export default function App() {
                   if (db) saveCachedGroupMessages(db, selectedConversationId, next).catch(() => {});
                   return next;
                 });
+                // Ack if conversation is still open
+                if (selectedConversationIdRef.current === selectedConversationId) {
+                  void relayFetch<{ acked: boolean }>(session, `/v1/groups/${selectedConversationId}/messages/ack`, {
+                    method: "POST",
+                    body: JSON.stringify({ lastReadMessageCreatedAt: message.createdAt }),
+                  }).catch(() => undefined);
+                }
               } catch {
                 // Ignore unparseable messages
               }
@@ -1620,6 +1888,28 @@ export default function App() {
     setSessionMessage(null);
 
     try {
+      // ---- edit existing message ----
+      if (editingMessageId && selectedGroup.historyMode !== "device_encrypted") {
+        await relayFetch<{ updated: boolean }>(
+          session,
+          `/v1/groups/${selectedGroup.id}/messages/${editingMessageId}`,
+          {
+            method: "PATCH",
+            body: JSON.stringify({ text: trimmedText }),
+          },
+        );
+        setThreadMessages((prev) =>
+          prev.map((m) =>
+            m.id === editingMessageId
+              ? { ...m, text: trimmedText, editedAt: new Date().toISOString() }
+              : m,
+          ),
+        );
+        setMessageDraft("");
+        setEditingMessageId(null);
+        return;
+      }
+
       let createdMessage: GroupThreadMessage;
 
       if (selectedGroup.historyMode === "device_encrypted") {
@@ -1650,14 +1940,14 @@ export default function App() {
         const attachmentIds: string[] = [];
 
         if (pendingAttachment) {
-          const fileResponse = await fetch(pendingAttachment.uri);
-          const fileBlob = await fileResponse.blob();
+          const attachmentFile = await loadPendingAttachmentFile(pendingAttachment);
+          const fileBytes = await attachmentFile.bytes();
 
-          if (fileBlob.size > MAX_ATTACHMENT_BYTES) {
+          if (fileBytes.byteLength > MAX_ATTACHMENT_BYTES) {
             throw new Error("That photo exceeds the 20 MB beta attachment limit.");
           }
 
-          const encrypted = encryptAttachmentBytes(await fileBlob.arrayBuffer());
+          const encrypted = encryptAttachmentBytes(fileBytes);
           const ticket = await relayFetch<AttachmentTicket>(session, "/v1/attachments/ticket", {
             method: "POST",
             body: JSON.stringify({
@@ -1676,23 +1966,18 @@ export default function App() {
             }),
           });
 
-          const uploadResponse = await fetch(ticket.uploadUrl, {
-            method: "PUT",
-            headers: { "content-type": "application/octet-stream" },
-            body: encrypted.ciphertext,
-          });
-
-          if (!uploadResponse.ok) {
-            const uploadError = await uploadResponse.text();
-            throw new Error(uploadError || "Attachment upload failed.");
-          }
+          await uploadAttachmentBytes(
+            ticket.uploadUrl,
+            "application/octet-stream",
+            encrypted.ciphertext,
+          );
 
           attachment = {
             id: ticket.attachmentId,
             downloadUrl: "",
             fileName: pendingAttachment.fileName,
             mimeType: pendingAttachment.mimeType,
-            byteLength: fileBlob.size,
+            byteLength: fileBytes.byteLength,
             contentClass: "image",
             retentionMode: ticket.retentionMode,
             protectionProfile: ticket.protectionProfile,
@@ -1767,10 +2052,10 @@ export default function App() {
         let attachmentId: string | undefined;
 
         if (pendingAttachment) {
-          const fileResponse = await fetch(pendingAttachment.uri);
-          const fileBlob = await fileResponse.blob();
+          const attachmentFile = await loadPendingAttachmentFile(pendingAttachment);
+          const fileBytes = await attachmentFile.bytes();
 
-          if (fileBlob.size > MAX_ATTACHMENT_BYTES) {
+          if (fileBytes.byteLength > MAX_ATTACHMENT_BYTES) {
             throw new Error("That photo exceeds the 20 MB beta attachment limit.");
           }
 
@@ -1779,7 +2064,7 @@ export default function App() {
             body: JSON.stringify({
               fileName: pendingAttachment.fileName,
               mimeType: pendingAttachment.mimeType,
-              byteLength: fileBlob.size,
+              byteLength: fileBytes.byteLength,
               conversationId: selectedGroup.id,
               conversationEpoch: selectedGroup.epoch,
               contentClass: "image",
@@ -1788,16 +2073,11 @@ export default function App() {
             }),
           });
 
-          const uploadResponse = await fetch(ticket.uploadUrl, {
-            method: "PUT",
-            headers: { "content-type": pendingAttachment.mimeType },
-            body: fileBlob,
-          });
-
-          if (!uploadResponse.ok) {
-            const uploadError = await uploadResponse.text();
-            throw new Error(uploadError || "Attachment upload failed.");
-          }
+          await uploadAttachmentBytes(
+            ticket.uploadUrl,
+            pendingAttachment.mimeType,
+            fileBytes.buffer.slice(fileBytes.byteOffset, fileBytes.byteOffset + fileBytes.byteLength),
+          );
 
           attachmentId = ticket.attachmentId;
         }
@@ -1870,6 +2150,147 @@ export default function App() {
     })();
   }
 
+  function handleMessageAction(messageId: string, action: ContextMenuAction) {
+    if (action.kind === "edit") {
+      const msg = threadMessages.find((m) => m.id === messageId);
+      if (msg?.text) {
+        setMessageDraft(msg.text);
+        setEditingMessageId(messageId);
+      }
+    } else if (action.kind === "delete") {
+      setThreadMessages((prev) => prev.filter((m) => m.id !== messageId));
+    }
+    // "copy" is handled inside MessageBubble via Clipboard
+  }
+
+  function handleToggleConversationArchived(conversationId: string) {
+    const preference =
+      conversationPreferences[conversationId] ?? createConversationPreference(conversationId);
+    const nextArchived = !preference.isArchived;
+
+    updateConversationPreference(conversationId, {
+      isArchived: nextArchived,
+    });
+
+    if (nextArchived && selectedConversationId === conversationId) {
+      setSelectedConversationId(null);
+    }
+  }
+
+  function handleToggleConversationPinned(conversationId: string) {
+    const preference =
+      conversationPreferences[conversationId] ?? createConversationPreference(conversationId);
+
+    updateConversationPreference(conversationId, {
+      isPinned: !preference.isPinned,
+    });
+  }
+
+  function handleToggleConversationMuted(conversationId: string) {
+    const preference =
+      conversationPreferences[conversationId] ?? createConversationPreference(conversationId);
+
+    updateConversationPreference(conversationId, {
+      isMuted: !preference.isMuted,
+    });
+  }
+
+  async function handleUpdateGroup(title: string, sensitiveMedia: boolean) {
+    if (!session || !selectedGroup) return;
+    await relayFetch<{ updated: boolean }>(session, `/v1/groups/${selectedGroup.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ title, sensitiveMediaDefault: sensitiveMedia }),
+    });
+    // Refresh groups list so the title change reflects in ChatList
+    const nextGroups = await relayFetch<GroupMembershipSummary[]>(session, "/v1/groups");
+    setGroups(nextGroups);
+    if (db) await saveCachedGroups(db, session.accountId, nextGroups);
+  }
+
+  async function handleCreateInvite(): Promise<GroupInviteRecord | null> {
+    if (!session || !selectedGroup) return null;
+    try {
+      return await relayFetch<GroupInviteRecord>(session, `/v1/groups/${selectedGroup.id}/invites`, {
+        method: "POST",
+        body: JSON.stringify({ maxUses: 1, expiresInHours: 24 * 7 }),
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  async function handleChangeAvatar() {
+    if (!session) return;
+    setIsUploadingAvatar(true);
+    setSessionMessage(null);
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        setSessionMessage({
+          tone: "warning",
+          title: "Photo access is still blocked",
+          body: "Allow gallery access so EmberChamber can update your profile picture.",
+        });
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        quality: 0.85,
+        allowsEditing: true,
+        aspect: [1, 1],
+      });
+
+      if (result.canceled || !result.assets.length) return;
+
+      const asset = result.assets[0];
+      const manipulated = await ImageManipulator.manipulateAsync(
+        asset.uri,
+        [{ resize: { width: 400, height: 400 } }],
+        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG },
+      );
+
+      const file = new ExpoFile(manipulated.uri);
+      const fileBytes = await file.bytes();
+      const mimeType = "image/jpeg";
+
+      const ticket = await relayFetch<AttachmentTicket>(session, "/v1/attachments/ticket", {
+        method: "POST",
+        body: JSON.stringify({
+          fileName: `avatar-${Date.now()}.jpg`,
+          mimeType,
+          byteLength: fileBytes.byteLength,
+          contentClass: "image",
+          retentionMode: "private_vault",
+          protectionProfile: "standard",
+          encryptionMode: "none",
+        }),
+      });
+
+      await uploadAttachmentBytes(
+        ticket.uploadUrl,
+        mimeType,
+        fileBytes.buffer.slice(fileBytes.byteOffset, fileBytes.byteOffset + fileBytes.byteLength),
+      );
+
+      await relayFetch<MeProfile>(session, "/v1/me", {
+        method: "PATCH",
+        body: JSON.stringify({ avatarAttachmentId: ticket.attachmentId }),
+      });
+
+      const nextProfile = await relayFetch<MeProfile>(session, "/v1/me");
+      setProfile(nextProfile);
+    } catch (error) {
+      setSessionMessage({
+        tone: "error",
+        title: "Avatar upload failed",
+        body: error instanceof Error ? error.message : "Unable to update profile picture.",
+      });
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  }
+
   async function submitProfileSetup() {
     if (!session) {
       return;
@@ -1908,106 +2329,135 @@ export default function App() {
 
   // ---- render ----
 
-  const heroSignals = session ? signedInHeroSignals : onboardingHeroSignals;
+  const showEntryChrome = !session || profileSetupActive;
+  const heroSignals = !session ? onboardingHeroSignals : [];
 
   if (isBooting) {
     return (
-      <SafeAreaView style={styles.loadingScreen}>
-        <ActivityIndicator size="large" color={theme.colors.textSoft} />
-        <Text style={styles.loadingText}>Preparing local device storage…</Text>
-      </SafeAreaView>
+      <SafeAreaProvider>
+        <SafeAreaView style={styles.loadingScreen} edges={["top", "right", "bottom", "left"]}>
+          <ActivityIndicator size="large" color={theme.colors.textSoft} />
+          <Text style={styles.loadingText}>Preparing local device storage…</Text>
+        </SafeAreaView>
+      </SafeAreaProvider>
     );
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <View pointerEvents="none" style={styles.backgroundOrbTop} />
-      <View pointerEvents="none" style={styles.backgroundOrbLeft} />
-      <View pointerEvents="none" style={styles.backgroundOrbRight} />
-      <KeyboardAvoidingView
-        style={styles.keyboardShell}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <View style={styles.heroCard}>
-            <View pointerEvents="none" style={styles.heroGlow} />
-            <View style={styles.brandRow}>
-              <View style={styles.brandMark}>
-                <Text style={styles.brandMarkText}>EC</Text>
-              </View>
-              <View style={styles.brandCopy}>
-                <Text style={styles.eyebrow}>{session ? "Android companion" : "Android beta"}</Text>
-                <Text style={styles.brandName}>EmberChamber</Text>
-              </View>
-            </View>
-            <Text style={styles.title}>
-              {session
-                ? "Keep your trusted circles reachable on this phone"
-                : "Invite to first trusted-circle message should feel fast and intentional"}
-            </Text>
-            <Text style={styles.subtitle}>
-              {session
-                ? "Android now follows the same ember-toned companion surface as the web app, while keeping relay sign-in, recent group threads, and photo attachments ready on-device."
-                : "The fastest path is still invite, private email, adults-only confirmation, device label, and inbox completion handed straight back into the app."}
-            </Text>
-            <View style={styles.heroSignalRow}>
-              {heroSignals.map((signal) => (
-                <View key={signal} style={styles.heroSignalChip}>
-                  <Text style={styles.heroSignalText}>{signal}</Text>
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.screen} edges={["top", "right", "bottom", "left"]}>
+        {showEntryChrome ? (
+          <>
+            <View pointerEvents="none" style={styles.backgroundOrbTop} />
+            <View pointerEvents="none" style={styles.backgroundOrbLeft} />
+            <View pointerEvents="none" style={styles.backgroundOrbRight} />
+          </>
+        ) : null}
+        <KeyboardAvoidingView
+          style={styles.keyboardShell}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          {showEntryChrome ? (
+            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+            <View style={styles.heroCard}>
+              <View pointerEvents="none" style={styles.heroGlow} />
+              <View style={styles.brandRow}>
+                <View style={styles.brandMark}>
+                  <Text style={styles.brandMarkText}>EC</Text>
                 </View>
-              ))}
+                <View style={styles.brandCopy}>
+                  <Text style={styles.eyebrow}>
+                    {!session ? "Android beta" : "Profile setup"}
+                  </Text>
+                  <Text style={styles.brandName}>EmberChamber</Text>
+                </View>
+              </View>
+              <Text style={styles.title}>
+                {!session
+                  ? "Get this phone into your chats fast"
+                  : "Choose the name your circles will see"}
+              </Text>
+              <Text style={styles.subtitle}>
+                {!session
+                  ? "Keep onboarding focused on the next action only: name this phone, confirm adults-only access, and finish sign-in from your inbox or a trusted device."
+                  : "Pick the display name that should appear in trusted-circle conversations on this device."}
+              </Text>
+              {!session ? (
+                <View style={styles.heroSignalRow}>
+                  {heroSignals.map((signal) => (
+                    <View key={signal} style={styles.heroSignalChip}>
+                      <Text style={styles.heroSignalText}>{signal}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
             </View>
-          </View>
 
-          {!session ? (
-            <OnboardingScreen
-              authMethod={authMethod}
-              setAuthMethod={setAuthMethod}
-              email={email}
-              setEmail={setEmail}
-              inviteToken={inviteToken}
-              setInviteToken={setInviteToken}
-              deviceLabel={deviceLabel}
-              setDeviceLabel={setDeviceLabel}
-              ageConfirmed18={ageConfirmed18}
-              setAgeConfirmed18={setAgeConfirmed18}
-              inviteInput={inviteInput}
-              setInviteInput={setInviteInput}
-              inviteFieldVisible={inviteFieldVisible}
-              setInviteFieldVisible={setInviteFieldVisible}
-              isSending={isSending}
-              isCompleting={isCompleting}
-              challenge={challenge}
-              errors={errors}
-              setErrors={setErrors}
-              formMessage={formMessage}
-              sessionMessage={sessionMessage}
-              onSubmit={() => void submitMagicLink()}
-              onCompleteMagicLink={(token) => void completeMagicLink(token)}
-              deviceLinkQrValue={deviceLinkQrValue}
-              deviceLinkStatus={deviceLinkStatus}
-              deviceLinkMessage={deviceLinkMessage}
-              isWorkingDeviceLink={isWorkingDeviceLink}
-              onShowDeviceLinkQr={() => void beginTargetDeviceLink()}
-              onScanDeviceLinkQr={(payload) => scanDeviceLinkQr(payload)}
-              onResetDeviceLink={resetDeviceLinkState}
-            />
-          ) : profileSetupActive ? (
-            <ProfileSetupScreen
-              sessionMessage={sessionMessage}
-              profileSetupName={profileSetupName}
-              setProfileSetupName={setProfileSetupName}
-              profileSetupError={profileSetupError}
-              setProfileSetupError={setProfileSetupError}
-              isSubmittingProfile={isSubmittingProfile}
-              onSubmit={() => void submitProfileSetup()}
-            />
+            {!session ? (
+              <OnboardingScreen
+                authMethod={authMethod}
+                setAuthMethod={setAuthMethod}
+                email={email}
+                setEmail={setEmail}
+                inviteToken={inviteToken}
+                setInviteToken={setInviteToken}
+                deviceLabel={deviceLabel}
+                setDeviceLabel={setDeviceLabel}
+                ageConfirmed18={ageConfirmed18}
+                setAgeConfirmed18={setAgeConfirmed18}
+                inviteInput={inviteInput}
+                setInviteInput={setInviteInput}
+                inviteFieldVisible={inviteFieldVisible}
+                setInviteFieldVisible={setInviteFieldVisible}
+                isSending={isSending}
+                isCompleting={isCompleting}
+                challenge={challenge}
+                errors={errors}
+                setErrors={setErrors}
+                formMessage={formMessage}
+                sessionMessage={sessionMessage}
+                onSubmit={() => void submitMagicLink()}
+                onCompleteMagicLink={(token) => void completeMagicLink(token)}
+                deviceLinkQrValue={deviceLinkQrValue}
+                deviceLinkStatus={deviceLinkStatus}
+                deviceLinkMessage={deviceLinkMessage}
+                isWorkingDeviceLink={isWorkingDeviceLink}
+                onShowDeviceLinkQr={() => void beginTargetDeviceLink()}
+                onScanDeviceLinkQr={(payload) => scanDeviceLinkQr(payload)}
+                onResetDeviceLink={resetDeviceLinkState}
+              />
+            ) : (
+              <ProfileSetupScreen
+                sessionMessage={sessionMessage}
+                profileSetupName={profileSetupName}
+                setProfileSetupName={setProfileSetupName}
+                profileSetupError={profileSetupError}
+                setProfileSetupError={setProfileSetupError}
+                isSubmittingProfile={isSubmittingProfile}
+                onSubmit={() => void submitProfileSetup()}
+              />
+            )}
+
+            {!session ? (
+              <View style={styles.card}>
+                <Text style={styles.sectionTitle}>Trust boundary</Text>
+                {onboardingAssurances.map((item) => (
+                  <Text key={item} style={styles.bullet}>
+                    • {item}
+                  </Text>
+                ))}
+              </View>
+            ) : null}
+          </ScrollView>
           ) : (
             <MainScreen
-              session={session}
+              session={session!}
               profile={profile}
               contactCard={contactCard}
               groups={groups}
+              conversationPreviews={conversationPreviews}
+              conversationPreferences={conversationPreferences}
+              unreadCounts={unreadConversationCounts}
               selectedConversationId={selectedConversationId}
               setSelectedConversationId={setSelectedConversationId}
               selectedGroup={selectedGroup ?? null}
@@ -2039,6 +2489,9 @@ export default function App() {
               deviceLinkMessage={deviceLinkMessage}
               isWorkingDeviceLink={isWorkingDeviceLink}
               isApprovingDeviceLink={isApprovingDeviceLink}
+              editingMessageId={editingMessageId}
+              isUploadingAvatar={isUploadingAvatar}
+              unreadIds={unreadConversationIds}
               onSignOut={() => void signOut()}
               onShowDeviceLinkQr={() => void beginSourceDeviceLink()}
               onScanDeviceLinkQr={(payload) => scanDeviceLinkQr(payload)}
@@ -2051,19 +2504,21 @@ export default function App() {
               onSendMessage={() => void sendMessage()}
               onUpdatePrivacy={updatePrivacyDefaults}
               onImageError={handleImageError}
+              onCancelEdit={() => {
+                setEditingMessageId(null);
+                setMessageDraft("");
+              }}
+              onMessageAction={handleMessageAction}
+              onUpdateGroup={handleUpdateGroup}
+              onCreateInvite={handleCreateInvite}
+              onChangeAvatar={() => void handleChangeAvatar()}
+              onToggleConversationArchived={handleToggleConversationArchived}
+              onToggleConversationPinned={handleToggleConversationPinned}
+              onToggleConversationMuted={handleToggleConversationMuted}
             />
           )}
-
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Trust boundary</Text>
-            {onboardingAssurances.map((item) => (
-              <Text key={item} style={styles.bullet}>
-                • {item}
-              </Text>
-            ))}
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }

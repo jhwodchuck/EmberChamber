@@ -45,25 +45,25 @@ export const privacyBoundaryItems: PrivacyBoundaryItem[] = [
     currentNote: "The relay does not serve plaintext DM history back to the browser.",
   },
   {
-    title: "New encrypted groups",
-    staysLocal: "The active relay runtime creates new groups with device-encrypted history and local client history.",
+    title: "Group history",
+    staysLocal: "New groups are created with device-encrypted history and local client history.",
     relayRole:
-      "The relay coordinates membership, epochs, and mailbox delivery for those groups without exposing a relay-hosted history endpoint.",
+      "The relay coordinates membership, epochs, and mailbox delivery for new groups while legacy compatibility history still exists for older group and room paths.",
     currentNote: "Legacy relay-hosted group and room history still exists in compatibility paths and older data.",
   },
   {
-    title: "Attachments",
-    staysLocal: "Browser encrypted-conversation flows can encrypt attachment bytes and keep file keys with the client.",
+    title: "Browser attachments",
+    staysLocal: "Browser encrypted-conversation flows can encrypt attachment bytes and keep file keys with the client before upload.",
     relayRole:
-      "R2 still stores attachment blobs and metadata so downloads can be delivered to authorized members.",
-    currentNote: "Mobile and desktop attachment encryption is not yet uniform across every client flow.",
+      "R2 stores attachment blobs and signed access metadata so downloads can be delivered to authorized members.",
+    currentNote: "This browser DM path is ahead of the native attachment path today.",
   },
   {
-    title: "Account, invites, and sessions",
-    staysLocal: "Private keys and local trust state remain with the client.",
+    title: "Native attachments",
+    staysLocal: "File selection, local cache, and local trust state remain with the client.",
     relayRole:
-      "D1 stores email, account, invite, device, session, and report metadata so the hosted beta can function.",
-    currentNote: "That metadata is operational reality, not a reason to flatten the privacy story.",
+      "Current mobile and desktop flows can still upload raw bytes to R2 through signed upload and download tickets.",
+    currentNote: "Native attachment encryption is still being migrated and should not be flattened into the browser DM story.",
   },
   {
     title: "Search",
@@ -71,6 +71,20 @@ export const privacyBoundaryItems: PrivacyBoundaryItem[] = [
     relayRole:
       "The relay exposes joined-space metadata search, not server-side search over private message bodies.",
     currentNote: "Search is local-first today, not a server archive feature.",
+  },
+  {
+    title: "Recovery",
+    staysLocal: "Private keys, local history, and trusted-device state remain tied to the devices you control.",
+    relayRole:
+      "Email bootstrap plus device and session metadata let the hosted beta restore access to an existing account.",
+    currentNote: "Total-device-loss recovery remains intentionally limited, and the fuller trusted-device recovery flow is not finished.",
+  },
+  {
+    title: "Passkeys",
+    staysLocal: "When shipped, passkey private keys will live on user devices or platform authenticators rather than on the relay.",
+    relayRole:
+      "The relay schema and endpoints exist only as scaffolding today so the beta can add passkeys later without changing the product boundary.",
+    currentNote: "Passkey sign-in is not live in the current beta.",
   },
 ];
 
@@ -100,7 +114,7 @@ export const surfaceCapabilities = [
       "Native device integration",
       "Installable daily client",
     ],
-    caveat: "Push is not wired yet",
+    caveat: "Android push wiring exists, but reliable production delivery still depends on deployed relay secrets.",
   },
   {
     name: "Windows",
@@ -148,7 +162,7 @@ export const launchPlatforms = [
     name: "Android",
     artifact: ".apk",
     status: "Primary beta client",
-    detail: "The main way to use EmberChamber. Native client with local encrypted storage and relay-assisted delivery.",
+    detail: "The main way to use EmberChamber. Native client with local device storage and relay-assisted delivery.",
   },
   {
     id: "windows",
@@ -156,7 +170,7 @@ export const launchPlatforms = [
     artifact: ".exe / .msi",
     status: "First-wave desktop",
     detail:
-      "Full desktop experience — auth, messaging, groups, invites, and settings in a native window built on the same secure Rust core.",
+      "Full desktop experience in a native Tauri shell for auth, messaging, groups, invites, and settings.",
   },
   {
     id: "ubuntu",
@@ -164,7 +178,7 @@ export const launchPlatforms = [
     artifact: ".deb / AppImage",
     status: "First-wave desktop",
     detail:
-      "Packaged as .deb and AppImage for Linux operators and desktop-heavy testers who want a native build with the same capabilities as Windows.",
+      "Packaged as .deb and AppImage for Linux operators and desktop-heavy testers who want the same first-wave desktop scope as Windows.",
   },
 ];
 

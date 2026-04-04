@@ -1,0 +1,52 @@
+name: CI - Repo Contracts
+
+on:
+  push:
+    branches: [main, "copilot/**"]
+    paths:
+      - "AGENTS.md"
+      - "README.md"
+      - "CONTRIBUTING.md"
+      - "repo-map.yaml"
+      - "docs/**"
+      - "llm_council/**"
+      - "scripts/**"
+      - ".github/workflows/**"
+      - "apps/web/README.md"
+      - "apps/web/src/app/app/**"
+      - "apps/relay/src/index.ts"
+      - "package.json"
+      - "Cargo.toml"
+  pull_request:
+    paths:
+      - "AGENTS.md"
+      - "README.md"
+      - "CONTRIBUTING.md"
+      - "repo-map.yaml"
+      - "docs/**"
+      - "llm_council/**"
+      - "scripts/**"
+      - ".github/workflows/**"
+      - "apps/web/README.md"
+      - "apps/web/src/app/app/**"
+      - "apps/relay/src/index.ts"
+      - "package.json"
+      - "Cargo.toml"
+
+concurrency:
+  group: ci-repo-contract-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify repo contracts and doc/runtime alignment
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Check repo contracts
+        run: npm run check:repo-contracts

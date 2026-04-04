@@ -428,10 +428,10 @@ export const relayDeviceApi = {
 };
 
 export const relayDeviceLinkApi = {
-  start: () =>
+  start: (deviceLabel?: string) =>
     relayFetch<DeviceLinkStartResponse>("/v1/devices/link/start", {
       method: "POST",
-      body: JSON.stringify({}),
+      body: JSON.stringify(deviceLabel?.trim() ? { deviceLabel: deviceLabel.trim() } : {}),
     }),
   scan: (input: DeviceLinkScanRequest) =>
     relayFetch<DeviceLinkStatus>("/v1/devices/link/scan", {

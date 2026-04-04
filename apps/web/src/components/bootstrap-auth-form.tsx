@@ -290,16 +290,17 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
 
   const title =
     entryMethod === "device-link"
-      ? "Link with another device"
+      ? "Link this browser from a trusted device"
       : mode === "join"
         ? "Join the invite-only beta"
         : "Continue with a private email";
   const subtitle =
     entryMethod === "device-link"
-      ? "Use a readable device name, then either show a QR for a signed-in device to approve or scan a trusted device QR here."
+      ? "Use QR only when another EmberChamber device is already signed in."
       : mode === "join"
-        ? "First confirm the invite path and adults-only gate, then name the device that should receive the inbox link."
-        : "First confirm the email and adults-only gate, then name the browser that should receive the inbox link.";
+        ? "Confirm the invite and adults-only gate first, then name this device and send the inbox link."
+        : "Confirm the email and adults-only gate first, then name this device and send the inbox link.";
+  const canUseDeviceLink = mode === "signin";
   const requiresInviteToken = mode === "join" || inviteFieldVisible;
 
   return (
@@ -320,47 +321,58 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
       </div>
 
       <div className="space-y-5">
-        <div className="grid gap-2 sm:grid-cols-2">
-          <button
-            type="button"
-            onClick={() => {
-              setEntryMethod("magic-link");
-              setMagicLinkStep(1);
-            }}
-            className={`rounded-[1.2rem] border px-4 py-3 text-left transition-colors ${
-              entryMethod === "magic-link"
-                ? "border-brand-500 bg-brand-500/5"
-                : "border-[var(--border)] bg-[var(--bg-secondary)] hover:border-brand-500/40"
-            }`}
-          >
-            <p className="text-sm font-medium text-[var(--text-primary)]">Magic link</p>
-            <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
-              Use email bootstrap for the first device or whenever QR linking is unavailable.
-            </p>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setEntryMethod("device-link");
-              setMagicLinkStep(1);
-            }}
-            className={`rounded-[1.2rem] border px-4 py-3 text-left transition-colors ${
-              entryMethod === "device-link"
-                ? "border-brand-500 bg-brand-500/5"
-                : "border-[var(--border)] bg-[var(--bg-secondary)] hover:border-brand-500/40"
-            }`}
-          >
-            <p className="text-sm font-medium text-[var(--text-primary)]">Link with QR</p>
-            <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
-              Add this browser to an existing account after approval from a signed-in device.
-            </p>
-          </button>
-        </div>
-
         {entryMethod === "magic-link" && !authBootstrapEnabled ? (
           <StatusCallout tone="warning" title="Closed beta bootstrap is not live here yet">
             This deployment is up, but the production email bootstrap path is still being wired.
           </StatusCallout>
+        ) : null}
+
+        {canUseDeviceLink && entryMethod === "magic-link" ? (
+          <div className="rounded-[1.2rem] border border-dashed border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-[var(--text-primary)]">
+                  Already signed in on another device?
+                </p>
+                <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
+                  Use QR device link instead of waiting on email.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => {
+                  setEntryMethod("device-link");
+                  setMagicLinkStep(1);
+                  setFormMessage(null);
+                  setChallenge(null);
+                }}
+              >
+                Use QR
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {canUseDeviceLink && entryMethod === "device-link" ? (
+          <div className="rounded-[1.2rem] border border-brand-500/15 bg-brand-500/5 px-4 py-4">
+            <p className="text-sm font-medium text-[var(--text-primary)]">Secondary path: QR device link</p>
+            <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
+              Use this only when a trusted EmberChamber device is already signed in.
+            </p>
+            <button
+              type="button"
+              className="mt-3 text-sm font-semibold text-brand-600 hover:text-brand-500"
+              onClick={() => {
+                setEntryMethod("magic-link");
+                setMagicLinkStep(1);
+                setFormMessage(null);
+                setChallenge(null);
+              }}
+            >
+              Back to magic link
+            </button>
+          </div>
         ) : null}
 
         <div className={`grid gap-2 ${entryMethod === "magic-link" ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
@@ -386,7 +398,7 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
                 }`}
               >
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-600">Step 2</p>
-                <p className="mt-1 text-sm font-medium text-[var(--text-primary)]">Name device + send inbox link</p>
+                <p className="mt-1 text-sm font-medium text-[var(--text-primary)]">Name device + send link</p>
               </div>
             </>
           ) : (
@@ -513,8 +525,8 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
                     <div className="rounded-[1.2rem] border border-dashed border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-3 text-sm text-[var(--text-secondary)]">
                       <p className="font-medium text-[var(--text-primary)]">No invite token on hand?</p>
                       <p className="mt-1">
-                        Returning users can continue with email alone. If this is your first device on a
-                        new beta account, add the invite token now instead of starting over later.
+                        Returning users can continue with email alone. If this is the first device
+                        for a new beta account, add the invite token now.
                       </p>
                       <button
                         type="button"
@@ -675,13 +687,14 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
               <br />
               2. Confirm the link from the device you want to use first.
               <br />
-              3. Finish profile setup with a pseudonymous name, then return later to review active devices and privacy settings.
+              3. Finish profile setup with a pseudonymous name, then review active devices and settings later.
             </StatusCallout>
           </>
         ) : (
           <div className="space-y-4">
             <StatusCallout tone="info" title="Existing account only">
-              QR linking adds this browser to an account that already has a signed-in device. It does not replace invite-only account creation or email recovery for the first device.
+              QR linking adds this browser to an account that already has a signed-in device. It
+              does not replace invite-only account creation or first-device recovery.
             </StatusCallout>
 
             <div>
@@ -713,7 +726,8 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
             <DeviceLinkPanel signedIn={false} deviceLabel={deviceLabel} />
 
             <StatusCallout tone="info" title="Fallback stays available">
-              If the camera is unavailable, the QR expires, or this is your first device on a new account, switch back to the magic-link path above.
+              If the camera is unavailable, the QR expires, or this is your first device on a new
+              account, switch back to the magic-link path above.
             </StatusCallout>
           </div>
         )}

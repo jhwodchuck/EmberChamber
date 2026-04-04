@@ -38,7 +38,8 @@ Only change legacy paths when the user explicitly asks for them or when they blo
 ## Routing Work
 
 - Web UI, onboarding, invite landing, and browser messaging usually belong in `apps/web`
-- Relay auth, invites, mailbox flows, group membership, and attachment handling belong in `apps/relay`
+- Community and room management usually belong in `apps/web` plus `apps/relay`
+- Relay auth, invites, mailbox flows, group membership, room access policy, and attachment handling belong in `apps/relay`
 - Android and iPhone work belongs in `apps/mobile`
 - Desktop shell and packaging work belongs in `apps/desktop` and `apps/desktop/src-tauri`
 - Shared secure-state logic belongs in `crates/core`
@@ -51,7 +52,7 @@ Preserve the current beta direction:
 - invite-only access
 - adults-only access with self-attested 18+ affirmation
 - email magic-link bootstrap, with passkeys later
-- E2EE direct messages and small groups
+- E2EE direct messages and small groups, with invite-gated communities and rooms as a closed-beta expansion surface
 - organizer or admin invite control in phase 1
 - local-first history on device
 - web as a capable secondary surface, not the preferred primary client
@@ -68,6 +69,7 @@ Do not reintroduce deprecated product assumptions unless the user asks:
 
 Run the smallest relevant checks for the paths you touch:
 
+- repo guidance, docs, scripts, workflows, or runtime-boundary changes: `npm run check:repo-contracts`
 - protocol contracts: `npm run build --workspace=packages/protocol`
 - relay: `npm run build --workspace=apps/relay` and `npm test --workspace=apps/relay`
 - web: `npm run lint --workspace=apps/web` and `npm run build --workspace=apps/web`
@@ -76,6 +78,7 @@ Run the smallest relevant checks for the paths you touch:
 - shared Rust core and protocol: `cargo test -p emberchamber-core -p emberchamber-relay-protocol`
 
 If you change protocol payloads or auth/session shapes, verify both the TypeScript and Rust sides.
+If you change repo guidance, runtime routing, active-vs-legacy boundaries, or CI expectations, run `npm run check:repo-contracts`.
 
 For a full active-runtime sweep from the repo root, use `npm run verify:all`.
 

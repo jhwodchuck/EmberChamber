@@ -62,12 +62,15 @@ The Play deployment workflow additionally expects the `GOOGLE_PLAY_SERVICE_ACCOU
 Actions secret described in [`docs/operator-playbook.md`](operator-playbook.md),
 plus `ANDROID_GOOGLE_SERVICES_JSON` for the Firebase Android app config file.
 
+Use the exact tag currently posted in GitHub Releases when you trigger the Play workflow. Do not
+copy an old beta tag from this document into an operator run.
+
 Run it from GitHub Actions or from the CLI, for example:
 
 ```bash
 gh workflow run "Deploy - Android to Play Store" \
   --ref main \
-  -f ref=v0.1.0-beta.8 \
+  -f ref=<tag-from-github-releases> \
   -f track=internal \
   -f release_status=completed \
   -f in_app_update_priority=2 \

@@ -14,9 +14,9 @@ export default function LoginPage() {
       <section className="mx-auto grid max-w-6xl gap-8 px-6 py-16 sm:py-20 lg:grid-cols-[minmax(0,0.95fr)_28rem] lg:items-start">
         <AuthPageIntro
           eyebrow="Email bootstrap"
-          title="Sign in without turning your identity into a contact graph."
-          description="Returning users should only need a private email, an adults-only affirmation, and a readable device name. If this email has never been used for beta access before, the flow can expand to accept an invite token instead of forcing you to start over."
-          emphasis="Same deliberate bootstrap across web, desktop, Android, Windows, and Ubuntu: confirm adults-only access, identify the inbox, name the device, then confirm from the inbox you already control."
+          title="Sign in with the private email tied to this account."
+          description="Most returning users only need the same private email, an adults-only confirmation, and a readable device name."
+          emphasis="If this email was never used for beta access, the form can add an invite token without making you restart."
         />
 
         <LoginForm />

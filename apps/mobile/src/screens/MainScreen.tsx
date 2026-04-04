@@ -1,29 +1,40 @@
+import { useEffect, useMemo, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
-import { ActivityIndicator, Image, Pressable, Text, TextInput, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import type {
   AuthSession,
   ContactCard,
+  ConversationPreference,
   FormMessage,
   GroupInvitePreview,
+  GroupInviteRecord,
   GroupMembershipSummary,
   GroupThreadMessage,
   MeProfile,
   PendingAttachment,
   PrivacyDefaults,
 } from "../types";
-import { formatBytes } from "../lib/utils";
-import { styles, theme } from "../styles";
-import { DeviceLinkCard } from "../components/DeviceLinkCard";
+import type { ContextMenuAction } from "../components/MessageContextMenu";
+import { styles } from "../styles";
 import { StatusCard } from "../components/StatusCard";
-import { MessageBubble } from "../components/MessageBubble";
-import { ToggleRow } from "../components/ToggleRow";
 import type { DeviceLinkStatus } from "@emberchamber/protocol";
+import {
+  ChatListScreen,
+  type ChatListFilter,
+  type ChatListItem,
+} from "./ChatListScreen";
+import { ConversationScreen } from "./ConversationScreen";
+import { InvitesScreen } from "./InvitesScreen";
+import { SettingsScreen } from "./SettingsScreen";
 
 export type MainScreenProps = {
   session: AuthSession;
   profile: MeProfile | null;
   contactCard: ContactCard | null;
   groups: GroupMembershipSummary[];
+  conversationPreviews: Record<string, GroupThreadMessage | null>;
+  conversationPreferences: Record<string, ConversationPreference>;
+  unreadCounts: Record<string, number>;
   selectedConversationId: string | null;
   setSelectedConversationId: Dispatch<SetStateAction<string | null>>;
   selectedGroup: GroupMembershipSummary | null;
@@ -67,417 +78,274 @@ export type MainScreenProps = {
   onSendMessage: () => void;
   onUpdatePrivacy: <K extends keyof PrivacyDefaults>(key: K, value: PrivacyDefaults[K]) => void;
   onImageError: (messageId: string) => void;
+  editingMessageId: string | null;
+  onCancelEdit: () => void;
+  onMessageAction: (messageId: string, action: ContextMenuAction) => void;
+  onUpdateGroup: (title: string, sensitiveMedia: boolean) => Promise<void>;
+  onCreateInvite: () => Promise<GroupInviteRecord | null>;
+  isUploadingAvatar: boolean;
+  onChangeAvatar: () => void;
+  unreadIds: Set<string>;
+  onToggleConversationArchived: (conversationId: string) => void;
+  onToggleConversationPinned: (conversationId: string) => void;
+  onToggleConversationMuted: (conversationId: string) => void;
 };
+
+type MainTab = "chats" | "invites" | "settings";
 
 export function MainScreen(props: MainScreenProps) {
   const {
-    session, profile, contactCard, groups,
-    selectedConversationId, setSelectedConversationId, selectedGroup,
-    threadMessages, inviteInput, setInviteInput,
-    invitePreview, invitePreviewError,
-    messageDraft, setMessageDraft, pendingAttachment, setPendingAttachment,
-    isLoadingAccount, isLoadingThread, isPreviewingInvite, isAcceptingInvite,
-    isPickingPhoto, isSendingMessage,
-    deviceBundleReady, deviceBundleCount, deviceBundleError,
-    vaultCount, privacyDefaults, sessionMessage, email, deviceLabel,
-    deviceLinkQrValue, deviceLinkStatus, deviceLinkMessage, isWorkingDeviceLink, isApprovingDeviceLink,
-    onSignOut, onShowDeviceLinkQr, onScanDeviceLinkQr, onApproveDeviceLink, onResetDeviceLink,
-    onPreviewInvite, onAcceptInvite, onPickPhoto, onTakePhoto, onSendMessage,
-    onUpdatePrivacy, onImageError,
+    session,
+    profile,
+    contactCard,
+    groups,
+    conversationPreviews,
+    conversationPreferences,
+    unreadCounts,
+    selectedConversationId,
+    setSelectedConversationId,
+    selectedGroup,
+    threadMessages,
+    inviteInput,
+    setInviteInput,
+    invitePreview,
+    invitePreviewError,
+    messageDraft,
+    setMessageDraft,
+    pendingAttachment,
+    setPendingAttachment,
+    isLoadingAccount,
+    isLoadingThread,
+    isPreviewingInvite,
+    isAcceptingInvite,
+    isPickingPhoto,
+    isSendingMessage,
+    deviceBundleReady,
+    deviceBundleCount,
+    deviceBundleError,
+    vaultCount,
+    privacyDefaults,
+    sessionMessage,
+    email,
+    deviceLabel,
+    deviceLinkQrValue,
+    deviceLinkStatus,
+    deviceLinkMessage,
+    isWorkingDeviceLink,
+    isApprovingDeviceLink,
+    onSignOut,
+    onShowDeviceLinkQr,
+    onScanDeviceLinkQr,
+    onApproveDeviceLink,
+    onResetDeviceLink,
+    onPreviewInvite,
+    onAcceptInvite,
+    onPickPhoto,
+    onTakePhoto,
+    onSendMessage,
+    onUpdatePrivacy,
+    onImageError,
+    editingMessageId,
+    onCancelEdit,
+    onMessageAction,
+    onUpdateGroup,
+    onCreateInvite,
+    isUploadingAvatar,
+    onChangeAvatar,
+    unreadIds,
+    onToggleConversationArchived,
+    onToggleConversationPinned,
+    onToggleConversationMuted,
   } = props;
 
+  const [activeTab, setActiveTab] = useState<MainTab>("chats");
+  const [chatView, setChatView] = useState<"list" | "conversation">("list");
+  const [chatFilter, setChatFilter] = useState<ChatListFilter>("all");
+  const [chatSearch, setChatSearch] = useState("");
+
+  useEffect(() => {
+    if (!selectedGroup) {
+      setChatView("list");
+    }
+  }, [selectedGroup]);
+
+  const chatItems = useMemo<ChatListItem[]>(() => {
+    const normalizedSearch = chatSearch.trim().toLowerCase();
+
+    return groups
+      .map((group) => ({
+        group,
+        latestMessage: conversationPreviews[group.id] ?? null,
+        preference:
+          conversationPreferences[group.id] ?? {
+            conversationId: group.id,
+            isArchived: false,
+            isPinned: false,
+            isMuted: false,
+            lastReadAt: null,
+          },
+        unreadCount: unreadCounts[group.id] ?? 0,
+      }))
+      .filter(({ group, preference, unreadCount }) => {
+        if (chatFilter === "unread" && unreadCount < 1) {
+          return false;
+        }
+
+        if (chatFilter === "pinned" && !preference.isPinned) {
+          return false;
+        }
+
+        if (chatFilter === "archived" && !preference.isArchived) {
+          return false;
+        }
+
+        if (chatFilter !== "archived" && preference.isArchived) {
+          return false;
+        }
+
+        if (!normalizedSearch) {
+          return true;
+        }
+
+        return group.title.toLowerCase().includes(normalizedSearch);
+      })
+      .sort((left, right) => {
+        if (left.preference.isPinned !== right.preference.isPinned) {
+          return left.preference.isPinned ? -1 : 1;
+        }
+
+        const leftTimestamp = left.latestMessage?.createdAt ?? left.group.updatedAt;
+        const rightTimestamp = right.latestMessage?.createdAt ?? right.group.updatedAt;
+        return rightTimestamp.localeCompare(leftTimestamp);
+      });
+  }, [chatFilter, chatSearch, conversationPreferences, conversationPreviews, groups, unreadCounts]);
+
+  function openConversation(conversationId: string) {
+    setSelectedConversationId(conversationId);
+    setPendingAttachment(null);
+    setActiveTab("chats");
+    setChatView("conversation");
+  }
+
+  const content =
+    activeTab === "chats" ? (
+      chatView === "conversation" && selectedGroup ? (
+        <ConversationScreen
+          session={session}
+          selectedGroup={selectedGroup}
+          threadMessages={threadMessages}
+          messageDraft={messageDraft}
+          setMessageDraft={setMessageDraft}
+          pendingAttachment={pendingAttachment}
+          setPendingAttachment={setPendingAttachment}
+          isLoadingThread={isLoadingThread}
+          isPickingPhoto={isPickingPhoto}
+          isSendingMessage={isSendingMessage}
+          editingMessageId={editingMessageId}
+          onCancelEdit={onCancelEdit}
+          onTakePhoto={onTakePhoto}
+          onPickPhoto={onPickPhoto}
+          onSendMessage={onSendMessage}
+          onBack={() => setChatView("list")}
+          onImageError={onImageError}
+          onMessageAction={onMessageAction}
+          onUpdateGroup={onUpdateGroup}
+          onCreateInvite={onCreateInvite}
+        />
+      ) : (
+        <ChatListScreen
+          profileName={profile?.displayName ?? null}
+          selectedConversationId={selectedConversationId}
+          items={chatItems}
+          activeFilter={chatFilter}
+          onChangeFilter={setChatFilter}
+          searchQuery={chatSearch}
+          onChangeSearchQuery={setChatSearch}
+          isLoadingAccount={isLoadingAccount}
+          unreadIds={unreadIds}
+          onSelectConversation={openConversation}
+          onToggleConversationArchived={onToggleConversationArchived}
+          onToggleConversationPinned={onToggleConversationPinned}
+          onToggleConversationMuted={onToggleConversationMuted}
+          onOpenInvites={() => setActiveTab("invites")}
+        />
+      )
+    ) : activeTab === "invites" ? (
+      <InvitesScreen
+        inviteInput={inviteInput}
+        setInviteInput={setInviteInput}
+        invitePreview={invitePreview}
+        invitePreviewError={invitePreviewError}
+        isPreviewingInvite={isPreviewingInvite}
+        isAcceptingInvite={isAcceptingInvite}
+        groupCount={groups.length}
+        onPreviewInvite={onPreviewInvite}
+        onAcceptInvite={onAcceptInvite}
+        onOpenChats={() => setActiveTab("chats")}
+      />
+    ) : (
+      <SettingsScreen
+        isLoadingAccount={isLoadingAccount}
+        profile={profile}
+        contactCard={contactCard}
+        email={email}
+        deviceLabel={deviceLabel}
+        deviceBundleReady={deviceBundleReady}
+        deviceBundleCount={deviceBundleCount}
+        deviceBundleError={deviceBundleError}
+        vaultCount={vaultCount}
+        privacyDefaults={privacyDefaults}
+        deviceLinkQrValue={deviceLinkQrValue}
+        deviceLinkStatus={deviceLinkStatus}
+        deviceLinkMessage={deviceLinkMessage}
+        isWorkingDeviceLink={isWorkingDeviceLink}
+        isApprovingDeviceLink={isApprovingDeviceLink}
+        isUploadingAvatar={isUploadingAvatar}
+        onShowDeviceLinkQr={onShowDeviceLinkQr}
+        onScanDeviceLinkQr={onScanDeviceLinkQr}
+        onApproveDeviceLink={onApproveDeviceLink}
+        onResetDeviceLink={onResetDeviceLink}
+        onUpdatePrivacy={onUpdatePrivacy}
+        onChangeAvatar={onChangeAvatar}
+        onSignOut={onSignOut}
+      />
+    );
+
   return (
-    <>
-      {sessionMessage ? <StatusCard {...sessionMessage} /> : null}
+    <View style={styles.appShell}>
+      {sessionMessage ? (
+        <View style={styles.shellBanner}>
+          <StatusCard {...sessionMessage} />
+        </View>
+      ) : null}
 
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Account ready</Text>
-        {isLoadingAccount ? (
-          <View style={styles.inlineLoadingRow}>
-            <ActivityIndicator size="small" color={theme.colors.textSoft} />
-            <Text style={styles.helper}>Loading profile, device state, and current groups…</Text>
-          </View>
-        ) : (
-          <>
-            <View style={styles.metricRow}>
-              <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>Display name</Text>
-                <Text style={styles.metricValueText}>
-                  {profile?.displayName ?? "Loading…"}
-                </Text>
-              </View>
-              <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>Current device</Text>
-                <Text style={styles.metricValueText}>{deviceLabel}</Text>
-              </View>
-            </View>
-            <Text style={styles.helper}>
-              {(profile?.email ?? email) || "This account email is loading."}
-            </Text>
+      <View style={styles.appBody}>{content}</View>
 
-            {contactCard ? (
-              <View style={styles.infoCard}>
-                <Text style={styles.infoTitle}>Contact card ready</Text>
-                <Text style={styles.infoBody}>
-                  Share this token later by QR or copy flow. The immediate goal is that this
-                  phone now has a working relay session and registered delivery metadata.
-                </Text>
-                <Text selectable style={styles.codeText}>
-                  {contactCard.cardToken}
-                </Text>
-              </View>
-            ) : null}
-
-            <View style={styles.metricRow}>
-              <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>Device registration</Text>
-                <Text style={styles.metricValueText}>
-                  {deviceBundleReady ? "Synced" : "Pending"}
-                </Text>
-                <Text style={styles.helper}>
-                  {deviceBundleCount} visible bundle{deviceBundleCount === 1 ? "" : "s"} on the relay.
-                </Text>
-              </View>
-              <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>Current groups</Text>
-                <Text style={styles.metricValue}>{groups.length}</Text>
-              </View>
-            </View>
-
-            {deviceBundleError ? (
-              <Text style={styles.errorText}>{deviceBundleError}</Text>
-            ) : null}
-
-            <DeviceLinkCard
-              signedIn
-              deviceLabel={deviceLabel}
-              qrValue={deviceLinkQrValue}
-              status={deviceLinkStatus}
-              message={deviceLinkMessage}
-              isWorking={isWorkingDeviceLink}
-              isApproving={isApprovingDeviceLink}
-              onShowQr={onShowDeviceLinkQr}
-              onScanPayload={onScanDeviceLinkQr}
-              onApprove={onApproveDeviceLink}
-              onReset={onResetDeviceLink}
-            />
-
-            <Pressable style={styles.secondaryButton} onPress={onSignOut}>
-              <Text style={styles.secondaryButtonLabel}>Sign out</Text>
-            </Pressable>
-          </>
-        )}
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Thread picker</Text>
-        <Text style={styles.sectionBody}>
-          Pick a group and send the first real message from this phone. If you do not have one
-          yet, paste an invite right below.
-        </Text>
-        {groups.length ? (
-          <View style={styles.groupSelectorRow}>
-            {groups.map((group) => (
-              <Pressable
-                key={group.id}
-                style={[
-                  styles.groupSelectorChip,
-                  selectedConversationId === group.id ? styles.groupSelectorChipActive : null,
-                ]}
-                onPress={() => {
-                  setSelectedConversationId(group.id);
-                  setPendingAttachment(null);
-                }}
-              >
-                <Text
-                  style={[
-                    styles.groupSelectorLabel,
-                    selectedConversationId === group.id ? styles.groupSelectorLabelActive : null,
-                  ]}
-                >
-                  {group.title}
-                </Text>
-                <Text style={styles.groupSelectorMeta}>
-                  {group.memberCount}/{group.memberCap}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        ) : (
-          <Text style={styles.helper}>
-            No groups attached yet. Paste a group invite below to get into a conversation fast.
-          </Text>
-        )}
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Join a group invite</Text>
-        <Text style={styles.sectionBody}>
-          Paste a trusted invite here to attach a new circle to this account without leaving the app.
-        </Text>
-        <TextInput
-          autoCapitalize="none"
-          placeholder="Paste an /invite/{groupId}/{token} link"
-          placeholderTextColor={theme.colors.placeholder}
-          style={styles.input}
-          value={inviteInput}
-          onChangeText={setInviteInput}
-        />
-        <View style={styles.buttonRow}>
+      <View style={styles.appTabBar}>
+        {([
+          ["chats", "Chats"],
+          ["invites", "Invites"],
+          ["settings", "Settings"],
+        ] as const).map(([tab, label]) => (
           <Pressable
+            key={tab}
+            onPress={() => setActiveTab(tab)}
             style={[
-              styles.secondaryButton,
-              styles.buttonRowButton,
-              isPreviewingInvite ? styles.primaryButtonDisabled : null,
+              styles.appTabButton,
+              activeTab === tab ? styles.appTabButtonActive : null,
             ]}
-            onPress={onPreviewInvite}
-            disabled={isPreviewingInvite}
           >
-            <Text style={styles.secondaryButtonLabel}>
-              {isPreviewingInvite ? "Previewing…" : "Preview invite"}
+            <Text
+              style={[
+                styles.appTabLabel,
+                activeTab === tab ? styles.appTabLabelActive : null,
+              ]}
+            >
+              {label}
             </Text>
           </Pressable>
-          <Pressable
-            style={[
-              styles.primaryButton,
-              styles.buttonRowButton,
-              isAcceptingInvite ? styles.primaryButtonPressed : null,
-            ]}
-            onPress={onAcceptInvite}
-            disabled={isAcceptingInvite || !inviteInput.trim()}
-          >
-            <Text style={styles.primaryButtonLabel}>
-              {isAcceptingInvite ? "Joining…" : "Join group"}
-            </Text>
-          </Pressable>
-        </View>
-        {invitePreviewError ? <Text style={styles.errorText}>{invitePreviewError}</Text> : null}
-        {invitePreview ? (
-          <View style={styles.infoCard}>
-            <Text style={styles.infoTitle}>{invitePreview.group.title}</Text>
-            <Text style={styles.infoBody}>
-              Issued by {invitePreview.invite.inviterDisplayName}. Members{" "}
-              {invitePreview.group.memberCount}/{invitePreview.group.memberCap}. Status{" "}
-              {invitePreview.invite.status}.
-            </Text>
-            {invitePreview.group.joinRuleText ? (
-              <Text style={styles.helper}>{invitePreview.group.joinRuleText}</Text>
-            ) : null}
-          </View>
-        ) : null}
+        ))}
       </View>
-
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>
-          {selectedGroup ? `${selectedGroup.title}` : "Conversation"}
-        </Text>
-        <Text style={styles.sectionBody}>
-          {selectedGroup
-            ? "This Android beta supports recent thread history, photo uploads, and message send for your current groups."
-            : "Join or select a group to unlock the composer."}
-        </Text>
-
-        {selectedGroup ? (
-          <>
-            <View style={styles.threadMetaRow}>
-              <Text style={styles.threadMetaText}>
-                Role {selectedGroup.myRole}. Members {selectedGroup.memberCount}/{selectedGroup.memberCap}.
-              </Text>
-              <Text style={styles.threadMetaText}>
-                Stronger media protections {selectedGroup.sensitiveMediaDefault ? "on" : "off"}.
-              </Text>
-            </View>
-
-            {isLoadingThread ? (
-              <View style={styles.threadList}>
-                <View style={styles.skeletonBubble} />
-                <View style={[styles.skeletonBubble, styles.skeletonBubbleSoft]} />
-                <View style={[styles.skeletonBubble, styles.skeletonBubbleFaint]} />
-              </View>
-            ) : threadMessages.length ? (
-              <View style={styles.threadList}>
-                {threadMessages.map((message) => (
-                  <MessageBubble
-                    key={message.id}
-                    message={message}
-                    isOwnMessage={message.senderAccountId === session.accountId}
-                    onImageError={onImageError}
-                  />
-                ))}
-              </View>
-            ) : (
-              <View style={styles.emptyThreadCard}>
-                <Text style={styles.infoTitle}>No messages yet</Text>
-                <Text style={styles.infoBody}>
-                  Send a short note or attach a photo to make this phone's first delivery path real.
-                </Text>
-              </View>
-            )}
-
-            {pendingAttachment ? (
-              <View style={styles.pendingAttachmentCard}>
-                <View style={styles.pendingAttachmentHeader}>
-                  <Text style={styles.infoTitle}>Ready to send</Text>
-                  <Pressable onPress={() => setPendingAttachment(null)}>
-                    <Text style={styles.inlineAction}>Remove</Text>
-                  </Pressable>
-                </View>
-                <Image
-                  source={{ uri: pendingAttachment.uri }}
-                  style={styles.pendingAttachmentImage}
-                  resizeMode="cover"
-                />
-                <Text style={styles.helper}>
-                  {pendingAttachment.fileName} ·{" "}
-                  {formatBytes(pendingAttachment.byteLength || 0)}
-                </Text>
-              </View>
-            ) : null}
-
-            <TextInput
-              multiline
-              placeholder="Write a short message"
-              placeholderTextColor={theme.colors.placeholder}
-              style={[styles.input, styles.composerInput]}
-              value={messageDraft}
-              onChangeText={setMessageDraft}
-            />
-
-            <View style={styles.buttonRow}>
-              <Pressable
-                style={[
-                  styles.secondaryButton,
-                  styles.buttonRowButton,
-                ]}
-                onPress={onTakePhoto}
-                disabled={isPickingPhoto}
-              >
-                <Text style={styles.secondaryButtonLabel}>
-                  {isPickingPhoto ? "Loading…" : "Take Photo"}
-                </Text>
-              </Pressable>
-              <Pressable
-                style={[
-                  styles.secondaryButton,
-                  styles.buttonRowButton,
-                  isPickingPhoto ? styles.primaryButtonDisabled : null,
-                ]}
-                onPress={onPickPhoto}
-                disabled={isPickingPhoto}
-              >
-                <Text style={styles.secondaryButtonLabel}>
-                  {isPickingPhoto ? "Opening gallery…" : "Pick photo"}
-                </Text>
-              </Pressable>
-            </View>
-            <View style={styles.buttonRow}>
-              <Pressable
-                style={[
-                  styles.primaryButton,
-                  styles.buttonRowButton,
-                  (!messageDraft.trim() && !pendingAttachment) || isSendingMessage
-                    ? styles.primaryButtonDisabled
-                    : null,
-                ]}
-                onPress={onSendMessage}
-                disabled={(!messageDraft.trim() && !pendingAttachment) || isSendingMessage}
-              >
-                <Text style={styles.primaryButtonLabel}>
-                  {isSendingMessage ? "Sending…" : "Send"}
-                </Text>
-              </Pressable>
-            </View>
-          </>
-        ) : (
-          <Text style={styles.helper}>
-            Finish sign-in with a group invite or join a circle above. The fastest first-message path is a shared group thread, not a blank inbox.
-          </Text>
-        )}
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Local private vault</Text>
-        <Text style={styles.sectionBody}>
-          Sent sensitive media is now tracked locally so the vault reflects what this phone handled.
-        </Text>
-        <View style={styles.metricRow}>
-          <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Vault items</Text>
-            <Text style={styles.metricValue}>{vaultCount}</Text>
-          </View>
-          <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Export posture</Text>
-            <Text style={styles.metricValue}>
-              {privacyDefaults.allowSensitiveExport ? "Open" : "Locked"}
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Discreet device defaults</Text>
-        <Text style={styles.sectionBody}>
-          These settings stay local and now sit behind the first-message path instead of blocking it.
-        </Text>
-
-        <View style={styles.fieldBlock}>
-          <Text style={styles.label}>Notification preview mode</Text>
-          <View style={styles.segmentRow}>
-            {(["discreet", "expanded", "none"] as const).map((mode) => (
-              <Pressable
-                key={mode}
-                style={[
-                  styles.segmentButton,
-                  privacyDefaults.notificationPreviewMode === mode ? styles.segmentButtonActive : null,
-                ]}
-                onPress={() => onUpdatePrivacy("notificationPreviewMode", mode)}
-              >
-                <Text
-                  style={[
-                    styles.segmentButtonLabel,
-                    privacyDefaults.notificationPreviewMode === mode
-                      ? styles.segmentButtonLabelActive
-                      : null,
-                  ]}
-                >
-                  {mode}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-
-        <ToggleRow
-          title="Auto-download sensitive media"
-          description="Keep this off so intimate media does not silently accumulate on the device."
-          value={privacyDefaults.autoDownloadSensitiveMedia}
-          onPress={() =>
-            onUpdatePrivacy(
-              "autoDownloadSensitiveMedia",
-              !privacyDefaults.autoDownloadSensitiveMedia,
-            )
-          }
-        />
-        <ToggleRow
-          title="Allow sensitive export"
-          description="Keep this off to discourage saving media outside the private vault."
-          value={privacyDefaults.allowSensitiveExport}
-          onPress={() =>
-            onUpdatePrivacy(
-              "allowSensitiveExport",
-              !privacyDefaults.allowSensitiveExport,
-            )
-          }
-        />
-        <ToggleRow
-          title="Secure app switcher"
-          description="Request screenshot and app-switcher protection on supported devices."
-          value={privacyDefaults.secureAppSwitcher}
-          onPress={() =>
-            onUpdatePrivacy("secureAppSwitcher", !privacyDefaults.secureAppSwitcher)
-          }
-        />
-      </View>
-    </>
+    </View>
   );
 }

@@ -11,7 +11,7 @@ This file tracks what the repo can actually build and, where release lanes exist
 | Windows         | `.exe` and `.msi` from `apps/desktop`                                                        | Relay        | Bundled desktop shell for auth, groups, invites, sessions, privacy, and attachment sending.                                                                       | `.github/workflows/release-windows.yml`                                            |
 | Ubuntu / Debian | `.deb` and `.AppImage` from `apps/desktop`                                                   | Relay        | Bundled desktop shell for auth, groups, invites, sessions, privacy settings, and attachment sending.                                                              | `.github/workflows/release-linux.yml`                                              |
 | macOS           | `.app` and `.dmg` from `apps/desktop`                                                        | Relay        | Same bundled desktop shell as Windows/Linux, but signed distribution and launch commitment remain later work.                                                     | `.github/workflows/release-macos.yml`                                              |
-| Web             | Next.js deployment from `apps/web`                                                           | Relay        | Public site, onboarding, DM/chat, groups, invite flows, joined-space metadata search, and settings on relay. Legacy channel routes are retired placeholders only. | `.github/workflows/ci-web.yml`                                                     |
+| Web             | Next.js deployment from `apps/web`                                                           | Relay        | Public site, onboarding, DM/chat, groups, community and room management, invite flows, joined-space metadata search, and settings on relay. Legacy channel routes are retired placeholders only. | `.github/workflows/ci-web.yml`                                                     |
 
 ## What Counts As Primary Right Now
 
@@ -49,16 +49,16 @@ This file tracks what the repo can actually build and, where release lanes exist
 - Signed and notarized Apple desktop releases
 - Code-signed Windows desktop releases
 - Auto-update channels
-- Later-beta community-room flows
+- Native community and room management outside the web companion
 - Final end-to-end encrypted group-history and attachment model
 
 ## Distribution Assumptions
 
 - Beta remains invite-only.
 - Android, Windows, and Ubuntu are the committed first-wave native surfaces.
-- Web remains available for onboarding, messaging, invite review, search, settings, and recovery when a native build is unavailable or not preferred.
+- Web remains available for onboarding, messaging, community and room management, invite review, search, settings, and recovery when a native build is unavailable or not preferred.
 - iPhone and macOS are deferred until the first-wave surfaces are stable enough to justify the extra reliability and review work.
-- Channel-style browser surfaces remain deferred, and they are not the target long-term beta architecture.
+- Legacy channel-style browser surfaces remain retired placeholders, and they are not the target long-term beta architecture.
 - GitHub Releases remains the authoritative source for posted native artifacts and their tags.
 
 ## Ubuntu Testing

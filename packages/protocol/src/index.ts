@@ -401,6 +401,8 @@ export interface GroupThreadMessage {
     fileIvB64?: string | null;
   } | null;
   createdAt: string;
+  editedAt?: string | null;
+  readByCount?: number;
 }
 
 export interface MeProfile {
@@ -409,6 +411,7 @@ export interface MeProfile {
   displayName: string;
   email: string;
   bio?: string;
+  avatarUrl?: string;
 }
 
 export interface PrivacySettings {

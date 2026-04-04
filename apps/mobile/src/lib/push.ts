@@ -66,7 +66,12 @@ export async function getNativeDevicePushRegistrationAsync(): Promise<NativePush
     return null;
   }
 
-  const provider = token.type === "fcm" ? "fcm" : token.type === "apns" ? "apns" : null;
+  const provider =
+    token.type === "fcm" || token.type === "android"
+      ? "fcm"
+      : token.type === "apns" || token.type === "ios"
+        ? "apns"
+        : null;
   if (!provider) {
     throw new Error(`Unsupported native push token type: ${token.type}`);
   }

@@ -27,12 +27,12 @@ const vaultSignals = [
   {
     icon: Search,
     label: "Local Search",
-    body: "Search index stays on this device.",
+    body: "Private-content search stays on this device.",
   },
   {
     icon: ShieldCheck,
     label: "Relay Boundary",
-    body: "Hosted delivery, no message visibility.",
+    body: "Hosted delivery, narrow relay role.",
   },
   {
     icon: UserRoundPlus,
@@ -44,7 +44,7 @@ const vaultSignals = [
 const inviteChecklist = [
   "Invite token confirmed",
   "Adults-only beta",
-  "Web first, native when ready",
+  "Device name confirmed",
 ];
 
 const phoneMessages = [
@@ -76,7 +76,7 @@ export function ProductPreview() {
                 <div className="ml-auto flex items-center gap-2">
                   <LockKeyhole className="h-3.5 w-3.5 text-brand-400" />
                   <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-[#f3cdb8]">
-                    End-to-end encrypted
+                    Encrypted DM live
                   </span>
                 </div>
               </div>
@@ -155,13 +155,13 @@ export function ProductPreview() {
                       <div className="flex items-center gap-2">
                         <Paperclip className="h-3.5 w-3.5 text-brand-400" />
                         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#ffd0b6]">
-                          Attachment
+                          Browser attachment
                         </p>
                       </div>
                       <div className="mt-3 flex items-center justify-between gap-3 rounded-[1rem] border border-white/8 bg-black/20 px-3 py-2">
                         <div>
                           <p className="text-[11px] font-medium text-[#f3dfd3]">tickets.pdf</p>
-                          <p className="text-[9px] text-[#a98982]">Encrypted before upload</p>
+                          <p className="text-[9px] text-[#a98982]">Encrypted before upload on the browser DM path</p>
                         </div>
                         <div className="rounded-full border border-white/10 bg-white/[0.05] p-2 text-brand-400">
                           <Download className="h-3.5 w-3.5" />
@@ -217,7 +217,7 @@ export function ProductPreview() {
                   </p>
                 </div>
                 <div className="mt-4 grid gap-2">
-                  {["Push on Android", "Desktop for long sessions", "Browser for fast entry"].map((item) => (
+                  {["Android-first daily use", "Desktop for long sessions", "Browser recovery and settings"].map((item) => (
                     <div
                       key={item}
                       className="rounded-full border border-white/8 bg-white/[0.04] px-3 py-2 text-[11px] text-[#d6b6a8]"
@@ -239,8 +239,9 @@ export function ProductPreview() {
                 </p>
               </div>
               <p className="mt-3 text-sm leading-6 text-[#d6b6a8]">
-                Delete the app and the archive goes with it. History is not sitting in a server
-                warehouse waiting to be searched later.
+                DM history and private-content search stay on this device. Legacy group
+                compatibility history is still being retired instead of being hidden behind a
+                flatter claim.
               </p>
             </div>
 
@@ -269,7 +270,7 @@ export function ProductPreview() {
                     ))}
                   </div>
                   <div className="mt-4 rounded-[1rem] border border-white/8 bg-white/[0.04] px-3 py-2 text-[10px] text-[#b9968f]">
-                    Local history and notifications stay with the client.
+                    DM history stays with the client.
                   </div>
                 </div>
               </div>

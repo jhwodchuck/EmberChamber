@@ -272,7 +272,8 @@ Authenticated web workspace routes:
 - `/app` for the web workspace home
 - `/app/new-dm` and `/app/chat/[id]` for direct messaging
 - `/app/new-group` for group creation
-- `/app/new-channel` as a later-beta placeholder for community-room work
+- `/app/new-community` and `/app/community/[id]` for invite-gated community and room management
+- `/app/new-channel` as a bridge to the newer community flow
 - `/app/channel/[id]` for the retired legacy-channel notice
 - `/app/search` for workspace search
 - `/app/discover` for invite preview and join
@@ -280,7 +281,7 @@ Authenticated web workspace routes:
 
 Current backend split:
 
-- relay-native: onboarding, adults-only affirmation, invite landing/preview, DM chat, joined-space search, profile and privacy settings, session review, group creation, and group invite creation/acceptance
+- relay-native: onboarding, adults-only affirmation, invite landing/preview, DM chat, joined-space search, profile and privacy settings, session review, group creation, community and room management, and invite creation/acceptance
 - legacy `apps/api`: retained prototype only, not part of the active authenticated web workspace
 
 The web app remains useful, but Android and desktop are still the preferred primary-use surfaces.

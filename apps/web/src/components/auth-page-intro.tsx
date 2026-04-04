@@ -37,8 +37,7 @@ export function AuthPageIntro({
       </div>
 
       <p className="mt-6 max-w-2xl text-sm leading-7 text-[var(--text-secondary)]">
-        Email stays private, invites stay deliberate, and display names replace email as the
-        social identity once you are inside.
+        Email stays private. Display names take over once you are inside.
       </p>
     </div>
   );
