@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { Buffer } from "node:buffer";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -6,6 +6,13 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { unstable_dev } from "wrangler";
+import {
+  encodeDeviceLinkQrPayload,
+  parseDeviceLinkQrPayload,
+  type DeviceLinkConfirmResponse,
+  type DeviceLinkStartResponse,
+  type DeviceLinkStatus,
+} from "@emberchamber/protocol";
 
 const relayDir = path.resolve(__dirname, "..");
 
@@ -437,6 +444,97 @@ describe("relay routes", () => {
 
     expect(sync.envelopes).toHaveLength(1);
     expect(sync.envelopes[0].envelopeId).toBe(firstSend.acceptedEnvelopeIds[0]);
+  });
+
+  it("completes device-link handoff from both QR directions", async () => {
+    const owner = await bootstrapAccount("device-link-owner@example.com", "Owner desktop");
+
+    const start = await relayJson<DeviceLinkStartResponse>("/v1/devices/link/start", {
+      method: "POST",
+      headers: authHeaders(owner),
+      body: JSON.stringify({ deviceLabel: "Owner desktop" }),
+    });
+
+    expect(start.state).toBe("pending_claim");
+    const sourceQr = parseDeviceLinkQrPayload(start.qrPayload);
+    expect(sourceQr.qrMode).toBe("source_display");
+
+    const claimed = await relayJson<DeviceLinkStatus>("/v1/devices/link/claim", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        qrPayload: start.qrPayload,
+        deviceLabel: "Android phone",
+      }),
+    });
+    expect(claimed.state).toBe("pending_approval");
+    expect(claimed.requesterLabel).toBe("Android phone");
+
+    const confirmed = await relayJson<DeviceLinkConfirmResponse>("/v1/devices/link/confirm", {
+      method: "POST",
+      headers: authHeaders(owner),
+      body: JSON.stringify({ linkId: start.linkId }),
+    });
+    expect(confirmed.confirmed).toBe(true);
+    expect(confirmed.state).toBe("approved");
+
+    const completed = await relayJson<RelaySession>("/v1/devices/link/complete", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        linkToken: sourceQr.linkToken,
+        qrMode: sourceQr.qrMode,
+      }),
+    });
+    expect(completed.accountId).toBe(owner.accountId);
+    expect(completed.deviceId).not.toBe(owner.deviceId);
+
+    const consumedStatus = await relayJson<DeviceLinkStatus>(
+      `/v1/devices/link/status?token=${encodeURIComponent(sourceQr.linkToken)}&qrMode=${encodeURIComponent(sourceQr.qrMode)}`
+    );
+    expect(consumedStatus.state).toBe("consumed");
+    expect(consumedStatus.completedSessionId).toBe(completed.sessionId);
+
+    const targetLinkToken = `${randomUUID()}-${randomUUID()}`;
+    const targetQrPayload = encodeDeviceLinkQrPayload({
+      relayOrigin: "http://127.0.0.1:8787",
+      qrMode: "target_display",
+      linkToken: targetLinkToken,
+      requesterLabel: "Tablet browser",
+    });
+
+    const missingStatus = await relayFetch(
+      `/v1/devices/link/status?token=${encodeURIComponent(targetLinkToken)}&qrMode=target_display`
+    );
+    expect(missingStatus.status).toBe(404);
+    expect(await missingStatus.json()).toMatchObject({ code: "DEVICE_LINK_NOT_FOUND" });
+
+    const scanned = await relayJson<DeviceLinkStatus>("/v1/devices/link/scan", {
+      method: "POST",
+      headers: authHeaders(owner),
+      body: JSON.stringify({ qrPayload: targetQrPayload }),
+    });
+    expect(scanned.state).toBe("pending_approval");
+    expect(scanned.requesterLabel).toBe("Tablet browser");
+    expect(scanned.qrMode).toBe("target_display");
+
+    const targetConfirmed = await relayJson<DeviceLinkConfirmResponse>("/v1/devices/link/confirm", {
+      method: "POST",
+      headers: authHeaders(owner),
+      body: JSON.stringify({ linkId: scanned.linkId }),
+    });
+    expect(targetConfirmed.state).toBe("approved");
+
+    const targetCompleted = await relayJson<RelaySession>("/v1/devices/link/complete", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        linkToken: targetLinkToken,
+        qrMode: "target_display",
+      }),
+    });
+    expect(targetCompleted.accountId).toBe(owner.accountId);
+    expect(targetCompleted.deviceId).not.toBe(owner.deviceId);
   });
 
   it("registers and clears a native push token for the current device", async () => {

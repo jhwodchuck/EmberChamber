@@ -33,7 +33,7 @@ const startSteps = [
   {
     number: "01",
     title: "Start in web",
-    body: "Review the trust model, confirm access, and get the first session running without an install.",
+    body: "Review the boundary, confirm access, and get the first session running without an install.",
   },
   {
     number: "02",
@@ -42,8 +42,8 @@ const startSteps = [
   },
   {
     number: "03",
-    title: "Move to native when you stay",
-    body: "Shift to Android or desktop once the circle becomes part of daily use.",
+    title: "Install a daily-use client when you want one",
+    body: "Android and desktop builds are there when the browser stops being enough.",
   },
 ] as const;
 
@@ -53,12 +53,11 @@ function getStartPaths(): StartPath[] {
       icon: Compass,
       eyebrow: "New Here",
       title: "See how EmberChamber works",
-      body: "Start with what EmberChamber is, what it is not, and where your data actually lives. Then decide if it fits your circle.",
+      body: "Start with the trust model, current scope, and where your data actually lives.",
       accent: "from-brand-500/20 via-brand-500/5 to-transparent",
-      tempo: "Best when you are evaluating the boundary",
+      tempo: "Best when you are evaluating",
       highlights: [
-        "Trust model before signup flow",
-        "Local-history model explained clearly",
+        "Trust model first",
         "Download status stays visible",
       ],
       primary: {
@@ -74,14 +73,13 @@ function getStartPaths(): StartPath[] {
       ? {
           icon: MailCheck,
           eyebrow: "Have An Invite",
-          title: "Join the beta in web first",
-          body: "You need your invite token and the private email address that will anchor access and recovery. The web flow handles the first entry cleanly.",
+          title: "Join the beta",
+          body: "Bring the invite token and the private email that will stay tied to access and recovery.",
           accent: "from-amber-300/20 via-amber-200/5 to-transparent",
           tempo: "Best when your invite is already live",
           highlights: [
-            "Invite token and private email",
-            "First message flow in browser",
-            "Move to native after access is stable",
+            "Invite token + private email",
+            "Short staged onboarding",
           ],
           primary: {
             href: "/register",
@@ -96,13 +94,12 @@ function getStartPaths(): StartPath[] {
           icon: LifeBuoy,
           eyebrow: "Have An Invite",
           title: "Coordinate early-access entry",
-          body: "Beta entry is opened in small waves. Email support with your invite code and we will confirm the right path instead of leaving you guessing.",
+          body: "Beta entry still opens in small waves. Email support with your invite code and we will confirm the right path.",
           accent: "from-amber-300/20 via-amber-200/5 to-transparent",
           tempo: "Coordinated access while waves stay small",
           highlights: [
             "Invite code checked by support",
             "Onboarding opened in batches",
-            "Web remains the first reliable surface",
           ],
           primary: {
             href: "/support",
@@ -117,13 +114,12 @@ function getStartPaths(): StartPath[] {
       ? {
           icon: KeyRound,
           eyebrow: "Already Have Access",
-          title: "Return with your private email",
-          body: "Sign in with the same private email you used to join so the right recovery and device state follow you.",
+          title: "Sign in with the same private email",
+          body: "Use the email tied to this account so the right sessions and recovery path follow you.",
           accent: "from-rose-300/18 via-rose-200/5 to-transparent",
-          tempo: "Best when your account already exists",
+          tempo: "Best when the account already exists",
           highlights: [
-            "Same private email as registration",
-            "Recovery path stays consistent",
+            "Same private email",
             "Support remains available if state drifts",
           ],
           primary: {
@@ -139,13 +135,12 @@ function getStartPaths(): StartPath[] {
           icon: LifeBuoy,
           eyebrow: "Already Have Access",
           title: "Recover the right path quietly",
-          body: "If access feels off, email support with your device label and the private email you used to register. We will help restore the correct route.",
+          body: "If access feels off, email support with your device label and the private email you used to register.",
           accent: "from-rose-300/18 via-rose-200/5 to-transparent",
           tempo: "Recovery and continuity",
           highlights: [
             "Share device label if blocked",
             "Use the original private email",
-            "Support helps restore the right state",
           ],
           primary: {
             href: "/support",
@@ -159,14 +154,13 @@ function getStartPaths(): StartPath[] {
     {
       icon: Download,
       eyebrow: "Need A Client Build",
-      title: "Pick the surface you want to live in",
-      body: "See what is posted for Android, Windows, and Ubuntu. The web app stays usable if nothing is listed for your platform yet.",
+      title: "Check the posted clients",
+      body: "See what is posted for Android, Windows, and Ubuntu when you want an installed client.",
       accent: "from-sky-300/16 via-sky-200/4 to-transparent",
-      tempo: "Best when you want the daily-use surface",
+      tempo: "Best when you want an installed client",
       highlights: [
-        "Android is the first-wave primary client",
-        "Windows and Ubuntu stay in the release feed",
-        "Web remains the reliable fallback",
+        "Android build status",
+        "Windows and Ubuntu releases",
       ],
       primary: {
         href: "/download",
@@ -192,11 +186,10 @@ export function StartHereSummary() {
       <div className="relative">
         <div className="eyebrow">Choose A Path</div>
         <h2 className="mt-5 text-balance font-display text-3xl font-semibold text-[var(--text-primary)]">
-          Start quietly, then move deeper when you want to stay.
+          Choose the shortest path and keep moving.
         </h2>
         <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">
-          The browser gets you in fast. Native clients are there when EmberChamber becomes a daily
-          surface instead of a quick visit.
+          If you already know why you are here, one click should be enough.
         </p>
       </div>
 
@@ -329,12 +322,12 @@ export function StartHereGuide() {
         <section className="panel px-6 py-7">
           <div className="eyebrow">Keep It Simple</div>
           <h2 className="mt-5 text-balance font-display text-4xl font-semibold text-[var(--text-primary)]">
-            Web first. Native later. Support early if something drifts.
+            Keep the account state clean.
           </h2>
           <div className="mt-6 space-y-4">
             {[
               "Keep the same private email attached to invite, sign-in, and recovery.",
-              "Treat web as the first stable surface even if you plan to live in native later.",
+              "Give every device a readable name before you add it.",
               "If something feels unclear, ask support early instead of forcing the wrong flow.",
             ].map((item) => (
               <div key={item} className="signal-line">

@@ -3,8 +3,9 @@
 ## Active Beta Docs
 
 - [`../CONTRIBUTING.md`](../CONTRIBUTING.md): human contributor quickstart, active paths, and verification defaults
-- [`../repo-map.yaml`](../repo-map.yaml): machine-readable active-versus-legacy path map and verify commands
+- [`../repo-map.yaml`](../repo-map.yaml): machine-readable active-versus-legacy path map, ownership, risk, and change-routing metadata
 - [`../llm_council/README.md`](../llm_council/README.md): repo-specific AI review council, routing, and evidence-pack workflow
+- [`../scripts/check-repo-contracts.mjs`](../scripts/check-repo-contracts.mjs): repo contract and doc/runtime drift checker
 - [`architecture.md`](architecture.md): current runtime map, storage planes, client-surface status, and migration gaps
 - [`launch-targets.md`](launch-targets.md): what the repo can actually build and distribute today
 - [`ubuntu-install-and-test.md`](ubuntu-install-and-test.md): Ubuntu install, local build, and desktop smoke-test guide

@@ -33,7 +33,8 @@ export default function PrivacyPage() {
         <p>
           The right privacy question is not whether the relay exists. It does. The real question is
           what it stores today, what stays local, and which compatibility paths are still being
-          retired.
+          retired. That includes DMs, group history, browser versus native attachments, search,
+          recovery, and passkeys.
         </p>
         <div className="mt-5">
           <PrivacyBoundaryMatrix items={privacyBoundaryItems} />

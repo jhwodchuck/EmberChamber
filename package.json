@@ -13,10 +13,12 @@
   ],
   "scripts": {
     "bootstrap": "bash scripts/bootstrap-dev.sh",
+    "check:repo-contracts": "node scripts/check-repo-contracts.mjs",
     "council:review": "bash llm_council/scripts/orchestrate_review.sh",
     "council:route": "python3 -B llm_council/scripts/route_reviewers.py",
     "council:changed-files": "bash llm_council/scripts/collect_changed_files.sh",
     "council:repo-facts": "bash llm_council/scripts/collect_repo_facts.sh",
+    "council:pack": "bash llm_council/scripts/rebuild_persona_zips.sh",
     "dev": "concurrently \"npm run dev --workspace=apps/relay\" \"npm run dev --workspace=apps/web\"",
     "dev:legacy": "concurrently \"npm run dev --workspace=apps/api\" \"npm run dev --workspace=apps/web\"",
     "build": "npm run build --workspace=packages/shared && npm run build --workspace=packages/protocol && npm run build --workspace=apps/relay && npm run build --workspace=apps/web",
@@ -40,7 +42,7 @@
     "test:legacy": "npm run test --workspace=apps/api",
     "lint": "npm run lint --workspace=apps/web && npm run lint --workspace=apps/relay",
     "type-check": "npm run type-check --workspace=packages/protocol && npm run type-check --workspace=apps/relay && npm run type-check --workspace=apps/web && npm run build --workspace=packages/shared && cargo check -p emberchamber-core -p emberchamber-relay-protocol",
-    "verify:all": "npm run build --workspace=packages/protocol && npm run build --workspace=apps/relay && npm test --workspace=apps/relay && npm run lint --workspace=apps/web && npm run build --workspace=apps/web && npm run type-check --workspace=apps/mobile && cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml && cargo test -p emberchamber-core -p emberchamber-relay-protocol",
+    "verify:all": "npm run check:repo-contracts && npm run build --workspace=packages/protocol && npm run build --workspace=apps/relay && npm test --workspace=apps/relay && npm run lint --workspace=apps/web && npm run build --workspace=apps/web && npm run type-check --workspace=apps/mobile && cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml && cargo test -p emberchamber-core -p emberchamber-relay-protocol",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\" --ignore-path .gitignore"
   },
   "devDependencies": {

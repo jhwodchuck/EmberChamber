@@ -59,6 +59,9 @@ installs the Ubuntu desktop package. The full flow is documented in
 Run the smallest relevant checks for the paths you touched:
 
 ```bash
+# Repo guidance, docs, scripts, and workflows
+npm run check:repo-contracts
+
 # Protocol contracts
 npm run build --workspace=packages/protocol
 
@@ -82,6 +85,7 @@ cargo test -p emberchamber-core -p emberchamber-relay-protocol
 
 If you change protocol payloads or auth or session shapes, verify both the TypeScript and Rust
 contracts.
+If you change runtime boundaries, docs, repo routing, or CI metadata, run `npm run check:repo-contracts`.
 
 For a full active-runtime sweep, run:
 

@@ -1,4 +1,4 @@
-version: 1
+version: 2
 package_managers:
   root:
     path: .
@@ -13,6 +13,19 @@ paths:
   - path: apps/relay
     status: active
     purpose: Cloudflare Worker relay and control plane
+    owner: relay-runtime
+    risk: high
+    reviewers:
+      - C-06
+      - C-09
+      - C-11
+    change_routes:
+      - packages/protocol
+      - crates/relay-protocol
+      - apps/web
+      - apps/mobile
+      - apps/desktop
+      - docs
     depends_on:
       - packages/protocol
     verify:
@@ -21,6 +34,16 @@ paths:
   - path: apps/web
     status: active
     purpose: Public site and authenticated web workspace
+    owner: web-companion
+    risk: medium
+    reviewers:
+      - C-02
+      - C-03
+      - C-11
+    change_routes:
+      - apps/relay
+      - packages/protocol
+      - docs
     depends_on:
       - apps/relay
       - packages/protocol
@@ -30,6 +53,16 @@ paths:
   - path: apps/mobile
     status: active
     purpose: Expo Android-first client with iPhone scaffolding
+    owner: mobile-client
+    risk: medium
+    reviewers:
+      - C-02
+      - C-04
+      - C-11
+    change_routes:
+      - apps/relay
+      - packages/protocol
+      - docs
     depends_on:
       - apps/relay
       - packages/protocol
@@ -38,6 +71,17 @@ paths:
   - path: apps/desktop
     status: active
     purpose: Tauri desktop shell and packaged local frontend
+    owner: desktop-shell
+    risk: medium
+    reviewers:
+      - C-05
+      - C-08
+      - C-11
+    change_routes:
+      - crates/core
+      - crates/relay-protocol
+      - packages/protocol
+      - docs
     depends_on:
       - crates/core
       - crates/relay-protocol
@@ -47,32 +91,164 @@ paths:
   - path: crates/core
     status: active
     purpose: Shared Rust secure-state and local-first scaffold
+    owner: rust-core
+    risk: high
+    reviewers:
+      - C-07
+      - C-08
+      - C-09
+    change_routes:
+      - crates/relay-protocol
+      - apps/desktop
+      - docs
     depends_on:
       - crates/domain
       - crates/relay-protocol
     verify:
       - cargo test -p emberchamber-core -p emberchamber-relay-protocol
+  - path: crates/domain
+    status: active
+    purpose: Shared Rust domain models used by the secure-state and relay contract crates
+    owner: rust-domain
+    risk: medium
+    reviewers:
+      - C-07
+      - C-08
+      - C-09
+    change_routes:
+      - crates/core
+      - crates/relay-protocol
+      - docs
+    depends_on: []
+    verify:
+      - cargo test -p emberchamber-core -p emberchamber-relay-protocol
   - path: crates/relay-protocol
     status: active
     purpose: Canonical Rust relay contracts
+    owner: protocol-rust
+    risk: high
+    reviewers:
+      - C-07
+      - C-08
+      - C-09
+    change_routes:
+      - packages/protocol
+      - apps/relay
+      - crates/core
+      - docs
     depends_on: []
     verify:
       - cargo test -p emberchamber-core -p emberchamber-relay-protocol
   - path: packages/protocol
     status: active
     purpose: TypeScript mirror of relay contracts
+    owner: protocol-typescript
+    risk: high
+    reviewers:
+      - C-07
+      - C-09
+      - C-11
+    change_routes:
+      - crates/relay-protocol
+      - apps/relay
+      - apps/web
+      - apps/mobile
+      - apps/desktop
+      - docs
     depends_on: []
     verify:
       - npm run build --workspace=packages/protocol
+  - path: docs
+    status: active
+    purpose: Active architecture, product, API, operator, and security docs that define the beta contract
+    owner: docs-contract
+    risk: medium
+    reviewers:
+      - C-01
+      - C-12
+    change_routes:
+      - apps/relay
+      - apps/web
+      - apps/mobile
+      - apps/desktop
+      - llm_council
+      - scripts
+      - .github/workflows
+    depends_on:
+      - apps/relay
+      - apps/web
+      - apps/mobile
+      - apps/desktop
+      - llm_council
+    verify:
+      - npm run check:repo-contracts
+  - path: scripts
+    status: active
+    purpose: Root bootstrap, local relay, Ubuntu, and repo contract automation
+    owner: developer-experience
+    risk: medium
+    reviewers:
+      - C-11
+      - C-12
+    change_routes:
+      - apps/relay
+      - apps/desktop
+      - docs
+      - .github/workflows
+    depends_on:
+      - apps/relay
+      - docs
+    verify:
+      - npm run check:repo-contracts
+  - path: .github/workflows
+    status: active
+    purpose: CI, release, and deployment automation for the beta runtime
+    owner: release-engineering
+    risk: high
+    reviewers:
+      - C-11
+      - C-12
+    change_routes:
+      - apps/relay
+      - apps/web
+      - apps/mobile
+      - apps/desktop
+      - docs
+      - scripts
+    depends_on:
+      - apps/relay
+      - apps/web
+      - apps/mobile
+      - apps/desktop
+      - scripts
+    verify:
+      - npm run check:repo-contracts
   - path: llm_council
     status: active
     purpose: Repo-specific AI review council, reviewer routing, and evidence-pack tooling
+    owner: review-council
+    risk: medium
+    reviewers:
+      - C-00
+      - C-12
+      - C-13
+    change_routes:
+      - docs
+      - scripts
+      - .github/workflows
     depends_on: []
     verify:
       - npm run council:review -- HEAD WORKTREE council-smoke
   - path: apps/api
     status: legacy
     purpose: Express and Postgres prototype retained for reference
+    owner: legacy-prototype
+    risk: low
+    reviewers:
+      - C-06
+      - C-12
+    change_routes:
+      - docs
     depends_on: []
     verify:
       - npm run type-check --workspace=apps/api
@@ -80,11 +256,26 @@ paths:
   - path: infra/docker-compose.yml
     status: legacy
     purpose: Centralized prototype stack retained for legacy maintenance only
+    owner: legacy-prototype
+    risk: low
+    reviewers:
+      - C-11
+      - C-12
+    change_routes:
+      - apps/api
+      - docs
     depends_on: []
     verify: []
   - path: services
     status: legacy
     purpose: Archived Rust service scaffolds not included in the root Cargo workspace
+    owner: legacy-rust
+    risk: low
+    reviewers:
+      - C-08
+      - C-12
+    change_routes:
+      - docs
     depends_on: []
     verify:
       - cargo check --manifest-path services/<service>/Cargo.toml

@@ -2,6 +2,8 @@
 
 All council outputs must be Markdown files with YAML frontmatter.
 
+The default tone is findings-first. Do not pad the report with praise or a walkthrough of the diff.
+
 ## Output file types
 
 - `persona_review`: specialist review
@@ -15,9 +17,12 @@ All council outputs must be Markdown files with YAML frontmatter.
 2. Scope observed
 3. Findings table
 4. Detailed findings
-5. Routed notes for other personas
-6. Recommended next actions
-7. Verification after fix
+5. Open questions or residual risks
+6. Routed notes for other personas
+7. Recommended next actions
+8. Verification after fix
+
+If there are no material findings, state `No material findings.` in the executive summary and leave the findings table empty except for a `none` row.
 
 ## Required Markdown structure for `evidence_pack`
 
@@ -58,3 +63,9 @@ Every `critical`, `high`, or `medium` finding must include:
 - concrete fix
 - owner area
 - what to test afterward
+
+## Ordering requirement
+
+- Order findings from highest severity to lowest severity.
+- Put the strongest, most defensible finding first.
+- Do not include filler `note` findings just to reach a quota.

@@ -10,11 +10,13 @@ import {
   parseDeviceLinkQrPayload,
   relayOriginsMatch,
   type DeviceLinkQrMode,
+  type DeviceLinkStartResponse,
   type DeviceLinkStatus,
 } from "@emberchamber/protocol";
 import { StatusCallout } from "@/components/status-callout";
 import {
   getRelayOrigin,
+  RelayRequestError,
   relayDeviceLinkApi,
 } from "@/lib/relay";
 import { useAuthStore } from "@/lib/store";
@@ -75,6 +77,43 @@ function formatExpiry(value?: string) {
   return parsed.toLocaleString();
 }
 
+function normalizeStartedSourceDeviceLink(response: DeviceLinkStartResponse, requesterLabel: string) {
+  try {
+    return {
+      legacy: false,
+      qrPayload: response.qrPayload,
+      parsed: parseDeviceLinkQrPayload(response.qrPayload),
+      status: response as DeviceLinkStatus,
+    };
+  } catch {
+    if (!response.linkId || !response.qrPayload?.trim()) {
+      throw new Error("The relay returned an unreadable device-link QR payload.");
+    }
+
+    const qrPayload = encodeDeviceLinkQrPayload({
+      relayOrigin: getRelayOrigin(),
+      qrMode: "source_display",
+      linkToken: response.qrPayload.trim(),
+      requesterLabel,
+    });
+
+    return {
+      legacy: true,
+      qrPayload,
+      parsed: parseDeviceLinkQrPayload(qrPayload),
+      status: {
+        linkId: response.linkId,
+        relayOrigin: getRelayOrigin(),
+        qrMode: "source_display" as const,
+        state: "pending_claim" as const,
+        requesterLabel,
+        expiresAt: response.expiresAt,
+        canComplete: false,
+      } satisfies DeviceLinkStatus,
+    };
+  }
+}
+
 export function DeviceLinkPanel({ signedIn, deviceLabel = "", className }: DeviceLinkPanelProps) {
   const router = useRouter();
   const setSession = useAuthStore((state) => state.setSession);
@@ -117,16 +156,29 @@ export function DeviceLinkPanel({ signedIn, deviceLabel = "", className }: Devic
 
     try {
       if (signedIn) {
-        const response = await relayDeviceLinkApi.start();
-        setActiveLink({
-          linkToken: parseDeviceLinkQrPayload(response.qrPayload).linkToken,
-          qrMode: response.qrMode,
-          qrPayload: response.qrPayload,
-          requesterLabel: response.requesterLabel,
-          localExpiresAt: response.expiresAt,
-        });
-        setStatus(response);
-        setQrImageUrl(await QRCode.toDataURL(response.qrPayload, { margin: 1, width: 260 }));
+        const response = await relayDeviceLinkApi.start(deviceLabel);
+        const normalizedDeviceLabel = deviceLabel.trim() || "Current device";
+        const normalized = normalizeStartedSourceDeviceLink(response, normalizedDeviceLabel);
+        setActiveLink(
+          normalized.legacy
+            ? null
+            : {
+                linkToken: normalized.parsed.linkToken,
+                qrMode: normalized.parsed.qrMode,
+                qrPayload: normalized.qrPayload,
+                requesterLabel: normalized.status.requesterLabel,
+                localExpiresAt: normalized.status.expiresAt,
+              },
+        );
+        setStatus(normalized.status);
+        setQrImageUrl(await QRCode.toDataURL(normalized.qrPayload, { margin: 1, width: 260 }));
+        if (normalized.legacy) {
+          setMessage({
+            tone: "warning",
+            title: "Relay rollout still pending",
+            body: "This QR is displayed using the older relay contract. Completing the full device-link handoff still requires the relay update.",
+          });
+        }
       } else {
         const linkToken = createDeviceLinkToken();
         const qrPayload = encodeDeviceLinkQrPayload({
@@ -310,7 +362,13 @@ export function DeviceLinkPanel({ signedIn, deviceLabel = "", className }: Devic
           return;
         }
       } catch (error) {
-        if (!cancelled) {
+        const awaitingSourceScan =
+          !signedIn &&
+          activeLink.qrMode === "target_display" &&
+          error instanceof RelayRequestError &&
+          error.code === "DEVICE_LINK_NOT_FOUND";
+
+        if (!cancelled && !awaitingSourceScan) {
           setMessage({
             tone: "error",
             title: "Device-link status failed",

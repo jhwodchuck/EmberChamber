@@ -4,42 +4,43 @@ import { ArrowRight, MessageSquare, Search, Settings, ShieldCheck, Users } from 
 import Link from "next/link";
 import { useCompanionShell } from "@/components/companion-shell";
 import { StatusCallout } from "@/components/status-callout";
+import { conversationDefaultTitle, conversationTypeLabel } from "@/lib/conversation-labels";
 
 const actionCards = [
   {
     href: "/app/new-dm",
     label: "Start a DM",
-    description: "Open a direct conversation from the browser when that is the fastest path.",
+    description: "Open a direct conversation.",
     icon: MessageSquare,
   },
   {
     href: "/app/search",
     label: "Search Conversations",
-    description: "Find joined conversations and shared contacts you already have access to.",
+    description: "Find joined conversations and shared contacts.",
     icon: Search,
   },
   {
     href: "/app/new-group",
     label: "Create a Group",
-    description: "Set the member boundary and the first invite before the conversation starts.",
-    icon: Users,
-  },
-  {
-    href: "/app/new-community",
-    label: "Create a Community",
-    description: "Stand up a multi-room space with organizer policies and scoped invites.",
+    description: "Set the member boundary and first invite.",
     icon: Users,
   },
   {
     href: "/app/discover",
     label: "Review an Invite",
-    description: "Preview where a link leads before you join it from this account.",
+    description: "Preview where a link leads before you join.",
     icon: ShieldCheck,
+  },
+  {
+    href: "/app/new-community",
+    label: "Create a Community",
+    description: "Set up a multi-room space with scoped invites.",
+    icon: Users,
   },
   {
     href: "/app/settings",
     label: "Open Settings",
-    description: "Keep privacy defaults, device sessions, and recovery options readable.",
+    description: "Review privacy defaults, sessions, and recovery.",
     icon: Settings,
   },
 ] as const;
@@ -66,7 +67,7 @@ export default function AppHome() {
             </h2>
             <p className="mt-5 max-w-3xl text-base leading-7 text-[var(--text-secondary)]">
               Welcome back, {userName}. Recent conversations, invite review, search, and quick
-              compose should all be reachable from here without another tour of the product.
+              compose all start here.
             </p>
           </div>
 
@@ -123,7 +124,7 @@ export default function AppHome() {
               <div className="rounded-[1.45rem] border border-dashed border-[var(--border)] bg-[var(--bg-secondary)] px-5 py-6">
                 <p className="text-base font-semibold text-[var(--text-primary)]">No conversations yet</p>
                 <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                  Start a DM, create a group, or review an invite to give the workspace something to resume.
+                  Start a DM, create a Group, or review an Invite to give the workspace something to resume.
                 </p>
                 <div className="mt-4 flex flex-wrap gap-3">
                   <Link href="/app/new-dm" className="btn-primary">
@@ -145,23 +146,10 @@ export default function AppHome() {
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="truncate text-base font-semibold text-[var(--text-primary)]">
-                          {conversation.name ??
-                            (conversation.type === "dm"
-                              ? "Direct message"
-                              : conversation.type === "community"
-                                ? "Community"
-                                : conversation.type === "room"
-                                  ? "Room"
-                                  : "Group")}
+                          {conversation.name ?? conversationDefaultTitle(conversation.type)}
                         </p>
                         <span className="rounded-full border border-[var(--border)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-600">
-                          {conversation.type === "dm"
-                            ? "DM"
-                            : conversation.type === "community"
-                              ? "Community"
-                              : conversation.type === "room"
-                                ? "Room"
-                                : "Group"}
+                          {conversationTypeLabel(conversation.type)}
                         </span>
                       </div>
                       <p className="mt-2 truncate text-sm text-[var(--text-secondary)]">
@@ -206,8 +194,8 @@ export default function AppHome() {
           </section>
 
           <section className="panel px-6 py-7">
-            <p className="section-kicker">Admin & Recovery</p>
-            <h3 className="mt-3 text-2xl font-semibold text-[var(--text-primary)]">Keep the account readable</h3>
+            <p className="section-kicker">Admin & Settings</p>
+            <h3 className="mt-3 text-2xl font-semibold text-[var(--text-primary)]">Handle policy and account details</h3>
             <div className="mt-6 space-y-3">
               {secondaryActions.map((card) => {
                 const Icon = card.icon;
@@ -230,10 +218,10 @@ export default function AppHome() {
 
             <div className="mt-6 flex flex-wrap gap-3">
               <Link href="/download" className="btn-ghost">
-                Check native builds
+                View downloads
               </Link>
               <Link href="/app/new-dm" className="btn-primary">
-                Message from web
+                Start a DM
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </Link>
             </div>

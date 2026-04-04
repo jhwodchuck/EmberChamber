@@ -55,6 +55,12 @@ All generated council artifacts land in the repo root and are gitignored by defa
 - `scripts/`: premade evidence-collection and routing scripts
 - `persona-zips/`: one self-contained zip per persona
 
+If you change any persona or shared council file, rebuild the bundles:
+
+```bash
+npm run council:pack
+```
+
 ## Recommended default reviewer sets
 
 ### Web/UI change

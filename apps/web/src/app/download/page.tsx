@@ -46,7 +46,7 @@ const platformAccent = {
 const platformProfiles = {
   android: {
     bestFor: "Pocket-first daily use",
-    moments: ["Push + background sync", "Primary mobile client", "Best for staying in the circle all day"],
+    moments: ["Native mobile integration", "Primary mobile client", "Best for staying in the circle all day"],
   },
   windows: {
     bestFor: "Longer sessions and desk-first use",
@@ -330,9 +330,10 @@ async function DownloadPageInner({
               What each surface can actually do.
             </h2>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-              All surfaces share the same relay contracts and privacy direction. The real
-              differences are device integration, push behavior, and how far encrypted attachments
-              and local-history maturity have landed on each client.
+              All surfaces share the same relay contracts and local-first direction, but not the
+              same current encryption maturity. Browser DMs and new groups are ahead of legacy
+              compatibility history and native attachment encryption, so read these cards as
+              current-state guidance rather than parity claims.
             </p>
 
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -385,13 +386,13 @@ async function DownloadPageInner({
                 {[
                   {
                     icon: Cloud,
-                    title: "Same relay boundary",
-                    body: "Every client uses the same hosted-delivery model, with the relay kept narrow rather than invisible.",
+                    title: "Shared relay boundary",
+                    body: "Every client uses the same hosted-delivery model, but current history and attachment handling still differ by path.",
                   },
                   {
                     icon: ShieldCheck,
-                    title: "Same local-first direction",
-                    body: "Keys, search, and local history stay device-centered, even though a few compatibility paths are still being retired.",
+                    title: "Shared local-first direction",
+                    body: "Keys, search, and DM history stay device-centered, even though legacy group history and native attachment encryption are still being migrated.",
                   },
                   {
                     icon: Download,

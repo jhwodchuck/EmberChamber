@@ -74,7 +74,7 @@ const quickAnswers = [
   {
     question: "What data stays on my device?",
     answer:
-      "Your private keys, DM history, and private-content search index stay on your device. The relay still stores account, invite, session, and attachment data needed for the hosted beta, so use the privacy page for the exact boundary.",
+      "Private keys, DM history, private-content search, and new device-encrypted group history stay device-centered. Legacy group history, account metadata, and native attachment uploads still use hosted beta paths, so check the privacy page for the exact current boundary.",
   },
 ];
 
@@ -163,12 +163,13 @@ export default function SupportPage() {
           <div className="mt-10 border-t border-[var(--border)] pt-8">
             <h2 className="text-lg font-semibold text-[var(--text-primary)]">Privacy boundary today</h2>
             <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-              The simplest accurate answer is that DMs and private-content search stay local-first,
-              while the hosted beta still needs metadata, attachment storage, and a few legacy
-              compatibility paths.
+              The shortest accurate answer is that private keys, DM history, private-content
+              search, and new device-encrypted group history stay device-centered, while the hosted
+              beta still keeps account metadata, signed attachment storage, and a few legacy
+              compatibility paths. Browser and native attachment handling are not uniform yet.
             </p>
             <div className="mt-5">
-              <PrivacyBoundaryMatrix items={privacyBoundaryItems.slice(0, 4)} />
+              <PrivacyBoundaryMatrix items={privacyBoundaryItems.slice(0, 5)} />
             </div>
           </div>
 

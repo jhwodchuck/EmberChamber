@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import type { ConversationSearchResult } from "@emberchamber/protocol";
 import { Avatar } from "@/components/avatar";
+import { conversationDefaultTitle, conversationTypeLabel } from "@/lib/conversation-labels";
 import { relayConversationApi } from "@/lib/relay";
 import { conversationHref } from "@/lib/conversation-routes";
 
@@ -115,17 +116,10 @@ export default function SearchPage() {
                   >
                     <div className="mb-1 flex items-center justify-between gap-3">
                       <span className="text-sm font-medium text-[var(--text-primary)]">
-                        {conversation.title ??
-                          (conversation.kind === "direct_message" ? "Direct message" : "Private space")}
+                        {conversation.title ?? conversationDefaultTitle(conversation.kind)}
                       </span>
                       <span className="text-xs uppercase tracking-[0.14em] text-[var(--text-secondary)]">
-                        {conversation.kind === "direct_message"
-                          ? "DM"
-                          : conversation.kind === "room"
-                            ? "Room"
-                            : conversation.kind === "community"
-                              ? "Community"
-                              : "Group"}
+                        {conversationTypeLabel(conversation.kind)}
                       </span>
                     </div>
                     <p className="text-sm text-[var(--text-secondary)]">

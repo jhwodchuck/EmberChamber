@@ -42,6 +42,12 @@ token_budget_tier: normal
 | --- | --- | --- | --- | --- |
 | C-XX-01 | medium | <title> | <short impact> | <path or team> |
 
+If there are no material findings, use:
+
+| ID | Severity | Title | Why it matters | Owner area |
+| --- | --- | --- | --- | --- |
+| none | note | No material findings | No concrete defect found in this persona's scope. | n/a |
+
 # Detailed findings
 
 ## C-XX-01 — <title>
@@ -50,6 +56,10 @@ token_budget_tier: normal
 **Why it matters:** <specific impact>  
 **Concrete fix:** <exact next action>  
 **What to test after fix:** <focused verification>
+
+# Open questions or residual risks
+
+- <question or `none`>
 
 # Routed notes for other personas
 
