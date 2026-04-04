@@ -19,32 +19,115 @@ concurrency:
 jobs:
   build:
     name: Build Android release artifacts
-    uses: ./.github/workflows/build-android.yml
-    with:
-      build_type: release
-      sign: true
-      ref: ${{ github.ref_name }}
-      artifact_name: emberchamber-android-release
-      require_google_services: true
-      validate_release_inputs: true
-    secrets: inherit
-
-  publish-release:
-    name: Publish Android assets to GitHub Release
     runs-on: ubuntu-22.04
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
     steps:
-      - name: Download Android artifacts
-        uses: actions/download-artifact@v6
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
         with:
-          name: ${{ needs.build.outputs.artifact_name }}
-          path: apps/mobile/artifacts/android-build
+          node-version: 22
+
+      - name: Get npm cache directory
+        id: npm-cache-dir
+        run: echo "dir=$(npm config get cache)" >> $GITHUB_OUTPUT
+
+      - name: Restore npm cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ steps.npm-cache-dir.outputs.dir }}
+          key: node-cache-${{ runner.os }}-${{ runner.arch }}-npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: node-cache-${{ runner.os }}-${{ runner.arch }}-npm-
+
+      - uses: actions/setup-java@v5
+        with:
+          java-version: 17
+          distribution: temurin
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Assert Firebase Android app config is configured
+        env:
+          ANDROID_GOOGLE_SERVICES_JSON: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -z "$ANDROID_GOOGLE_SERVICES_JSON" ]; then
+            echo "Missing GitHub Actions secret ANDROID_GOOGLE_SERVICES_JSON" >&2
+            exit 1
+          fi
+
+      - name: Write Firebase Android app config
+        env:
+          ANDROID_GOOGLE_SERVICES_JSON: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON }}
+        run: |
+          mkdir -p apps/mobile/secrets
+          printf '%s' "$ANDROID_GOOGLE_SERVICES_JSON" > apps/mobile/secrets/google-services.json
+
+      - name: Validate Android release inputs
+        run: |
+          npm run verify:google-services --workspace=apps/mobile
+          npm run type-check --workspace=apps/mobile
+          (cd apps/mobile && npx expo config --json > /tmp/emberchamber-mobile-config.json)
+
+      - name: Generate Android native project
+        run: npm run build:android --workspace=apps/mobile
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x apps/mobile/android/gradlew
+
+      - name: Decode release keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d \
+            > apps/mobile/android/app/emberchamber-release.keystore
+
+      - name: Build signed release APK and AAB
+        env:
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          ./gradlew assembleRelease bundleRelease \
+            -Pandroid.injected.signing.store.file="$GITHUB_WORKSPACE/apps/mobile/android/app/emberchamber-release.keystore" \
+            -Pandroid.injected.signing.store.password="$ANDROID_STORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$ANDROID_KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$ANDROID_KEY_PASSWORD"
+        working-directory: apps/mobile/android
+
+      - name: Rename artifacts with version
+        run: |
+          REF="${GITHUB_REF_NAME//\//-}"
+          APK_SRC=apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+          AAB_SRC=apps/mobile/android/app/build/outputs/bundle/release/app-release.aab
+          mv "$APK_SRC" \
+            "apps/mobile/android/app/build/outputs/apk/release/emberchamber-${REF}-release.apk"
+          mv "$AAB_SRC" \
+            "apps/mobile/android/app/build/outputs/bundle/release/emberchamber-${REF}-release.aab"
+
+      - name: Upload Android artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: emberchamber-android-release
+          path: |
+            apps/mobile/android/app/build/outputs/apk/release/*.apk
+            apps/mobile/android/app/build/outputs/bundle/release/*.aab
+          retention-days: 30
+          if-no-files-found: error
 
       - name: Publish Android assets to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           prerelease: ${{ contains(github.ref_name, '-beta.') || contains(github.ref_name, '-rc.') }}
           files: |
-            apps/mobile/artifacts/android-build/*.apk
-            apps/mobile/artifacts/android-build/*.aab
+            apps/mobile/android/app/build/outputs/apk/release/*.apk
+            apps/mobile/android/app/build/outputs/bundle/release/*.aab

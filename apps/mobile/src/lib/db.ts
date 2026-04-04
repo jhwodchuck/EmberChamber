@@ -120,6 +120,23 @@ export async function loadPrivacyDefaults(db: SQLite.SQLiteDatabase): Promise<Pr
   };
 }
 
+export async function loadRelayStateValue(db: SQLite.SQLiteDatabase, key: string) {
+  const row = await db.getFirstAsync<{ value: string }>(
+    "SELECT value FROM relay_state WHERE key = ?",
+    key,
+  );
+  return row?.value ?? null;
+}
+
+export async function saveRelayStateValue(db: SQLite.SQLiteDatabase, key: string, value: string) {
+  await db.runAsync(
+    `INSERT INTO relay_state (key, value) VALUES (?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+    key,
+    value,
+  );
+}
+
 export async function savePrivacyDefault(
   db: SQLite.SQLiteDatabase,
   key: keyof PrivacyDefaults,

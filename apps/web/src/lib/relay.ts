@@ -474,6 +474,8 @@ export const relayAttachmentApi = {
     ciphertextSha256B64?: string;
     plaintextByteLength?: number;
     plaintextSha256B64?: string;
+    fileKeyB64?: string;
+    fileIvB64?: string;
     conversationId?: string;
     conversationEpoch?: number;
     contentClass?: "image" | "video" | "audio" | "file";

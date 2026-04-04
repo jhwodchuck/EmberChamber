@@ -25,8 +25,17 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: package-lock.json
+
+      - name: Get npm cache directory
+        id: npm-cache-dir
+        run: echo "dir=$(npm config get cache)" >> $GITHUB_OUTPUT
+
+      - name: Restore npm cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ steps.npm-cache-dir.outputs.dir }}
+          key: node-cache-${{ runner.os }}-${{ runner.arch }}-npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: node-cache-${{ runner.os }}-${{ runner.arch }}-npm-
 
       - uses: dtolnay/rust-toolchain@stable
 

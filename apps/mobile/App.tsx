@@ -16,6 +16,13 @@ import {
   Text,
   View,
 } from "react-native";
+import type { EncryptedConversationPayload } from "@emberchamber/protocol";
+import {
+  decryptConversationPayload,
+  encryptAttachmentBytes,
+  encryptConversationPayload,
+  toPublicPrekeyBundle,
+} from "@emberchamber/protocol";
 
 import type {
   AttachmentTicket,
@@ -55,8 +62,10 @@ import {
   countVaultItems,
   loadCachedGroupMessages,
   loadCachedGroups,
+  loadRelayStateValue,
   loadPrivacyDefaults,
   persistVaultMediaRecord,
+  saveRelayStateValue,
   savePrivacyDefault,
   saveCachedGroupMessages,
   saveCachedGroups,
@@ -90,6 +99,8 @@ const signedInHeroSignals = [
   "On-device vault defaults",
   "Relay-native group sync",
 ];
+
+const MAILBOX_CURSOR_STATE_KEY = "mailbox_cursor";
 
 // ---------------------------------------------------------------------------
 // App – thin orchestrator
@@ -141,6 +152,7 @@ export default function App() {
   const groupsRef = useRef<GroupMembershipSummary[]>([]);
   const sessionRef = useRef<AuthSession | null>(null);
   const selectedConversationIdRef = useRef<string | null>(null);
+  const deviceBundleDirectoryRef = useRef(new Map<string, DeviceKeyBundle[]>());
 
   const selectedGroup =
     groups.find((group) => group.id === selectedConversationId) ??
@@ -243,28 +255,30 @@ export default function App() {
   }
 
   async function ensureDeviceBundleRegistered(currentSession: AuthSession) {
-    const existingBundles = await relayFetch<DeviceKeyBundle[]>(
-      currentSession,
-      `/v1/accounts/${currentSession.accountId}/device-bundles`,
-    );
-
-    if (existingBundles.some((bundle) => bundle.deviceId === currentSession.deviceId)) {
-      return existingBundles;
-    }
-
     const localBundle =
       (await loadStoredDeviceBundle(currentSession.deviceId)) ?? createDeviceBundleScaffold();
     await saveStoredDeviceBundle(currentSession.deviceId, localBundle);
 
+    const existingBundles = await relayFetch<DeviceKeyBundle[]>(
+      currentSession,
+      `/v1/accounts/${currentSession.accountId}/device-bundles`,
+    );
+    deviceBundleDirectoryRef.current.set(currentSession.accountId, existingBundles);
+
+    if (existingBundles.some((bundle) => bundle.deviceId === currentSession.deviceId) && localBundle.privateKeyB64) {
+      return existingBundles;
+    }
+
     await relayFetch<{ registered: boolean }>(currentSession, "/v1/devices/register", {
       method: "POST",
-      body: JSON.stringify(localBundle),
+      body: JSON.stringify(toPublicPrekeyBundle(localBundle)),
     });
 
     const confirmedBundles = await relayFetch<DeviceKeyBundle[]>(
       currentSession,
       `/v1/accounts/${currentSession.accountId}/device-bundles`,
     );
+    deviceBundleDirectoryRef.current.set(currentSession.accountId, confirmedBundles);
 
     if (!confirmedBundles.some((bundle) => bundle.deviceId === currentSession.deviceId)) {
       throw new Error("This phone's device identity did not register correctly.");
@@ -273,7 +287,142 @@ export default function App() {
     return confirmedBundles;
   }
 
+  async function listDeviceBundlesForAccount(currentSession: AuthSession, accountId: string) {
+    const cached = deviceBundleDirectoryRef.current.get(accountId);
+    if (cached) {
+      return cached;
+    }
+
+    const bundles = await relayFetch<DeviceKeyBundle[]>(
+      currentSession,
+      `/v1/accounts/${accountId}/device-bundles`,
+    );
+    deviceBundleDirectoryRef.current.set(accountId, bundles);
+    return bundles;
+  }
+
+  async function loadStoredBundleOrThrow(currentSession: AuthSession) {
+    const bundle = await loadStoredDeviceBundle(currentSession.deviceId);
+    if (!bundle?.privateKeyB64) {
+      throw new Error("This device is missing its private message key.");
+    }
+
+    return bundle as DeviceKeyBundle["bundle"] & { privateKeyB64: string };
+  }
+
+  async function syncEncryptedMailbox(currentSession: AuthSession) {
+    if (!db) {
+      return { receivedConversationIds: [] as string[] };
+    }
+
+    await ensureDeviceBundleRegistered(currentSession);
+    const localBundle = await loadStoredBundleOrThrow(currentSession);
+    const cursor = await loadRelayStateValue(db, MAILBOX_CURSOR_STATE_KEY);
+    const sync = await relayFetch<{
+      cursor: { lastSeenEnvelopeId?: string };
+      envelopes: Array<{
+        envelopeId: string;
+        conversationId: string;
+        senderAccountId: string;
+        senderDeviceId: string;
+        ciphertext: string;
+      }>;
+    }>(
+      currentSession,
+      `/v1/mailbox/sync?after=${encodeURIComponent(cursor ?? "")}&limit=${encodeURIComponent(String(100))}`,
+    );
+
+    const receivedConversationIds = new Set<string>();
+    const updatedMessages = new Map<string, GroupThreadMessage[]>();
+    const ackEnvelopeIds: string[] = [];
+
+    for (const envelope of sync.envelopes) {
+      try {
+        const senderBundles = await listDeviceBundlesForAccount(currentSession, envelope.senderAccountId);
+        const senderBundle = senderBundles.find((entry) => entry.deviceId === envelope.senderDeviceId);
+        if (!senderBundle) {
+          continue;
+        }
+
+        const payload = decryptConversationPayload<EncryptedConversationPayload>(
+          envelope.ciphertext,
+          senderBundle.bundle.identityKeyB64,
+          localBundle.privateKeyB64,
+        );
+
+        if (payload.kind !== "ember_conversation_v1") {
+          continue;
+        }
+
+        const conversationMessages =
+          updatedMessages.get(envelope.conversationId) ??
+          (await loadCachedGroupMessages(db, envelope.conversationId));
+        const messageId = `${envelope.envelopeId}:${payload.clientMessageId}`;
+        const nextMessage: GroupThreadMessage = {
+          id: messageId,
+          conversationId: envelope.conversationId,
+          historyMode: "device_encrypted",
+          senderAccountId: envelope.senderAccountId,
+          senderDisplayName: payload.senderDisplayName,
+          kind: payload.attachment ? "media" : "text",
+          text: payload.text,
+          attachment: payload.attachment
+            ? {
+                ...payload.attachment,
+                downloadUrl: "",
+              }
+            : null,
+          createdAt: payload.createdAt,
+        };
+
+        const mergedMessages = conversationMessages
+          .filter((entry) => entry.id !== nextMessage.id)
+          .concat(nextMessage)
+          .sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime());
+
+        updatedMessages.set(envelope.conversationId, mergedMessages);
+        receivedConversationIds.add(envelope.conversationId);
+        ackEnvelopeIds.push(envelope.envelopeId);
+      } catch {
+        // Ignore envelopes that this device cannot open.
+      }
+    }
+
+    await Promise.all(
+      Array.from(updatedMessages.entries()).map(([conversationId, messages]) =>
+        saveCachedGroupMessages(db, conversationId, messages),
+      ),
+    );
+
+    if (sync.cursor.lastSeenEnvelopeId) {
+      await saveRelayStateValue(db, MAILBOX_CURSOR_STATE_KEY, sync.cursor.lastSeenEnvelopeId);
+    }
+
+    if (ackEnvelopeIds.length > 0) {
+      await relayFetch<{ acknowledged: number }>(currentSession, "/v1/mailbox/ack", {
+        method: "POST",
+        body: JSON.stringify({ envelopeIds: ackEnvelopeIds }),
+      });
+    }
+
+    return {
+      receivedConversationIds: Array.from(receivedConversationIds),
+    };
+  }
+
   async function refreshGroupThread(currentSession: AuthSession, conversationId: string) {
+    const targetGroup = groupsRef.current.find((group) => group.id === conversationId);
+    if (targetGroup?.historyMode === "device_encrypted") {
+      if (!db) {
+        setThreadMessages([]);
+        return;
+      }
+
+      await syncEncryptedMailbox(currentSession);
+      setThreadMessages(await loadCachedGroupMessages(db, conversationId));
+      return;
+    }
+
     const messages = await relayFetch<GroupThreadMessage[]>(
       currentSession,
       `/v1/groups/${conversationId}/messages?limit=100`,
@@ -424,6 +573,13 @@ export default function App() {
       }
 
       if (reason === "mailbox") {
+        const currentSession = sessionRef.current;
+        if (currentSession) {
+          void syncEncryptedMailbox(currentSession).catch(() => undefined);
+        }
+        if (conversationId) {
+          setSelectedConversationId(conversationId);
+        }
         setSessionMessage({
           tone: "info",
           title: "New secure message",
@@ -461,6 +617,8 @@ export default function App() {
           selectedConversationIdRef.current === conversationId
         ) {
           void refreshGroupThread(currentSession, conversationId).catch(() => undefined);
+        } else if (currentSession && reason === "mailbox") {
+          void syncEncryptedMailbox(currentSession).catch(() => undefined);
         }
       });
 
@@ -509,6 +667,7 @@ export default function App() {
 
   useEffect(() => {
     if (!session) {
+      deviceBundleDirectoryRef.current.clear();
       setProfile(null);
       setContactCard(null);
       setGroups([]);
@@ -571,6 +730,8 @@ export default function App() {
         if (db) {
           await saveCachedGroups(db, session.accountId, nextGroups);
         }
+
+        await syncEncryptedMailbox(session);
 
         setSessionMessage((current) => {
           if (current?.tone === "error") {
@@ -636,10 +797,12 @@ export default function App() {
       return;
     }
 
+    const selectedGroupSummary = groups.find((group) => group.id === selectedConversationId) ?? null;
     let cancelled = false;
     setIsLoadingThread(true);
     let ws: WebSocket | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let refreshTimer: ReturnType<typeof setInterval> | null = null;
 
     void (async () => {
       const cachedMessages = db
@@ -651,20 +814,39 @@ export default function App() {
       }
 
       try {
-        const messages = await relayFetch<GroupThreadMessage[]>(
-          session,
-          `/v1/groups/${selectedConversationId}/messages?limit=100`,
-        );
+        if (selectedGroupSummary?.historyMode === "device_encrypted") {
+          await syncEncryptedMailbox(session);
+          if (db && !cancelled) {
+            setThreadMessages(await loadCachedGroupMessages(db, selectedConversationId));
+          }
 
-        if (!cancelled) {
-          setThreadMessages(messages);
-        }
+          if (!cancelled) {
+            refreshTimer = setInterval(() => {
+              void syncEncryptedMailbox(session)
+                .then(async () => {
+                  if (!db || cancelled || selectedConversationIdRef.current !== selectedConversationId) {
+                    return;
+                  }
+                  setThreadMessages(await loadCachedGroupMessages(db, selectedConversationId));
+                })
+                .catch(() => undefined);
+            }, 8000);
+          }
+        } else {
+          const messages = await relayFetch<GroupThreadMessage[]>(
+            session,
+            `/v1/groups/${selectedConversationId}/messages?limit=100`,
+          );
 
-        if (db) {
-          await saveCachedGroupMessages(db, selectedConversationId, messages);
-        }
+          if (!cancelled) {
+            setThreadMessages(messages);
+          }
 
-        if (!cancelled) {
+          if (db) {
+            await saveCachedGroupMessages(db, selectedConversationId, messages);
+          }
+
+          if (!cancelled) {
           const wsUrlBase = relayUrl.replace(/^http/, "ws");
           const clearReconnectTimer = () => {
             if (reconnectTimer !== null) {
@@ -706,6 +888,7 @@ export default function App() {
 
           connectSocket();
         }
+        }
       } catch (error) {
         if (!cancelled) {
           setSessionMessage({
@@ -727,6 +910,9 @@ export default function App() {
 
     return () => {
       cancelled = true;
+      if (refreshTimer) {
+        clearInterval(refreshTimer);
+      }
       if (reconnectTimer) {
         clearTimeout(reconnectTimer);
       }
@@ -734,7 +920,7 @@ export default function App() {
         ws.close();
       }
     };
-  }, [db, session, selectedConversationId]);
+  }, [db, groups, session, selectedConversationId]);
 
   // ---- handlers ----
 
@@ -1127,56 +1313,201 @@ export default function App() {
     setSessionMessage(null);
 
     try {
-      let attachmentId: string | undefined;
+      let createdMessage: GroupThreadMessage;
 
-      if (pendingAttachment) {
-        const fileResponse = await fetch(pendingAttachment.uri);
-        const fileBlob = await fileResponse.blob();
+      if (selectedGroup.historyMode === "device_encrypted") {
+        const localBundle = await loadStoredBundleOrThrow(session);
+        const conversation = await relayFetch<{
+          id: string;
+          kind: "group";
+          epoch: number;
+          memberAccountIds: string[];
+          members: Array<{ accountId: string }>;
+        }>(session, `/v1/conversations/${selectedGroup.id}`);
 
-        if (fileBlob.size > MAX_ATTACHMENT_BYTES) {
-          throw new Error("That photo exceeds the 20 MB beta attachment limit.");
+        const bundleLists = await Promise.all(
+          Array.from(new Set(conversation.memberAccountIds)).map(async (accountId) => ({
+            accountId,
+            bundles: await listDeviceBundlesForAccount(session, accountId),
+          })),
+        );
+        const recipientDevices = bundleLists
+          .flatMap((entry) => entry.bundles)
+          .filter((bundle) => bundle.deviceId !== session.deviceId);
+
+        if (recipientDevices.length === 0) {
+          throw new Error("No member devices are registered for this encrypted group yet.");
         }
 
-        const ticket = await relayFetch<AttachmentTicket>(session, "/v1/attachments/ticket", {
-          method: "POST",
-          body: JSON.stringify({
+        let attachment: GroupThreadMessage["attachment"] | null = null;
+        const attachmentIds: string[] = [];
+
+        if (pendingAttachment) {
+          const fileResponse = await fetch(pendingAttachment.uri);
+          const fileBlob = await fileResponse.blob();
+
+          if (fileBlob.size > MAX_ATTACHMENT_BYTES) {
+            throw new Error("That photo exceeds the 20 MB beta attachment limit.");
+          }
+
+          const encrypted = encryptAttachmentBytes(await fileBlob.arrayBuffer());
+          const ticket = await relayFetch<AttachmentTicket>(session, "/v1/attachments/ticket", {
+            method: "POST",
+            body: JSON.stringify({
+              fileName: pendingAttachment.fileName,
+              mimeType: "application/octet-stream",
+              encryptionMode: "device_encrypted",
+              ciphertextByteLength: encrypted.ciphertext.byteLength,
+              ciphertextSha256B64: encrypted.ciphertextSha256B64,
+              plaintextByteLength: encrypted.plaintext.byteLength,
+              plaintextSha256B64: encrypted.plaintextSha256B64,
+              conversationId: selectedGroup.id,
+              conversationEpoch: selectedGroup.epoch,
+              contentClass: "image",
+              retentionMode: "private_vault",
+              protectionProfile: selectedGroup.sensitiveMediaDefault ? "sensitive_media" : "standard",
+            }),
+          });
+
+          const uploadResponse = await fetch(ticket.uploadUrl, {
+            method: "PUT",
+            headers: { "content-type": "application/octet-stream" },
+            body: encrypted.ciphertext,
+          });
+
+          if (!uploadResponse.ok) {
+            const uploadError = await uploadResponse.text();
+            throw new Error(uploadError || "Attachment upload failed.");
+          }
+
+          attachment = {
+            id: ticket.attachmentId,
+            downloadUrl: "",
             fileName: pendingAttachment.fileName,
             mimeType: pendingAttachment.mimeType,
             byteLength: fileBlob.size,
-            conversationId: selectedGroup.id,
-            conversationEpoch: selectedGroup.epoch,
             contentClass: "image",
-            retentionMode: "private_vault",
-            protectionProfile: selectedGroup.sensitiveMediaDefault ? "sensitive_media" : "standard",
-          }),
-        });
-
-        const uploadResponse = await fetch(ticket.uploadUrl, {
-          method: "PUT",
-          headers: { "content-type": pendingAttachment.mimeType },
-          body: fileBlob,
-        });
-
-        if (!uploadResponse.ok) {
-          const uploadError = await uploadResponse.text();
-          throw new Error(uploadError || "Attachment upload failed.");
+            retentionMode: ticket.retentionMode,
+            protectionProfile: ticket.protectionProfile,
+            previewBlurHash: ticket.previewBlurHash ?? null,
+            encryptionMode: ticket.encryptionMode,
+            fileKeyB64: encrypted.fileKeyB64,
+            fileIvB64: encrypted.fileIvB64,
+          };
+          attachmentIds.push(ticket.attachmentId);
         }
 
-        attachmentId = ticket.attachmentId;
-      }
+        const createdAt = new Date().toISOString();
+        const clientMessageId = makeOpaqueToken();
+        const senderDisplayName = profile?.displayName ?? deviceLabel;
+        const payload: EncryptedConversationPayload = {
+          version: 1,
+          kind: "ember_conversation_v1",
+          conversationId: selectedGroup.id,
+          conversationKind: "group",
+          historyMode: "device_encrypted",
+          senderDisplayName,
+          text: trimmedText || undefined,
+          attachment: attachment
+            ? {
+                id: attachment.id,
+                fileName: attachment.fileName,
+                mimeType: attachment.mimeType,
+                byteLength: attachment.byteLength,
+                contentClass: attachment.contentClass,
+                retentionMode: attachment.retentionMode,
+                protectionProfile: attachment.protectionProfile,
+                previewBlurHash: attachment.previewBlurHash ?? null,
+                encryptionMode: attachment.encryptionMode ?? "device_encrypted",
+                fileKeyB64: attachment.fileKeyB64 ?? null,
+                fileIvB64: attachment.fileIvB64 ?? null,
+              }
+            : null,
+          createdAt,
+          clientMessageId,
+        };
 
-      const createdMessage = await relayFetch<GroupThreadMessage>(
-        session,
-        `/v1/groups/${selectedGroup.id}/messages`,
-        {
+        await relayFetch<{ acceptedEnvelopeIds: string[] }>(session, "/v1/messages/batch", {
           method: "POST",
           body: JSON.stringify({
-            text: trimmedText || undefined,
-            attachmentId,
-            clientMessageId: makeOpaqueToken(),
+            conversationId: selectedGroup.id,
+            epoch: selectedGroup.epoch,
+            envelopes: recipientDevices.map((bundle) => ({
+              recipientDeviceId: bundle.deviceId,
+              ciphertext: encryptConversationPayload(
+                payload,
+                bundle.bundle.identityKeyB64,
+                localBundle.privateKeyB64,
+              ),
+              clientMessageId,
+              attachmentIds,
+            })),
           }),
-        },
-      );
+        });
+
+        createdMessage = {
+          id: clientMessageId,
+          conversationId: selectedGroup.id,
+          historyMode: "device_encrypted",
+          senderAccountId: session.accountId,
+          senderDisplayName,
+          kind: attachment ? "media" : "text",
+          text: trimmedText || undefined,
+          attachment,
+          createdAt,
+        };
+      } else {
+        let attachmentId: string | undefined;
+
+        if (pendingAttachment) {
+          const fileResponse = await fetch(pendingAttachment.uri);
+          const fileBlob = await fileResponse.blob();
+
+          if (fileBlob.size > MAX_ATTACHMENT_BYTES) {
+            throw new Error("That photo exceeds the 20 MB beta attachment limit.");
+          }
+
+          const ticket = await relayFetch<AttachmentTicket>(session, "/v1/attachments/ticket", {
+            method: "POST",
+            body: JSON.stringify({
+              fileName: pendingAttachment.fileName,
+              mimeType: pendingAttachment.mimeType,
+              byteLength: fileBlob.size,
+              conversationId: selectedGroup.id,
+              conversationEpoch: selectedGroup.epoch,
+              contentClass: "image",
+              retentionMode: "private_vault",
+              protectionProfile: selectedGroup.sensitiveMediaDefault ? "sensitive_media" : "standard",
+            }),
+          });
+
+          const uploadResponse = await fetch(ticket.uploadUrl, {
+            method: "PUT",
+            headers: { "content-type": pendingAttachment.mimeType },
+            body: fileBlob,
+          });
+
+          if (!uploadResponse.ok) {
+            const uploadError = await uploadResponse.text();
+            throw new Error(uploadError || "Attachment upload failed.");
+          }
+
+          attachmentId = ticket.attachmentId;
+        }
+
+        createdMessage = await relayFetch<GroupThreadMessage>(
+          session,
+          `/v1/groups/${selectedGroup.id}/messages`,
+          {
+            method: "POST",
+            body: JSON.stringify({
+              text: trimmedText || undefined,
+              attachmentId,
+              clientMessageId: makeOpaqueToken(),
+            }),
+          },
+        );
+      }
 
       const nextThreadMessages = [...threadMessages, createdMessage];
       setThreadMessages(nextThreadMessages);

@@ -364,6 +364,7 @@ export interface GroupMembershipSummary {
   id: ConversationId;
   title: string;
   epoch: GroupEpoch;
+  historyMode: ConversationHistoryMode;
   memberCount: number;
   memberCap: number;
   myRole: "owner" | "admin" | "member";
@@ -387,7 +388,7 @@ export interface GroupThreadMessage {
   text?: string | null;
   attachment?: {
     id: string;
-    downloadUrl: string;
+    downloadUrl?: string;
     fileName: string;
     mimeType: string;
     byteLength: number;
@@ -395,6 +396,9 @@ export interface GroupThreadMessage {
     retentionMode: RetentionMode;
     protectionProfile: ProtectionProfile;
     previewBlurHash?: string | null;
+    encryptionMode?: AttachmentEncryptionMode;
+    fileKeyB64?: string | null;
+    fileIvB64?: string | null;
   } | null;
   createdAt: string;
 }
@@ -421,3 +425,5 @@ export interface SessionDescriptor {
   lastSeenAt: string;
   isCurrent: boolean;
 }
+
+export * from "./e2ee";

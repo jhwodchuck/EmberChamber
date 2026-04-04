@@ -41,6 +41,7 @@ export type GroupMembershipSummary = {
   id: string;
   title: string;
   epoch: number;
+  historyMode: "relay_hosted" | "device_encrypted";
   memberCount: number;
   memberCap: number;
   myRole: "owner" | "admin" | "member";
@@ -57,13 +58,14 @@ export type GroupMembershipSummary = {
 export type GroupThreadMessage = {
   id: string;
   conversationId: string;
+  historyMode: "relay_hosted" | "device_encrypted";
   senderAccountId: string;
   senderDisplayName: string;
   kind: "text" | "media" | "system_notice";
   text?: string | null;
   attachment?: {
     id: string;
-    downloadUrl: string;
+    downloadUrl?: string;
     fileName: string;
     mimeType: string;
     byteLength: number;
@@ -71,6 +73,9 @@ export type GroupThreadMessage = {
     retentionMode: "private_vault" | "ephemeral";
     protectionProfile: "sensitive_media" | "standard";
     previewBlurHash?: string | null;
+    encryptionMode?: "none" | "device_encrypted";
+    fileKeyB64?: string | null;
+    fileIvB64?: string | null;
   } | null;
   createdAt: string;
 };
@@ -107,6 +112,7 @@ export type AttachmentTicket = {
   downloadUrl: string;
   expiresAt: string;
   maxBytes: number;
+  encryptionMode: "none" | "device_encrypted";
   contentClass: "image" | "video" | "audio" | "file";
   retentionMode: "private_vault" | "ephemeral";
   protectionProfile: "sensitive_media" | "standard";
@@ -123,6 +129,7 @@ export type DeviceKeyBundle = {
     signedPrekeyB64: string;
     signedPrekeySignatureB64: string;
     oneTimePrekeysB64: string[];
+    privateKeyB64?: string;
   };
 };
 

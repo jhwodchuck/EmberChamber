@@ -23,7 +23,7 @@ from target direction so the docs do not overstate privacy, platform maturity, o
 | Cipher mailbox queue | `DeviceMailboxDO` stores ciphertext envelopes written through `/v1/messages/batch`, fans them out to connected device WebSockets, enforces backlog caps, and deletes them on ack or expiry. | Mature the mailbox path into the default DM and future encrypted-group transport on every client. |
 | Group threads | D1 `conversation_messages` stores group thread text in `body_text` plus attachment references. | Replace relay-hosted readable group history with a stronger end-to-end model. |
 | Attachments | R2 stores uploaded bytes referenced by signed upload/download tickets. The browser DM path now supports client-encrypted uploads, while current mobile and desktop flows still upload raw file bytes. | Move every client to client-side attachment encryption before upload. |
-| Client local state | Mobile persists SQLite, SecureStore, and vault metadata. Desktop persists local shell state. Web persists browser session state. | Push more authoritative history and safety state back onto devices over time. |
+| Client local state | Mobile persists SQLite, SecureStore, and vault metadata. Desktop now persists shell auth state in the system keyring when available, with a restricted local-file fallback. Web persists browser session state. | Push more authoritative history and safety state back onto devices over time. |
 
 ## Active Relay Capabilities
 

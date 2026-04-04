@@ -6,9 +6,23 @@ import type {
   ContentClass,
   ConversationDetail,
   ConversationSummary,
-  PrekeyBundle,
+  DeviceKeyBundle,
+  EncryptedConversationAttachment,
+  EncryptedConversationPayload,
   ProtectionProfile,
   RetentionMode,
+  StoredDeviceBundle,
+} from "@emberchamber/protocol";
+import {
+  decodeBytes,
+  createStoredDeviceBundle,
+  decryptAttachmentBytes,
+  decryptConversationPayload,
+  encryptAttachmentBytes,
+  encryptConversationPayload,
+  isStoredDeviceBundle,
+  toPublicPrekeyBundle,
+  toArrayBuffer,
 } from "@emberchamber/protocol";
 import {
   readRelaySession,
@@ -29,7 +43,7 @@ const MAX_STORED_DM_MESSAGES = 2000;
 type WorkspaceState = {
   version: 2;
   registeredDeviceId?: string;
-  bundle?: PrekeyBundle;
+  bundle?: StoredDeviceBundle;
   mailboxCursor?: string;
   knownEnvelopeIds: string[];
 };
@@ -37,35 +51,14 @@ type WorkspaceState = {
 type LegacyWorkspaceState = {
   version?: number;
   registeredDeviceId?: string;
-  bundle?: PrekeyBundle;
+  bundle?: StoredDeviceBundle;
   mailboxCursor?: string;
   knownEnvelopeIds?: string[];
   messagesByConversation?: Record<string, StoredDmMessage[]>;
 };
 
-type WorkspaceEnvelopeAttachment = {
-  attachmentId: string;
-  fileName: string;
-  mimeType: string;
-  byteLength: number;
-  contentClass: ContentClass;
-  retentionMode: RetentionMode;
-  protectionProfile: ProtectionProfile;
-  previewBlurHash?: string | null;
-  encryptionMode: AttachmentEncryptionMode;
-  downloadUrl: string;
-  fileKeyB64?: string;
-  fileIvB64?: string;
-};
-
-type WorkspaceEnvelopePayload = {
-  version: 1;
-  kind: "web_dm_v1";
-  senderDisplayName: string;
-  text?: string | null;
-  attachment?: WorkspaceEnvelopeAttachment | null;
-  createdAt: string;
-  clientMessageId: string;
+type WorkspaceEnvelopeAttachment = EncryptedConversationAttachment & {
+  downloadUrl?: string;
 };
 
 export type StoredDmMessage = {
@@ -81,7 +74,24 @@ export type StoredDmMessage = {
   status: "pending" | "sent" | "received" | "failed";
 };
 
+type RelayReadableAttachment = {
+  attachmentId?: string;
+  id?: string;
+  fileName: string;
+  mimeType: string;
+  byteLength?: number;
+  contentClass: ContentClass;
+  retentionMode: RetentionMode;
+  protectionProfile: ProtectionProfile;
+  previewBlurHash?: string | null;
+  encryptionMode?: AttachmentEncryptionMode;
+  downloadUrl?: string;
+  fileKeyB64?: string | null;
+  fileIvB64?: string | null;
+};
+
 const workspaceMessageCache = new Map<string, StoredDmMessage[]>();
+const deviceBundleCache = new Map<string, Promise<DeviceKeyBundle[]>>();
 let workspaceDbPromise: Promise<IDBDatabase | null> | null = null;
 let legacyWorkspaceMigrationPromise: Promise<void> | null = null;
 
@@ -90,51 +100,6 @@ function defaultWorkspaceState(): WorkspaceState {
     version: 2,
     knownEnvelopeIds: [],
   };
-}
-
-function encodeBytes(bytes: Uint8Array): string {
-  let binary = "";
-  const chunkSize = 0x8000;
-
-  for (let index = 0; index < bytes.length; index += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
-  }
-
-  return btoa(binary);
-}
-
-function decodeBytes(value: string): Uint8Array {
-  const binary = atob(value);
-  const bytes = new Uint8Array(binary.length);
-
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-
-  return bytes;
-}
-
-function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
-  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
-}
-
-function encodeJson(value: unknown): string {
-  return btoa(JSON.stringify(value));
-}
-
-function decodeJson<T>(value: string): T {
-  return JSON.parse(atob(value)) as T;
-}
-
-async function sha256B64(buffer: ArrayBuffer): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", buffer);
-  return encodeBytes(new Uint8Array(digest));
-}
-
-function randomOpaqueToken(byteLength = 32): string {
-  const bytes = new Uint8Array(byteLength);
-  crypto.getRandomValues(bytes);
-  return encodeBytes(bytes);
 }
 
 function fallbackMessageStorageKey(conversationId: string) {
@@ -167,7 +132,7 @@ function readWorkspaceState(): WorkspaceState {
   return {
     version: 2,
     registeredDeviceId: parsed.registeredDeviceId,
-    bundle: parsed.bundle,
+    bundle: isStoredDeviceBundle(parsed.bundle) ? parsed.bundle : undefined,
     mailboxCursor: parsed.mailboxCursor,
     knownEnvelopeIds: parsed.knownEnvelopeIds ?? [],
   };
@@ -345,18 +310,13 @@ async function ensureRelayDeviceBundle() {
   }
 
   const state = readWorkspaceState();
-  if (state.registeredDeviceId === session.deviceId && state.bundle) {
+  if (state.registeredDeviceId === session.deviceId && isStoredDeviceBundle(state.bundle)) {
     return state.bundle;
   }
 
-  const bundle: PrekeyBundle = {
-    identityKeyB64: randomOpaqueToken(),
-    signedPrekeyB64: randomOpaqueToken(),
-    signedPrekeySignatureB64: randomOpaqueToken(),
-    oneTimePrekeysB64: Array.from({ length: 8 }, () => randomOpaqueToken(24)),
-  };
+  const bundle = createStoredDeviceBundle();
 
-  await relayDeviceApi.registerBundle(bundle);
+  await relayDeviceApi.registerBundle(toPublicPrekeyBundle(bundle));
   writeWorkspaceState({
     ...state,
     registeredDeviceId: session.deviceId,
@@ -366,9 +326,39 @@ async function ensureRelayDeviceBundle() {
   return bundle;
 }
 
+async function listDeviceBundles(accountId: string) {
+  const cached = deviceBundleCache.get(accountId);
+  if (cached) {
+    return cached;
+  }
+
+  const request = relayDeviceApi.listBundles(accountId)
+    .catch((error) => {
+      deviceBundleCache.delete(accountId);
+      throw error;
+    });
+
+  deviceBundleCache.set(accountId, request);
+  return request;
+}
+
+async function resolveSenderIdentityKey(accountId: string, deviceId: string) {
+  const bundles = await listDeviceBundles(accountId);
+  const bundle = bundles.find((entry) => entry.deviceId === deviceId);
+  if (!bundle) {
+    throw new Error("Sender device bundle is unavailable.");
+  }
+
+  return bundle.bundle.identityKeyB64;
+}
+
 export async function listStoredDmMessages(conversationId: string): Promise<StoredDmMessage[]> {
   await migrateLegacyWorkspaceState();
   return loadConversationMessages(conversationId);
+}
+
+export async function listStoredConversationMessages(conversationId: string): Promise<StoredDmMessage[]> {
+  return listStoredDmMessages(conversationId);
 }
 
 export async function getConversationPreview(conversationId: string) {
@@ -389,6 +379,7 @@ export async function ingestRelayEnvelopes(
   options: { cursor?: string; acknowledge?: boolean } = {},
 ) {
   await migrateLegacyWorkspaceState();
+  const registeredBundle = await ensureRelayDeviceBundle();
   const receivedConversationIds = new Set<string>();
   const ackEnvelopeIds = envelopes.map((envelope) => envelope.envelopeId);
   const updatedMessages = new Map<string, StoredDmMessage[]>();
@@ -400,14 +391,18 @@ export async function ingestRelayEnvelopes(
       continue;
     }
 
-    let payload: WorkspaceEnvelopePayload | null = null;
+    let payload: EncryptedConversationPayload | null = null;
     try {
-      payload = decodeJson<WorkspaceEnvelopePayload>(envelope.ciphertext);
+      payload = decryptConversationPayload<EncryptedConversationPayload>(
+        envelope.ciphertext,
+        await resolveSenderIdentityKey(envelope.senderAccountId, envelope.senderDeviceId),
+        registeredBundle.privateKeyB64,
+      );
     } catch {
       continue;
     }
 
-    if (!payload || payload.kind !== "web_dm_v1") {
+    if (!payload || payload.kind !== "ember_conversation_v1") {
       continue;
     }
 
@@ -425,7 +420,12 @@ export async function ingestRelayEnvelopes(
         senderAccountId: envelope.senderAccountId,
         senderDisplayName: payload.senderDisplayName,
         text: payload.text,
-        attachment: payload.attachment ?? null,
+        attachment: payload.attachment
+          ? {
+              ...payload.attachment,
+              downloadUrl: "",
+            }
+          : null,
         createdAt: payload.createdAt,
         clientMessageId: payload.clientMessageId,
         status: "received",
@@ -479,31 +479,12 @@ export async function syncRelayMailbox() {
   });
 }
 
-async function encryptAttachment(file: File) {
+export async function encryptRelayAttachmentFile(file: File) {
   const plaintext = await file.arrayBuffer();
-  const key = await crypto.subtle.generateKey(
-    {
-      name: "AES-GCM",
-      length: 256,
-    },
-    true,
-    ["encrypt", "decrypt"],
-  );
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, plaintext);
-  const rawKey = await crypto.subtle.exportKey("raw", key);
-
-  return {
-    plaintext,
-    ciphertext,
-    plaintextSha256B64: await sha256B64(plaintext),
-    ciphertextSha256B64: await sha256B64(ciphertext),
-    fileKeyB64: encodeBytes(new Uint8Array(rawKey)),
-    fileIvB64: encodeBytes(iv),
-  };
+  return encryptAttachmentBytes(plaintext);
 }
 
-export async function sendDirectMessage(input: {
+export async function sendConversationMessage(input: {
   conversation: ConversationDetail | ConversationSummary;
   senderDisplayName: string;
   text?: string;
@@ -515,23 +496,21 @@ export async function sendDirectMessage(input: {
   }
 
   await migrateLegacyWorkspaceState();
-  await ensureRelayDeviceBundle();
+  const registeredBundle = await ensureRelayDeviceBundle();
 
   const members = "members" in input.conversation
     ? input.conversation.members
     : (await relayConversationApi.get(input.conversation.id)).members;
-  const recipientAccounts = members
-    .filter((member) => member.accountId !== session.accountId)
-    .map((member) => member.accountId);
-
-  if (recipientAccounts.length === 0) {
+  const isDirectMessage = input.conversation.kind === "direct_message";
+  const recipientAccounts = members.filter((member) => member.accountId !== session.accountId);
+  if (isDirectMessage && recipientAccounts.length === 0) {
     throw new Error("A DM needs another member before it can send.");
   }
 
   const bundleLists = await Promise.all(
     Array.from(new Set(input.conversation.memberAccountIds)).map(async (accountId) => ({
       accountId,
-      bundles: await relayDeviceApi.listBundles(accountId),
+      bundles: await listDeviceBundles(accountId),
     })),
   );
   const recipientDevices = bundleLists
@@ -547,7 +526,7 @@ export async function sendDirectMessage(input: {
   let attachmentIds: string[] = [];
 
   if (input.file) {
-    const encrypted = await encryptAttachment(input.file);
+    const encrypted = await encryptRelayAttachmentFile(input.file);
     const ticket = await relayAttachmentApi.createTicket({
       fileName: input.file.name,
       mimeType: "application/octet-stream",
@@ -565,7 +544,7 @@ export async function sendDirectMessage(input: {
 
     await uploadAttachment(ticket.uploadUrl, encrypted.ciphertext, "application/octet-stream");
     attachment = {
-      attachmentId: ticket.attachmentId,
+      id: ticket.attachmentId,
       fileName: input.file.name,
       mimeType: input.file.type || "application/octet-stream",
       byteLength: input.file.size,
@@ -574,7 +553,6 @@ export async function sendDirectMessage(input: {
       protectionProfile: ticket.protectionProfile,
       previewBlurHash: ticket.previewBlurHash ?? null,
       encryptionMode: ticket.encryptionMode,
-      downloadUrl: ticket.downloadUrl,
       fileKeyB64: encrypted.fileKeyB64,
       fileIvB64: encrypted.fileIvB64,
     };
@@ -587,9 +565,17 @@ export async function sendDirectMessage(input: {
 
   const createdAt = new Date().toISOString();
   const clientMessageId = crypto.randomUUID();
-  const payload: WorkspaceEnvelopePayload = {
+  const payload: EncryptedConversationPayload = {
     version: 1,
-    kind: "web_dm_v1",
+    kind: "ember_conversation_v1",
+    conversationId: input.conversation.id,
+    conversationKind:
+      input.conversation.kind === "direct_message"
+        ? "direct_message"
+        : input.conversation.kind === "room"
+          ? "room"
+          : "group",
+    historyMode: "device_encrypted",
     senderDisplayName: input.senderDisplayName,
     text: trimmedText,
     attachment,
@@ -602,7 +588,7 @@ export async function sendDirectMessage(input: {
     epoch: input.conversation.epoch,
     envelopes: recipientDevices.map((bundle) => ({
       recipientDeviceId: bundle.deviceId,
-      ciphertext: encodeJson(payload),
+      ciphertext: encryptConversationPayload(payload, bundle.bundle.identityKeyB64, registeredBundle.privateKeyB64),
       clientMessageId,
       attachmentIds,
     })),
@@ -617,7 +603,7 @@ export async function sendDirectMessage(input: {
       senderAccountId: session.accountId,
       senderDisplayName: input.senderDisplayName,
       text: trimmedText,
-      attachment,
+      attachment: attachment ? { ...attachment, downloadUrl: "" } : null,
       createdAt,
       clientMessageId,
       status: "sent",
@@ -625,9 +611,23 @@ export async function sendDirectMessage(input: {
   );
 }
 
-export async function readDmAttachmentBlob(attachment: WorkspaceEnvelopeAttachment) {
+export async function sendDirectMessage(input: {
+  conversation: ConversationDetail | ConversationSummary;
+  senderDisplayName: string;
+  text?: string;
+  file?: File | null;
+}) {
+  return sendConversationMessage(input);
+}
+
+export async function readRelayAttachmentBlob(attachment: RelayReadableAttachment) {
+  const attachmentId = attachment.attachmentId ?? attachment.id;
+  if (!attachmentId) {
+    throw new Error("Attachment id is missing.");
+  }
+
   if (attachment.encryptionMode !== "device_encrypted" || !attachment.fileKeyB64 || !attachment.fileIvB64) {
-    const access = await relayAttachmentApi.refreshDownloadUrl(attachment.attachmentId);
+    const access = await relayAttachmentApi.refreshDownloadUrl(attachmentId);
     const response = await fetch(access.downloadUrl);
     if (!response.ok) {
       throw new Error("Unable to fetch attachment bytes.");
@@ -637,24 +637,37 @@ export async function readDmAttachmentBlob(attachment: WorkspaceEnvelopeAttachme
     return new Blob([buffer], { type: attachment.mimeType });
   }
 
-  const access = await relayAttachmentApi.refreshDownloadUrl(attachment.attachmentId);
+  const access = await relayAttachmentApi.refreshDownloadUrl(attachmentId);
   const response = await fetch(access.downloadUrl);
   if (!response.ok) {
     throw new Error("Unable to fetch encrypted attachment bytes.");
   }
 
   const ciphertext = await response.arrayBuffer();
-  const rawKey = decodeBytes(attachment.fileKeyB64);
   const iv = decodeBytes(attachment.fileIvB64);
-  const rawKeyBuffer = toArrayBuffer(rawKey);
-  const ivBuffer = toArrayBuffer(iv);
-  const key = await crypto.subtle.importKey("raw", rawKeyBuffer, "AES-GCM", false, ["decrypt"]);
-  const plaintext = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: new Uint8Array(ivBuffer) },
-    key,
-    ciphertext,
-  );
+  const plaintext =
+    iv.length === 24
+      ? toArrayBuffer(decryptAttachmentBytes(ciphertext, attachment.fileKeyB64, attachment.fileIvB64))
+      : toArrayBuffer(
+          new Uint8Array(
+            await crypto.subtle.decrypt(
+              { name: "AES-GCM", iv: new Uint8Array(toArrayBuffer(iv)) },
+              await crypto.subtle.importKey(
+                "raw",
+                toArrayBuffer(decodeBytes(attachment.fileKeyB64)),
+                "AES-GCM",
+                false,
+                ["decrypt"],
+              ),
+              ciphertext,
+            ),
+          ),
+        );
   return new Blob([plaintext], { type: attachment.mimeType });
+}
+
+export async function readDmAttachmentBlob(attachment: WorkspaceEnvelopeAttachment) {
+  return readRelayAttachmentBlob(attachment);
 }
 
 export async function ensureWorkspaceReady() {

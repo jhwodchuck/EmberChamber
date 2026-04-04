@@ -10,5 +10,9 @@
   },
   "devDependencies": {
     "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "js-sha256": "^0.11.1",
+    "tweetnacl": "^1.0.3"
   }
 }

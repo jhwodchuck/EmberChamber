@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { Buffer } from "node:buffer";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -208,7 +209,7 @@ describe("relay routes", () => {
     });
 
     expect(conversations.find((entry) => entry.id === dm.id)?.historyMode).toBe("device_encrypted");
-    expect(conversations.find((entry) => entry.id === group.id)?.historyMode).toBe("relay_hosted");
+    expect(conversations.find((entry) => entry.id === group.id)?.historyMode).toBe("device_encrypted");
 
     const search = await relayJson<{
       conversations: Array<{ id: string }>;
@@ -275,6 +276,103 @@ describe("relay routes", () => {
       },
     );
 
+    expect(access.attachmentId).toBe(ticket.attachmentId);
+    expect(access.downloadUrl).toContain(`/v1/attachments/download/${ticket.attachmentId}`);
+  });
+
+  it("routes encrypted group attachment delivery through mailbox fanout", async () => {
+    const owner = await bootstrapAccount("group-owner@example.com", "Group owner");
+    const peer = await bootstrapAccount("group-peer@example.com", "Group peer");
+    await updateDisplayName(peer, "Group peer");
+    await registerOpaqueBundle(owner);
+    await registerOpaqueBundle(peer);
+
+    const group = await relayJson<{ id: string; epoch: number; historyMode: string }>("/v1/groups", {
+      method: "POST",
+      headers: authHeaders(owner),
+      body: JSON.stringify({
+        title: "Encrypted group",
+        memberAccountIds: [peer.accountId],
+        memberCap: 6,
+        sensitiveMediaDefault: false,
+      }),
+    });
+    expect(group.historyMode).toBe("device_encrypted");
+
+    const ciphertext = "cipher-group-payload";
+    const ticket = await relayJson<{
+      attachmentId: string;
+      uploadUrl: string;
+      encryptionMode: string;
+    }>("/v1/attachments/ticket", {
+      method: "POST",
+      headers: authHeaders(owner),
+      body: JSON.stringify({
+        fileName: "group.bin",
+        mimeType: "application/octet-stream",
+        encryptionMode: "device_encrypted",
+        ciphertextByteLength: ciphertext.length,
+        ciphertextSha256B64: sha256B64(ciphertext),
+        plaintextByteLength: 11,
+        plaintextSha256B64: sha256B64("plain-group"),
+        conversationId: group.id,
+        conversationEpoch: group.epoch,
+        contentClass: "file",
+        retentionMode: "private_vault",
+        protectionProfile: "standard",
+      }),
+    });
+
+    expect(ticket.encryptionMode).toBe("device_encrypted");
+
+    const upload = await relayFetch(new URL(ticket.uploadUrl).pathname + new URL(ticket.uploadUrl).search, {
+      method: "PUT",
+      body: ciphertext,
+    });
+    expect(upload.status).toBe(200);
+
+    const unsupportedHistoryResponse = await relayFetch(`/v1/groups/${group.id}/messages?limit=20`, {
+      headers: { authorization: `Bearer ${peer.accessToken}` },
+    });
+    expect(unsupportedHistoryResponse.status).toBe(409);
+
+    const peerBundles = await relayJson<Array<{ deviceId: string }>>(
+      `/v1/accounts/${peer.accountId}/device-bundles`,
+      {
+        headers: { authorization: `Bearer ${owner.accessToken}` },
+      },
+    );
+
+    const sendResult = await relayJson<{ acceptedEnvelopeIds: string[] }>("/v1/messages/batch", {
+      method: "POST",
+      headers: authHeaders(owner),
+      body: JSON.stringify({
+        conversationId: group.id,
+        epoch: group.epoch,
+        envelopes: [
+          {
+            recipientDeviceId: peerBundles[0].deviceId,
+            ciphertext: Buffer.from(JSON.stringify({ kind: "ember_conversation_v1" })).toString("base64"),
+            clientMessageId: "group-attachment-message-1",
+            attachmentIds: [ticket.attachmentId],
+          },
+        ],
+      }),
+    });
+    expect(sendResult.acceptedEnvelopeIds).toHaveLength(1);
+
+    const mailboxSync = await relayJson<{ envelopes: Array<{ attachmentIds: string[] }> }>("/v1/mailbox/sync", {
+      headers: { authorization: `Bearer ${peer.accessToken}` },
+    });
+    expect(mailboxSync.envelopes).toHaveLength(1);
+    expect(mailboxSync.envelopes[0]?.attachmentIds).toEqual([ticket.attachmentId]);
+
+    const access = await relayJson<{ attachmentId: string; downloadUrl: string }>(
+      `/v1/attachments/${ticket.attachmentId}/access`,
+      {
+        headers: { authorization: `Bearer ${peer.accessToken}` },
+      },
+    );
     expect(access.attachmentId).toBe(ticket.attachmentId);
     expect(access.downloadUrl).toContain(`/v1/attachments/download/${ticket.attachmentId}`);
   });
