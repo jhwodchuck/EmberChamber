@@ -390,7 +390,8 @@ jobs:
             -sdk iphonesimulator \
             -derivedDataPath apps/mobile/ios/build \
             -quiet \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            BUNDLE_REACT_NATIVE_CODE_AND_IMAGES=YES
 
       - name: Locate built simulator app
         run: |
