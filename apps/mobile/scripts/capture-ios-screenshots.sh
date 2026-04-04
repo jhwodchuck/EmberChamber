@@ -12,7 +12,7 @@ if [[ ! -d "$APP_PATH" ]]; then
   exit 1
 fi
 
-RUNTIME_ID="$({ xcrun simctl list runtimes available -j || true; } | python3 - <<'PY'
+RUNTIME_ID="$({ xcrun simctl list runtimes available -j || true; } | python3 -c '
 import json
 import sys
 
@@ -20,15 +20,14 @@ data = json.load(sys.stdin)
 runtimes = [r for r in data.get("runtimes", []) if r.get("isAvailable") and "iOS" in r.get("name", "")]
 runtimes.sort(key=lambda r: r.get("version", "0"), reverse=True)
 print(runtimes[0]["identifier"] if runtimes else "")
-PY
-)"
+')"
 
 if [[ -z "$RUNTIME_ID" ]]; then
   echo "Unable to find an available iOS simulator runtime" >&2
   exit 1
 fi
 
-DEVICE_TYPE_ID="$({ xcrun simctl list devicetypes -j || true; } | python3 - <<'PY'
+DEVICE_TYPE_ID="$({ xcrun simctl list devicetypes -j || true; } | python3 -c '
 import json
 import sys
 
@@ -42,8 +41,7 @@ for device in data.get("devicetypes", []):
         print(device["identifier"])
         raise SystemExit
 print("")
-PY
-)"
+')"
 
 if [[ -z "$DEVICE_TYPE_ID" ]]; then
   echo "Unable to find an iPhone simulator device type" >&2
