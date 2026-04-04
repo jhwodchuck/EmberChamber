@@ -332,14 +332,9 @@ jobs:
         run: |
           XCODE_VERSION=$(xcodebuild -version | awk 'NR==1 {print $2}')
           PODFILE_HASH=$(shasum apps/mobile/ios/Podfile package-lock.json | shasum | awk '{print $1}')
-          LOCK_HASH="missing"
-          if [[ -f apps/mobile/ios/Podfile.lock ]]; then
-            LOCK_HASH=$(shasum apps/mobile/ios/Podfile.lock | awk '{print $1}')
-          fi
           echo "xcode-version=$XCODE_VERSION" >> "$GITHUB_OUTPUT"
-          echo "restore-key=cocoapods-${{ runner.os }}-${{ runner.arch }}-xcode-$XCODE_VERSION-podfile-$PODFILE_HASH" >> "$GITHUB_OUTPUT"
-          echo "lock-prefix=cocoapods-${{ runner.os }}-${{ runner.arch }}-xcode-$XCODE_VERSION-lock-" >> "$GITHUB_OUTPUT"
-          echo "initial-lock-hash=$LOCK_HASH" >> "$GITHUB_OUTPUT"
+          echo "key=cocoapods-${{ runner.os }}-${{ runner.arch }}-xcode-$XCODE_VERSION-podfile-$PODFILE_HASH" >> "$GITHUB_OUTPUT"
+          echo "prefix=cocoapods-${{ runner.os }}-${{ runner.arch }}-xcode-$XCODE_VERSION-" >> "$GITHUB_OUTPUT"
 
       - name: Restore CocoaPods cache
         id: cocoapods-cache-restore
@@ -349,22 +344,13 @@ jobs:
             apps/mobile/ios/Pods
             apps/mobile/ios/Podfile.lock
             ~/Library/Caches/CocoaPods
-          key: ${{ steps.cocoapods-cache-key.outputs.restore-key }}
+          key: ${{ steps.cocoapods-cache-key.outputs.key }}
           restore-keys: |
-            ${{ steps.cocoapods-cache-key.outputs.lock-prefix }}
-            cocoapods-${{ runner.os }}-${{ runner.arch }}-xcode-${{ steps.cocoapods-cache-key.outputs.xcode-version }}-
+            ${{ steps.cocoapods-cache-key.outputs.prefix }}
 
       - name: Install CocoaPods
         run: pod install
         working-directory: apps/mobile/ios
-
-      - name: Compute CocoaPods cache save key
-        if: steps.cocoapods-cache-restore.outputs.cache-hit != 'true'
-        id: cocoapods-cache-save-key
-        shell: bash
-        run: |
-          LOCK_HASH=$(shasum apps/mobile/ios/Podfile.lock | awk '{print $1}')
-          echo "key=cocoapods-${{ runner.os }}-${{ runner.arch }}-xcode-${{ steps.cocoapods-cache-key.outputs.xcode-version }}-lock-$LOCK_HASH" >> "$GITHUB_OUTPUT"
 
       - name: Save CocoaPods cache
         if: steps.cocoapods-cache-restore.outputs.cache-hit != 'true'
@@ -374,7 +360,7 @@ jobs:
             apps/mobile/ios/Pods
             apps/mobile/ios/Podfile.lock
             ~/Library/Caches/CocoaPods
-          key: ${{ steps.cocoapods-cache-save-key.outputs.key }}
+          key: ${{ steps.cocoapods-cache-key.outputs.key }}
 
       - name: Detect Xcode workspace and scheme
         run: |
