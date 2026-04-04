@@ -1,4 +1,5 @@
 import { Platform } from "react-native";
+import { createStoredDeviceBundle } from "@emberchamber/protocol";
 import type { InviteReference } from "../types";
 
 export function isValidEmail(value: string) {
@@ -119,12 +120,7 @@ export function deviceBundleStorageKey(deviceId: string) {
 }
 
 export function createDeviceBundleScaffold() {
-  return {
-    identityKeyB64: randomBase64(32),
-    signedPrekeyB64: randomBase64(32),
-    signedPrekeySignatureB64: randomBase64(64),
-    oneTimePrekeysB64: Array.from({ length: 12 }, () => randomBase64(32)),
-  };
+  return createStoredDeviceBundle();
 }
 
 export function isDefaultDisplayName(value: string) {

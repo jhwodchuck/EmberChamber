@@ -21,8 +21,8 @@
         --warning: #ffd28b;
         --error: #fecdd3;
         --success: #98efc5;
-        --shadow: 0 28px 70px rgba(0, 0, 0, 0.34);
-        font-family: "Inter", system-ui, sans-serif;
+        --shadow: 0 14px 34px rgba(0, 0, 0, 0.24);
+        font-family: "Ubuntu", "Cantarell", "Segoe UI", system-ui, sans-serif;
         background: var(--bg);
         color: var(--text);
       }
@@ -39,10 +39,9 @@
 
       body {
         background:
-          radial-gradient(circle at top, rgba(255, 191, 146, 0.16), transparent 24%),
-          radial-gradient(circle at 15% 18%, rgba(234, 111, 63, 0.18), transparent 18%),
-          radial-gradient(circle at 85% 16%, rgba(255, 205, 146, 0.08), transparent 20%),
-          linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 35%),
+          radial-gradient(circle at top, rgba(255, 191, 146, 0.12), transparent 20%),
+          radial-gradient(circle at 12% 14%, rgba(234, 111, 63, 0.1), transparent 14%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.015), transparent 24%),
           var(--bg);
       }
 
@@ -63,7 +62,7 @@
 
       .shell {
         min-height: 100vh;
-        padding: 24px;
+        padding: 14px;
       }
 
       .auth-layout,
@@ -77,8 +76,8 @@
       }
 
       .workspace-layout {
-        grid-template-columns: 18rem minmax(0, 1fr);
-        align-items: start;
+        grid-template-columns: 15.5rem minmax(0, 1fr);
+        align-items: stretch;
       }
 
       .panel,
@@ -87,12 +86,12 @@
         background:
           linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02)),
           var(--panel);
-        border-radius: 24px;
+        border-radius: 18px;
         box-shadow: var(--shadow);
       }
 
       .panel {
-        padding: 24px;
+        padding: 16px;
       }
 
       .panel-strong {
@@ -161,17 +160,17 @@
       }
 
       h1 {
-        max-width: 12ch;
-        font-size: clamp(2.6rem, 5vw, 4.8rem);
-        line-height: 0.92;
-        letter-spacing: -0.05em;
-        font-family: Georgia, "Times New Roman", serif;
+        max-width: 16ch;
+        font-size: clamp(2rem, 4vw, 2.8rem);
+        line-height: 1;
+        letter-spacing: -0.03em;
+        font-family: inherit;
       }
 
       h2 {
-        font-size: 1.45rem;
-        line-height: 1.15;
-        font-family: Georgia, "Times New Roman", serif;
+        font-size: 1.2rem;
+        line-height: 1.2;
+        font-family: inherit;
       }
 
       h3 {
@@ -235,9 +234,9 @@
 
       .sidebar {
         position: sticky;
-        top: 24px;
+        top: 14px;
         display: grid;
-        gap: 16px;
+        gap: 12px;
       }
 
       .sidebar-nav {
@@ -251,8 +250,8 @@
       .danger-button,
       .secondary-button {
         appearance: none;
-        border-radius: 16px;
-        padding: 13px 15px;
+        border-radius: 12px;
+        padding: 11px 13px;
         border: 1px solid transparent;
         transition:
           background-color 120ms ease,
@@ -338,11 +337,11 @@
       select,
       textarea {
         width: 100%;
-        border-radius: 16px;
+        border-radius: 12px;
         border: 1px solid rgba(255, 255, 255, 0.1);
         background: rgba(255, 255, 255, 0.03);
         color: var(--text);
-        padding: 14px 15px;
+        padding: 12px 13px;
         outline: none;
       }
 
@@ -461,10 +460,10 @@
       .group-card,
       .session-card,
       .invite-card {
-        border-radius: 20px;
+        border-radius: 16px;
         border: 1px solid var(--line);
         background: rgba(255, 255, 255, 0.04);
-        padding: 18px;
+        padding: 16px;
       }
 
       .group-title-row {
@@ -548,10 +547,10 @@
       }
 
       .hero-summary h2 {
-        font-size: clamp(2rem, 4vw, 3.4rem);
-        line-height: 0.96;
-        letter-spacing: -0.04em;
-        max-width: 14ch;
+        font-size: 1.35rem;
+        line-height: 1.15;
+        letter-spacing: -0.02em;
+        max-width: 18ch;
       }
 
       .secondary-meta {
@@ -570,10 +569,10 @@
       }
 
       .thread-card {
-        border-radius: 24px;
+        border-radius: 18px;
         border: 1px solid var(--line);
         background: rgba(17, 11, 12, 0.92);
-        padding: 18px;
+        padding: 16px;
       }
 
       .thread-stream {
@@ -601,7 +600,7 @@
       }
 
       .message-bubble {
-        border-radius: 22px;
+        border-radius: 16px;
         border: 1px solid var(--line);
         background: rgba(255, 255, 255, 0.04);
         padding: 14px;
@@ -753,12 +752,17 @@
   <body>
     <div id="app-root" class="shell"></div>
 
+    <script src="./vendor/tweetnacl.min.js"></script>
     <script>
       const DEFAULT_RELAY_URL = "https://relay.emberchamber.com";
       const LOCAL_RELAY_URL = "http://127.0.0.1:8787";
       const LOCAL_RELAY_TEST_INVITE_TOKEN = "ubuntu-local-test-invite";
-      const storageKeys = {
+      const LOCAL_RELAY_AUTOCONNECT_MARKER = "emberchamber-local-relay";
+      const localStorageKeys = {
         relayUrl: "emberchamber.relay-url.override",
+        mailboxMessagesPrefix: "emberchamber.desktop.mailbox-thread.v1.",
+      };
+      const legacyStorageKeys = {
         session: "emberchamber.desktop.relay.session.v1",
         email: "emberchamber.auth.v1.email",
         inviteToken: "emberchamber.auth.v1.inviteToken",
@@ -767,11 +771,14 @@
         pendingChallenge: "emberchamber.desktop.pending-challenge.v1",
         createdInvites: "emberchamber.desktop.created-invites.v1",
       };
+      const nativeDesktop = typeof globalThis.__TAURI_INTERNALS__?.invoke === "function";
 
       const timeFormatter = new Intl.DateTimeFormat(undefined, {
         dateStyle: "medium",
         timeStyle: "short",
       });
+      const utf8Encoder = new TextEncoder();
+      const utf8Decoder = new TextDecoder();
 
       const root = document.getElementById("app-root");
 
@@ -779,9 +786,9 @@
         activeView: "thread",
         activeGroupId: null,
         relayUrl: readRelayUrl(),
-        session: readJson(storageKeys.session, null),
-        pendingChallenge: readJson(storageKeys.pendingChallenge, null),
-        createdInvites: readJson(storageKeys.createdInvites, {}),
+        session: null,
+        pendingChallenge: null,
+        createdInvites: {},
         authStatus: null,
         workspaceStatus: null,
         groupsStatus: null,
@@ -789,7 +796,10 @@
         settingsStatus: null,
         sessionsStatus: null,
         threadStatus: null,
+        secureStorageMode: nativeDesktop ? "loading" : "browser",
+        secureStorageDetail: nativeDesktop ? "Loading desktop state..." : null,
         busyAction: "",
+        isHydrating: true,
         isLoadingWorkspace: false,
         isLoadingThread: false,
         me: null,
@@ -798,12 +808,15 @@
         groups: [],
         groupInvites: {},
         threadMessages: [],
+        deviceBundle: null,
+        mailboxCursor: "",
         revealedMessages: {},
+        attachmentMedia: {},
         authForm: {
-          email: readText(storageKeys.email),
-          inviteToken: readText(storageKeys.inviteToken),
-          groupInviteReference: readText(storageKeys.groupInviteReference),
-          deviceLabel: readText(storageKeys.deviceLabel) || suggestDesktopLabel(),
+          email: "",
+          inviteToken: "",
+          groupInviteReference: "",
+          deviceLabel: suggestDesktopLabel(),
           ageConfirmed18: false,
           completionInput: readCompletionTokenFromLocation(),
         },
@@ -838,15 +851,28 @@
         },
       };
 
-      function readText(key) {
+      let secureStatePersistTimer = 0;
+      const deviceBundleDirectoryCache = new Map();
+      let mailboxSocket = null;
+      let mailboxReconnectTimer = 0;
+
+      function readLocalText(key) {
         return globalThis.localStorage?.getItem(key) || "";
       }
 
-      function writeText(key, value) {
+      function writeLocalText(key, value) {
         globalThis.localStorage?.setItem(key, value);
       }
 
-      function readJson(key, fallback) {
+      function removeLocalKey(key) {
+        globalThis.localStorage?.removeItem(key);
+      }
+
+      function readLegacyText(key) {
+        return readLocalText(key);
+      }
+
+      function readLegacyJson(key, fallback) {
         const raw = globalThis.localStorage?.getItem(key);
         if (!raw) {
           return fallback;
@@ -860,22 +886,232 @@
         }
       }
 
-      function writeJson(key, value) {
+      function writeLegacyJson(key, value) {
         globalThis.localStorage?.setItem(key, JSON.stringify(value));
       }
 
+      function readRelayUrl() {
+        const raw = readLocalText(localStorageKeys.relayUrl);
+        return normalizeRelayUrl(raw || DEFAULT_RELAY_URL);
+      }
+
+      function readLegacySecureState() {
+        return {
+          session: readLegacyJson(legacyStorageKeys.session, null),
+          pendingChallenge: readLegacyJson(legacyStorageKeys.pendingChallenge, null),
+          createdInvites: readLegacyJson(legacyStorageKeys.createdInvites, {}),
+          email: readLegacyText(legacyStorageKeys.email),
+          inviteToken: readLegacyText(legacyStorageKeys.inviteToken),
+          groupInviteReference: readLegacyText(legacyStorageKeys.groupInviteReference),
+          deviceBundle: readLegacyJson("emberchamber.desktop.device-bundle.v1", null),
+          mailboxCursor: readLegacyText("emberchamber.desktop.mailbox-cursor.v1"),
+          deviceLabel: readLegacyText(legacyStorageKeys.deviceLabel),
+        };
+      }
+
+      function clearLegacySecureState() {
+        Object.values(legacyStorageKeys).forEach(removeLocalKey);
+        removeLocalKey("emberchamber.desktop.device-bundle.v1");
+        removeLocalKey("emberchamber.desktop.mailbox-cursor.v1");
+      }
+
+      function hasPersistedSecureState(payload) {
+        if (!payload || typeof payload !== "object") {
+          return false;
+        }
+
+        return Boolean(
+          payload.session ||
+            payload.pendingChallenge ||
+            (payload.createdInvites && Object.keys(payload.createdInvites).length > 0) ||
+            payload.email ||
+            payload.inviteToken ||
+            payload.groupInviteReference ||
+            payload.deviceBundle ||
+            payload.mailboxCursor ||
+            payload.deviceLabel
+        );
+      }
+
+      function applyPersistedSecureState(payload = {}) {
+        state.session = payload.session || null;
+        state.pendingChallenge = payload.pendingChallenge || null;
+        state.createdInvites =
+          payload.createdInvites && typeof payload.createdInvites === "object" ? payload.createdInvites : {};
+        state.authForm.email = typeof payload.email === "string" ? payload.email : "";
+        state.authForm.inviteToken = typeof payload.inviteToken === "string" ? payload.inviteToken : "";
+        state.authForm.groupInviteReference =
+          typeof payload.groupInviteReference === "string" ? payload.groupInviteReference : "";
+        state.deviceBundle =
+          payload.deviceBundle && typeof payload.deviceBundle === "object" ? payload.deviceBundle : null;
+        state.mailboxCursor = typeof payload.mailboxCursor === "string" ? payload.mailboxCursor : "";
+        state.authForm.deviceLabel =
+          typeof payload.deviceLabel === "string" && payload.deviceLabel.trim()
+            ? payload.deviceLabel
+            : suggestDesktopLabel();
+      }
+
+      function currentSecureStatePayload() {
+        return {
+          session: state.session,
+          pendingChallenge: state.pendingChallenge,
+          createdInvites: state.createdInvites,
+          email: state.authForm.email.trim(),
+          inviteToken: state.authForm.inviteToken.trim(),
+          groupInviteReference: state.authForm.groupInviteReference.trim(),
+          deviceBundle: state.deviceBundle,
+          mailboxCursor: state.mailboxCursor,
+          deviceLabel: state.authForm.deviceLabel.trim() || suggestDesktopLabel(),
+        };
+      }
+
+      function updateSecureStorageStatus(snapshot) {
+        if (!snapshot || typeof snapshot !== "object") {
+          return;
+        }
+
+        state.secureStorageMode = snapshot.storageMode || state.secureStorageMode;
+        state.secureStorageDetail = snapshot.detail || snapshot.storagePath || null;
+      }
+
+      async function desktopInvoke(command, payload = {}) {
+        const invoke = globalThis.__TAURI_INTERNALS__?.invoke;
+        if (typeof invoke !== "function") {
+          throw new Error("Desktop IPC is unavailable.");
+        }
+        return invoke(command, payload);
+      }
+
+      function writeBrowserSecureState(payload) {
+        writeLegacyJson(legacyStorageKeys.session, payload.session);
+        writeLegacyJson(legacyStorageKeys.pendingChallenge, payload.pendingChallenge);
+        writeLegacyJson(legacyStorageKeys.createdInvites, payload.createdInvites || {});
+        writeLocalText(legacyStorageKeys.email, payload.email || "");
+        writeLocalText(legacyStorageKeys.inviteToken, payload.inviteToken || "");
+        writeLocalText(legacyStorageKeys.groupInviteReference, payload.groupInviteReference || "");
+        writeLegacyJson("emberchamber.desktop.device-bundle.v1", payload.deviceBundle || null);
+        writeLocalText("emberchamber.desktop.mailbox-cursor.v1", payload.mailboxCursor || "");
+        writeLocalText(legacyStorageKeys.deviceLabel, payload.deviceLabel || suggestDesktopLabel());
+      }
+
+      async function loadPersistedSecureState() {
+        const legacyState = readLegacySecureState();
+
+        if (!nativeDesktop) {
+          applyPersistedSecureState(legacyState);
+          state.secureStorageMode = "browser";
+          state.secureStorageDetail = null;
+          return;
+        }
+
+        try {
+          const snapshot = await desktopInvoke("load_secure_state");
+          updateSecureStorageStatus(snapshot);
+
+          if (hasPersistedSecureState(snapshot?.state)) {
+            applyPersistedSecureState(snapshot.state);
+            clearLegacySecureState();
+            return;
+          }
+
+          if (hasPersistedSecureState(legacyState)) {
+            applyPersistedSecureState(legacyState);
+            const migrated = await desktopInvoke("save_secure_state", {
+              state: currentSecureStatePayload(),
+            });
+            updateSecureStorageStatus(migrated);
+            clearLegacySecureState();
+            return;
+          }
+
+          applyPersistedSecureState(snapshot?.state || {});
+          clearLegacySecureState();
+        } catch (error) {
+          applyPersistedSecureState(legacyState);
+          state.secureStorageMode = "browser";
+          state.secureStorageDetail =
+            error instanceof Error ? error.message : "Desktop secure storage is unavailable.";
+        }
+      }
+
+      async function persistSecureStateNow() {
+        const payload = currentSecureStatePayload();
+
+        if (!nativeDesktop) {
+          writeBrowserSecureState(payload);
+          return;
+        }
+
+        try {
+          const snapshot = await desktopInvoke("save_secure_state", { state: payload });
+          updateSecureStorageStatus(snapshot);
+          clearLegacySecureState();
+        } catch (error) {
+          writeBrowserSecureState(payload);
+          state.secureStorageMode = "browser";
+          state.secureStorageDetail =
+            error instanceof Error ? error.message : "Desktop secure storage is unavailable.";
+        }
+      }
+
+      function scheduleSecureStatePersist() {
+        if (secureStatePersistTimer) {
+          globalThis.clearTimeout(secureStatePersistTimer);
+        }
+
+        secureStatePersistTimer = globalThis.setTimeout(() => {
+          secureStatePersistTimer = 0;
+          void persistSecureStateNow();
+        }, 180);
+      }
+
+      async function clearPersistedSecureState() {
+        if (secureStatePersistTimer) {
+          globalThis.clearTimeout(secureStatePersistTimer);
+          secureStatePersistTimer = 0;
+        }
+
+        if (!nativeDesktop) {
+          clearLegacySecureState();
+          return;
+        }
+
+        try {
+          const snapshot = await desktopInvoke("clear_secure_state");
+          updateSecureStorageStatus(snapshot);
+          clearLegacySecureState();
+        } catch (error) {
+          clearLegacySecureState();
+          state.secureStorageMode = "browser";
+          state.secureStorageDetail =
+            error instanceof Error ? error.message : "Desktop secure storage is unavailable.";
+        }
+      }
+
       function clearStoredSession() {
-        globalThis.localStorage?.removeItem(storageKeys.session);
+        state.session = null;
       }
 
       function clearPendingChallenge() {
-        globalThis.localStorage?.removeItem(storageKeys.pendingChallenge);
         state.pendingChallenge = null;
       }
 
-      function readRelayUrl() {
-        const raw = readText(storageKeys.relayUrl);
-        return normalizeRelayUrl(raw || DEFAULT_RELAY_URL);
+      async function setNativeContentProtection(enabled) {
+        if (!nativeDesktop) {
+          return null;
+        }
+
+        try {
+          await desktopInvoke("plugin:window|set_content_protected", {
+            label: "main",
+            value: Boolean(enabled),
+          });
+          return null;
+        } catch (error) {
+          return error instanceof Error
+            ? error.message
+            : "The native window could not update content protection.";
+        }
       }
 
       function normalizeRelayUrl(value) {
@@ -892,7 +1128,7 @@
       }
 
       function hasStoredRelayOverride() {
-        return Boolean(readText(storageKeys.relayUrl).trim());
+        return Boolean(readLocalText(localStorageKeys.relayUrl).trim());
       }
 
       async function maybeAdoptLocalRelay() {
@@ -906,12 +1142,21 @@
             return;
           }
 
+          const body = (await response.json().catch(() => null)) || null;
+          if (
+            !body ||
+            body.relay !== "cloudflare-workers" ||
+            body.localAutoconnectMarker !== LOCAL_RELAY_AUTOCONNECT_MARKER
+          ) {
+            return;
+          }
+
           state.relayUrl = LOCAL_RELAY_URL;
-          writeText(storageKeys.relayUrl, state.relayUrl);
+          writeLocalText(localStorageKeys.relayUrl, state.relayUrl);
 
           if (!state.authForm.groupInviteReference.trim() && !state.authForm.inviteToken.trim()) {
             state.authForm.inviteToken = LOCAL_RELAY_TEST_INVITE_TOKEN;
-            writeText(storageKeys.inviteToken, state.authForm.inviteToken);
+            await persistSecureStateNow();
           }
 
           const status = createStatus(
@@ -977,6 +1222,177 @@
         }
 
         return timeFormatter.format(parsed);
+      }
+
+      function encodeBytes(bytes) {
+        let binary = "";
+        const chunkSize = 0x8000;
+
+        for (let index = 0; index < bytes.length; index += chunkSize) {
+          binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+        }
+
+        return btoa(binary);
+      }
+
+      function decodeBytes(value) {
+        const binary = atob(value);
+        const bytes = new Uint8Array(binary.length);
+
+        for (let index = 0; index < binary.length; index += 1) {
+          bytes[index] = binary.charCodeAt(index);
+        }
+
+        return bytes;
+      }
+
+      function toArrayBuffer(bytes) {
+        return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+      }
+
+      async function sha256B64(value) {
+        const digest = await crypto.subtle.digest("SHA-256", value);
+        return encodeBytes(new Uint8Array(digest));
+      }
+
+      function createStoredDeviceBundle() {
+        const keyPair = nacl.box.keyPair();
+        const publicKeyB64 = encodeBytes(keyPair.publicKey);
+        return {
+          identityKeyB64: publicKeyB64,
+          signedPrekeyB64: publicKeyB64,
+          signedPrekeySignatureB64: publicKeyB64,
+          oneTimePrekeysB64: [],
+          privateKeyB64: encodeBytes(keyPair.secretKey),
+        };
+      }
+
+      function toPublicPrekeyBundle(bundle) {
+        return {
+          identityKeyB64: bundle.identityKeyB64,
+          signedPrekeyB64: bundle.signedPrekeyB64,
+          signedPrekeySignatureB64: bundle.signedPrekeySignatureB64,
+          oneTimePrekeysB64: Array.isArray(bundle.oneTimePrekeysB64) ? bundle.oneTimePrekeysB64 : [],
+        };
+      }
+
+      function readCachedThreadMessages(conversationId) {
+        try {
+          const raw = globalThis.localStorage?.getItem(`${localStorageKeys.mailboxMessagesPrefix}${conversationId}`);
+          if (!raw) {
+            return [];
+          }
+
+          const parsed = JSON.parse(raw);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          globalThis.localStorage?.removeItem(`${localStorageKeys.mailboxMessagesPrefix}${conversationId}`);
+          return [];
+        }
+      }
+
+      function writeCachedThreadMessages(conversationId, messages) {
+        const trimmed = messages
+          .slice()
+          .sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime())
+          .slice(-500);
+        globalThis.localStorage?.setItem(
+          `${localStorageKeys.mailboxMessagesPrefix}${conversationId}`,
+          JSON.stringify(trimmed)
+        );
+      }
+
+      function clearCachedThreadMessages() {
+        const storage = globalThis.localStorage;
+        if (!storage) {
+          return;
+        }
+
+        const keysToRemove = [];
+        for (let index = 0; index < storage.length; index += 1) {
+          const key = storage.key(index);
+          if (key && key.startsWith(localStorageKeys.mailboxMessagesPrefix)) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach((key) => storage.removeItem(key));
+      }
+
+      function scheduleRenderSoon() {
+        globalThis.setTimeout(() => {
+          render();
+        }, 0);
+      }
+
+      async function encryptThreadAttachment(file) {
+        const plaintext = await file.arrayBuffer();
+        const rawKey = nacl.randomBytes(nacl.secretbox.keyLength);
+        const iv = nacl.randomBytes(nacl.secretbox.nonceLength);
+        const ciphertext = nacl.secretbox(new Uint8Array(plaintext), iv, rawKey);
+
+        return {
+          plaintext,
+          ciphertext: toArrayBuffer(ciphertext),
+          plaintextSha256B64: await sha256B64(plaintext),
+          ciphertextSha256B64: await sha256B64(toArrayBuffer(ciphertext)),
+          fileKeyB64: encodeBytes(rawKey),
+          fileIvB64: encodeBytes(iv),
+        };
+      }
+
+      async function decryptThreadAttachment(ciphertext, attachment) {
+        if (!attachment.fileKeyB64 || !attachment.fileIvB64) {
+          throw new Error("Attachment key material is missing.");
+        }
+
+        const rawKey = decodeBytes(attachment.fileKeyB64);
+        const iv = decodeBytes(attachment.fileIvB64);
+        if (iv.length === nacl.secretbox.nonceLength) {
+          const plaintext = nacl.secretbox.open(new Uint8Array(ciphertext), iv, rawKey);
+          if (!plaintext) {
+            throw new Error("Attachment ciphertext could not be opened.");
+          }
+          return toArrayBuffer(plaintext);
+        }
+
+        const key = await crypto.subtle.importKey("raw", toArrayBuffer(rawKey), "AES-GCM", false, ["decrypt"]);
+        return crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
+      }
+
+      function encryptConversationPayload(payload, recipientIdentityKeyB64, senderPrivateKeyB64) {
+        const nonce = nacl.randomBytes(nacl.box.nonceLength);
+        const ciphertext = nacl.box(
+          utf8Encoder.encode(JSON.stringify(payload)),
+          nonce,
+          decodeBytes(recipientIdentityKeyB64),
+          decodeBytes(senderPrivateKeyB64)
+        );
+
+        return encodeBytes(
+          utf8Encoder.encode(
+            JSON.stringify({
+              version: 1,
+              nonceB64: encodeBytes(nonce),
+              boxB64: encodeBytes(ciphertext),
+            })
+          )
+        );
+      }
+
+      function decryptConversationPayload(ciphertext, senderIdentityKeyB64, recipientPrivateKeyB64) {
+        const envelope = JSON.parse(utf8Decoder.decode(decodeBytes(ciphertext)));
+        const plaintext = nacl.box.open(
+          decodeBytes(envelope.boxB64),
+          decodeBytes(envelope.nonceB64),
+          decodeBytes(senderIdentityKeyB64),
+          decodeBytes(recipientPrivateKeyB64)
+        );
+
+        if (!plaintext) {
+          throw new Error("Conversation envelope could not be opened.");
+        }
+
+        return JSON.parse(utf8Decoder.decode(plaintext));
       }
 
       function isBusy(action) {
@@ -1072,7 +1488,7 @@
           ...state.createdInvites,
           [groupId]: next,
         };
-        writeJson(storageKeys.createdInvites, state.createdInvites);
+        void persistSecureStateNow();
       }
 
       function cachedInvite(groupId, inviteId) {
@@ -1119,6 +1535,171 @@
         return state.groups.find((group) => group.id === state.activeGroupId) || null;
       }
 
+      async function ensureDesktopDeviceBundle() {
+        if (!state.session) {
+          throw new Error("Missing relay session");
+        }
+
+        if (state.deviceBundle?.privateKeyB64) {
+          return state.deviceBundle;
+        }
+
+        const bundle = createStoredDeviceBundle();
+        await relayFetch("/v1/devices/register", {
+          method: "POST",
+          body: JSON.stringify(toPublicPrekeyBundle(bundle)),
+        });
+        state.deviceBundle = bundle;
+        await persistSecureStateNow();
+        return bundle;
+      }
+
+      async function listDeviceBundlesForAccount(accountId) {
+        if (deviceBundleDirectoryCache.has(accountId)) {
+          return deviceBundleDirectoryCache.get(accountId);
+        }
+
+        const request = relayFetch(`/v1/accounts/${accountId}/device-bundles`).catch((error) => {
+          deviceBundleDirectoryCache.delete(accountId);
+          throw error;
+        });
+        deviceBundleDirectoryCache.set(accountId, request);
+        return request;
+      }
+
+      async function syncEncryptedMailbox() {
+        if (!state.session) {
+          return { receivedConversationIds: [] };
+        }
+
+        const localBundle = await ensureDesktopDeviceBundle();
+        const sync = await relayFetch(
+          `/v1/mailbox/sync?after=${encodeURIComponent(state.mailboxCursor || "")}&limit=${encodeURIComponent("100")}`
+        );
+        const receivedConversationIds = new Set();
+        const updates = new Map();
+        const ackEnvelopeIds = [];
+
+        for (const envelope of sync.envelopes || []) {
+          try {
+            const senderBundles = await listDeviceBundlesForAccount(envelope.senderAccountId);
+            const senderBundle = senderBundles.find((entry) => entry.deviceId === envelope.senderDeviceId);
+            if (!senderBundle) {
+              continue;
+            }
+
+            const payload = decryptConversationPayload(
+              envelope.ciphertext,
+              senderBundle.bundle.identityKeyB64,
+              localBundle.privateKeyB64
+            );
+            if (!payload || payload.kind !== "ember_conversation_v1") {
+              continue;
+            }
+
+            const existing = updates.get(envelope.conversationId) || readCachedThreadMessages(envelope.conversationId);
+            const message = {
+              id: `${envelope.envelopeId}:${payload.clientMessageId}`,
+              conversationId: envelope.conversationId,
+              historyMode: "device_encrypted",
+              senderAccountId: envelope.senderAccountId,
+              senderDisplayName: payload.senderDisplayName,
+              kind: payload.attachment ? "media" : "text",
+              text: payload.text,
+              attachment: payload.attachment
+                ? {
+                    ...payload.attachment,
+                    downloadUrl: "",
+                  }
+                : null,
+              createdAt: payload.createdAt,
+            };
+            const merged = existing
+              .filter((entry) => entry.id !== message.id)
+              .concat(message)
+              .sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime());
+
+            updates.set(envelope.conversationId, merged);
+            ackEnvelopeIds.push(envelope.envelopeId);
+            receivedConversationIds.add(envelope.conversationId);
+          } catch {
+            // Ignore envelopes that this desktop cannot open.
+          }
+        }
+
+        updates.forEach((messages, conversationId) => {
+          writeCachedThreadMessages(conversationId, messages);
+        });
+
+        if (sync.cursor?.lastSeenEnvelopeId) {
+          state.mailboxCursor = sync.cursor.lastSeenEnvelopeId;
+          await persistSecureStateNow();
+        }
+
+        if (ackEnvelopeIds.length > 0) {
+          await relayFetch("/v1/mailbox/ack", {
+            method: "POST",
+            body: JSON.stringify({ envelopeIds: ackEnvelopeIds }),
+          });
+        }
+
+        if (state.activeGroupId && receivedConversationIds.has(state.activeGroupId)) {
+          state.threadMessages = readCachedThreadMessages(state.activeGroupId);
+          clearThreadAttachmentMedia();
+          render();
+        }
+
+        return { receivedConversationIds: Array.from(receivedConversationIds) };
+      }
+
+      function stopMailboxSocket() {
+        if (mailboxReconnectTimer) {
+          globalThis.clearTimeout(mailboxReconnectTimer);
+          mailboxReconnectTimer = 0;
+        }
+
+        if (mailboxSocket) {
+          try {
+            mailboxSocket.close();
+          } catch {
+            // Ignore socket close failures.
+          }
+          mailboxSocket = null;
+        }
+      }
+
+      async function connectMailboxSocket() {
+        stopMailboxSocket();
+        if (!state.session?.accessToken) {
+          return;
+        }
+
+        const wsUrl = `${state.relayUrl.replace(/^http/, "ws")}/v1/mailbox/ws?token=${encodeURIComponent(
+          state.session.accessToken
+        )}`;
+        mailboxSocket = new WebSocket(wsUrl);
+        mailboxSocket.onmessage = () => {
+          void syncEncryptedMailbox().catch(() => undefined);
+        };
+        mailboxSocket.onclose = () => {
+          mailboxSocket = null;
+          if (!state.session) {
+            return;
+          }
+          mailboxReconnectTimer = globalThis.setTimeout(() => {
+            mailboxReconnectTimer = 0;
+            void connectMailboxSocket();
+          }, 1500);
+        };
+        mailboxSocket.onerror = () => {
+          try {
+            mailboxSocket?.close();
+          } catch {
+            // Ignore close failures.
+          }
+        };
+      }
+
       function viewerIdentityLabel() {
         if (state.me?.displayName) {
           return state.me.displayName;
@@ -1162,10 +1743,105 @@
         return "file";
       }
 
+      function clearThreadAttachmentMedia() {
+        Object.values(state.attachmentMedia).forEach((entry) => {
+          if (entry?.objectUrl) {
+            revokePreviewUrl(entry.objectUrl);
+          }
+        });
+        state.attachmentMedia = {};
+      }
+
+      async function fetchThreadAttachmentArrayBuffer(attachment) {
+        let downloadUrl = attachment.downloadUrl;
+        let response =
+          downloadUrl
+            ? await fetch(downloadUrl, { referrerPolicy: "no-referrer" }).catch(() => new Response(null, { status: 599 }))
+            : new Response(null, { status: 598 });
+
+        if (!response.ok) {
+          const access = await relayFetch(`/v1/attachments/${attachment.id}/access`);
+          attachment.downloadUrl = access.downloadUrl;
+          downloadUrl = access.downloadUrl;
+          response = await fetch(downloadUrl, { referrerPolicy: "no-referrer" });
+        }
+
+        if (!response.ok) {
+          throw new Error("Unable to fetch attachment bytes.");
+        }
+
+        return response.arrayBuffer();
+      }
+
+      async function readThreadAttachmentBlob(attachment) {
+        const buffer = await fetchThreadAttachmentArrayBuffer(attachment);
+        if (attachment.encryptionMode !== "device_encrypted") {
+          return new Blob([buffer], { type: attachment.mimeType });
+        }
+
+        const plaintext = await decryptThreadAttachment(buffer, attachment);
+        return new Blob([plaintext], { type: attachment.mimeType });
+      }
+
+      function attachmentMediaEntry(attachmentId) {
+        return state.attachmentMedia[attachmentId] || null;
+      }
+
+      async function ensureAttachmentMedia(attachment) {
+        if (!attachment?.id || attachment.encryptionMode !== "device_encrypted") {
+          return null;
+        }
+
+        const existing = attachmentMediaEntry(attachment.id);
+        if (existing?.status === "ready") {
+          return existing;
+        }
+
+        if (existing?.status === "loading") {
+          return existing;
+        }
+
+        state.attachmentMedia[attachment.id] = {
+          status: "loading",
+          objectUrl: "",
+          error: "",
+        };
+        scheduleRenderSoon();
+
+        try {
+          const blob = await readThreadAttachmentBlob(attachment);
+          const objectUrl = URL.createObjectURL(blob);
+          if (existing?.objectUrl) {
+            revokePreviewUrl(existing.objectUrl);
+          }
+          state.attachmentMedia[attachment.id] = {
+            status: "ready",
+            objectUrl,
+            error: "",
+          };
+        } catch (error) {
+          state.attachmentMedia[attachment.id] = {
+            status: "error",
+            objectUrl: "",
+            error: error instanceof Error ? error.message : "Unable to open the attachment.",
+          };
+        }
+
+        render();
+        return state.attachmentMedia[attachment.id];
+      }
+
+      function findThreadAttachment(attachmentId) {
+        return (
+          state.threadMessages.find((message) => message.attachment?.id === attachmentId)?.attachment || null
+        );
+      }
+
       function resetThreadState() {
         state.activeGroupId = null;
         state.threadMessages = [];
         state.revealedMessages = {};
+        clearThreadAttachmentMedia();
         state.threadStatus = null;
         state.isLoadingThread = false;
         state.threadComposer.text = "";
@@ -1187,7 +1863,7 @@
       async function refreshRelaySession() {
         if (!state.session?.refreshToken) {
           clearStoredSession();
-          state.session = null;
+          await persistSecureStateNow();
           return null;
         }
 
@@ -1204,7 +1880,7 @@
         const body = (await response.json().catch(() => ({}))) || {};
         if (!response.ok || !body.accessToken) {
           clearStoredSession();
-          state.session = null;
+          await persistSecureStateNow();
           return null;
         }
 
@@ -1214,7 +1890,7 @@
           sessionId: body.sessionId,
           deviceId: body.deviceId,
         };
-        writeJson(storageKeys.session, state.session);
+        await persistSecureStateNow();
         return state.session;
       }
 
@@ -1256,6 +1932,7 @@
       async function loadWorkspace() {
         if (!state.session) {
           state.isLoadingWorkspace = false;
+          stopMailboxSocket();
           render();
           return;
         }
@@ -1265,6 +1942,7 @@
         render();
 
         try {
+          await ensureDesktopDeviceBundle();
           const [me, privacy, sessions, groups] = await Promise.all([
             relayFetch("/v1/me"),
             relayFetch("/v1/me/privacy"),
@@ -1284,6 +1962,14 @@
             allowSensitiveExport: Boolean(privacy.allowSensitiveExport),
             secureAppSwitcher: Boolean(privacy.secureAppSwitcher),
           };
+          const contentProtectionError = await setNativeContentProtection(state.privacyForm.secureAppSwitcher);
+          if (contentProtectionError) {
+            state.settingsStatus = createStatus(
+              "warning",
+              "Desktop privacy fallback",
+              `The relay says secure app-switcher previews should be ${state.privacyForm.secureAppSwitcher ? "on" : "off"}, but the native window could not apply that change on this device: ${contentProtectionError}`
+            );
+          }
 
           const inviteLoads = await Promise.allSettled(
             groups
@@ -1302,6 +1988,8 @@
           }
           state.groupInvites = nextInvites;
           state.activeGroupId = pickPreferredGroupId(groups);
+          await syncEncryptedMailbox();
+          await connectMailboxSocket();
           if (state.activeGroupId) {
             await loadThread(state.activeGroupId, { preserveStatus: true });
           } else {
@@ -1330,11 +2018,16 @@
       }
 
       function resetWorkspaceState() {
+        stopMailboxSocket();
+        deviceBundleDirectoryCache.clear();
         state.me = null;
         state.privacy = null;
         state.sessions = [];
         state.groups = [];
         state.groupInvites = {};
+        state.deviceBundle = null;
+        state.mailboxCursor = "";
+        clearCachedThreadMessages();
         resetThreadState();
         state.profileForm = {
           displayName: "",
@@ -1363,14 +2056,24 @@
         state.isLoadingThread = true;
         state.threadMessages = [];
         state.revealedMessages = {};
+        clearThreadAttachmentMedia();
         if (!preserveStatus) {
           state.threadStatus = null;
         }
         render();
 
         try {
-          state.threadMessages = await relayFetch(`/v1/groups/${groupId}/messages?limit=80`);
+          const group = state.groups.find((entry) => entry.id === groupId) || null;
+          if (group?.historyMode === "device_encrypted") {
+            state.threadMessages = readCachedThreadMessages(groupId);
+            render();
+            await syncEncryptedMailbox();
+            state.threadMessages = readCachedThreadMessages(groupId);
+          } else {
+            state.threadMessages = await relayFetch(`/v1/groups/${groupId}/messages?limit=80`);
+          }
           state.revealedMessages = {};
+          clearThreadAttachmentMedia();
         } catch (error) {
           state.threadStatus = createStatus(
             "error",
@@ -1424,61 +2127,215 @@
         setBusy("send-message");
 
         try {
-          let attachmentId;
+          let message;
 
-          if (file) {
-            const contentClass = inferContentClass(file);
-            const protectionProfile =
-              contentClass === "image" || contentClass === "video"
-                ? group.sensitiveMediaDefault
-                  ? "sensitive_media"
-                  : "standard"
-                : "standard";
+          if (group.historyMode === "device_encrypted") {
+            const localBundle = await ensureDesktopDeviceBundle();
+            const conversation = await relayFetch(`/v1/conversations/${group.id}`);
+            const bundleLists = await Promise.all(
+              Array.from(new Set(conversation.memberAccountIds)).map(async (accountId) => ({
+                accountId,
+                bundles: await listDeviceBundlesForAccount(accountId),
+              }))
+            );
+            const recipientDevices = bundleLists
+              .flatMap((entry) => entry.bundles)
+              .filter((bundle) => bundle.deviceId !== state.session.deviceId);
 
-            const ticket = await relayFetch("/v1/attachments/ticket", {
-              method: "POST",
-              body: JSON.stringify({
+            if (recipientDevices.length === 0) {
+              throw new Error("No member devices are registered for this encrypted group yet.");
+            }
+
+            let attachment = null;
+            const attachmentIds = [];
+
+            if (file) {
+              const contentClass = inferContentClass(file);
+              const encrypted = await encryptThreadAttachment(file);
+              const protectionProfile =
+                contentClass === "image" || contentClass === "video"
+                  ? group.sensitiveMediaDefault
+                    ? "sensitive_media"
+                    : "standard"
+                  : "standard";
+
+              const ticket = await relayFetch("/v1/attachments/ticket", {
+                method: "POST",
+                body: JSON.stringify({
+                  fileName: file.name,
+                  mimeType: "application/octet-stream",
+                  encryptionMode: "device_encrypted",
+                  ciphertextByteLength: encrypted.ciphertext.byteLength,
+                  ciphertextSha256B64: encrypted.ciphertextSha256B64,
+                  plaintextByteLength: encrypted.plaintext.byteLength,
+                  plaintextSha256B64: encrypted.plaintextSha256B64,
+                  conversationId: group.id,
+                  conversationEpoch: group.epoch,
+                  contentClass,
+                  retentionMode: "private_vault",
+                  protectionProfile,
+                }),
+              });
+
+              const uploadResponse = await fetch(ticket.uploadUrl, {
+                method: "PUT",
+                headers: {
+                  "content-type": "application/octet-stream",
+                },
+                body: encrypted.ciphertext,
+              });
+
+              if (!uploadResponse.ok) {
+                throw new Error((await uploadResponse.text()) || "Attachment upload failed");
+              }
+
+              attachment = {
+                id: ticket.attachmentId,
+                downloadUrl: "",
                 fileName: file.name,
                 mimeType: file.type || "application/octet-stream",
                 byteLength: file.size,
-                conversationId: group.id,
-                conversationEpoch: group.epoch,
                 contentClass,
-                retentionMode: "private_vault",
-                protectionProfile,
+                retentionMode: ticket.retentionMode,
+                protectionProfile: ticket.protectionProfile,
+                previewBlurHash: ticket.previewBlurHash || null,
+                encryptionMode: ticket.encryptionMode,
+                fileKeyB64: encrypted.fileKeyB64,
+                fileIvB64: encrypted.fileIvB64,
+              };
+              attachmentIds.push(ticket.attachmentId);
+            }
+
+            const createdAt = new Date().toISOString();
+            const clientMessageId = crypto.randomUUID();
+            const payload = {
+              version: 1,
+              kind: "ember_conversation_v1",
+              conversationId: group.id,
+              conversationKind: "group",
+              historyMode: "device_encrypted",
+              senderDisplayName: viewerIdentityLabel(),
+              text: text || undefined,
+              attachment: attachment
+                ? {
+                    id: attachment.id,
+                    fileName: attachment.fileName,
+                    mimeType: attachment.mimeType,
+                    byteLength: attachment.byteLength,
+                    contentClass: attachment.contentClass,
+                    retentionMode: attachment.retentionMode,
+                    protectionProfile: attachment.protectionProfile,
+                    previewBlurHash: attachment.previewBlurHash,
+                    encryptionMode: attachment.encryptionMode,
+                    fileKeyB64: attachment.fileKeyB64,
+                    fileIvB64: attachment.fileIvB64,
+                  }
+                : null,
+              createdAt,
+              clientMessageId,
+            };
+
+            await relayFetch("/v1/messages/batch", {
+              method: "POST",
+              body: JSON.stringify({
+                conversationId: group.id,
+                epoch: group.epoch,
+                envelopes: recipientDevices.map((bundle) => ({
+                  recipientDeviceId: bundle.deviceId,
+                  ciphertext: encryptConversationPayload(
+                    payload,
+                    bundle.bundle.identityKeyB64,
+                    localBundle.privateKeyB64
+                  ),
+                  clientMessageId,
+                  attachmentIds,
+                })),
               }),
             });
 
-            const uploadResponse = await fetch(ticket.uploadUrl, {
-              method: "PUT",
-              headers: {
-                "content-type": file.type || "application/octet-stream",
-              },
-              body: file,
-            });
+            message = {
+              id: clientMessageId,
+              conversationId: group.id,
+              historyMode: "device_encrypted",
+              senderAccountId: state.session.accountId,
+              senderDisplayName: viewerIdentityLabel(),
+              kind: attachment ? "media" : "text",
+              text: text || undefined,
+              attachment,
+              createdAt,
+            };
+            const mergedMessages = state.threadMessages
+              .filter((entry) => entry.id !== message.id)
+              .concat(message)
+              .sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime());
+            state.threadMessages = mergedMessages;
+            writeCachedThreadMessages(group.id, mergedMessages);
+          } else {
+            let attachmentId;
 
-            if (!uploadResponse.ok) {
-              throw new Error("Attachment upload failed");
+            if (file) {
+              const contentClass = inferContentClass(file);
+              const encrypted = await encryptThreadAttachment(file);
+              const protectionProfile =
+                contentClass === "image" || contentClass === "video"
+                  ? group.sensitiveMediaDefault
+                    ? "sensitive_media"
+                    : "standard"
+                  : "standard";
+
+              const ticket = await relayFetch("/v1/attachments/ticket", {
+                method: "POST",
+                body: JSON.stringify({
+                  fileName: file.name,
+                  mimeType: file.type || "application/octet-stream",
+                  encryptionMode: "device_encrypted",
+                  ciphertextByteLength: encrypted.ciphertext.byteLength,
+                  ciphertextSha256B64: encrypted.ciphertextSha256B64,
+                  plaintextByteLength: encrypted.plaintext.byteLength,
+                  plaintextSha256B64: encrypted.plaintextSha256B64,
+                  fileKeyB64: encrypted.fileKeyB64,
+                  fileIvB64: encrypted.fileIvB64,
+                  conversationId: group.id,
+                  conversationEpoch: group.epoch,
+                  contentClass,
+                  retentionMode: "private_vault",
+                  protectionProfile,
+                }),
+              });
+
+              const uploadResponse = await fetch(ticket.uploadUrl, {
+                method: "PUT",
+                headers: {
+                  "content-type": "application/octet-stream",
+                },
+                body: encrypted.ciphertext,
+              });
+
+              if (!uploadResponse.ok) {
+                throw new Error((await uploadResponse.text()) || "Attachment upload failed");
+              }
+
+              attachmentId = ticket.attachmentId;
             }
 
-            attachmentId = ticket.attachmentId;
+            message = await relayFetch(`/v1/groups/${group.id}/messages`, {
+              method: "POST",
+              body: JSON.stringify({
+                text: text || undefined,
+                attachmentId,
+                clientMessageId: crypto.randomUUID(),
+              }),
+            });
+            state.threadMessages = [...state.threadMessages, message];
           }
 
-          const message = await relayFetch(`/v1/groups/${group.id}/messages`, {
-            method: "POST",
-            body: JSON.stringify({
-              text: text || undefined,
-              attachmentId,
-              clientMessageId: crypto.randomUUID(),
-            }),
-          });
-
-          state.threadMessages = [...state.threadMessages, message];
           state.threadStatus = createStatus(
             "success",
-            file ? "Photo sent" : "Message sent",
+            file ? "Attachment sent" : "Message sent",
             file
-              ? `Delivered into ${group.title}. This desktop install now proves the first-send loop.`
+              ? group.historyMode === "device_encrypted"
+                ? `Delivered into ${group.title}. Text and attachment metadata stayed on-device and moved by encrypted mailbox fanout.`
+                : `Delivered into ${group.title}. The attachment bytes were encrypted on this desktop before upload.`
               : `Delivered into ${group.title}.`
           );
           state.threadComposer.text = "";
@@ -1508,7 +2365,7 @@
 
         if (localRelay && !parsedGroupInvite && !state.authForm.inviteToken.trim()) {
           state.authForm.inviteToken = inviteToken;
-          writeText(storageKeys.inviteToken, inviteToken);
+          await persistSecureStateNow();
         }
 
         if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -1571,11 +2428,11 @@
           );
 
           state.pendingChallenge = challenge;
-          writeJson(storageKeys.pendingChallenge, challenge);
-          writeText(storageKeys.email, email);
-          writeText(storageKeys.inviteToken, inviteToken);
-          writeText(storageKeys.groupInviteReference, groupInviteReference);
-          writeText(storageKeys.deviceLabel, deviceLabel);
+          state.authForm.email = email;
+          state.authForm.inviteToken = inviteToken;
+          state.authForm.groupInviteReference = groupInviteReference;
+          state.authForm.deviceLabel = deviceLabel;
+          await persistSecureStateNow();
 
           if (challenge.debugCompletionToken) {
             state.authForm.completionInput = challenge.debugCompletionToken;
@@ -1641,8 +2498,8 @@
           );
 
           state.session = session;
-          writeJson(storageKeys.session, session);
           clearPendingChallenge();
+          await persistSecureStateNow();
           state.authStatus = null;
           resetWorkspaceState();
           state.activeView = "thread";
@@ -1714,11 +2571,18 @@
             allowSensitiveExport: Boolean(nextPrivacy.allowSensitiveExport),
             secureAppSwitcher: Boolean(nextPrivacy.secureAppSwitcher),
           };
-          state.settingsStatus = createStatus(
-            "success",
-            "Privacy defaults saved",
-            "Desktop notification, media, and app-switcher preferences were updated."
-          );
+          const contentProtectionError = await setNativeContentProtection(state.privacyForm.secureAppSwitcher);
+          state.settingsStatus = contentProtectionError
+            ? createStatus(
+                "warning",
+                "Privacy defaults saved with a desktop warning",
+                `Relay privacy defaults were updated, but the native app-switcher privacy flag could not be applied on this device: ${contentProtectionError}`
+              )
+            : createStatus(
+                "success",
+                "Privacy defaults saved",
+                "Desktop notification, media, and app-switcher preferences were updated."
+              );
         } catch (error) {
           state.settingsStatus = createStatus(
             "error",
@@ -1964,7 +2828,7 @@
 
       function saveRelayUrl() {
         state.relayUrl = normalizeRelayUrl(state.relayUrl);
-        writeText(storageKeys.relayUrl, state.relayUrl);
+        writeLocalText(localStorageKeys.relayUrl, state.relayUrl);
         state.settingsStatus = createStatus(
           "success",
           "Relay URL saved",
@@ -1974,17 +2838,40 @@
         render();
       }
 
-      function signOut() {
+      async function signOut() {
+        setBusy("sign-out");
+
+        let revokeError = null;
+        const currentSessionId = state.session?.sessionId;
+
+        if (currentSessionId) {
+          try {
+            await relayFetch(`/v1/sessions/${currentSessionId}`, {
+              method: "DELETE",
+            });
+          } catch (error) {
+            revokeError = error instanceof Error ? error.message : "Unknown relay error";
+          }
+        }
+
         clearStoredSession();
-        state.session = null;
+        clearPendingChallenge();
+        await clearPersistedSecureState();
         state.activeView = "thread";
         state.workspaceStatus = null;
         resetWorkspaceState();
-        state.authStatus = createStatus(
-          "info",
-          "Signed out",
-          "The desktop app cleared the local relay session for this device."
-        );
+        state.authStatus = revokeError
+          ? createStatus(
+              "warning",
+              "Signed out locally",
+              `This install cleared the local session, but the relay did not confirm server-side revocation for the current device: ${revokeError}`
+            )
+          : createStatus(
+              "info",
+              "Signed out",
+              "The desktop app revoked the current relay session and cleared local desktop state for this device."
+            );
+        clearBusy();
         render();
       }
 
@@ -2008,25 +2895,25 @@
 
         if (bind === "auth.email") {
           state.authForm.email = value;
-          writeText(storageKeys.email, value);
+          scheduleSecureStatePersist();
           return;
         }
 
         if (bind === "auth.inviteToken") {
           state.authForm.inviteToken = value;
-          writeText(storageKeys.inviteToken, value);
+          scheduleSecureStatePersist();
           return;
         }
 
         if (bind === "auth.groupInviteReference") {
           state.authForm.groupInviteReference = value;
-          writeText(storageKeys.groupInviteReference, value);
+          scheduleSecureStatePersist();
           return;
         }
 
         if (bind === "auth.deviceLabel") {
           state.authForm.deviceLabel = value;
-          writeText(storageKeys.deviceLabel, value);
+          scheduleSecureStatePersist();
           return;
         }
 
@@ -2132,7 +3019,7 @@
         }
 
         if (action === "sign-out") {
-          signOut();
+          await signOut();
           return;
         }
 
@@ -2214,6 +3101,55 @@
           const messageId = button.dataset.messageId;
           if (messageId) {
             state.revealedMessages[messageId] = true;
+            render();
+          }
+          return;
+        }
+
+        if (action === "open-attachment") {
+          const attachmentId = button.dataset.attachmentId;
+          if (!attachmentId) {
+            return;
+          }
+
+          const attachment = findThreadAttachment(attachmentId);
+          if (!attachment) {
+            state.threadStatus = createStatus(
+              "warning",
+              "Attachment unavailable",
+              "The selected attachment is no longer present in the current thread."
+            );
+            render();
+            return;
+          }
+
+          try {
+            const blob = await readThreadAttachmentBlob(attachment);
+            const objectUrl = URL.createObjectURL(blob);
+            const anchor = document.createElement("a");
+            anchor.href = objectUrl;
+            anchor.download = attachment.fileName;
+            anchor.click();
+            globalThis.setTimeout(() => revokePreviewUrl(objectUrl), 1500);
+          } catch (error) {
+            state.threadStatus = createStatus(
+              "error",
+              "Unable to open the attachment",
+              error instanceof Error ? error.message : "Unknown attachment error"
+            );
+            render();
+          }
+          return;
+        }
+
+        if (action === "retry-attachment") {
+          const attachmentId = button.dataset.attachmentId;
+          if (attachmentId) {
+            const existing = state.attachmentMedia[attachmentId];
+            if (existing?.objectUrl) {
+              revokePreviewUrl(existing.objectUrl);
+            }
+            delete state.attachmentMedia[attachmentId];
             render();
           }
           return;
@@ -2572,6 +3508,26 @@
         return `${size.toFixed(precision)} ${units[unitIndex]}`;
       }
 
+      function secureStorageModeLabel() {
+        if (state.secureStorageMode === "keyring") {
+          return "System keyring";
+        }
+
+        if (state.secureStorageMode === "file") {
+          return "Restricted local file fallback";
+        }
+
+        if (state.secureStorageMode === "browser") {
+          return "Browser fallback";
+        }
+
+        if (state.secureStorageMode === "memory") {
+          return "Volatile memory only";
+        }
+
+        return "Loading desktop state";
+      }
+
       function renderAttachmentBlock(message) {
         const attachment = message.attachment;
         if (!attachment) {
@@ -2580,12 +3536,70 @@
 
         const isSensitive = attachment.protectionProfile === "sensitive_media";
         const isRevealed = !isSensitive || Boolean(state.revealedMessages[message.id]);
+        const shouldFetchSensitiveMedia = !isSensitive || Boolean(state.privacy?.autoDownloadSensitiveMedia) || isRevealed;
         const watermark = `${viewerIdentityLabel()} · ${formatDateTime(message.createdAt)}`;
+        const encryptedAttachment = attachment.encryptionMode === "device_encrypted";
+        const inlineMedia = attachment.contentClass === "image" || attachment.contentClass === "video";
+        if (encryptedAttachment && inlineMedia && shouldFetchSensitiveMedia) {
+          void ensureAttachmentMedia(attachment);
+        }
+        const attachmentAsset = attachmentMediaEntry(attachment.id);
+        const loadingEncryptedMedia = encryptedAttachment && inlineMedia && shouldFetchSensitiveMedia && (!attachmentAsset || attachmentAsset.status === "loading");
+        const encryptedMediaError = encryptedAttachment && inlineMedia && attachmentAsset?.status === "error";
+        const mediaUrl = encryptedAttachment ? attachmentAsset?.objectUrl || "" : attachment.downloadUrl;
+
+        if (encryptedMediaError) {
+          return `
+            <div class="rule-block">
+              <p class="label">Attachment unavailable</p>
+              <p class="group-copy" style="margin-top: 10px">${escapeHtml(attachmentAsset.error || "The desktop client could not decrypt this attachment.")}</p>
+              <div class="inline-actions" style="margin-top: 12px">
+                <button class="secondary-button" type="button" data-action="retry-attachment" data-attachment-id="${escapeHtml(attachment.id)}">Retry</button>
+                <button class="ghost-button" type="button" data-action="open-attachment" data-attachment-id="${escapeHtml(attachment.id)}">Save copy</button>
+              </div>
+            </div>
+          `;
+        }
 
         if (attachment.contentClass === "image") {
+          if (isSensitive && !shouldFetchSensitiveMedia) {
+            return `
+              <div class="media-shell">
+                <div class="media-placeholder">
+                  <div>
+                    <p class="label">Sensitive image</p>
+                    <p style="margin-top: 10px">${escapeHtml(attachment.fileName)}</p>
+                    <p style="margin-top: 8px">${escapeHtml(formatByteSize(attachment.byteLength))}</p>
+                  </div>
+                  <button class="secondary-button reveal-button" type="button" data-action="reveal-message" data-message-id="${escapeHtml(message.id)}">Reveal image</button>
+                </div>
+                <div class="media-overlay">
+                  <div class="watermark">${escapeHtml(watermark)}</div>
+                </div>
+              </div>
+            `;
+          }
+
+          if (loadingEncryptedMedia) {
+            return `
+              <div class="media-shell">
+                <div class="media-placeholder">
+                  <div>
+                    <p class="label">Decrypting image</p>
+                    <p style="margin-top: 10px">${escapeHtml(attachment.fileName)}</p>
+                    <p style="margin-top: 8px">${escapeHtml(formatByteSize(attachment.byteLength))}</p>
+                  </div>
+                </div>
+                <div class="media-overlay">
+                  <div class="watermark">${escapeHtml(watermark)}</div>
+                </div>
+              </div>
+            `;
+          }
+
           return `
             <div class="media-shell ${isRevealed ? "" : "blurred"}">
-              <img src="${escapeHtml(attachment.downloadUrl)}" alt="${escapeHtml(attachment.fileName)}" referrerpolicy="no-referrer" />
+              <img src="${escapeHtml(mediaUrl)}" alt="${escapeHtml(attachment.fileName)}" referrerpolicy="no-referrer" />
               <div class="media-overlay">
                 <div class="watermark">${escapeHtml(watermark)}</div>
                 ${
@@ -2600,10 +3614,27 @@
         }
 
         if (attachment.contentClass === "video") {
+          if (loadingEncryptedMedia) {
+            return `
+              <div class="media-shell">
+                <div class="media-placeholder">
+                  <div>
+                    <p class="label">Decrypting video</p>
+                    <p style="margin-top: 10px">${escapeHtml(attachment.fileName)}</p>
+                    <p style="margin-top: 8px">${escapeHtml(formatByteSize(attachment.byteLength))}</p>
+                  </div>
+                </div>
+                <div class="media-overlay">
+                  <div class="watermark">${escapeHtml(watermark)}</div>
+                </div>
+              </div>
+            `;
+          }
+
           return isRevealed
             ? `
                 <div class="media-shell">
-                  <video src="${escapeHtml(attachment.downloadUrl)}" controls controlsList="nodownload noplaybackrate" referrerpolicy="no-referrer"></video>
+                  <video src="${escapeHtml(mediaUrl)}" controls controlsList="nodownload noplaybackrate" referrerpolicy="no-referrer"></video>
                   <div class="media-overlay">
                     <div class="watermark">${escapeHtml(watermark)}</div>
                   </div>
@@ -2632,6 +3663,11 @@
             <p class="label">${escapeHtml(attachment.contentClass)}</p>
             <p class="group-copy" style="margin-top: 10px">${escapeHtml(attachment.fileName)}</p>
             <p class="secondary-meta" style="margin-top: 8px">${escapeHtml(formatByteSize(attachment.byteLength))}</p>
+            <div class="inline-actions" style="margin-top: 12px">
+              <button class="secondary-button" type="button" data-action="open-attachment" data-attachment-id="${escapeHtml(attachment.id)}">
+                ${encryptedAttachment ? "Decrypt and save" : "Save copy"}
+              </button>
+            </div>
           </div>
         `;
       }
@@ -2673,11 +3709,9 @@
             <section class="panel panel-strong">
               <div class="hero-summary">
                 <div>
-                  <p class="eyebrow">First send path</p>
+                  <p class="eyebrow">Thread</p>
                   <h2>No groups on this account yet</h2>
-                  <p class="lede" style="margin-top: 14px">
-                    To prove the desktop MVP, start by accepting a group invite or create a new closed group from this install. The thread view will become the default landing surface as soon as one exists.
-                  </p>
+                  <p class="section-intro" style="margin-top: 12px">Accept an invite or create a group to start the first thread on this desktop.</p>
                 </div>
                 <div class="inline-actions">
                   <button class="primary-button" type="button" data-nav="invites">Accept invite</button>
@@ -2692,7 +3726,7 @@
           return `
             ${renderStatus(state.threadStatus)}
             <section class="panel">
-              <div class="empty">Choose a group from the sidebar to open its thread.</div>
+              <div class="empty">Choose a group from the left column.</div>
             </section>
           `;
         }
@@ -2703,7 +3737,7 @@
             <section class="panel panel-strong">
               <div class="view-header">
                 <div>
-                  <p class="eyebrow">Active group</p>
+                  <p class="eyebrow">Group</p>
                   <h2>${escapeHtml(group.title)}</h2>
                 </div>
                 <div class="badge-row">
@@ -2711,16 +3745,14 @@
                   <span class="badge ${group.sensitiveMediaDefault ? "good" : "warn"}">${group.sensitiveMediaDefault ? "Stronger media protections" : "Standard media default"}</span>
                 </div>
               </div>
-              <p class="section-intro" style="margin-top: 12px">
-                ${escapeHtml(group.joinRuleText || "No explicit join rule has been saved for this group yet.")}
-              </p>
+              <p class="section-intro" style="margin-top: 12px">${escapeHtml(group.joinRuleText || "No saved join rule.")}</p>
             </section>
 
             <section class="thread-card">
               <div class="view-header">
                 <div>
-                  <p class="eyebrow">Group thread</p>
-                  <h2>Recent messages</h2>
+                  <p class="eyebrow">Messages</p>
+                  <h2>Recent activity</h2>
                 </div>
                 <div class="inline-actions">
                   <button class="secondary-button" type="button" data-action="open-group" data-group-id="${escapeHtml(group.id)}" ${state.isLoadingThread ? "disabled" : ""}>
@@ -2736,13 +3768,13 @@
                     ? `
                         <div class="status info">
                           <h3>Loading thread</h3>
-                          <p>Fetching recent group messages and signed attachment URLs from the relay.</p>
+                          <p>Fetching recent messages and attachment access from the relay.</p>
                         </div>
                       `
                     : state.threadMessages.length === 0
                       ? `
                           <div class="empty">
-                            The thread is empty. Send a photo from the composer below to prove the first-use loop on Ubuntu.
+                            No messages yet. Send text or an attachment to start the thread.
                           </div>
                         `
                       : state.threadMessages.map((message) => renderThreadMessage(message)).join("")
@@ -2753,8 +3785,8 @@
             <section class="thread-card">
               <div class="view-header">
                 <div>
-                  <p class="eyebrow">Send</p>
-                  <h2>Photo-first composer</h2>
+                  <p class="eyebrow">Compose</p>
+                  <h2>New message</h2>
                 </div>
               </div>
 
@@ -2765,9 +3797,9 @@
                 </div>
 
                 <div class="field">
-                  <label for="thread-file">Photo or video</label>
+                  <label for="thread-file">Attachment</label>
                   <input id="thread-file" type="file" data-bind="thread.file" accept="image/*,video/*,audio/*" />
-                  <div class="hint">Images and videos inherit the group’s sensitive-media defaults. Files are uploaded through a relay ticket and sent into this thread. Current limit: 20 MB per file.</div>
+                  <div class="hint">Attachments are encrypted on this desktop before upload. Current limit: 20 MB per file.</div>
                 </div>
 
                 ${
@@ -2797,7 +3829,7 @@
                   <button class="primary-button" type="submit" ${isBusy("send-message") || sendDisabled ? "disabled" : ""}>
                     ${isBusy("send-message") ? "Sending..." : "Send to group"}
                   </button>
-                  <button class="secondary-button" type="button" data-nav="invites">Open invite tools</button>
+                  <button class="secondary-button" type="button" data-nav="groups">Group settings</button>
                 </div>
               </form>
             </section>
@@ -3150,7 +4182,7 @@
                   <input type="checkbox" data-bind="privacy.allowSensitiveExport" ${state.privacyForm.allowSensitiveExport ? "checked" : ""} />
                   <span>
                     <strong>Allow sensitive export</strong>
-                    <div class="hint">Keep off if sensitive media should remain inside the app by default.</div>
+                    <div class="hint">Keep off if sensitive media should stay inside the app by default. This desktop build still cannot stop operating-system capture outside the app.</div>
                   </span>
                 </label>
 
@@ -3158,7 +4190,7 @@
                   <input type="checkbox" data-bind="privacy.secureAppSwitcher" ${state.privacyForm.secureAppSwitcher ? "checked" : ""} />
                   <span>
                     <strong>Secure app switcher</strong>
-                    <div class="hint">Signals that app-switcher previews should stay discreet when the native client implements that behavior.</div>
+                    <div class="hint">Applies the native desktop content-protection flag on supported platforms so app-switcher and screenshot previews stay more discreet.</div>
                   </span>
                 </label>
 
@@ -3178,6 +4210,15 @@
             </div>
 
             <form data-form="save-relay-url" class="field-stack" style="margin-top: 18px">
+              <div class="rule-block">
+                <p class="label">Desktop storage</p>
+                <p class="group-copy" style="margin-top: 10px">${escapeHtml(secureStorageModeLabel())}</p>
+                ${
+                  state.secureStorageDetail
+                    ? `<p class="secondary-meta" style="margin-top: 8px">${escapeHtml(state.secureStorageDetail)}</p>`
+                    : ""
+                }
+              </div>
               <div class="field">
                 <label for="workspace-relay-url">Relay URL</label>
                 <input id="workspace-relay-url" type="url" data-bind="relayUrl" value="${escapeHtml(state.relayUrl)}" />
@@ -3278,13 +4319,11 @@
                 <div class="brand-chip">
                   <div class="logo small">EC</div>
                   <div>
-                    <p class="eyebrow">Signed in</p>
+                    <p class="eyebrow">Account</p>
                     <h2 style="font-size: 1.2rem">${escapeHtml(state.me?.displayName || "Member")}</h2>
                   </div>
                 </div>
-                <p class="section-intro" style="margin-top: 14px">
-                  ${escapeHtml(state.me?.email || "")}
-                </p>
+                <p class="secondary-meta" style="margin-top: 12px">${escapeHtml(state.me?.email || "")}</p>
                 <div class="badge-row" style="margin-top: 14px">
                   <span class="badge">Relay session</span>
                   <span class="badge">${escapeHtml(state.groups.length.toString())} groups</span>
@@ -3308,9 +4347,6 @@
 
               <section class="panel">
                 <p class="eyebrow">Groups</p>
-                <p class="section-intro" style="margin-top: 12px">
-                  Open the active thread directly from here. The first group should lead to the first send, not another setup maze.
-                </p>
                 <div class="group-switcher" style="margin-top: 16px">
                   ${
                     state.groups.length === 0
@@ -3330,10 +4366,7 @@
               </section>
 
               <section class="panel">
-                <p class="eyebrow">Session controls</p>
-                <p class="section-intro" style="margin-top: 12px">
-                  Use refresh to pull the latest relay state, or sign out to clear the local session from this device.
-                </p>
+                <p class="eyebrow">Device</p>
                 <div class="stack" style="margin-top: 16px">
                   <button class="secondary-button" type="button" data-action="refresh-workspace">Refresh workspace</button>
                   <button class="ghost-button" type="button" data-action="check-relay" ${isBusy("check-relay") ? "disabled" : ""}>
@@ -3347,7 +4380,7 @@
             <main class="content">
               <div class="workspace-header">
                 <div>
-                  <p class="eyebrow">Desktop MVP workspace</p>
+                  <p class="eyebrow">Workspace</p>
                   <h2 style="font-size: 1.8rem">
                     ${
                       state.activeView === "thread" && currentGroup()
@@ -3370,8 +4403,42 @@
         `;
       }
 
+      function renderHydratingView() {
+        return `
+          <section class="auth-layout">
+            <div class="panel panel-strong">
+              <div class="stack">
+                <div class="wordmark">
+                  <div class="logo">EC</div>
+                  <div>
+                    <p class="eyebrow">Desktop startup</p>
+                    <p style="font-size: 1.15rem; font-weight: 700">EmberChamber desktop</p>
+                  </div>
+                </div>
+                <h1>Loading local desktop state.</h1>
+                <p class="lede">
+                  The Ubuntu shell is restoring persisted session data, invite state, and desktop defaults before it decides whether to open the workspace or the sign-in path.
+                </p>
+                <div class="highlight">
+                  <strong>${escapeHtml(secureStorageModeLabel())}</strong>
+                  ${
+                    state.secureStorageDetail
+                      ? `<p style="margin-top: 10px">${escapeHtml(state.secureStorageDetail)}</p>`
+                      : '<p style="margin-top: 10px">Checking desktop storage and relay preferences now.</p>'
+                  }
+                </div>
+              </div>
+            </div>
+          </section>
+        `;
+      }
+
       function render() {
-        root.innerHTML = state.session ? renderWorkspaceView() : renderAuthView();
+        root.innerHTML = state.isHydrating
+          ? renderHydratingView()
+          : state.session
+            ? renderWorkspaceView()
+            : renderAuthView();
       }
 
       root.addEventListener("input", handleInput);
@@ -3384,6 +4451,9 @@
       });
 
       async function initializeDesktopShell() {
+        render();
+        await loadPersistedSecureState();
+        state.isHydrating = false;
         render();
         await maybeAdoptLocalRelay();
 

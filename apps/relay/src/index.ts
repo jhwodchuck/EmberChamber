@@ -58,6 +58,7 @@ export interface Env {
   EMBERCHAMBER_REFRESH_TOKEN_SECRET: string;
   EMBERCHAMBER_ATTACHMENT_TOKEN_SECRET: string;
   EMBERCHAMBER_ALLOWED_ORIGINS: string;
+  EMBERCHAMBER_LOCAL_AUTOCONNECT_MARKER?: string;
   EMBERCHAMBER_ADMIN_SECRET?: string;
   EMBERCHAMBER_PUSH_TOKEN_SECRET?: string;
   EMBERCHAMBER_FCM_SERVICE_ACCOUNT_JSON?: string;
@@ -172,6 +173,8 @@ const attachmentTicketSchema = z
     retentionMode: z.enum(["private_vault", "ephemeral"]).default("private_vault"),
     protectionProfile: z.enum(["sensitive_media", "standard"]).default("standard"),
     previewBlurHash: z.string().max(120).optional(),
+    fileKeyB64: z.string().max(4096).optional(),
+    fileIvB64: z.string().max(4096).optional(),
   })
   .superRefine((value, ctx) => {
     const storedByteLength = value.ciphertextByteLength ?? value.byteLength;
@@ -372,7 +375,7 @@ function defaultConversationTitle(kind: RelayConversationKind): string {
 }
 
 function conversationHistoryModeForKind(kind: RelayConversationKind): "device_encrypted" | "relay_hosted" {
-  return kind === "direct_message" ? "device_encrypted" : "relay_hosted";
+  return kind === "direct_message" || kind === "group" ? "device_encrypted" : "relay_hosted";
 }
 
 function coerceConversationHistoryMode(
@@ -1707,6 +1710,65 @@ function publicWebUrl(env: Env): string {
   return (env.EMBERCHAMBER_WEB_PUBLIC_URL ?? env.EMBERCHAMBER_RELAY_PUBLIC_URL).replace(/\/$/, "");
 }
 
+function attachmentMetadataSecret(env: Env): string {
+  return `${env.EMBERCHAMBER_ATTACHMENT_TOKEN_SECRET}:metadata`;
+}
+
+type RelayHostedAttachmentRow = {
+  attachment_id: string | null;
+  file_name: string | null;
+  mime_type: string | null;
+  byte_length: number | null;
+  plaintext_byte_length: number | null;
+  content_class: "image" | "video" | "audio" | "file" | null;
+  retention_mode: "private_vault" | "ephemeral" | null;
+  protection_profile: "sensitive_media" | "standard" | null;
+  preview_blur_hash: string | null;
+  encryption_mode: "none" | "device_encrypted" | null;
+  attachment_key_box: string | null;
+  attachment_iv_box: string | null;
+};
+
+async function buildRelayHostedAttachment(
+  env: Env,
+  row: RelayHostedAttachmentRow,
+  expiresAtMs: number
+): Promise<GroupThreadMessage["attachment"]> {
+  if (
+    !row.attachment_id ||
+    !row.file_name ||
+    !row.mime_type ||
+    row.byte_length === null ||
+    !row.content_class ||
+    !row.retention_mode ||
+    !row.protection_profile
+  ) {
+    return null;
+  }
+
+  const fileKeyB64 =
+    row.attachment_key_box ? await decryptString(attachmentMetadataSecret(env), row.attachment_key_box) : null;
+  const fileIvB64 =
+    row.attachment_iv_box ? await decryptString(attachmentMetadataSecret(env), row.attachment_iv_box) : null;
+
+  return {
+    id: row.attachment_id,
+    downloadUrl: `${env.EMBERCHAMBER_RELAY_PUBLIC_URL}/v1/attachments/download/${row.attachment_id}?token=${encodeURIComponent(
+      await signAttachmentToken(env, row.attachment_id, "download", expiresAtMs)
+    )}`,
+    fileName: row.file_name,
+    mimeType: row.mime_type,
+    byteLength: row.plaintext_byte_length ?? row.byte_length,
+    contentClass: row.content_class,
+    retentionMode: row.retention_mode,
+    protectionProfile: row.protection_profile,
+    previewBlurHash: row.preview_blur_hash,
+    encryptionMode: row.encryption_mode ?? "none",
+    fileKeyB64,
+    fileIvB64,
+  };
+}
+
 async function loadRelayHostedConversationMessages(
   env: Env,
   conversationId: string,
@@ -1720,15 +1782,7 @@ async function loadRelayHostedConversationMessages(
     kind: "text" | "media" | "system_notice";
     body_text: string | null;
     created_at: string;
-    attachment_id: string | null;
-    file_name: string | null;
-    mime_type: string | null;
-    byte_length: number | null;
-    content_class: "image" | "video" | "audio" | "file" | null;
-    retention_mode: "private_vault" | "ephemeral" | null;
-    protection_profile: "sensitive_media" | "standard" | null;
-    preview_blur_hash: string | null;
-  }>(
+  } & RelayHostedAttachmentRow>(
     env.DB,
     `SELECT
        m.id,
@@ -1742,10 +1796,14 @@ async function loadRelayHostedConversationMessages(
        a.file_name,
        a.mime_type,
        a.byte_length,
+       a.plaintext_byte_length,
        a.content_class,
        a.retention_mode,
        a.protection_profile,
-       a.preview_blur_hash
+       a.preview_blur_hash,
+       a.encryption_mode,
+       a.attachment_key_box,
+       a.attachment_iv_box
      FROM conversation_messages m
      JOIN accounts sender ON sender.id = m.sender_account_id
      LEFT JOIN attachments a ON a.id = m.attachment_id
@@ -1761,28 +1819,7 @@ async function loadRelayHostedConversationMessages(
   const messages: GroupThreadMessage[] = [];
 
   for (const row of rows.reverse()) {
-    const attachment =
-      row.attachment_id &&
-      row.file_name &&
-      row.mime_type &&
-      row.byte_length !== null &&
-      row.content_class &&
-      row.retention_mode &&
-      row.protection_profile
-        ? {
-            id: row.attachment_id,
-            downloadUrl: `${env.EMBERCHAMBER_RELAY_PUBLIC_URL}/v1/attachments/download/${row.attachment_id}?token=${encodeURIComponent(
-              await signAttachmentToken(env, row.attachment_id, "download", expiresAtMs)
-            )}`,
-            fileName: row.file_name,
-            mimeType: row.mime_type,
-            byteLength: row.byte_length,
-            contentClass: row.content_class,
-            retentionMode: row.retention_mode,
-            protectionProfile: row.protection_profile,
-            previewBlurHash: row.preview_blur_hash,
-          }
-        : null;
+    const attachment = await buildRelayHostedAttachment(env, row, expiresAtMs);
 
     messages.push({
       id: row.id,
@@ -1828,10 +1865,14 @@ async function createRelayHostedConversationMessage(
         file_name: string;
         mime_type: string;
         byte_length: number;
+        plaintext_byte_length: number | null;
         content_class: "image" | "video" | "audio" | "file";
         retention_mode: "private_vault" | "ephemeral";
         protection_profile: "sensitive_media" | "standard";
         preview_blur_hash: string | null;
+        encryption_mode: "none" | "device_encrypted";
+        attachment_key_box: string | null;
+        attachment_iv_box: string | null;
         account_id: string;
         conversation_id: string | null;
       }
@@ -1843,10 +1884,14 @@ async function createRelayHostedConversationMessage(
       file_name: string;
       mime_type: string;
       byte_length: number;
+      plaintext_byte_length: number | null;
       content_class: "image" | "video" | "audio" | "file";
       retention_mode: "private_vault" | "ephemeral";
       protection_profile: "sensitive_media" | "standard";
       preview_blur_hash: string | null;
+      encryption_mode: "none" | "device_encrypted";
+      attachment_key_box: string | null;
+      attachment_iv_box: string | null;
       account_id: string;
       conversation_id: string | null;
     }>(
@@ -1856,10 +1901,14 @@ async function createRelayHostedConversationMessage(
          file_name,
          mime_type,
          byte_length,
+         plaintext_byte_length,
          content_class,
          retention_mode,
          protection_profile,
          preview_blur_hash,
+         encryption_mode,
+         attachment_key_box,
+         attachment_iv_box,
          account_id,
          conversation_id
        FROM attachments
@@ -1895,19 +1944,24 @@ async function createRelayHostedConversationMessage(
     kind: attachment ? ("media" as const) : ("text" as const),
     text: input.text ?? null,
     attachment: attachment
-      ? {
-          id: attachment.id,
-          downloadUrl: `${env.EMBERCHAMBER_RELAY_PUBLIC_URL}/v1/attachments/download/${attachment.id}?token=${encodeURIComponent(
-            await signAttachmentToken(env, attachment.id, "download", expiresAtMs)
-          )}`,
-          fileName: attachment.file_name,
-          mimeType: attachment.mime_type,
-          byteLength: attachment.byte_length,
-          contentClass: attachment.content_class,
-          retentionMode: attachment.retention_mode,
-          protectionProfile: attachment.protection_profile,
-          previewBlurHash: attachment.preview_blur_hash,
-        }
+      ? await buildRelayHostedAttachment(
+          env,
+          {
+            attachment_id: attachment.id,
+            file_name: attachment.file_name,
+            mime_type: attachment.mime_type,
+            byte_length: attachment.byte_length,
+            plaintext_byte_length: attachment.plaintext_byte_length,
+            content_class: attachment.content_class,
+            retention_mode: attachment.retention_mode,
+            protection_profile: attachment.protection_profile,
+            preview_blur_hash: attachment.preview_blur_hash,
+            encryption_mode: attachment.encryption_mode,
+            attachment_key_box: attachment.attachment_key_box,
+            attachment_iv_box: attachment.attachment_iv_box,
+          },
+          expiresAtMs
+        )
       : null,
     createdAt: created.createdAt,
   };
@@ -2032,6 +2086,7 @@ export default {
           json({
             status: "ok",
             relay: "cloudflare-workers",
+            localAutoconnectMarker: env.EMBERCHAMBER_LOCAL_AUTOCONNECT_MARKER ?? null,
             timestamp: new Date().toISOString(),
           })
         );
@@ -3357,7 +3412,7 @@ export default {
           env.DB,
           `INSERT INTO conversations (
              id, kind, title, epoch, created_by, created_at, updated_at, member_cap, sensitive_media_default, join_rule_text, allow_member_invites, history_mode
-           ) VALUES (?1, 'group', ?2, 1, ?3, ?4, ?4, ?5, ?6, ?7, ?8, 'relay_hosted')`,
+           ) VALUES (?1, 'group', ?2, 1, ?3, ?4, ?4, ?5, ?6, ?7, ?8, 'device_encrypted')`,
           conversationId,
           body.title,
           auth.accountId,
@@ -3390,22 +3445,13 @@ export default {
           }),
         });
 
-        await appendConversationMessage(env, {
-          conversationId,
-          senderAccountId: auth.accountId,
-          kind: "system_notice",
-          text: `${body.title} created`,
-          clientMessageId: null,
-          createdAt,
-        });
-
         return respond(
           json({
             id: conversationId,
             kind: "group",
             title: body.title,
             epoch: 1,
-            historyMode: "relay_hosted",
+            historyMode: "device_encrypted",
             memberAccountIds,
             memberCap: body.memberCap,
             sensitiveMediaDefault: body.sensitiveMediaDefault,
@@ -3422,6 +3468,7 @@ export default {
           id: string;
           title: string | null;
           epoch: number;
+          history_mode: string | null;
           member_cap: number | null;
           sensitive_media_default: number | null;
           join_rule_text: string | null;
@@ -3437,6 +3484,7 @@ export default {
              c.id,
              c.title,
              c.epoch,
+             c.history_mode,
              c.member_cap,
              c.sensitive_media_default,
              c.join_rule_text,
@@ -3471,6 +3519,7 @@ export default {
             id: row.id,
             title: row.title ?? "Untitled group",
             epoch: row.epoch,
+            historyMode: coerceConversationHistoryMode(row.history_mode, "group"),
             memberCount: row.member_count,
             memberCap: row.member_cap ?? 12,
             myRole: ["owner", "admin"].includes(row.role) ? (row.role as "owner" | "admin") : "member",
@@ -3644,86 +3693,7 @@ export default {
         }
 
         const limit = Math.max(1, Math.min(100, Number(url.searchParams.get("limit") ?? "50")));
-        const rows = await dbAll<{
-          id: string;
-          conversation_id: string;
-          sender_account_id: string;
-          sender_display_name: string;
-          kind: "text" | "media" | "system_notice";
-          body_text: string | null;
-          created_at: string;
-          attachment_id: string | null;
-          file_name: string | null;
-          mime_type: string | null;
-          byte_length: number | null;
-          content_class: "image" | "video" | "audio" | "file" | null;
-          retention_mode: "private_vault" | "ephemeral" | null;
-          protection_profile: "sensitive_media" | "standard" | null;
-          preview_blur_hash: string | null;
-        }>(
-          env.DB,
-          `SELECT
-             m.id,
-             m.conversation_id,
-             m.sender_account_id,
-             sender.display_name AS sender_display_name,
-             m.kind,
-             m.body_text,
-             m.created_at,
-             a.id AS attachment_id,
-             a.file_name,
-             a.mime_type,
-             a.byte_length,
-             a.content_class,
-             a.retention_mode,
-             a.protection_profile,
-             a.preview_blur_hash
-           FROM conversation_messages m
-           JOIN accounts sender ON sender.id = m.sender_account_id
-           LEFT JOIN attachments a ON a.id = m.attachment_id
-          WHERE m.conversation_id = ?1
-            AND m.deleted_at IS NULL
-          ORDER BY m.created_at DESC
-          LIMIT ?2`,
-          conversationId,
-          limit
-        );
-
-        const expiresAtMs = Date.now() + 30 * 60 * 1000;
-        const messages: GroupThreadMessage[] = [];
-
-        for (const row of rows.reverse()) {
-          const attachment =
-            row.attachment_id && row.file_name && row.mime_type && row.byte_length !== null && row.content_class && row.retention_mode && row.protection_profile
-              ? {
-                  id: row.attachment_id,
-                  downloadUrl: `${env.EMBERCHAMBER_RELAY_PUBLIC_URL}/v1/attachments/download/${row.attachment_id}?token=${encodeURIComponent(
-                    await signAttachmentToken(env, row.attachment_id, "download", expiresAtMs)
-                  )}`,
-                  fileName: row.file_name,
-                  mimeType: row.mime_type,
-                  byteLength: row.byte_length,
-                  contentClass: row.content_class,
-                  retentionMode: row.retention_mode,
-                  protectionProfile: row.protection_profile,
-                  previewBlurHash: row.preview_blur_hash,
-                }
-              : null;
-
-          messages.push({
-            id: row.id,
-            conversationId: row.conversation_id,
-            historyMode: "relay_hosted",
-            senderAccountId: row.sender_account_id,
-            senderDisplayName: row.sender_display_name,
-            kind: row.kind,
-            text: row.body_text,
-            attachment,
-            createdAt: row.created_at,
-          });
-        }
-
-        return respond(json(messages));
+        return respond(json(await loadRelayHostedConversationMessages(env, conversationId, limit)));
       }
 
       if (request.method === "POST" && groupMessagesMatch) {
@@ -4802,15 +4772,19 @@ export default {
         const storedSha256 = body.ciphertextSha256B64 ?? body.sha256B64;
         const plaintextByteLength = body.plaintextByteLength ?? body.byteLength;
         const plaintextSha256 = body.plaintextSha256B64 ?? body.sha256B64;
+        let attachmentKeyBox: string | null = null;
+        let attachmentIvBox: string | null = null;
 
         if (!storedByteLength) {
           throw new HttpError(400, "Attachment byte length is required", "ATTACHMENT_LENGTH_REQUIRED");
         }
 
         if (body.conversationId) {
-          const conversation = await dbFirst<{ epoch: number }>(
+          const conversation = await dbFirst<{ epoch: number; kind: RelayConversationKind; history_mode: string | null }>(
             env.DB,
             `SELECT epoch
+                    , kind
+                    , history_mode
                FROM conversations
               WHERE id = ?1`,
             body.conversationId
@@ -4830,6 +4804,21 @@ export default {
 
           if (body.conversationEpoch && conversation.epoch !== body.conversationEpoch) {
             throw new HttpError(409, "Conversation epoch changed", "STALE_EPOCH");
+          }
+
+          const historyMode = coerceConversationHistoryMode(conversation.history_mode, conversation.kind);
+          if (historyMode === "relay_hosted" && body.encryptionMode === "device_encrypted") {
+            if (!body.fileKeyB64 || !body.fileIvB64) {
+              throw new HttpError(
+                400,
+                "Relay-hosted encrypted attachments need file key material.",
+                "ATTACHMENT_KEY_MATERIAL_REQUIRED"
+              );
+            }
+
+            const metadataSecret = attachmentMetadataSecret(env);
+            attachmentKeyBox = await encryptString(metadataSecret, body.fileKeyB64);
+            attachmentIvBox = await encryptString(metadataSecret, body.fileIvB64);
           }
         }
 
@@ -4856,11 +4845,13 @@ export default {
              retention_mode,
              protection_profile,
              preview_blur_hash,
+             attachment_key_box,
+             attachment_iv_box,
              conversation_id,
              conversation_epoch,
              upload_completed_at
            )
-           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?13, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, NULL)`,
+           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?13, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, NULL)`,
           attachmentId,
           auth.accountId,
           r2Key,
@@ -4879,6 +4870,8 @@ export default {
           body.retentionMode,
           body.protectionProfile,
           body.previewBlurHash ?? null,
+          attachmentKeyBox,
+          attachmentIvBox,
           body.conversationId ?? null,
           body.conversationEpoch ?? null
         );

@@ -15,9 +15,11 @@ import {
 } from "@/lib/relay";
 import {
   ensureWorkspaceReady,
-  listStoredDmMessages,
+  encryptRelayAttachmentFile,
+  listStoredConversationMessages,
   readDmAttachmentBlob,
-  sendDirectMessage,
+  readRelayAttachmentBlob,
+  sendConversationMessage,
   type StoredDmMessage,
 } from "@/lib/relay-workspace";
 import { useAuthStore } from "@/lib/store";
@@ -70,16 +72,16 @@ export default function ChatPage() {
     }
   }
 
-  async function loadDmMessages(conversationId: string, options: { syncWorkspace?: boolean } = {}) {
+  async function loadEncryptedConversationMessages(conversationId: string, options: { syncWorkspace?: boolean } = {}) {
     const { syncWorkspace = false } = options;
 
     try {
       if (syncWorkspace) {
         await ensureWorkspaceReady();
       }
-      setDmMessages(await listStoredDmMessages(conversationId));
+      setDmMessages(await listStoredConversationMessages(conversationId));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to sync DM history");
+      toast.error(error instanceof Error ? error.message : "Failed to sync encrypted conversation history");
     }
   }
 
@@ -122,7 +124,7 @@ export default function ChatPage() {
       return;
     }
 
-    if (conversation.kind === "group" || conversation.kind === "room") {
+    if ((conversation.kind === "group" || conversation.kind === "room") && conversation.historyMode === "relay_hosted") {
       let cancelled = false;
       let ws: WebSocket | null = null;
       let reconnectTimer: number | null = null;
@@ -182,15 +184,15 @@ export default function ChatPage() {
   }, [conversation, router]);
 
   useEffect(() => {
-    if (!conversation || conversation.kind !== "direct_message") {
+    if (!conversation || conversation.historyMode !== "device_encrypted") {
       return;
     }
 
-    void loadDmMessages(conversation.id, { syncWorkspace: true });
+    void loadEncryptedConversationMessages(conversation.id, { syncWorkspace: true });
   }, [conversation]);
 
   useEffect(() => {
-    if (!conversation || conversation.kind !== "direct_message") {
+    if (!conversation || conversation.historyMode !== "device_encrypted") {
       return;
     }
 
@@ -198,7 +200,7 @@ export default function ChatPage() {
       return;
     }
 
-    void loadDmMessages(conversation.id);
+    void loadEncryptedConversationMessages(conversation.id);
   }, [conversation, mailboxRevision]);
 
   async function compressWebImage(file: File): Promise<File> {
@@ -244,18 +246,24 @@ export default function ChatPage() {
 
   async function uploadGroupAttachment(originalFile: File) {
     const file = await compressWebImage(originalFile);
+    const encrypted = await encryptRelayAttachmentFile(file);
     const ticket = await relayAttachmentApi.createTicket({
       fileName: file.name,
       mimeType: file.type || "application/octet-stream",
-      byteLength: file.size,
+      encryptionMode: "device_encrypted",
+      ciphertextByteLength: encrypted.ciphertext.byteLength,
+      ciphertextSha256B64: encrypted.ciphertextSha256B64,
+      plaintextByteLength: encrypted.plaintext.byteLength,
+      plaintextSha256B64: encrypted.plaintextSha256B64,
+      fileKeyB64: encrypted.fileKeyB64,
+      fileIvB64: encrypted.fileIvB64,
       conversationId: id,
       conversationEpoch: conversation?.epoch,
       contentClass: contentClassForMimeType(file.type),
       retentionMode: "private_vault",
       protectionProfile: "standard",
     });
-    const bytes = await file.arrayBuffer();
-    await uploadAttachment(ticket.uploadUrl, bytes, file.type || "application/octet-stream");
+    await uploadAttachment(ticket.uploadUrl, encrypted.ciphertext, "application/octet-stream");
     return ticket.attachmentId;
   }
 
@@ -272,7 +280,15 @@ export default function ChatPage() {
 
     setIsSending(true);
     try {
-      if (conversation.kind === "group" || conversation.kind === "room") {
+      if (conversation.historyMode === "device_encrypted") {
+        await sendConversationMessage({
+          conversation,
+          senderDisplayName: user?.displayName ?? user?.username ?? "Web user",
+          text: trimmedContent,
+          file: selectedFile,
+        });
+        await loadEncryptedConversationMessages(conversation.id);
+      } else if (conversation.kind === "group" || conversation.kind === "room") {
         const attachmentId = selectedFile ? await uploadGroupAttachment(selectedFile) : undefined;
         await relayConversationApi.sendMessage(conversation.id, {
           text: trimmedContent || undefined,
@@ -280,14 +296,6 @@ export default function ChatPage() {
           clientMessageId: crypto.randomUUID(),
         });
         await loadRelayHostedMessages(conversation.id);
-      } else {
-        await sendDirectMessage({
-          conversation,
-          senderDisplayName: user?.displayName ?? user?.username ?? "Web user",
-          text: trimmedContent,
-          file: selectedFile,
-        });
-        await loadDmMessages(conversation.id);
       }
 
       setContent("");
@@ -306,6 +314,24 @@ export default function ChatPage() {
 
     try {
       const blob = await readDmAttachmentBlob(message.attachment);
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = message.attachment.fileName;
+      anchor.click();
+      URL.revokeObjectURL(objectUrl);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to download the attachment");
+    }
+  }
+
+  async function handleDownloadGroupAttachment(message: GroupThreadMessage) {
+    if (!message.attachment) {
+      return;
+    }
+
+    try {
+      const blob = await readRelayAttachmentBlob(message.attachment);
       const objectUrl = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = objectUrl;
@@ -351,6 +377,41 @@ export default function ChatPage() {
           <div className="flex h-full items-center justify-center">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
           </div>
+        ) : conversation?.historyMode === "device_encrypted" ? (
+          dmMessages.length === 0 ? (
+            <div className="flex h-full items-center justify-center">
+              <p className="text-[var(--text-secondary)]">No local encrypted history on this browser yet.</p>
+            </div>
+          ) : (
+            dmMessages.map((message) => {
+              const isOwn = message.senderAccountId === user?.id;
+
+              return (
+                <div
+                  key={message.id}
+                  className={`flex ${isOwn ? "justify-end" : "justify-start"}`}
+                >
+                  <div className="max-w-[80%] rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-600">
+                      {isOwn ? "You" : message.senderDisplayName}{isOwn ? "  ✓✓" : ""}
+                    </p>
+                    {message.text ? (
+                      <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--text-primary)]">{message.text}</p>
+                    ) : null}
+                    {message.attachment ? (
+                      <button
+                        type="button"
+                        onClick={() => void handleDownloadDmAttachment(message)}
+                        className="mt-3 inline-flex rounded-xl border border-[var(--border)] px-3 py-2 text-sm text-brand-600"
+                      >
+                        Download {message.attachment.fileName}
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })
+          )
         ) : conversation?.kind === "group" || conversation?.kind === "room" ? (
           groupMessages.length === 0 ? (
             <div className="flex h-full items-center justify-center">
@@ -375,12 +436,13 @@ export default function ChatPage() {
                       <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--text-primary)]">{message.text}</p>
                     ) : null}
                     {message.attachment ? (
-                      <a
-                        href={message.attachment.downloadUrl}
+                      <button
+                        type="button"
+                        onClick={() => void handleDownloadGroupAttachment(message)}
                         className="mt-3 inline-flex rounded-xl border border-[var(--border)] px-3 py-2 text-sm text-brand-600"
                       >
                         Download {message.attachment.fileName}
-                      </a>
+                      </button>
                     ) : null}
                   </div>
                 </div>

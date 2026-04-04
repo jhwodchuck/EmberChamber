@@ -24,16 +24,23 @@ export function MessageBubble({
     <View style={[styles.messageRow, isOwnMessage ? styles.messageRowOwn : null]}>
       <View style={[styles.messageBubble, isOwnMessage ? styles.messageBubbleOwn : null]}>
         <Text style={styles.messageMeta}>
-          {isOwnMessage ? "You" : message.senderDisplayName} · {new Date(message.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}{isOwnMessage ? "  ✓✓" : ""}
+          {isOwnMessage ? "You" : message.senderDisplayName} · {new Date(message.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
         </Text>
         {message.text ? <Text style={styles.messageText}>{message.text}</Text> : null}
-        {message.attachment?.contentClass === "image" ? (
+        {message.attachment?.contentClass === "image" &&
+        message.attachment.encryptionMode !== "device_encrypted" ? (
           <Image
             source={{ uri: message.attachment.downloadUrl }}
             style={styles.messageImage}
             resizeMode="cover"
             onError={() => onImageError?.(message.id)}
           />
+        ) : null}
+        {message.attachment?.contentClass === "image" &&
+        message.attachment.encryptionMode === "device_encrypted" ? (
+          <Text style={styles.attachmentMeta}>
+            Encrypted attachment. Android can receive it now, but inline media decrypt UI still needs a follow-up.
+          </Text>
         ) : null}
         {message.attachment ? (
           <Text style={styles.attachmentMeta}>

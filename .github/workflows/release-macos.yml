@@ -25,13 +25,30 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: package-lock.json
+
+      - name: Get npm cache directory
+        id: npm-cache-dir
+        run: echo "dir=$(npm config get cache)" >> $GITHUB_OUTPUT
+
+      - name: Restore npm cache
+        id: npm-cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ steps.npm-cache-dir.outputs.dir }}
+          key: node-cache-${{ runner.os }}-${{ runner.arch }}-npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: node-cache-${{ runner.os }}-${{ runner.arch }}-npm-
 
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
+
+      - name: Save npm cache
+        if: steps.npm-cache-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ steps.npm-cache-dir.outputs.dir }}
+          key: node-cache-${{ runner.os }}-${{ runner.arch }}-npm-${{ hashFiles('package-lock.json') }}
 
       - name: Build macOS shell
         run: npm run build --workspace=apps/desktop

@@ -15,6 +15,7 @@ That command:
 - applies local relay migrations
 - seeds a reusable real local beta invite token
 - starts the local relay in a detached `screen` session named `ember-relay`
+- tags that relay as the only localhost target the desktop app will auto-adopt
 - builds the desktop package
 - installs the latest desktop `.deb`
 
@@ -45,6 +46,7 @@ The Ubuntu desktop shell currently supports:
 - privacy settings
 - relay-hosted group threads
 - attachment upload and download, including photo send
+- native desktop session persistence through the system keyring when available, with a restricted local-file fallback if the keyring is unavailable
 
 Ubuntu is currently the most practical desktop release-verification lane in this repo because the Linux build workflow is live and public `.deb` and `.AppImage` assets already exist.
 
@@ -141,6 +143,7 @@ Run this checklist after installing a public build or creating a local bundle:
 - Desktop artifacts are not yet code-signed.
 - Group threads in the current relay-native `/v1/groups/*` flow still store readable text in D1.
 - Current attachment uploads are raw blobs in R2 rather than the final end-to-end encrypted attachment model.
+- Linux desktop privacy defaults are better grounded now, but operating-system capture outside the app is still not fully preventable.
 - iPhone and macOS remain later-surface work rather than first-beta commitments.
 - Production first-run still depends on a valid invite plus real magic-link delivery, so the deterministic five-minute path today is the local relay lane rather than the hosted beta.
 

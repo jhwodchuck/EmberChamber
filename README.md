@@ -50,9 +50,9 @@ Legacy prototype paths retained temporarily:
 
 Current implementation reality:
 
-- relay-native bootstrap, sessions, privacy settings, group creation/invites, relay-hosted group threads, and signed attachment tickets are live
-- the encrypted mailbox and device-bundle path now powers the browser DM flow, but the user-facing encrypted-group migration is still incomplete
-- current relay-native group threads store readable text in D1 and current attachment uploads are raw blobs in R2
+- relay-native bootstrap, sessions, privacy settings, group creation/invites, and signed attachment tickets are live
+- the encrypted mailbox and device-bundle path now powers new DM and new device-encrypted group sends across web, Android, and desktop
+- new device-encrypted groups keep message bodies and attachment keys off the relay, while legacy relay-hosted groups still exist until each group is migrated
 - the web workspace now runs on relay APIs for authenticated messaging, joined-space search, invites, and settings
 
 ## Beta Product Direction
@@ -68,6 +68,7 @@ The intended beta surface includes:
 - per-device key registration
 - ciphertext mailbox delivery for direct messages
 - small groups capped at 12 members
+- device-encrypted small-group delivery with local device history
 - organizer/admin-controlled invites in phase 1
 - standard media defaults globally, with stronger per-group protections when organizers opt in
 - signed attachment upload/download with private-vault defaults
@@ -142,6 +143,7 @@ The relay stores:
 - account/session/device metadata
 - invite and group membership metadata
 - relay-hosted group thread text and attachment metadata in the current `/v1/groups/*` flow
+- ciphertext attachment blobs, signed access metadata, and legacy relay-hosted group history that still needs cleanup after migration
 
 The target end state does not aim to store:
 
