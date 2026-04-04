@@ -1,0 +1,126 @@
+name: CI - Mobile (Self-Hosted)
+
+on:
+  push:
+    branches: [main, "copilot/**"]
+    paths:
+      - "apps/mobile/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/ci-mobile-self-hosted.yml"
+      - ".github/workflows/ci-mobile.yml"
+      - ".github/workflows/build-android.yml"
+      - ".github/workflows/release-android.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ci-mobile-self-hosted-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-android:
+    name: Verify Android mobile app
+    runs-on: [self-hosted, Linux, X64, emberchamber-trusted]
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      EXPO_NO_TELEMETRY: "1"
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Write Firebase Android app config
+        env:
+          ANDROID_GOOGLE_SERVICES_JSON: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -z "$ANDROID_GOOGLE_SERVICES_JSON" ]; then
+            echo "ANDROID_GOOGLE_SERVICES_JSON is not configured; continuing without google-services.json"
+            exit 0
+          fi
+          mkdir -p apps/mobile/secrets
+          printf '%s' "$ANDROID_GOOGLE_SERVICES_JSON" > apps/mobile/secrets/google-services.json
+
+      - name: Verify Android mobile project
+        run: npm run verify:android --workspace=apps/mobile
+
+  build-android-release:
+    name: Build Android release APK for screenshots
+    needs: verify-android
+    uses: ./.github/workflows/build-android.yml
+    with:
+      build_type: release
+      sign: false
+      artifact_name: emberchamber-android-release-screenshots
+    secrets: inherit
+
+  android-screenshots:
+    name: Capture Android screenshots (${{ matrix.device_class }})
+    runs-on: [self-hosted, Linux, X64, emberchamber-trusted]
+    needs: build-android-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - device_class: phone
+            wm_size: 1080x1920
+            wm_density: 420
+          - device_class: tablet
+            wm_size: 1920x1200
+            wm_density: 240
+          - device_class: chromebook
+            wm_size: 1366x768
+            wm_density: 160
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download release APK artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: ${{ needs.build-android-release.outputs.artifact_name }}
+          path: apps/mobile/artifacts/android-build
+
+      - name: Resolve APK path
+        run: |
+          APK_PATH=$(find apps/mobile/artifacts/android-build -name '*.apk' | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            echo "No APK found in downloaded build artifacts" >&2
+            exit 1
+          fi
+          echo "APK_PATH=$APK_PATH" >> "$GITHUB_ENV"
+
+      - name: Capture emulator screenshots
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: default
+          profile: pixel_6
+          avd-name: ci-screenshot-avd-${{ matrix.device_class }}
+          force-avd-creation: false
+          disable-animations: true
+          emulator-boot-timeout: 900
+          emulator-options: -no-snapshot -no-window -no-audio -no-boot-anim -netdelay none -netspeed full -gpu swiftshader_indirect
+          script: |
+            adb install -r "$APK_PATH"
+            bash apps/mobile/scripts/capture-android-screenshots.sh \
+              "apps/mobile/artifacts/android-screenshots/${{ matrix.device_class }}" \
+              "com.emberchamber.mobile" \
+              "${{ matrix.device_class }}" \
+              "${{ matrix.wm_size }}" \
+              "${{ matrix.wm_density }}"
+
+      - name: Upload Android screenshot artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: emberchamber-android-screenshots-${{ matrix.device_class }}-${{ github.run_number }}
+          path: apps/mobile/artifacts/android-screenshots/${{ matrix.device_class }}
+          retention-days: 14
+          if-no-files-found: error
