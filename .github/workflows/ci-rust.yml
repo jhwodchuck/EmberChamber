@@ -2,7 +2,7 @@ name: CI - Rust Core and Protocol
 
 on:
   push:
-    branches: [main, "copilot/**"]
+    branches: [main]
     paths:
       - "crates/**"
       - "services/**"
