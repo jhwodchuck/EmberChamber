@@ -67,40 +67,12 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: Build signed AAB and upload to Google Play
+  prepare:
+    name: Validate Play deployment inputs
     runs-on: ubuntu-22.04
+    outputs:
+      version_code: ${{ steps.version.outputs.version_code }}
     steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event.inputs.ref }}
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: package-lock.json
-
-      - uses: actions/setup-java@v5
-        with:
-          java-version: 17
-          distribution: temurin
-
-      - uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: "3.3"
-
-      - uses: android-actions/setup-android@v3
-
-      - name: Cache Gradle packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: gradle-${{ runner.os }}-
-
       - name: Validate Play Store input
         env:
           PLAY_RELEASE_STATUS: ${{ github.event.inputs.release_status }}
@@ -116,6 +88,32 @@ jobs:
             exit 1
           fi
 
+      - name: Calculate version code from Unix timestamp
+        id: version
+        run: |
+          VERSION_CODE=$(date +%s)
+          echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+          echo "Generated versionCode: $VERSION_CODE (Unix timestamp seconds)"
+
+  build:
+    name: Build signed AAB
+    needs: prepare
+    uses: ./.github/workflows/build-android.yml
+    with:
+      build_type: release
+      sign: true
+      ref: ${{ github.event.inputs.ref }}
+      artifact_name: emberchamber-play-store-aab
+      require_google_services: true
+      validate_release_inputs: true
+      version_code: ${{ needs.prepare.outputs.version_code }}
+    secrets: inherit
+
+  deploy:
+    name: Upload AAB to Google Play
+    runs-on: ubuntu-22.04
+    needs: build
+    steps:
       - name: Assert Play Store credentials are configured
         env:
           GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
@@ -125,82 +123,24 @@ jobs:
             exit 1
           fi
 
-      - name: Assert Firebase Android app config is configured
-        env:
-          ANDROID_GOOGLE_SERVICES_JSON: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON }}
+      - name: Download signed AAB artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: ${{ needs.build.outputs.artifact_name }}
+          path: apps/mobile/artifacts/android-build
+
+      - name: Resolve AAB path
         run: |
-          if [ -z "$ANDROID_GOOGLE_SERVICES_JSON" ]; then
-            echo "Missing GitHub Actions secret ANDROID_GOOGLE_SERVICES_JSON" >&2
+          AAB_PATH=$(find apps/mobile/artifacts/android-build -name '*.aab' | head -n 1)
+          if [ -z "$AAB_PATH" ]; then
+            echo "No AAB found in downloaded build artifacts" >&2
             exit 1
           fi
+          echo "AAB_PATH=$AAB_PATH" >> "$GITHUB_ENV"
 
-      - name: Install dependencies
-        run: npm ci --no-audit --no-fund
-
-      - name: Calculate version code from Unix timestamp
-        run: |
-          VERSION_CODE=$(date +%s)
-          echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
-          echo "Generated versionCode: $VERSION_CODE (Unix timestamp seconds)"
-
-      - name: Inject Android versionCode into Expo config
-        env:
-          VERSION_CODE: ${{ env.VERSION_CODE }}
-        run: |
-          node -e "const fs=require('fs'); const p='apps/mobile/app.json'; const d=JSON.parse(fs.readFileSync(p,'utf8')); d.expo=d.expo||{}; d.expo.android=d.expo.android||{}; d.expo.android.versionCode=Number(process.env.VERSION_CODE); fs.writeFileSync(p, JSON.stringify(d, null, 2)+'\n');"
-
-      - name: Write Firebase Android app config
-        env:
-          ANDROID_GOOGLE_SERVICES_JSON: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON }}
-        run: |
-          mkdir -p apps/mobile/secrets
-          printf '%s' "$ANDROID_GOOGLE_SERVICES_JSON" > apps/mobile/secrets/google-services.json
-
-      - name: Validate Android release inputs
-        run: |
-          npm run verify:google-services --workspace=apps/mobile
-          npm run type-check --workspace=apps/mobile
-          (cd apps/mobile && npx expo config --json > /tmp/emberchamber-mobile-config.json)
-
-      - name: Generate Android native project
-        run: npm run build:android --workspace=apps/mobile
-
-      - name: Make Gradle wrapper executable
-        run: chmod +x apps/mobile/android/gradlew
-
-      - name: Decode release keystore
-        run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d \
-            > apps/mobile/android/app/emberchamber-release.keystore
-
-      - name: Build signed release AAB
-        env:
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: |
-          ./gradlew bundleRelease \
-            -Pandroid.injected.signing.store.file="$GITHUB_WORKSPACE/apps/mobile/android/app/emberchamber-release.keystore" \
-            -Pandroid.injected.signing.store.password="$ANDROID_STORE_PASSWORD" \
-            -Pandroid.injected.signing.key.alias="$ANDROID_KEY_ALIAS" \
-            -Pandroid.injected.signing.key.password="$ANDROID_KEY_PASSWORD"
-        working-directory: apps/mobile/android
-
-      - name: Rename AAB with ref
-        run: |
-          SAFE_REF=$(printf '%s' "${{ github.event.inputs.ref }}" | tr '/:@' '-')
-          SRC=apps/mobile/android/app/build/outputs/bundle/release/app-release.aab
-          DEST="apps/mobile/android/app/build/outputs/bundle/release/emberchamber-${SAFE_REF}-release.aab"
-          mv "$SRC" "$DEST"
-          echo "AAB_PATH=$DEST" >> "$GITHUB_ENV"
-
-      - name: Upload signed AAB artifact
-        uses: actions/upload-artifact@v7
+      - uses: ruby/setup-ruby@v1
         with:
-          name: emberchamber-play-store-aab
-          path: ${{ env.AAB_PATH }}
-          retention-days: 30
-          if-no-files-found: error
+          ruby-version: "3.3"
 
       - name: Install fastlane
         run: gem install fastlane --no-document
