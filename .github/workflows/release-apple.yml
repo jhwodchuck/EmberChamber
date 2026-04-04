@@ -148,7 +148,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             SWIFT_STRICT_CONCURRENCY=minimal
 
-      - name: Package simulator artifact
+      - name: Locate simulator app artifact
         run: |
           PRODUCT_DIR=apps/mobile/ios/build/Build/Products/Debug-iphonesimulator
           APP_PATH=$(find "$PRODUCT_DIR" -maxdepth 1 -name '*.app' | head -n 1)
@@ -156,7 +156,15 @@ jobs:
             echo "No simulator .app found in $PRODUCT_DIR" >&2
             exit 1
           fi
+          echo "IOS_SIMULATOR_APP_PATH=$APP_PATH" >> "$GITHUB_ENV"
 
+      - name: Capture iOS simulator screenshots
+        run: bash apps/mobile/scripts/capture-ios-screenshots.sh "$IOS_SIMULATOR_APP_PATH"
+
+      - name: Package simulator artifact
+        run: |
+          PRODUCT_DIR=apps/mobile/ios/build/Build/Products/Debug-iphonesimulator
+          APP_PATH="$IOS_SIMULATOR_APP_PATH"
           APP_NAME=$(basename "$APP_PATH")
           cd "$PRODUCT_DIR"
           zip -r "$GITHUB_WORKSPACE/EmberChamber-ios-simulator.zip" "$APP_NAME"
@@ -167,6 +175,15 @@ jobs:
           name: emberchamber-ios-beta
           path: EmberChamber-ios-simulator.zip
           retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload iOS screenshot artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: emberchamber-ios-screenshots-${{ github.run_number }}
+          path: apps/mobile/artifacts/ios-screenshots
+          retention-days: 14
           if-no-files-found: error
 
       - name: Publish iOS asset to GitHub Release
