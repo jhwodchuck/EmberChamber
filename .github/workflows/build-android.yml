@@ -172,6 +172,20 @@ jobs:
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d \
             > apps/mobile/android/app/emberchamber-release.keystore
 
+      - name: Generate debug keystore for unsigned release builds
+        if: inputs.build_type == 'release' && !inputs.sign
+        run: |
+          mkdir -p "$HOME/.android"
+          keytool -genkey -v \
+            -keystore "$HOME/.android/debug.keystore" \
+            -alias androiddebugkey \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass android \
+            -keypass android \
+            -dname "CN=Android Debug,O=Android,C=US"
+
       - name: Build Android artifact(s)
         env:
           BUILD_TYPE: ${{ inputs.build_type }}
