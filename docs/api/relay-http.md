@@ -58,8 +58,8 @@ endpoint map for the current Cloudflare Worker runtime, not a full OpenAPI file.
 | `GET` | `/v1/conversations/:conversationId` | Read one conversation descriptor plus membership |
 | `GET` | `/v1/search?q=` | Search joined-space metadata and shared contacts |
 | `GET` | `/v1/groups` | List group memberships |
-| `POST` | `/v1/groups` | Create a group |
-| `GET` | `/v1/groups/:groupId/messages` | Read relay-hosted group thread messages | Returns `historyMode` and rejects unsupported encrypted-group history modes with `409 HISTORY_MODE_UNSUPPORTED`. |
+| `POST` | `/v1/groups` | Create a group | New groups are created with `historyMode = device_encrypted`. |
+| `GET` | `/v1/groups/:groupId/messages` | Read relay-hosted group thread messages | Compatibility path only. Returns `409 HISTORY_MODE_UNSUPPORTED` for encrypted groups. |
 | `POST` | `/v1/groups/:groupId/messages` | Write a relay-hosted group thread message | Only valid for `relay_hosted` group history. |
 | `GET` | `/v1/groups/:groupId/invites` | List invite records for a group |
 | `POST` | `/v1/groups/:groupId/invites` | Create a group invite |
@@ -87,7 +87,7 @@ endpoint map for the current Cloudflare Worker runtime, not a full OpenAPI file.
 
 ## Current Caveats
 
-- Group-thread text is still stored in D1 `conversation_messages` for the current relay-hosted group path.
+- New groups are created as `device_encrypted`; only legacy relay-hosted group and room compatibility paths still store readable text in D1 `conversation_messages`.
 - Current mobile and desktop clients still upload raw bytes to R2; the new browser DM attachment path encrypts before upload, but that is not yet universal across every client.
 - `CLEANUP_QUEUE` is now consumed by the worker for retention work. `PUSH_QUEUE` is still provisioned but not yet consumed.
 - The browser now uses relay APIs for authenticated messaging, search, invite, and settings flows. Legacy channel routes remain intentionally retired placeholders, not the target beta direction.
@@ -95,4 +95,4 @@ endpoint map for the current Cloudflare Worker runtime, not a full OpenAPI file.
 
 ## Legacy Reference
 
-For the older centralized prototype stack, see [`openapi.yaml`](/home/jason/gh/PrivateMesh/docs/api/openapi.yaml).
+For the older centralized prototype stack, see [`openapi.yaml`](openapi.yaml).

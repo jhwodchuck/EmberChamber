@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { SiteMobileNav } from "@/components/site-mobile-nav";
 import { authBootstrapEnabled, primaryNav } from "@/lib/site";
 
 export function SiteHeader() {
@@ -41,6 +42,7 @@ export function SiteHeader() {
         </div>
 
         <div className="flex items-center gap-3">
+          <SiteMobileNav />
           <Link href={secondaryCta.href} className="btn-ghost hidden sm:inline-flex">
             {secondaryCta.label}
           </Link>

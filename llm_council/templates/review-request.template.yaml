@@ -1,0 +1,28 @@
+review_target: <feature, PR, issue, branch, or commit range>
+repo: jhwodchuck/EmberChamber
+request_type: <feature | bugfix | refactor | release | audit>
+summary: >
+  <one-paragraph summary of the change or review need>
+base_ref: main
+head_ref: <branch or head sha>
+commit_range: <base>..<head>
+changed_paths_hint:
+  - <optional path hint>
+must_review:
+  - <optional reviewer id>
+avoid_reviewers:
+  - <optional reviewer id>
+risk_flags:
+  auth: false
+  crypto: false
+  protocol: false
+  storage: false
+  release: false
+  ui_flow: false
+  legacy_paths: false
+  app_store: false
+questions_to_answer:
+  - <question>
+token_budget_tier: normal
+notes: >
+  <optional extra guidance>

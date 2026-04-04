@@ -17,9 +17,9 @@ GitHub Actions now captures mobile screenshots for both Android and iOS flows:
 
 1. `expo prebuild` generates `apps/mobile/android`.
 2. Gradle builds `app-debug.apk`.
-3. CI boots a Pixel 6 API 34 emulator.
+3. CI boots a form-factor-specific API 34 emulator profile (`pixel_6`, `pixel_tablet`, `pixel_c`).
 4. APK is installed and launched.
-5. `adb exec-out screencap -p` writes PNG files to:
+5. `adb shell screencap -p` writes PNG files to:
    - `apps/mobile/artifacts/android-screenshots/phone`
    - `apps/mobile/artifacts/android-screenshots/tablet`
    - `apps/mobile/artifacts/android-screenshots/chromebook`

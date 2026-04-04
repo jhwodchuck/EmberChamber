@@ -1,16 +1,18 @@
 [package]
 name = "realtime-gateway"
 description = "WebSocket gateway for real-time message fan-out"
-version.workspace = true
-edition.workspace = true
-license.workspace = true
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
 
 [[bin]]
 name = "realtime-gateway"
 path = "src/main.rs"
 
+[workspace]
+
 [dependencies]
-emberchamber-domain = { workspace = true }
-tokio = { workspace = true }
-tracing = { workspace = true }
-dotenvy = { workspace = true }
+emberchamber-domain = { path = "../../crates/domain" }
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+dotenvy = "0.15"

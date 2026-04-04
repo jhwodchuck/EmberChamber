@@ -21,8 +21,8 @@ export function SiteFooter() {
                 Build a quieter place for the people you actually trust.
               </h2>
               <p className="mt-4 max-w-xl text-sm leading-7 text-[#cbb0a3] sm:text-base">
-                Invite-only access, on-device history, and a relay that delivers messages without
-                turning your conversations into a server archive.
+                Invite-only access, device-local DM history, and a relay kept narrow enough to avoid
+                becoming the default archive while older compatibility paths are retired.
               </p>
             </div>
 
@@ -42,7 +42,7 @@ export function SiteFooter() {
             <p className="font-medium text-[var(--text-primary)]">EmberChamber</p>
             <p className="mt-2 leading-6 text-[#b89690]">
               Private messaging for the people you trust. Invite-only, privacy-first, and built so
-              more of your history stays with you instead of turning into a server archive.
+              more of your history stays with you instead of becoming the service&apos;s default archive.
             </p>
           </div>
 

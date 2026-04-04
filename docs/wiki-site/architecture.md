@@ -52,7 +52,9 @@ The relay is the only hosted component. It runs on Cloudflare's edge using:
 
 ### `apps/web` — Next.js
 
-The web app is a capable secondary client. It handles onboarding, DMs, relay-hosted group threads, joined-space search, invite preview/accept, and settings — all on relay APIs.
+The web app is a capable secondary client. It handles onboarding, DMs, device-encrypted group
+creation, legacy compatibility history, joined-space search, invite preview or accept, and
+settings — all on relay APIs.
 
 ### `apps/mobile` — Expo (Android-first)
 

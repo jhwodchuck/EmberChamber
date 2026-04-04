@@ -6,10 +6,34 @@ PACKAGE_NAME="${2:-com.emberchamber.mobile}"
 DEVICE_CLASS="${3:-phone}"
 WM_SIZE="${4:-1080x1920}"
 WM_DENSITY="${5:-420}"
+SCREEN_ORIENTATION="${6:-portrait}"
+
+SCREEN_WIDTH="${WM_SIZE%x*}"
+SCREEN_HEIGHT="${WM_SIZE#*x}"
+WM_APPLY_SIZE="$WM_SIZE"
+CENTER_X=$((SCREEN_WIDTH / 2))
+SWIPE_START_Y=$((SCREEN_HEIGHT * 78 / 100))
+SWIPE_MID_Y=$((SCREEN_HEIGHT * 47 / 100))
+SWIPE_BOTTOM_Y=$((SCREEN_HEIGHT * 36 / 100))
 
 mkdir -p "$OUTPUT_DIR"
 
+reset_display() {
+  adb shell wm size reset >/dev/null 2>&1 || true
+  adb shell wm density reset >/dev/null 2>&1 || true
+  adb shell wm user-rotation free >/dev/null 2>&1 || true
+  adb shell settings delete system accelerometer_rotation >/dev/null 2>&1 || true
+  adb shell settings delete system user_rotation >/dev/null 2>&1 || true
+}
+
+trap reset_display EXIT
+
 adb wait-for-device
+
+# Fresh emulators sometimes fail their first screencap request unless the
+# compositor has already been exercised once.
+adb shell screencap -p /sdcard/emberchamber-preflight.png >/dev/null 2>&1 || true
+adb shell rm -f /sdcard/emberchamber-preflight.png >/dev/null 2>&1 || true
 
 # Keep captures deterministic and reduce flakiness from transitions.
 # Allow failures here — the settings service may not be ready immediately
@@ -23,9 +47,30 @@ adb shell input keyevent KEYCODE_WAKEUP || true
 adb shell wm dismiss-keyguard || true
 adb shell input keyevent 82 || true
 
+case "$SCREEN_ORIENTATION" in
+  portrait)
+    adb shell settings put system accelerometer_rotation 0 || true
+    adb shell settings put system user_rotation 0 || true
+    adb shell wm user-rotation lock 0 || true
+    ;;
+  landscape)
+    # `wm size` uses the device's natural portrait coordinate space, so apply
+    # the swapped dimensions when we want a landscape output.
+    WM_APPLY_SIZE="${SCREEN_HEIGHT}x${SCREEN_WIDTH}"
+    adb shell settings put system accelerometer_rotation 0 || true
+    adb shell settings put system user_rotation 1 || true
+    adb shell wm user-rotation lock 1 || true
+    ;;
+  *)
+    echo "Unsupported orientation: $SCREEN_ORIENTATION" >&2
+    exit 1
+    ;;
+esac
+
 # Match Play Store form-factor sizing expectations.
-adb shell wm size "$WM_SIZE"
+adb shell wm size "$WM_APPLY_SIZE"
 adb shell wm density "$WM_DENSITY"
+
 adb shell input keyevent KEYCODE_HOME || true
 
 LAUNCH_ACTIVITY="$(adb shell cmd package resolve-activity --brief "$PACKAGE_NAME" | tr -d '\r' | tail -n 1)"
@@ -54,10 +99,21 @@ sleep 8
 capture_png() {
   local target="$1"
   local remote_path="/sdcard/emberchamber-screencap.png"
+  local attempt
 
-  adb shell screencap -p "$remote_path" >/dev/null
-  adb pull "$remote_path" "$target" >/dev/null
-  adb shell rm -f "$remote_path" >/dev/null
+  for attempt in 1 2 3; do
+    if adb shell screencap -p "$remote_path" >/dev/null \
+      && adb pull "$remote_path" "$target" >/dev/null; then
+      adb shell rm -f "$remote_path" >/dev/null
+      return 0
+    fi
+
+    adb shell rm -f "$remote_path" >/dev/null 2>&1 || true
+    sleep 1
+  done
+
+  echo "Unable to capture screenshot after retries: $target" >&2
+  exit 1
 }
 
 tap_text() {
@@ -90,17 +146,22 @@ PY
   return 1
 }
 
+# Warm the compositor before the first artifact capture. Freshly booted
+# emulators sometimes drop the first screencap request.
+adb shell screencap -p /sdcard/emberchamber-warmup.png >/dev/null 2>&1 || true
+adb shell rm -f /sdcard/emberchamber-warmup.png >/dev/null 2>&1 || true
+
 capture_png "$OUTPUT_DIR/01-${DEVICE_CLASS}-onboarding-top.png"
 
 tap_text "Add beta invite token" || true
 sleep 2
 capture_png "$OUTPUT_DIR/02-${DEVICE_CLASS}-invite-expanded.png"
 
-adb shell input swipe 540 1500 540 900 450 || true
+adb shell input swipe "$CENTER_X" "$SWIPE_START_Y" "$CENTER_X" "$SWIPE_MID_Y" 450 || true
 sleep 1
 capture_png "$OUTPUT_DIR/03-${DEVICE_CLASS}-mid-form.png"
 
-adb shell input swipe 540 1500 540 700 450 || true
+adb shell input swipe "$CENTER_X" "$SWIPE_START_Y" "$CENTER_X" "$SWIPE_BOTTOM_Y" 450 || true
 sleep 1
 capture_png "$OUTPUT_DIR/04-${DEVICE_CLASS}-bottom-form.png"
 

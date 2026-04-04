@@ -1,17 +1,13 @@
 [workspace]
 resolver = "2"
+exclude = [
+    "services/*",
+]
 members = [
     # Desktop / mobile shell
     "apps/desktop/src-tauri",
     # Cross-platform secure client core
     "crates/core",
-    # Services
-    "services/control-api",
-    "services/realtime-gateway",
-    "services/relay-gateway",
-    "services/media-worker",
-    "services/push-worker",
-    "services/directory-ca",
     # Shared crates
     "crates/auth",
     "crates/db",

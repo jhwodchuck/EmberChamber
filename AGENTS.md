@@ -7,6 +7,8 @@ This repo is maintained primarily by AI agents. Keep repo guidance concrete, loc
 Read these docs before making broad product or architecture changes:
 
 - `README.md`
+- `repo-map.yaml`
+- `llm_council/README.md`
 - `docs/architecture.md`
 - `docs/launch-targets.md`
 - `docs/operator-playbook.md` for privacy, safety, abuse, and moderation language
@@ -29,7 +31,7 @@ These remain in the repo, but they are not the default place for new beta work:
 
 - `apps/api`: legacy Express and Postgres prototype
 - `infra/docker-compose.yml`: legacy centralized stack
-- `services/*`: older Rust service scaffolds still in the Cargo workspace
+- `services/*`: archived Rust service scaffolds kept for reference and explicit legacy maintenance
 
 Only change legacy paths when the user explicitly asks for them or when they block current builds.
 
@@ -74,3 +76,17 @@ Run the smallest relevant checks for the paths you touch:
 - shared Rust core and protocol: `cargo test -p emberchamber-core -p emberchamber-relay-protocol`
 
 If you change protocol payloads or auth/session shapes, verify both the TypeScript and Rust sides.
+
+For a full active-runtime sweep from the repo root, use `npm run verify:all`.
+
+## AI Review Council
+
+For broad reviews, audits, or cross-surface risk sweeps, use the repo-specific council in `llm_council/`.
+
+From the repo root:
+
+- `cp llm_council/templates/review-request.template.yaml review-request.yaml`
+- `npm run council:review -- HEAD WORKTREE "current-worktree"`
+- open `recommended-reviewers.txt` and run only the routed personas
+
+Use `main HEAD` when reviewing a committed branch or PR diff instead of the dirty worktree. Generated council artifacts in the repo root are gitignored.

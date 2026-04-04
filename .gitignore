@@ -42,6 +42,10 @@ coverage/
 # TypeScript
 *.tsbuildinfo
 
+# Python
+__pycache__/
+*.pyc
+
 # Rust / Cargo
 Cargo.lock
 **/*.rs.bk
@@ -65,3 +69,11 @@ infra/data/
 apps/mobile/secrets/
 apps/mobile/secrets/google-play-service-account.json
 apps/relay/.wrangler/
+
+# AI council artifacts
+review-request.yaml
+changed-files.txt
+changed-files.md
+repo-facts.md
+evidence-pack.md
+recommended-reviewers.txt

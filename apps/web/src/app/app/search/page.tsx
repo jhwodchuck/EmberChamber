@@ -61,7 +61,7 @@ export default function SearchPage() {
     <div className="mx-auto flex h-full max-w-3xl flex-col p-6">
       <h2 className="mb-2 text-xl font-bold text-[var(--text-primary)]">Search</h2>
       <p className="mb-4 text-sm text-[var(--text-secondary)]">
-        Search on web is relay-native now. It looks through joined-space metadata and shared
+        Search on web is relay-native now. It looks through joined conversation metadata and shared
         contacts, not private message bodies.
       </p>
       {scopedCommunityId ? (
@@ -71,11 +71,11 @@ export default function SearchPage() {
       ) : null}
       <input
         type="text"
+        name="search"
         value={query}
         onChange={(event) => void handleSearch(event.target.value)}
         className="input mb-4"
-        placeholder="Search joined spaces and shared contacts…"
-        autoFocus
+        placeholder="Search conversations and shared contacts…"
       />
 
       <div className="mb-4 flex gap-1 border-b border-[var(--border)]">
@@ -172,7 +172,7 @@ export default function SearchPage() {
           results.conversations.length === 0 &&
           results.accounts.length === 0 ? (
             <p className="py-8 text-center text-[var(--text-secondary)]">
-              No joined-space metadata matched &quot;{query}&quot;.
+              No joined conversation metadata matched &quot;{query}&quot;.
             </p>
           ) : null}
         </div>

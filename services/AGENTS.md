@@ -2,7 +2,7 @@
 
 ## Status
 
-`services/*` contains older Rust service scaffolds that remain in the Cargo workspace, but they are not the active beta runtime.
+`services/*` contains archived Rust service scaffolds that are no longer part of the root Cargo workspace and are not the active beta runtime.
 
 Prefer `../apps/relay`, `../crates/core`, and `../crates/relay-protocol` for current backend and shared-runtime work unless the user explicitly asks for these services.
 

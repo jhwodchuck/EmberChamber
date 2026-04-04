@@ -31,14 +31,14 @@
 
 ## Primary Touchpoints
 
-- Relay entrypoint: [apps/relay/src/index.ts](/home/jason/gh/PrivateMesh/apps/relay/src/index.ts)
-- Mailbox and coordination DOs: [apps/relay/src/do/device-mailbox.ts](/home/jason/gh/PrivateMesh/apps/relay/src/do/device-mailbox.ts) and [apps/relay/src/do/group-coordinator.ts](/home/jason/gh/PrivateMesh/apps/relay/src/do/group-coordinator.ts)
-- Relay config and environments: [apps/relay/wrangler.jsonc](/home/jason/gh/PrivateMesh/apps/relay/wrangler.jsonc)
-- Relay schema history: [apps/relay/migrations](/home/jason/gh/PrivateMesh/apps/relay/migrations)
-- TS contracts: [packages/protocol/src/index.ts](/home/jason/gh/PrivateMesh/packages/protocol/src/index.ts)
-- Rust contracts: [crates/relay-protocol/src](/home/jason/gh/PrivateMesh/crates/relay-protocol/src)
-- Web relay client: [apps/web/src/lib/relay.ts](/home/jason/gh/PrivateMesh/apps/web/src/lib/relay.ts)
-- Web relay-local workspace: [apps/web/src/lib/relay-workspace.ts](/home/jason/gh/PrivateMesh/apps/web/src/lib/relay-workspace.ts)
+- Relay entrypoint: [`apps/relay/src/index.ts`](../../apps/relay/src/index.ts)
+- Mailbox and coordination DOs: [`apps/relay/src/do/device-mailbox.ts`](../../apps/relay/src/do/device-mailbox.ts) and [`apps/relay/src/do/group-coordinator.ts`](../../apps/relay/src/do/group-coordinator.ts)
+- Relay config and environments: [`apps/relay/wrangler.jsonc`](../../apps/relay/wrangler.jsonc)
+- Relay schema history: [`apps/relay/migrations`](../../apps/relay/migrations)
+- TS contracts: [`packages/protocol/src/index.ts`](../../packages/protocol/src/index.ts)
+- Rust contracts: [`crates/relay-protocol/src`](../../crates/relay-protocol/src)
+- Web relay client: [`apps/web/src/lib/relay.ts`](../../apps/web/src/lib/relay.ts)
+- Web relay-local workspace: [`apps/web/src/lib/relay-workspace.ts`](../../apps/web/src/lib/relay-workspace.ts)
 
 ## Public API And Type Changes
 

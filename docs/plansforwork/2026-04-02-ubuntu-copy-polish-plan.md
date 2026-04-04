@@ -205,7 +205,7 @@ git diff --check
 
 - hosted production beta still depends on invite state and real email delivery
 - the first-photo loop still needs an actual GUI human pass after package reinstall
-- relay-hosted group threads and raw attachment storage remain implementation gaps already documented elsewhere
+- legacy relay-hosted compatibility history and raw attachment storage remain implementation gaps already documented elsewhere
 
 ## Default Decisions
 

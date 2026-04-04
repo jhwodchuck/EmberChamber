@@ -31,12 +31,8 @@ After it finishes:
 
 ## Current State
 
-As of April 2, 2026, the latest public prerelease is `v0.1.0-beta.2`.
-
-That release includes:
-
-- `EmberChamber_0.1.0_amd64.deb`
-- `EmberChamber_0.1.0_amd64.AppImage`
+GitHub Releases is the source of truth for posted Linux artifacts. Check the current release feed
+before naming a specific tag in docs or support replies.
 
 The Ubuntu desktop shell currently supports:
 
@@ -44,7 +40,7 @@ The Ubuntu desktop shell currently supports:
 - group and beta invite handling
 - session review
 - privacy settings
-- relay-hosted group threads
+- invite-gated group messaging
 - attachment upload and download, including photo send
 - native desktop session persistence through the system keyring when available, with a restricted local-file fallback if the keyring is unavailable
 
@@ -64,15 +60,15 @@ Recommended order:
 ### `.deb` path
 
 ```bash
-sudo dpkg -i EmberChamber_0.1.0_amd64.deb
+sudo dpkg -i EmberChamber_<version>_amd64.deb
 sudo apt-get install -f
 ```
 
 ### `AppImage` path
 
 ```bash
-chmod +x EmberChamber_0.1.0_amd64.AppImage
-./EmberChamber_0.1.0_amd64.AppImage
+chmod +x EmberChamber_<version>_amd64.AppImage
+./EmberChamber_<version>_amd64.AppImage
 ```
 
 ## Local Build Path
@@ -141,7 +137,7 @@ Run this checklist after installing a public build or creating a local bundle:
 ## Known Limitations
 
 - Desktop artifacts are not yet code-signed.
-- Group threads in the current relay-native `/v1/groups/*` flow still store readable text in D1.
+- Legacy relay-hosted group and room compatibility history still exists in D1 while the encrypted path finishes replacing it.
 - Current attachment uploads are raw blobs in R2 rather than the final end-to-end encrypted attachment model.
 - Linux desktop privacy defaults are better grounded now, but operating-system capture outside the app is still not fully preventable.
 - iPhone and macOS remain later-surface work rather than first-beta commitments.

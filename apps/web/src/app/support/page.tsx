@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CopyButton } from "@/components/copy-button";
+import { PrivacyBoundaryMatrix } from "@/components/privacy-boundary-matrix";
 import { MarketingShell } from "@/components/marketing-shell";
-import { githubIssuesUrl, supportEmail } from "@/lib/site";
+import { githubIssuesUrl, privacyBoundaryItems, supportEmail } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Support",
@@ -23,6 +25,36 @@ const supportTracks = [
   },
 ];
 
+const supportDecisionTree = [
+  {
+    title: "Need to join",
+    body: "Use this if you have a beta invite or need help figuring out whether the invite path is still valid.",
+    href: "/register",
+    label: "Join Beta",
+  },
+  {
+    title: "Need to recover access",
+    body: "Use this if the account already exists and the email or redirect flow is not landing you where it should.",
+    href: "/login",
+    label: "Request Sign-In Link",
+  },
+  {
+    title: "Need a build or product answer",
+    body: "Use this if the question is really about which client to use, posted builds, or current beta scope.",
+    href: "/download",
+    label: "Check Builds",
+  },
+] as const;
+
+const bugReportTemplate = [
+  "URL:",
+  "Approximate UTC time:",
+  "What happened:",
+  "What you expected:",
+  "Error code or digest:",
+  "Screenshot attached: yes/no",
+].join("\n");
+
 const quickAnswers = [
   {
     question: "Can't access my invite code.",
@@ -42,7 +74,7 @@ const quickAnswers = [
   {
     question: "What data stays on my device?",
     answer:
-      "Your message history, search index, and private keys. They never leave your device in decryptable form. The relay sees routing metadata, not content.",
+      "Your private keys, DM history, and private-content search index stay on your device. The relay still stores account, invite, session, and attachment data needed for the hosted beta, so use the privacy page for the exact boundary.",
   },
 ];
 
@@ -55,6 +87,20 @@ export default function SupportPage() {
           <h1 className="mt-5 max-w-3xl text-balance font-display text-5xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-6xl">
             Get help with your beta access.
           </h1>
+
+          <div className="mt-8 grid gap-4 lg:grid-cols-3">
+            {supportDecisionTree.map((item) => (
+              <div key={item.title} className="rounded-[1.35rem] border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
+                <p className="text-sm font-semibold text-[var(--text-primary)]">{item.title}</p>
+                <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{item.body}</p>
+                <div className="mt-4">
+                  <Link href={item.href} className="btn-ghost">
+                    {item.label}
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
             {quickAnswers.map((qa) => (
@@ -76,6 +122,7 @@ export default function SupportPage() {
             <a href={`mailto:${supportEmail}`} className="btn-primary">
               Email Support
             </a>
+            <CopyButton value={supportEmail} label="Copy Support Email" successMessage="Support email copied" />
             <p className="text-sm text-[var(--text-secondary)]">
               <span className="select-all font-medium text-[var(--text-primary)]">{supportEmail}</span>
             </p>
@@ -99,6 +146,9 @@ export default function SupportPage() {
                 <li>Any error code or digest shown on screen.</li>
                 <li>Whether it reproduces after a page refresh.</li>
               </ul>
+              <div className="mt-4">
+                <CopyButton value={bugReportTemplate} label="Copy Bug Template" successMessage="Bug template copied" />
+              </div>
             </div>
 
             <div className="card">
@@ -107,6 +157,18 @@ export default function SupportPage() {
                 Codes can expire or run out of uses. Confirm with whoever sent yours that it&apos;s still
                 valid, then email support with the code. We can look it up on our end.
               </p>
+            </div>
+          </div>
+
+          <div className="mt-10 border-t border-[var(--border)] pt-8">
+            <h2 className="text-lg font-semibold text-[var(--text-primary)]">Privacy boundary today</h2>
+            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+              The simplest accurate answer is that DMs and private-content search stay local-first,
+              while the hosted beta still needs metadata, attachment storage, and a few legacy
+              compatibility paths.
+            </p>
+            <div className="mt-5">
+              <PrivacyBoundaryMatrix items={privacyBoundaryItems.slice(0, 4)} />
             </div>
           </div>
 

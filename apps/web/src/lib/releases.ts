@@ -24,13 +24,17 @@ export type PlatformDownload = {
   updatedAt: string;
 };
 
-export type PlatformReleaseAvailability = {
+export type PlatformPostedBuild = {
   releaseName: string;
   releaseTag: string;
   releaseUrl: string;
   prerelease: boolean;
   publishedAt: string | null;
-  downloadsByPlatform: Record<string, PlatformDownload[]>;
+  downloads: PlatformDownload[];
+};
+
+export type PlatformReleaseAvailability = {
+  buildsByPlatform: Record<string, PlatformPostedBuild | null>;
 };
 
 const RELEASES_API_URL = "https://api.github.com/repos/jhwodchuck/EmberChamber/releases";
@@ -75,49 +79,44 @@ export async function getLatestPlatformRelease(): Promise<PlatformReleaseAvailab
     }
 
     const releases = (await response.json()) as GitHubRelease[];
-    const downloadsByPlatform: Record<string, PlatformDownload[]> = {
-      android: [],
-      windows: [],
-      ubuntu: [],
+    const buildsByPlatform: Record<string, PlatformPostedBuild | null> = {
+      android: null,
+      windows: null,
+      ubuntu: null,
     };
 
-    let latestNativeRelease: GitHubRelease | null = null;
-
     for (const release of releases) {
-      let releaseHasNativeAssets = false;
-
       for (const [platform, suffixes] of Object.entries(PLATFORM_SUFFIXES)) {
-        if (downloadsByPlatform[platform].length > 0) {
+        if (buildsByPlatform[platform]) {
           continue;
         }
 
-        const platformDownloads = pickPlatformDownloads(release, [...suffixes]);
-        if (platformDownloads.length > 0) {
-          downloadsByPlatform[platform] = platformDownloads;
-          releaseHasNativeAssets = true;
+        const downloads = pickPlatformDownloads(release, [...suffixes]);
+        if (downloads.length === 0) {
+          continue;
         }
+
+        buildsByPlatform[platform] = {
+          releaseName: release.name ?? release.tag_name,
+          releaseTag: release.tag_name,
+          releaseUrl: release.html_url,
+          prerelease: release.prerelease,
+          publishedAt: release.published_at,
+          downloads,
+        };
       }
 
-      if (!latestNativeRelease && releaseHasNativeAssets) {
-        latestNativeRelease = release;
-      }
-
-      if (Object.values(downloadsByPlatform).every((downloads) => downloads.length > 0)) {
+      if (Object.values(buildsByPlatform).every(Boolean)) {
         break;
       }
     }
 
-    if (!latestNativeRelease) {
+    if (!Object.values(buildsByPlatform).some(Boolean)) {
       return null;
     }
 
     return {
-      releaseName: latestNativeRelease.name ?? latestNativeRelease.tag_name,
-      releaseTag: latestNativeRelease.tag_name,
-      releaseUrl: latestNativeRelease.html_url,
-      prerelease: latestNativeRelease.prerelease,
-      publishedAt: latestNativeRelease.published_at,
-      downloadsByPlatform,
+      buildsByPlatform,
     };
   } catch {
     return null;

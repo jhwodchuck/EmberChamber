@@ -60,6 +60,21 @@ export const metadata: Metadata = {
   },
 };
 
+const themeInitScript = `
+  (function () {
+    try {
+      var storedTheme = window.localStorage.getItem("theme");
+      var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      var resolvedTheme = storedTheme === "dark" || ((storedTheme === null || storedTheme === "system") && prefersDark)
+        ? "dark"
+        : "light";
+      document.documentElement.classList.toggle("dark", resolvedTheme === "dark");
+    } catch (error) {
+      document.documentElement.classList.add("dark");
+    }
+  })();
+`;
+
 export default function RootLayout({
   children,
 }: {
@@ -68,6 +83,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${cormorant.variable} font-sans`}>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <a
           href="#main-content"
           className="sr-only absolute left-4 top-4 z-50 rounded-full bg-[var(--bg-secondary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] shadow focus:not-sr-only"

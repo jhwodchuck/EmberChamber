@@ -5,7 +5,7 @@
 This plan captures the concrete repo work for the first usable phase 2 pass on April 2, 2026.
 
 The product-direction source of truth remains
-[`docs/roadmap.md`](/home/jason/gh/PrivateMesh/docs/roadmap.md). This file describes the active
+[`docs/roadmap.md`](../roadmap.md). This file describes the active
 implementation slice that turns the roadmap's closed-beta expansion language into working relay and
 web behavior.
 
