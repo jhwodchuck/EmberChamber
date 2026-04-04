@@ -71,7 +71,7 @@ jobs:
         run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
 
   screenshots:
-    name: Capture web and desktop shell screenshots
+    name: Capture web auth-flow and desktop shell screenshots
     runs-on: ubuntu-22.04
     needs: verify
     steps:
@@ -87,25 +87,33 @@ jobs:
         run: npm ci --no-audit --no-fund
 
       - name: Build web app
+        env:
+          NEXT_PUBLIC_RELAY_URL: http://127.0.0.1:8787
+          NEXT_PUBLIC_WEB_URL: http://127.0.0.1:3000
+          NEXT_PUBLIC_EMBERCHAMBER_AUTH_BOOTSTRAP_ENABLED: "true"
         run: npm run build --workspace=apps/web
 
       - name: Install Playwright Chromium
         run: npx -y playwright@1.54.2 install --with-deps chromium
 
-      - name: Capture web screenshots
+      - name: Capture web new-user flow screenshots
         run: |
-          mkdir -p apps/web/artifacts/screenshots
+          mkdir -p apps/web/artifacts/screenshots/new-user-flow
+
+          npm run relay:local > /tmp/emberchamber-relay.log 2>&1 &
+          RELAY_PID=$!
+
           npm run start --workspace=apps/web -- --hostname 127.0.0.1 --port 3000 &
           WEB_PID=$!
-          trap 'kill $WEB_PID' EXIT
+          trap 'kill $WEB_PID $RELAY_PID' EXIT
 
+          npx -y wait-on@8.0.3 http://127.0.0.1:8787/health
           npx -y wait-on@8.0.3 http://127.0.0.1:3000/start
-          npx -y playwright@1.54.2 screenshot --device="Desktop Chrome" \
-            http://127.0.0.1:3000/start \
-            apps/web/artifacts/screenshots/01-start.png
-          npx -y playwright@1.54.2 screenshot --device="Desktop Chrome" \
-            http://127.0.0.1:3000/login \
-            apps/web/artifacts/screenshots/02-login.png
+          CI_WEB_BASE_URL=http://127.0.0.1:3000 \
+          CI_RELAY_BASE_URL=http://127.0.0.1:8787 \
+          CI_AUTH_INVITE_TOKEN=dev-beta-invite \
+          CI_SCREENSHOT_DIR=apps/web/artifacts/screenshots/new-user-flow \
+          npx -y playwright@1.54.2 test apps/web/e2e/ci-new-user-flow.spec.ts --workers=1 --reporter=line
 
       - name: Capture desktop shell screenshot
         run: |
