@@ -17,6 +17,11 @@
     "verify:android": "npm run doctor && npm run type-check && npm run prebuild",
     "type-check": "tsc --noEmit"
   },
+  "expo": {
+    "install": {
+      "exclude": ["react-native-get-random-values", "react-native-svg"]
+    }
+  },
   "dependencies": {
     "@emberchamber/protocol": "^0.1.0",
     "expo": "~55.0.11",
@@ -34,7 +39,8 @@
     "react-native": "0.83.4",
     "react-native-get-random-values": "^2.0.0",
     "react-native-qrcode-svg": "^6.3.21",
-    "react-native-safe-area-context": "~5.6.2"
+    "react-native-safe-area-context": "~5.6.2",
+    "react-native-svg": "^15.15.4"
   },
   "devDependencies": {
     "@types/react": "^19.2.2",

@@ -19,7 +19,12 @@ pub struct SecureStateSnapshot {
 }
 
 impl SecureStateSnapshot {
-    fn new(state: Value, storage_mode: &str, detail: Option<String>, storage_path: Option<PathBuf>) -> Self {
+    fn new(
+        state: Value,
+        storage_mode: &str,
+        detail: Option<String>,
+        storage_path: Option<PathBuf>,
+    ) -> Self {
         Self {
             state: normalize_state(state),
             storage_mode: storage_mode.to_string(),
@@ -42,13 +47,21 @@ pub fn load<R: Runtime>(app: &AppHandle<R>) -> Result<SecureStateSnapshot, Strin
             Some(state) => Ok(SecureStateSnapshot::new(
                 state,
                 "file",
-                Some("Using restricted local file fallback instead of the system keyring.".to_string()),
+                Some(
+                    "Using restricted local file fallback instead of the system keyring."
+                        .to_string(),
+                ),
                 Some(file_path),
             )),
             None => Ok(SecureStateSnapshot::empty("keyring", None, None)),
         },
         Err(error) => match load_from_file(&file_path)? {
-            Some(state) => Ok(SecureStateSnapshot::new(state, "file", Some(error), Some(file_path))),
+            Some(state) => Ok(SecureStateSnapshot::new(
+                state,
+                "file",
+                Some(error),
+                Some(file_path),
+            )),
             None => Ok(SecureStateSnapshot::empty("memory", Some(error), None)),
         },
     }
@@ -61,7 +74,12 @@ pub fn save<R: Runtime>(app: &AppHandle<R>, state: Value) -> Result<SecureStateS
     match save_to_keyring(&normalized_state) {
         Ok(()) => {
             let _ = remove_file_if_exists(&file_path);
-            Ok(SecureStateSnapshot::new(normalized_state, "keyring", None, None))
+            Ok(SecureStateSnapshot::new(
+                normalized_state,
+                "keyring",
+                None,
+                None,
+            ))
         }
         Err(error) => {
             write_to_file(&file_path, &normalized_state)?;
@@ -110,8 +128,12 @@ fn load_from_file(path: &Path) -> Result<Option<Value>, String> {
         return Ok(None);
     }
 
-    let raw = fs::read_to_string(path)
-        .map_err(|error| format!("Unable to read secure state fallback file {}: {error}", path.display()))?;
+    let raw = fs::read_to_string(path).map_err(|error| {
+        format!(
+            "Unable to read secure state fallback file {}: {error}",
+            path.display()
+        )
+    })?;
 
     if raw.trim().is_empty() {
         return Ok(None);
@@ -129,11 +151,16 @@ fn load_from_file(path: &Path) -> Result<Option<Value>, String> {
 
 fn write_to_file(path: &Path, state: &Value) -> Result<(), String> {
     if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|error| format!("Unable to create secure state directory {}: {error}", parent.display()))?;
+        fs::create_dir_all(parent).map_err(|error| {
+            format!(
+                "Unable to create secure state directory {}: {error}",
+                parent.display()
+            )
+        })?;
     }
 
-    let bytes = serde_json::to_vec(state).map_err(|error| format!("Unable to serialize secure state: {error}"))?;
+    let bytes = serde_json::to_vec(state)
+        .map_err(|error| format!("Unable to serialize secure state: {error}"))?;
 
     #[cfg(unix)]
     {
@@ -146,10 +173,19 @@ fn write_to_file(path: &Path, state: &Value) -> Result<(), String> {
             .write(true)
             .mode(0o600)
             .open(path)
-            .map_err(|error| format!("Unable to open secure state fallback file {}: {error}", path.display()))?;
+            .map_err(|error| {
+                format!(
+                    "Unable to open secure state fallback file {}: {error}",
+                    path.display()
+                )
+            })?;
 
-        file.write_all(&bytes)
-            .map_err(|error| format!("Unable to write secure state fallback file {}: {error}", path.display()))?;
+        file.write_all(&bytes).map_err(|error| {
+            format!(
+                "Unable to write secure state fallback file {}: {error}",
+                path.display()
+            )
+        })?;
 
         fs::set_permissions(path, fs::Permissions::from_mode(0o600)).map_err(|error| {
             format!(
@@ -161,8 +197,12 @@ fn write_to_file(path: &Path, state: &Value) -> Result<(), String> {
 
     #[cfg(not(unix))]
     {
-        fs::write(path, &bytes)
-            .map_err(|error| format!("Unable to write secure state fallback file {}: {error}", path.display()))?;
+        fs::write(path, &bytes).map_err(|error| {
+            format!(
+                "Unable to write secure state fallback file {}: {error}",
+                path.display()
+            )
+        })?;
     }
 
     Ok(())
@@ -179,13 +219,23 @@ fn remove_file_if_exists(path: &Path) -> Result<(), String> {
     }
 }
 
-#[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos", target_os = "ios"))]
+#[cfg(any(
+    target_os = "linux",
+    target_os = "windows",
+    target_os = "macos",
+    target_os = "ios"
+))]
 fn keyring_entry() -> Result<keyring::Entry, String> {
     keyring::Entry::new(KEYRING_SERVICE, KEYRING_USER)
         .map_err(|error| format!("Unable to initialize system keyring entry: {error}"))
 }
 
-#[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos", target_os = "ios"))]
+#[cfg(any(
+    target_os = "linux",
+    target_os = "windows",
+    target_os = "macos",
+    target_os = "ios"
+))]
 fn load_from_keyring() -> Result<Option<Value>, String> {
     let entry = keyring_entry()?;
     match entry.get_password() {
@@ -198,26 +248,47 @@ fn load_from_keyring() -> Result<Option<Value>, String> {
     }
 }
 
-#[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos", target_os = "ios")))]
+#[cfg(not(any(
+    target_os = "linux",
+    target_os = "windows",
+    target_os = "macos",
+    target_os = "ios"
+)))]
 fn load_from_keyring() -> Result<Option<Value>, String> {
     Err("System keyring is not supported on this desktop build.".to_string())
 }
 
-#[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos", target_os = "ios"))]
+#[cfg(any(
+    target_os = "linux",
+    target_os = "windows",
+    target_os = "macos",
+    target_os = "ios"
+))]
 fn save_to_keyring(state: &Value) -> Result<(), String> {
     let entry = keyring_entry()?;
-    let raw = serde_json::to_string(state).map_err(|error| format!("Unable to serialize secure state: {error}"))?;
+    let raw = serde_json::to_string(state)
+        .map_err(|error| format!("Unable to serialize secure state: {error}"))?;
     entry
         .set_password(&raw)
         .map_err(|error| format!("System keyring save failed: {error}"))
 }
 
-#[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos", target_os = "ios")))]
+#[cfg(not(any(
+    target_os = "linux",
+    target_os = "windows",
+    target_os = "macos",
+    target_os = "ios"
+)))]
 fn save_to_keyring(_state: &Value) -> Result<(), String> {
     Err("System keyring is not supported on this desktop build.".to_string())
 }
 
-#[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos", target_os = "ios"))]
+#[cfg(any(
+    target_os = "linux",
+    target_os = "windows",
+    target_os = "macos",
+    target_os = "ios"
+))]
 fn clear_keyring() -> Result<(), String> {
     let entry = keyring_entry()?;
     match entry.delete_credential() {
@@ -226,7 +297,12 @@ fn clear_keyring() -> Result<(), String> {
     }
 }
 
-#[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos", target_os = "ios")))]
+#[cfg(not(any(
+    target_os = "linux",
+    target_os = "windows",
+    target_os = "macos",
+    target_os = "ios"
+)))]
 fn clear_keyring() -> Result<(), String> {
     Err("System keyring is not supported on this desktop build.".to_string())
 }
