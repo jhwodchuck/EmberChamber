@@ -69,12 +69,18 @@ jobs:
       matrix:
         include:
           - device_class: phone
-            wm_size: 1080x1920
+            avd_profile: pixel_6
+            orientation: portrait
+            wm_size: 1080x2400
             wm_density: 420
           - device_class: tablet
-            wm_size: 1920x1200
-            wm_density: 240
+            avd_profile: pixel_tablet
+            orientation: portrait
+            wm_size: 1600x2560
+            wm_density: 320
           - device_class: chromebook
+            avd_profile: pixel_c
+            orientation: landscape
             wm_size: 1366x768
             wm_density: 160
     steps:
@@ -101,20 +107,23 @@ jobs:
           api-level: 34
           arch: x86_64
           target: default
-          profile: pixel_6
-          avd-name: ci-screenshot-avd-${{ matrix.device_class }}
-          force-avd-creation: false
+          profile: ${{ matrix.avd_profile }}
+          avd-name: ci-screenshot-avd-${{ matrix.device_class }}-${{ matrix.avd_profile }}
+          force-avd-creation: true
           disable-animations: true
           emulator-boot-timeout: 900
           emulator-options: -no-snapshot -no-window -no-audio -no-boot-anim -netdelay none -netspeed full -gpu swiftshader_indirect
           script: |
             adb install -r "$APK_PATH"
+            adb shell screencap -p /sdcard/emberchamber-ci-warmup.png >/dev/null || true
+            adb shell rm -f /sdcard/emberchamber-ci-warmup.png >/dev/null || true
             bash apps/mobile/scripts/capture-android-screenshots.sh \
               "apps/mobile/artifacts/android-screenshots/${{ matrix.device_class }}" \
               "com.emberchamber.mobile" \
               "${{ matrix.device_class }}" \
               "${{ matrix.wm_size }}" \
-              "${{ matrix.wm_density }}"
+              "${{ matrix.wm_density }}" \
+              "${{ matrix.orientation }}"
 
       - name: Upload Android screenshot artifacts
         if: always()

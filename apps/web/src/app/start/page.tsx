@@ -23,15 +23,15 @@ export default function StartPage() {
             <div className="max-w-3xl">
               <div className="eyebrow">Start Here</div>
               <h1 className="mt-5 text-balance font-display text-5xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-6xl">
-                New here, or ready to join?
+                Pick the quickest correct path.
               </h1>
               <p className="mt-5 text-lg leading-8 text-[var(--text-secondary)]">
-                EmberChamber is invite-only. Start with the trust model if you&apos;re evaluating it
-                for your circle, or pick the quickest path if you already have an invite or account.
+                Start with the trust model if you&apos;re evaluating EmberChamber. If you already have
+                access or an invite, take the shortest route from here.
               </p>
 
               <div className="mt-6 flex flex-wrap gap-3">
-                {["Trust model first", "Browser companion first", "Native once access is stable"].map((item) => (
+                {["Web = fastest start", "Native = best daily home"].map((item) => (
                   <div key={item} className="metric-pill">
                     <BadgeCheck aria-hidden="true" className="h-3.5 w-3.5 text-brand-400" />
                     {item}

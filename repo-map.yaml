@@ -1,0 +1,90 @@
+version: 1
+package_managers:
+  root:
+    path: .
+    manager: npm
+    version: "10"
+    notes: Canonical package manager for the active app workspace and CI.
+  standalone:
+    - path: docs/wiki-site
+      manager: pnpm
+      notes: Standalone VitePress docs site with its own lockfile and install flow.
+paths:
+  - path: apps/relay
+    status: active
+    purpose: Cloudflare Worker relay and control plane
+    depends_on:
+      - packages/protocol
+    verify:
+      - npm run build --workspace=apps/relay
+      - npm test --workspace=apps/relay
+  - path: apps/web
+    status: active
+    purpose: Public site and authenticated web workspace
+    depends_on:
+      - apps/relay
+      - packages/protocol
+    verify:
+      - npm run lint --workspace=apps/web
+      - npm run build --workspace=apps/web
+  - path: apps/mobile
+    status: active
+    purpose: Expo Android-first client with iPhone scaffolding
+    depends_on:
+      - apps/relay
+      - packages/protocol
+    verify:
+      - npm run type-check --workspace=apps/mobile
+  - path: apps/desktop
+    status: active
+    purpose: Tauri desktop shell and packaged local frontend
+    depends_on:
+      - crates/core
+      - crates/relay-protocol
+      - packages/protocol
+    verify:
+      - cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
+  - path: crates/core
+    status: active
+    purpose: Shared Rust secure-state and local-first scaffold
+    depends_on:
+      - crates/domain
+      - crates/relay-protocol
+    verify:
+      - cargo test -p emberchamber-core -p emberchamber-relay-protocol
+  - path: crates/relay-protocol
+    status: active
+    purpose: Canonical Rust relay contracts
+    depends_on: []
+    verify:
+      - cargo test -p emberchamber-core -p emberchamber-relay-protocol
+  - path: packages/protocol
+    status: active
+    purpose: TypeScript mirror of relay contracts
+    depends_on: []
+    verify:
+      - npm run build --workspace=packages/protocol
+  - path: llm_council
+    status: active
+    purpose: Repo-specific AI review council, reviewer routing, and evidence-pack tooling
+    depends_on: []
+    verify:
+      - npm run council:review -- HEAD WORKTREE council-smoke
+  - path: apps/api
+    status: legacy
+    purpose: Express and Postgres prototype retained for reference
+    depends_on: []
+    verify:
+      - npm run type-check --workspace=apps/api
+      - npm run test --workspace=apps/api
+  - path: infra/docker-compose.yml
+    status: legacy
+    purpose: Centralized prototype stack retained for legacy maintenance only
+    depends_on: []
+    verify: []
+  - path: services
+    status: legacy
+    purpose: Archived Rust service scaffolds not included in the root Cargo workspace
+    depends_on: []
+    verify:
+      - cargo check --manifest-path services/<service>/Cargo.toml

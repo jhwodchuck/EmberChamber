@@ -35,11 +35,11 @@ Passkeys remain future work. The endpoints exist, but the relay does not complet
 
 ### Group thread and attachment flow today
 
-1. Mobile and desktop call the relay group endpoints directly.
-2. Message text is stored in relay-side `conversation_messages`.
-3. Attachments upload to R2 through signed tickets and are linked into the group thread.
+1. New groups in the active relay runtime are created with `device_encrypted` history and mailbox delivery.
+2. Legacy relay-hosted group and room compatibility endpoints still exist, and only those paths write readable text into `conversation_messages`.
+3. Attachments upload to R2 through signed tickets; browser encrypted-conversation flows can upload ciphertext first, while native attachment rollout is still uneven.
 4. Clients can keep local copies and local vault metadata.
-5. This is the working beta flow, but it is not the final end-to-end encrypted group-history design.
+5. This is the working beta flow, but it is not yet a fully uniform encrypted-group and encrypted-attachment experience across every surface.
 
 ### Encrypted-delivery substrate in progress
 

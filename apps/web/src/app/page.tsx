@@ -1,16 +1,11 @@
 import Link from "next/link";
 import {
-  Archive,
   ArrowRight,
   BadgeCheck,
-  BellRing,
   Cloud,
   Download,
   LockKeyhole,
-  MailCheck,
   MonitorSmartphone,
-  Search,
-  ShieldCheck,
   Sparkles,
   Users,
 } from "lucide-react";
@@ -20,50 +15,25 @@ import { StartHereSummary } from "@/components/start-here-guide";
 import { betaScopeItems, faqItems, launchPlatforms, trustFacts } from "@/lib/site";
 
 const heroSignals = [
-  "Invite-only onboarding",
-  "On-device history & search",
+  "Invite-only access",
   "No public discovery surface",
 ];
 
-const heroStats = [
+const liveTodayCards = [
   {
-    title: "Trusted circles only",
-    body: "No public profiles, no feed, and no cold messages from strangers.",
+    title: "Direct messages are live",
+    body: "Encrypted mailbox delivery works across the active beta surfaces, with DM history staying local to the device.",
+    icon: LockKeyhole,
+  },
+  {
+    title: "New groups start device-encrypted",
+    body: "Older relay-hosted compatibility history still exists, but new groups no longer depend on relay-hosted history reads.",
     icon: Users,
   },
   {
-    title: "Hosted delivery, narrow role",
-    body: "The relay keeps packets moving without turning itself into your archive.",
-    icon: Cloud,
-  },
-  {
-    title: "Local history is the default",
-    body: "Keys, search, and conversation history stay on the device you use.",
-    icon: Search,
-  },
-  {
-    title: "Native when you stay",
-    body: "Web gets you in quickly. Android and desktop become the daily-use surfaces.",
+    title: "Web is the fast start. Native is the daily home.",
+    body: "Use the browser for first access and recovery, then move to Android or desktop when the circle becomes part of daily life.",
     icon: MonitorSmartphone,
-  },
-];
-
-const experienceCards = [
-  {
-    title: "A quieter inbox",
-    body: "No algorithmic feed, no discovery layer, and no pressure to stay publicly visible.",
-    icon: Sparkles,
-    wide: true,
-  },
-  {
-    title: "Deliberate trust boundaries",
-    body: "Invite gating and adults-only onboarding keep circles intentional from the start.",
-    icon: ShieldCheck,
-  },
-  {
-    title: "Private by product design",
-    body: "The strongest privacy claims come from what the product simply does not do.",
-    icon: LockKeyhole,
   },
 ];
 
@@ -92,9 +62,9 @@ export default function HomePage() {
               </h1>
               <p className="mt-6 max-w-3xl text-lg leading-8 text-[#cdb1a5] sm:text-xl">
                 Invite-only, private by design, and built so your conversations do not turn into a
-                public profile or a searchable server archive. End-to-end encrypted direct messages
-                are live now; stronger encrypted-group history is still being finished. No feeds.
-                No discovery. No cold messages from strangers.
+                public profile or a searchable archive. Direct messages are live now, new groups
+                start device-encrypted, and the remaining compatibility-path cleanup is called out
+                plainly instead of hidden in marketing language.
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -115,14 +85,14 @@ export default function HomePage() {
                 ))}
               </div>
 
-              <div className="mt-10 grid gap-4 sm:grid-cols-2">
-                {heroStats.map((stat) => (
-                  <div key={stat.title} className="card h-full p-5">
+              <div className="mt-8 grid gap-3 sm:grid-cols-3">
+                {liveTodayCards.map((stat) => (
+                  <div key={stat.title} className="rounded-[1.35rem] border border-white/10 bg-white/[0.04] p-4">
                     <div className="flex items-center gap-2 text-brand-400">
                       <stat.icon aria-hidden="true" className="h-4 w-4" />
-                      <span className="section-kicker">Signal</span>
+                      <span className="section-kicker">Live Today</span>
                     </div>
-                    <h2 className="mt-4 text-lg font-semibold text-[var(--text-primary)]">{stat.title}</h2>
+                    <h2 className="mt-3 text-base font-semibold text-[var(--text-primary)]">{stat.title}</h2>
                     <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{stat.body}</p>
                   </div>
                 ))}
@@ -137,180 +107,6 @@ export default function HomePage() {
       </section>
 
       <section className="mx-auto max-w-6xl px-6 py-10 sm:py-14">
-        <div className="section-divider mb-10" />
-        <div className="mb-8 max-w-2xl">
-          <div className="section-kicker">Show, Don&apos;t Tell</div>
-          <h2 className="mt-4 text-balance font-display text-4xl font-semibold text-[var(--text-primary)] sm:text-5xl">
-            See the product in three moments instead of thirty disclaimers.
-          </h2>
-          <p className="mt-4 section-copy">
-            Entry is quiet, the conversation stays contained, and history remains device-local. The
-            product feels different because its constraints show up in the interface itself.
-          </p>
-        </div>
-
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1.04fr)_minmax(0,0.96fr)]">
-          <div className="story-card relative overflow-hidden rounded-[2.2rem] p-6 sm:p-7">
-            <div className="pointer-events-none absolute right-[-10%] top-[-6%] h-52 w-52 rounded-full bg-[radial-gradient(circle,rgba(255,163,104,0.18),transparent_65%)] blur-3xl" />
-            <div className="relative">
-              <div className="flex items-center gap-2 text-brand-400">
-                <MailCheck aria-hidden="true" className="h-4 w-4" />
-                <span className="section-kicker">Quiet Entry</span>
-              </div>
-              <h3 className="mt-4 text-balance text-3xl font-semibold text-[var(--text-primary)]">
-                Joining feels deliberate, not viral.
-              </h3>
-              <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-                The invite flow is designed to confirm the right person and the right circle before
-                the conversation starts. There is no public-facing identity funnel to optimize.
-              </p>
-
-              <div className="mt-6 showcase-frame rounded-[1.7rem] p-5">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#ffcfb6]">
-                      Invite review
-                    </p>
-                    <p className="mt-2 text-lg font-semibold text-[#fff1e8]">Hold the circle boundary before entry.</p>
-                  </div>
-                  <div className="metric-pill">
-                    <BadgeCheck className="h-3.5 w-3.5 text-brand-400" />
-                    Verified path
-                  </div>
-                </div>
-
-                <div className="mt-4 grid gap-4 sm:grid-cols-[minmax(0,1fr)_14rem]">
-                  <div className="space-y-3">
-                    {[
-                      "Invite token matched to the right circle",
-                      "Adults-only beta with deliberate onboarding",
-                      "Web companion first, native after access is stable",
-                    ].map((item) => (
-                      <div key={item} className="signal-line">
-                        <span className="signal-dot" />
-                        <span>{item}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="showcase-screen rounded-[1.4rem] p-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#ffcfb6]">
-                      Intake snapshot
-                    </p>
-                    <div className="mt-4 space-y-3">
-                      {["Private email confirmed", "Invite code accepted", "Circle access pending"].map((item, index) => (
-                        <div key={item} className="rounded-[1rem] border border-white/8 bg-white/[0.04] px-3 py-2.5">
-                          <p className="text-[10px] uppercase tracking-[0.16em] text-[#a98982]">Step {index + 1}</p>
-                          <p className="mt-1 text-xs font-medium text-[#ecd9ce]">{item}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid gap-5">
-            <div className="story-card-muted rounded-[1.9rem] p-6">
-              <div className="flex items-center gap-2 text-brand-400">
-                <BellRing aria-hidden="true" className="h-4 w-4" />
-                <span className="section-kicker">Daily Rhythm</span>
-              </div>
-              <h3 className="mt-4 text-2xl font-semibold text-[var(--text-primary)]">
-                When the circle becomes real, move to native.
-              </h3>
-              <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">
-                The browser is the fast entry point. Android and desktop are where longer sessions,
-                heavier media, and primary-use habits settle in.
-              </p>
-              <div className="mt-5 grid gap-2 sm:grid-cols-3">
-                {["Android for pocket access", "Desktop for longer threads", "Web for fast recovery"].map((item) => (
-                  <div
-                    key={item}
-                    className="rounded-[1rem] border border-white/8 bg-white/[0.04] px-3 py-3 text-xs leading-5 text-[#d6b6a8]"
-                  >
-                    {item}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="story-card-muted rounded-[1.9rem] p-6">
-              <div className="flex items-center gap-2 text-brand-400">
-                <Archive aria-hidden="true" className="h-4 w-4" />
-                <span className="section-kicker">Local Vault</span>
-              </div>
-              <h3 className="mt-4 text-2xl font-semibold text-[var(--text-primary)]">
-                The archive belongs to the device, not the service.
-              </h3>
-              <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">
-                Search, keys, and message history stay local. That is not a slogan in the footer;
-                it changes what the interface optimizes for and what the relay never becomes.
-              </p>
-              <div className="mt-5 space-y-3">
-                {[
-                  "Search index never leaves the device",
-                  "Private keys stay with the client",
-                  "Deleting the app deletes the local archive",
-                ].map((item) => (
-                  <div key={item} className="signal-line">
-                    <span className="signal-dot" />
-                    <span>{item}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-6 py-10 sm:py-14">
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-start">
-          <div className="max-w-xl">
-            <div className="section-kicker">Why It Feels Different</div>
-            <h2 className="mt-4 text-balance font-display text-4xl font-semibold text-[var(--text-primary)] sm:text-5xl">
-              A messaging space designed to feel calmer from the first minute.
-            </h2>
-            <p className="mt-4 section-copy">
-              EmberChamber is deliberately narrower than mainstream chat apps. The product gets
-              quieter by removing the things that make most messaging platforms noisy, public, and
-              extractive.
-            </p>
-
-            <div className="mt-6 space-y-3">
-              {[
-                "No discovery loops pushing strangers into the room.",
-                "No feed mechanics competing with the actual conversation.",
-                "No requirement to build a public persona to stay reachable.",
-              ].map((item) => (
-                <div key={item} className="signal-line">
-                  <span className="signal-dot" />
-                  <span>{item}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            {experienceCards.map((card) => (
-              <div
-                key={card.title}
-                className={`card h-full p-6 ${card.wide ? "md:col-span-2" : ""}`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 text-brand-400">
-                    <card.icon aria-hidden="true" className="h-5 w-5" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-[var(--text-primary)]">{card.title}</h3>
-                </div>
-                <p className="mt-4 text-sm leading-7 text-[var(--text-secondary)]">{card.body}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-6 py-10 sm:py-14">
         <div className="section-spotlight relative overflow-hidden rounded-[2.4rem] px-6 py-8 sm:px-8 sm:py-10">
           <div
             className="pointer-events-none absolute right-[-6%] top-[-8%] h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(255,170,110,0.16),transparent_65%)] blur-3xl"
@@ -320,12 +116,13 @@ export default function HomePage() {
             <div>
               <div className="section-kicker">Relay Boundary</div>
               <h2 className="mt-4 text-balance font-display text-4xl font-semibold text-[var(--text-primary)] sm:text-5xl">
-                A relay that delivers, not stores.
+                A relay that delivers without pretending to disappear.
               </h2>
               <p className="mt-4 section-copy">
                 Reliable delivery matters. So does keeping the relay&apos;s role narrow. EmberChamber
-                uses a hosted edge relay to move encrypted traffic, while conversation history,
-                search, and private keys stay local to the people in the circle.
+                uses a hosted edge relay for metadata, mailbox delivery, and attachment storage,
+                while private keys, DM history, and private-content search stay local to the people
+                in the circle.
               </p>
 
               <div className="mt-6 rounded-[1.7rem] border border-white/8 bg-white/[0.04] p-5">
@@ -339,9 +136,9 @@ export default function HomePage() {
                   </div>
                 </div>
                 <div className="mt-4 grid gap-3 text-sm leading-6 text-[var(--text-secondary)] sm:grid-cols-3">
-                  <div>Encrypted packets move through the relay.</div>
+                  <div>Ciphertext envelopes move through the relay.</div>
                   <div>Private keys stay on the devices in the circle.</div>
-                  <div>Conversation history remains local instead of accumulating in a server archive.</div>
+                  <div>Legacy hosted history still exists in a few compatibility paths while migration finishes.</div>
                 </div>
               </div>
             </div>

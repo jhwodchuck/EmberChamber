@@ -41,12 +41,13 @@ Working beta scaffolds now in this repo:
 - `crates/core`: Rust local-first sync and secure-state scaffold
 - `crates/relay-protocol`: canonical Rust relay and envelope contracts
 - `packages/protocol`: TypeScript mirror of relay contracts
+- `repo-map.yaml`: machine-readable runtime map for agents and contributors
 
 Legacy prototype paths retained temporarily:
 
 - `apps/api`: Express/Postgres prototype, now legacy
 - `infra/docker-compose.yml`: legacy centralized stack
-- `services/` and several older Rust scaffolds: not part of the active beta runtime
+- `services/` and several older Rust scaffolds: archived legacy services, not part of the active beta runtime or the root Cargo workspace
 
 Current implementation reality:
 
@@ -153,6 +154,17 @@ The target end state does not aim to store:
 
 ## Local Development
 
+First-time setup from the repo root:
+
+```bash
+npm run bootstrap
+npm run dev
+```
+
+`npm run bootstrap` installs root dependencies, creates the default local env files when missing,
+builds `packages/protocol`, and seeds the reusable local beta invite after applying local relay
+migrations.
+
 ### Web app + relay
 
 ```bash
@@ -162,6 +174,9 @@ cp apps/web/.env.example apps/web/.env.local
 npm run build --workspace=packages/protocol
 npm run dev
 ```
+
+Root workspace scripts and CI use `npm`. The standalone VitePress wiki under `docs/wiki-site`
+keeps its own `pnpm` install flow.
 
 ### Relay migrations
 
@@ -203,8 +218,15 @@ The new beta scaffold should verify cleanly with:
 - `cargo test -p emberchamber-core -p emberchamber-relay-protocol`
 - `cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml`
 
+For a full active-runtime sweep, run:
+
+- `npm run verify:all`
+
 ## Documentation
 
+- Contributing: [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- Repo map: [`repo-map.yaml`](repo-map.yaml)
+- AI review council: [`llm_council/README.md`](llm_council/README.md)
 - Docs index: [`docs/README.md`](docs/README.md)
 - Architecture: [`docs/architecture.md`](docs/architecture.md)
 - Launch targets: [`docs/launch-targets.md`](docs/launch-targets.md)
@@ -214,6 +236,20 @@ The new beta scaffold should verify cleanly with:
 - Web app: [`apps/web/README.md`](apps/web/README.md)
 - Operator playbook: [`docs/operator-playbook.md`](docs/operator-playbook.md)
 - Legacy prototype API spec: [`docs/api/openapi.yaml`](docs/api/openapi.yaml)
+
+## AI Review Council
+
+For non-trivial reviews, audits, or cross-surface changes, use the repo-specific council in `llm_council/`.
+
+From the repo root:
+
+```bash
+cp llm_council/templates/review-request.template.yaml review-request.yaml
+npm run council:review -- HEAD WORKTREE "current-worktree"
+cat recommended-reviewers.txt
+```
+
+Use `main HEAD` instead of `HEAD WORKTREE` when you want a committed branch or PR diff instead of the current dirty tree.
 
 ## Web App
 

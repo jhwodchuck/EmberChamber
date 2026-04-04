@@ -1,4 +1,4 @@
-import { onboardingAssurances, onboardingSteps } from "@/lib/onboarding";
+import { onboardingSteps } from "@/lib/onboarding";
 
 export function AuthPageIntro({
   eyebrow,
@@ -23,29 +23,23 @@ export function AuthPageIntro({
         <p className="text-sm font-medium text-[var(--text-primary)]">{emphasis}</p>
       </div>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-3">
+      <div className="mt-8 grid gap-3 sm:grid-cols-3">
         {onboardingSteps.map((step) => (
-          <div key={step.number} className="card h-full">
-            <div className="text-xs font-semibold uppercase tracking-[0.22em] text-brand-600">
-              {step.number}
-            </div>
+          <div
+            key={step.number}
+            className="rounded-[1.35rem] border border-[var(--border)] bg-[var(--bg-secondary)] p-4"
+          >
+            <div className="text-xs font-semibold uppercase tracking-[0.22em] text-brand-600">{step.number}</div>
             <h2 className="mt-3 text-base font-semibold text-[var(--text-primary)]">{step.title}</h2>
             <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{step.body}</p>
           </div>
         ))}
       </div>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-3">
-        {onboardingAssurances.map((item) => (
-          <div
-            key={item.title}
-            className="rounded-[1.45rem] border border-[var(--border)] bg-[var(--bg-secondary)] p-4"
-          >
-            <h3 className="text-sm font-semibold text-[var(--text-primary)]">{item.title}</h3>
-            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{item.body}</p>
-          </div>
-        ))}
-      </div>
+      <p className="mt-6 max-w-2xl text-sm leading-7 text-[var(--text-secondary)]">
+        Email stays private, invites stay deliberate, and display names replace email as the
+        social identity once you are inside.
+      </p>
     </div>
   );
 }

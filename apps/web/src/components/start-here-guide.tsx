@@ -1,15 +1,11 @@
 import Link from "next/link";
 import {
   ArrowRight,
-  BadgeCheck,
   Compass,
   Download,
   KeyRound,
   LifeBuoy,
   MailCheck,
-  MonitorSmartphone,
-  ShieldCheck,
-  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import { StatusCallout } from "@/components/status-callout";
@@ -36,39 +32,18 @@ type StartPath = {
 const startSteps = [
   {
     number: "01",
-    title: "Start with the browser companion",
-    body: "Use web first to understand the trust model, accept the invite path, and get your first conversation running without an install.",
+    title: "Start in web",
+    body: "Review the trust model, confirm access, and get the first session running without an install.",
   },
   {
     number: "02",
-    title: "Confirm the right circle and recovery path",
-    body: "Stay anchored to the same private email, confirm the invite state, and make sure recovery is clear before you treat it as a daily client.",
+    title: "Keep the same private email",
+    body: "Use one inbox for invite, sign-in, and recovery so the account state stays consistent.",
   },
   {
     number: "03",
-    title: "Move to native when the product becomes home",
-    body: "Once the circle is stable, shift to Android or desktop for longer sessions, notifications, and your preferred day-to-day surface.",
-  },
-] as const;
-
-const surfaceSplit = [
-  {
-    icon: Compass,
-    title: "Browser Companion",
-    eyebrow: "Fastest path",
-    body: "Best for onboarding, invite review, direct messages, group setup, search, recovery, and settings.",
-  },
-  {
-    icon: MonitorSmartphone,
-    title: "Android & Desktop",
-    eyebrow: "Primary use",
-    body: "Move here when you want the preferred daily experience, device integration, and more headroom for heavier media and longer sessions.",
-  },
-  {
-    icon: LifeBuoy,
-    title: "Support",
-    eyebrow: "Clear the edge cases",
-    body: "If invite state, sign-in, or build availability is unclear, ask support directly instead of guessing.",
+    title: "Move to native when you stay",
+    body: "Shift to Android or desktop once the circle becomes part of daily use.",
   },
 ] as const;
 
@@ -300,21 +275,17 @@ export function StartHereGuide() {
                 </p>
               </div>
 
-              <div className="mt-5 flex flex-wrap items-center gap-2">
-                <span className="metric-pill">{path.tempo}</span>
-              </div>
-
               <h2 className="mt-4 text-balance text-2xl font-semibold text-[var(--text-primary)]">
                 {path.title}
               </h2>
               <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">{path.body}</p>
 
-              <div className="mt-5 space-y-2">
-                {path.highlights.map((item) => (
-                  <div key={item} className="signal-line py-3">
-                    <BadgeCheck aria-hidden="true" className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand-400" />
-                    <span>{item}</span>
-                  </div>
+              <div className="mt-5 flex flex-wrap gap-2">
+                <span className="metric-pill">{path.tempo}</span>
+                {path.highlights.slice(0, 2).map((item) => (
+                  <span key={item} className="metric-pill">
+                    {item}
+                  </span>
                 ))}
               </div>
 
@@ -335,37 +306,30 @@ export function StartHereGuide() {
         ))}
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)]">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]">
         <section className="section-spotlight rounded-[2rem] px-6 py-7">
           <div className="eyebrow">Typical Path</div>
           <h2 className="mt-5 text-balance font-display text-4xl font-semibold text-[var(--text-primary)]">
-            Most people should follow these three moves.
+            Most people only need three moves.
           </h2>
 
-          <div className="mt-6 space-y-4">
-            {startSteps.map((step, index) => (
-              <div key={step.number} className="grid gap-4 sm:grid-cols-[auto_1fr]">
-                <div className="flex items-start gap-3 sm:flex-col sm:items-center">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full border border-brand-500/25 bg-brand-500/10 text-sm font-semibold text-brand-300">
-                    {step.number}
-                  </div>
-                  {index < startSteps.length - 1 ? (
-                    <div className="hidden h-full min-h-10 w-px bg-gradient-to-b from-brand-500/35 to-transparent sm:block" />
-                  ) : null}
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            {startSteps.map((step) => (
+              <div key={step.number} className="rounded-[1.5rem] border border-white/8 bg-white/[0.035] p-5">
+                <div className="flex h-11 w-11 items-center justify-center rounded-full border border-brand-500/25 bg-brand-500/10 text-sm font-semibold text-brand-300">
+                  {step.number}
                 </div>
-                <div className="rounded-[1.5rem] border border-white/8 bg-white/[0.035] p-5">
-                  <h3 className="text-base font-semibold text-[var(--text-primary)]">{step.title}</h3>
-                  <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{step.body}</p>
-                </div>
+                <h3 className="mt-4 text-base font-semibold text-[var(--text-primary)]">{step.title}</h3>
+                <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{step.body}</p>
               </div>
             ))}
           </div>
         </section>
 
         <section className="panel px-6 py-7">
-          <div className="eyebrow">Before You Start</div>
+          <div className="eyebrow">Keep It Simple</div>
           <h2 className="mt-5 text-balance font-display text-4xl font-semibold text-[var(--text-primary)]">
-            The cleanest path is the calmest one.
+            Web first. Native later. Support early if something drifts.
           </h2>
           <div className="mt-6 space-y-4">
             {[
@@ -379,72 +343,16 @@ export function StartHereGuide() {
               </div>
             ))}
           </div>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link href="/download" className="btn-ghost">
+              Check Builds
+            </Link>
+            <Link href="/support" className="btn-ghost">
+              Ask Support
+            </Link>
+          </div>
         </section>
       </div>
-
-      <section className="grid gap-5 xl:grid-cols-3">
-        {surfaceSplit.map((surface) => (
-          <article key={surface.title} className="story-card-muted rounded-[1.8rem] p-6">
-            <div className="flex items-center gap-3">
-              <div className="rounded-[1.1rem] border border-white/10 bg-white/[0.05] p-3 text-brand-400">
-                <surface.icon aria-hidden="true" className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="section-kicker">{surface.eyebrow}</p>
-                <h3 className="mt-2 text-xl font-semibold text-[var(--text-primary)]">{surface.title}</h3>
-              </div>
-            </div>
-            <p className="mt-4 text-sm leading-7 text-[var(--text-secondary)]">{surface.body}</p>
-          </article>
-        ))}
-      </section>
-
-      <section className="cinema-panel relative overflow-hidden rounded-[2rem] px-6 py-7">
-        <div
-          className="pointer-events-none absolute right-[-4%] top-[-10%] h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(255,163,104,0.16),transparent_65%)] blur-3xl"
-          aria-hidden="true"
-        />
-        <div className="relative grid gap-6 lg:grid-cols-[minmax(0,0.84fr)_minmax(0,1.16fr)] lg:items-center">
-          <div>
-            <div className="eyebrow">Native Shift</div>
-            <h2 className="mt-5 text-balance font-display text-4xl font-semibold text-[var(--text-primary)]">
-              Web gets you in. Native is where the product settles.
-            </h2>
-            <p className="mt-4 text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-              EmberChamber is designed so the browser handles onboarding and recovery without drama.
-              Once that foundation is solid, Android or desktop becomes the better long-session home.
-            </p>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-3">
-            {[
-              {
-                icon: Sparkles,
-                title: "Start fast",
-                body: "No install required for the first interaction.",
-              },
-              {
-                icon: ShieldCheck,
-                title: "Stay grounded",
-                body: "Recovery and trust boundaries stay clearer in web first.",
-              },
-              {
-                icon: MonitorSmartphone,
-                title: "Move deeper",
-                body: "Use native when the circle becomes part of daily life.",
-              },
-            ].map((item) => (
-              <div key={item.title} className="rounded-[1.45rem] border border-white/8 bg-white/[0.04] p-4">
-                <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 text-brand-400">
-                  <item.icon aria-hidden="true" className="h-4 w-4" />
-                </div>
-                <h3 className="mt-4 text-base font-semibold text-[var(--text-primary)]">{item.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{item.body}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
     </div>
   );
 }

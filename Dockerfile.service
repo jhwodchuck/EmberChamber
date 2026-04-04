@@ -1,7 +1,7 @@
-# EmberChamber — Rust service Dockerfile
+# EmberChamber — legacy Rust service Dockerfile
 #
-# Build any service from the workspace root:
-#   docker build --build-arg SERVICE=control-api -t emberchamber-control-api .
+# Build an archived service scaffold explicitly:
+#   docker build --build-arg SERVICE=control-api -f Dockerfile.service -t emberchamber-control-api .
 #
 # Used by infra/compose/docker-compose.yml with per-service build-arg overrides.
 
@@ -17,13 +17,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config libssl-dev && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy workspace manifests (for dependency caching)
+# Copy manifests needed for dependency caching
 COPY Cargo.toml ./
 COPY crates/domain/Cargo.toml       crates/domain/
-COPY crates/db/Cargo.toml           crates/db/
-COPY crates/auth/Cargo.toml         crates/auth/
-COPY crates/relay-protocol/Cargo.toml crates/relay-protocol/
-COPY crates/test-support/Cargo.toml crates/test-support/
 COPY services/control-api/Cargo.toml   services/control-api/
 COPY services/realtime-gateway/Cargo.toml services/realtime-gateway/
 COPY services/relay-gateway/Cargo.toml  services/relay-gateway/
@@ -31,8 +27,8 @@ COPY services/media-worker/Cargo.toml   services/media-worker/
 COPY services/push-worker/Cargo.toml    services/push-worker/
 COPY services/directory-ca/Cargo.toml   services/directory-ca/
 
-# Stub all sources so cargo resolves the dependency graph without full sources
-RUN for crate in domain db auth relay-protocol test-support; do \
+# Stub sources so cargo resolves the dependency graph without full sources
+RUN for crate in domain; do \
       mkdir -p crates/$crate/src && \
       printf 'pub fn _stub() {}\n' > crates/$crate/src/lib.rs; \
     done && \
@@ -41,19 +37,19 @@ RUN for crate in domain db auth relay-protocol test-support; do \
       printf 'fn main() {}\n' > services/$svc/src/main.rs; \
     done
 
-RUN cargo build --release --bin "$SERVICE" 2>/dev/null; exit 0
+RUN cargo build --release --manifest-path "services/$SERVICE/Cargo.toml" 2>/dev/null; exit 0
 
 # Copy real sources and do incremental rebuild
 COPY crates/ crates/
 COPY services/ services/
 RUN find crates services -name '*.rs' -exec touch {} + && \
-    cargo build --release --bin "$SERVICE"
+    cargo build --release --manifest-path "services/$SERVICE/Cargo.toml"
 
 # ── Runtime stage ─────────────────────────────────────────────────────────────
 FROM debian:bookworm-slim AS runtime
 ARG SERVICE
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && \
     rm -rf /var/lib/apt/lists/*
-COPY --from=builder /build/target/release/$SERVICE /usr/local/bin/emberchamber-service
+COPY --from=builder /build/services/$SERVICE/target/release/$SERVICE /usr/local/bin/emberchamber-service
 ENV SERVICE_NAME=$SERVICE
 ENTRYPOINT ["/usr/local/bin/emberchamber-service"]

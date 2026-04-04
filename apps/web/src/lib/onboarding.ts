@@ -1,18 +1,18 @@
 export const onboardingSteps = [
   {
     number: "01",
-    title: "Bring the invite and inbox",
-    body: "Use a private email for bootstrap and recovery, then add the invite token or group link only when a new account needs it.",
+    title: "Confirm access",
+    body: "Bring the private email and invite details that belong to this account.",
   },
   {
     number: "02",
-    title: "Confirm adults-only access",
-    body: "EmberChamber is for adults 18 and over. The beta uses a clear self-attested gate instead of heavy identity verification.",
+    title: "Name the device",
+    body: "Use a readable label so session review and later device linking stay clear.",
   },
   {
     number: "03",
-    title: "Name the device and finish sign-in",
-    body: "Readable device names make session reviews and recovery less painful. The first magic link establishes the session.",
+    title: "Finish from the inbox",
+    body: "Open the link on the device you want to use first so the first session lands cleanly.",
   },
 ] as const;
 

@@ -5,7 +5,7 @@
 This plan covers the repo work needed to implement the agreed EmberChamber roadmap pass on April 2,
 2026.
 
-It is not the product-direction source of truth. That remains [`docs/roadmap.md`](/home/jason/gh/PrivateMesh/docs/roadmap.md).
+It is not the product-direction source of truth. That remains [`docs/roadmap.md`](../roadmap.md).
 This file is the execution plan for the concrete repo work needed to align the active beta runtime
 with that roadmap.
 

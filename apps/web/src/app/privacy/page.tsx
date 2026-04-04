@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { PrivacyBoundaryMatrix } from "@/components/privacy-boundary-matrix";
 import { PolicyPage } from "@/components/policy-page";
+import { privacyBoundaryItems } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Privacy",
@@ -20,10 +22,22 @@ export default function PrivacyPage() {
           <li>Email is used for auth and recovery, not public discovery.</li>
           <li>Email is not the social identity inside the product; pseudonymous names and handles are.</li>
           <li>The current beta is adults-only and uses a self-attested 18+ confirmation step.</li>
-          <li>The relay should store ciphertext message envelopes, not routine plaintext DM history.</li>
-          <li>Message history and local search are intended to live primarily on user devices.</li>
+          <li>The relay stores operational metadata, mailbox ciphertext, and attachment blobs needed for the hosted beta.</li>
+          <li>Private keys, DM history, and local private-content search stay primarily on user devices.</li>
           <li>EmberChamber does not market itself as perfect anonymity, law-proof infrastructure, or zero-visibility hosting.</li>
         </ul>
+      </section>
+
+      <section>
+        <h2>Current boundary</h2>
+        <p>
+          The right privacy question is not whether the relay exists. It does. The real question is
+          what it stores today, what stays local, and which compatibility paths are still being
+          retired.
+        </p>
+        <div className="mt-5">
+          <PrivacyBoundaryMatrix items={privacyBoundaryItems} />
+        </div>
       </section>
 
       <section>
@@ -38,8 +52,9 @@ export default function PrivacyPage() {
       <section>
         <h2>Search and storage</h2>
         <p>
-          Search for private content is planned as a local device capability. The relay should not
-          become a searchable archive of private message bodies.
+          Search for private content is a local device capability. The relay should not become a
+          searchable archive of private message bodies, even while joined-space metadata search and
+          hosted attachment delivery still exist.
         </p>
       </section>
 

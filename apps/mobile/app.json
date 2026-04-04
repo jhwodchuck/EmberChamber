@@ -5,7 +5,7 @@
     "scheme": "emberchamber",
     "version": "0.1.0",
     "description": "Invite-only messaging for trusted circles.",
-    "orientation": "portrait",
+    "orientation": "default",
     "userInterfaceStyle": "automatic",
     "icon": "./assets/icon.png",
     "android": {

@@ -58,6 +58,27 @@ const platformProfiles = {
   },
 } as const;
 
+const recommendedToday = [
+  {
+    title: "Need the fastest start",
+    body: "Use the browser first. It covers onboarding, invite review, settings, and lighter chat without waiting for a native install.",
+    href: "/start",
+    label: "Start On Web",
+  },
+  {
+    title: "Need a daily mobile home",
+    body: "Choose Android when a posted build exists. It remains the first-wave native client for day-to-day use.",
+    href: "#android",
+    label: "Check Android",
+  },
+  {
+    title: "Need a desk-first surface",
+    body: "Choose Windows or Ubuntu when a posted build exists. If neither is posted, treat web as the fallback instead of guessing.",
+    href: githubReleasesUrl,
+    label: "Open Release Feed",
+  },
+] as const;
+
 export default function DownloadPage() {
   const latestReleasePromise = getLatestPlatformRelease();
 
@@ -70,12 +91,18 @@ async function DownloadPageInner({
   latestReleasePromise: ReturnType<typeof getLatestPlatformRelease>;
 }) {
   const latestRelease = await latestReleasePromise;
-  const totalPostedAssets = latestRelease
-    ? Object.values(latestRelease.downloadsByPlatform).reduce((count, downloads) => count + downloads.length, 0)
-    : 0;
-  const surfacesWithBuilds = latestRelease
-    ? launchPlatforms.filter((platform) => latestRelease.downloadsByPlatform[platform.id]?.length).length
-    : 0;
+  const platformBuilds = launchPlatforms.map((platform) => ({
+    platform,
+    build: latestRelease?.buildsByPlatform[platform.id] ?? null,
+  }));
+  const totalPostedAssets = platformBuilds.reduce(
+    (count, entry) => count + (entry.build?.downloads.length ?? 0),
+    0
+  );
+  const surfacesWithBuilds = platformBuilds.filter((entry) => entry.build).length;
+  const representedTags = new Set(
+    platformBuilds.flatMap((entry) => (entry.build ? [entry.build.releaseTag] : []))
+  ).size;
 
   return (
     <MarketingShell>
@@ -119,22 +146,22 @@ async function DownloadPageInner({
           </div>
 
           <div className="panel px-6 py-7">
-            <p className="section-kicker">Current Release State</p>
+            <p className="section-kicker">Posted Build Feed</p>
             {latestRelease ? (
               <>
                 <h2 className="mt-4 text-2xl font-semibold text-[var(--text-primary)]">
-                  {latestRelease.releaseName}
+                  {surfacesWithBuilds}/3 native surfaces have a posted build
                 </h2>
                 <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-                  {latestRelease.prerelease ? "Latest prerelease" : "Latest release"}
-                  {latestRelease.publishedAt ? ` published ${formatUtcDate(latestRelease.publishedAt)} UTC.` : "."}
+                  GitHub Releases is the source of truth. Each platform card below shows the latest
+                  release tag that actually contains that platform&apos;s posted artifacts.
                 </p>
 
                 <div className="mt-6 grid gap-3">
                   {[
                     { label: "Posted assets", value: String(totalPostedAssets) },
                     { label: "Native surfaces live", value: `${surfacesWithBuilds}/3` },
-                    { label: "Fallback surface", value: "Web" },
+                    { label: "Release tags represented", value: String(representedTags) },
                   ].map((item) => (
                     <div key={item.label} className="rounded-[1.2rem] border border-white/8 bg-white/[0.04] px-4 py-3">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#a98982]">
@@ -146,10 +173,10 @@ async function DownloadPageInner({
                 </div>
 
                 <a
-                  href={latestRelease.releaseUrl}
+                  href={githubReleasesUrl}
                   className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-brand-300 transition-colors hover:text-brand-200"
                 >
-                  Open release page
+                  Open release feed
                   <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
                 </a>
               </>
@@ -168,19 +195,41 @@ async function DownloadPageInner({
         </div>
 
         <div className="mt-10 mb-8 max-w-2xl">
-          <div className="section-kicker">Choose Your Home Surface</div>
+          <div className="section-kicker">Recommended Today</div>
           <h2 className="mt-4 text-balance font-display text-4xl font-semibold text-[var(--text-primary)] sm:text-5xl">
-            Each native client has the same trust model, but a different daily rhythm.
+            Start with the surface that matches the moment, not the slogan.
           </h2>
           <p className="mt-4 section-copy">
-            The real differences are where you want to live, how much device integration you need,
-            and which posted artifact is available today.
+            Posted builds can land on different tags. The right choice is whichever surface is
+            actually available and best suited to the session you are starting.
           </p>
         </div>
 
-        <div className="grid gap-5 lg:grid-cols-3">
-          {launchPlatforms.map((platform) => (
-            <div key={platform.name} className="card relative h-full overflow-hidden p-6">
+        <div className="grid gap-4 lg:grid-cols-3">
+          {recommendedToday.map((item) =>
+            item.href.startsWith("/") ? (
+              <Link key={item.title} href={item.href} className="rounded-[1.45rem] border border-white/8 bg-white/[0.04] p-5 transition-[border-color,transform] hover:-translate-y-0.5 hover:border-brand-500/25">
+                <p className="text-lg font-semibold text-[var(--text-primary)]">{item.title}</p>
+                <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{item.body}</p>
+                <span className="mt-4 inline-flex text-sm font-medium text-brand-300">{item.label}</span>
+              </Link>
+            ) : (
+              <a
+                key={item.title}
+                href={item.href}
+                className="rounded-[1.45rem] border border-white/8 bg-white/[0.04] p-5 transition-[border-color,transform] hover:-translate-y-0.5 hover:border-brand-500/25"
+              >
+                <p className="text-lg font-semibold text-[var(--text-primary)]">{item.title}</p>
+                <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{item.body}</p>
+                <span className="mt-4 inline-flex text-sm font-medium text-brand-300">{item.label}</span>
+              </a>
+            ),
+          )}
+        </div>
+
+        <div className="mt-8 grid gap-5 lg:grid-cols-3">
+          {platformBuilds.map(({ platform, build }) => (
+            <div key={platform.name} id={platform.id} className="card relative h-full overflow-hidden p-6">
               <div
                 className={`absolute inset-x-0 top-0 h-24 bg-gradient-to-r ${
                   platformAccent[platform.id as keyof typeof platformAccent]
@@ -200,6 +249,28 @@ async function DownloadPageInner({
                 <p className="mt-3 text-sm font-medium text-brand-300">{platform.status}</p>
                 <p className="mt-4 text-sm leading-7 text-[var(--text-secondary)]">{platform.detail}</p>
 
+                {build ? (
+                  <div className="mt-4 rounded-[1.35rem] border border-white/8 bg-white/[0.04] px-4 py-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#a98982]">
+                      Latest posted build
+                    </p>
+                    <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">
+                      {build.releaseTag}
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
+                      {build.prerelease ? "Prerelease" : "Release"}
+                      {build.publishedAt ? ` published ${formatUtcDate(build.publishedAt)} UTC.` : "."}
+                    </p>
+                    <a
+                      href={build.releaseUrl}
+                      className="mt-3 inline-flex items-center gap-2 text-xs font-medium text-brand-300 transition-colors hover:text-brand-200"
+                    >
+                      Open tagged release
+                      <ArrowUpRight aria-hidden="true" className="h-3.5 w-3.5" />
+                    </a>
+                  </div>
+                ) : null}
+
                 <div className="mt-5 showcase-screen rounded-[1.45rem] p-4">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#ffd0b6]">
                     Best for
@@ -218,9 +289,9 @@ async function DownloadPageInner({
                 </div>
 
                 <div className="mt-6 space-y-3">
-                  {latestRelease?.downloadsByPlatform[platform.id]?.length ? (
+                  {build ? (
                     <>
-                      {latestRelease.downloadsByPlatform[platform.id].map((download) => (
+                      {build.downloads.map((download) => (
                         <a
                           key={download.url}
                           href={download.url}
@@ -230,7 +301,7 @@ async function DownloadPageInner({
                         </a>
                       ))}
                       <ul className="space-y-1 text-xs text-[var(--text-secondary)]">
-                        {latestRelease.downloadsByPlatform[platform.id].map((download) => (
+                        {build.downloads.map((download) => (
                           <li key={`${download.url}-meta`}>
                             {download.label} • {formatBytes(download.size)}
                           </li>
@@ -242,7 +313,7 @@ async function DownloadPageInner({
                       <p className="text-sm font-medium text-[var(--text-primary)]">No public build posted yet</p>
                       <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
                         This surface is part of the beta plan, but no downloadable public binary is
-                        attached to the latest release.
+                        attached to the release feed yet.
                       </p>
                     </div>
                   )}
@@ -259,8 +330,9 @@ async function DownloadPageInner({
               What each surface can actually do.
             </h2>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-              All surfaces share the same relay contracts and encryption model. The real differences
-              are device integration, push behavior, and which client should be your default home.
+              All surfaces share the same relay contracts and privacy direction. The real
+              differences are device integration, push behavior, and how far encrypted attachments
+              and local-history maturity have landed on each client.
             </p>
 
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -313,13 +385,13 @@ async function DownloadPageInner({
                 {[
                   {
                     icon: Cloud,
-                    title: "Same relay model",
-                    body: "Every client follows the same hosted-delivery, narrow-visibility boundary.",
+                    title: "Same relay boundary",
+                    body: "Every client uses the same hosted-delivery model, with the relay kept narrow rather than invisible.",
                   },
                   {
                     icon: ShieldCheck,
-                    title: "Same local-history principle",
-                    body: "Keys, search, and archive discipline stay local-first across surfaces.",
+                    title: "Same local-first direction",
+                    body: "Keys, search, and local history stay device-centered, even though a few compatibility paths are still being retired.",
                   },
                   {
                     icon: Download,

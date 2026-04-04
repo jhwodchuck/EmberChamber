@@ -7,7 +7,7 @@ This document is the current Android release and Play deployment lane for `apps/
 - Invite-only Android client
 - Email magic-link sign-in
 - Adults-only 18+ affirmation
-- Relay-hosted group threads
+- Device-encrypted group creation plus legacy compatibility history where migration is incomplete
 - Photo attachment upload and download
 - Local session, privacy-default, and recent-thread cache on device
 
@@ -22,8 +22,8 @@ attachment model. That rollout is still in progress across the repo.
 
 ## Store Assets
 
-- App icon: [`brand/play_store/icon_512.png`](/home/jason/gh/PrivateMesh/brand/play_store/icon_512.png)
-- Feature graphic: [`brand/play_store/feature_graphic_1024.jpg`](/home/jason/gh/PrivateMesh/brand/play_store/feature_graphic_1024.jpg)
+- App icon: [`brand/play_store/icon_512.png`](../brand/play_store/icon_512.png)
+- Feature graphic: [`brand/play_store/feature_graphic_1024.jpg`](../brand/play_store/feature_graphic_1024.jpg)
 
 ## Local Verification
 
@@ -46,20 +46,20 @@ The signed outputs land in:
 ## Release Workflows
 
 GitHub Actions builds the signed release APK and release AAB from
-[`.github/workflows/release-android.yml`](/home/jason/gh/PrivateMesh/.github/workflows/release-android.yml).
+[`release-android.yml`](../.github/workflows/release-android.yml).
 
 The workflow expects the release keystore secrets described in
-[`docs/operator-playbook.md`](/home/jason/gh/PrivateMesh/docs/operator-playbook.md).
+[`docs/operator-playbook.md`](operator-playbook.md).
 It also expects `ANDROID_GOOGLE_SERVICES_JSON` so CI can write
 `apps/mobile/secrets/google-services.json` before Expo prebuild and Gradle release builds.
 
 GitHub Actions can also upload a signed AAB to Google Play through
-[`.github/workflows/deploy-play-store.yml`](/home/jason/gh/PrivateMesh/.github/workflows/deploy-play-store.yml).
+[`deploy-play-store.yml`](../.github/workflows/deploy-play-store.yml).
 That workflow is manual by design: the operator chooses the exact `ref`, track, rollout, and
 release status instead of silently pushing every Android tag into Play Console.
 
 The Play deployment workflow additionally expects the `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` GitHub
-Actions secret described in [`docs/operator-playbook.md`](/home/jason/gh/PrivateMesh/docs/operator-playbook.md),
+Actions secret described in [`docs/operator-playbook.md`](operator-playbook.md),
 plus `ANDROID_GOOGLE_SERVICES_JSON` for the Firebase Android app config file.
 
 Run it from GitHub Actions or from the CLI, for example:
@@ -81,5 +81,5 @@ first upload may still need to be done manually before API-based updates work re
 ## Listing Guidance
 
 - Position the app as invite-only messaging for trusted circles.
-- Keep privacy language accurate: private email bootstrap, device-bound sessions, and current relay-hosted group flows.
+- Keep privacy language accurate: private email bootstrap, device-bound sessions, new encrypted groups, and the remaining compatibility-path caveats.
 - Do not describe the current Android group flow as fully end-to-end encrypted.

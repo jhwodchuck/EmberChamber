@@ -33,6 +33,24 @@ const honestyCards = [
   "We do not position EmberChamber as law-enforcement proof or anonymity guaranteed.",
 ];
 
+const encryptionStatus = [
+  {
+    title: "Direct messages",
+    status: "Live",
+    body: "DM delivery is encrypted end to end, and the relay does not expose plaintext DM history back to the browser.",
+  },
+  {
+    title: "New groups",
+    status: "Live with migration caveats",
+    body: "New groups start device-encrypted, while legacy relay-hosted group and room history still exists in compatibility paths.",
+  },
+  {
+    title: "Attachments",
+    status: "Mixed by client flow",
+    body: "Browser encrypted-conversation uploads can encrypt before upload, but native attachment encryption is still uneven across client paths.",
+  },
+];
+
 export default function TrustAndSafetyPage() {
   return (
     <PolicyPage
@@ -41,12 +59,27 @@ export default function TrustAndSafetyPage() {
       intro="Invite-only access and end-to-end encrypted direct messages are the current privacy floor, not the excuse for inflated claims. The design still needs clear boundaries, real reporting paths, and accurate language about what is already true versus what is still being migrated."
     >
       <section>
+        <div className="section-kicker">Current Encryption Status</div>
+        <h2 className="mt-3">Three lines tell the truth faster than a page of caveats.</h2>
+        <div className="mt-5 grid gap-4 md:grid-cols-3">
+          {encryptionStatus.map((item) => (
+            <div key={item.title} className="rounded-[1.35rem] border border-white/8 bg-white/[0.04] p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-400">{item.status}</p>
+              <h3 className="mt-3">{item.title}</h3>
+              <p className="mt-2 text-sm leading-7 text-[var(--text-secondary)]">{item.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section>
         <div className="section-kicker">Private By Default</div>
         <h2 className="mt-3">Your conversations stay private.</h2>
         <p>
-          EmberChamber is built around end-to-end encrypted DMs and invite-gated trusted circles.
-          The relay routes mailbox traffic without reading DM content, while current small-group
-          history still uses a relay-hosted beta path during the encrypted-group migration.
+          EmberChamber is built around end-to-end encrypted DMs, new device-encrypted groups, and
+          invite-gated trusted circles. The relay routes mailbox traffic without exposing DM
+          plaintext history, while legacy relay-hosted group and room history still exists in
+          compatibility paths during the migration.
         </p>
         <p>
           The product is also adults-only by design. Invite gating, self-attested 18+ onboarding,

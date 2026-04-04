@@ -14,6 +14,7 @@ import { authBootstrapEnabled } from "@/lib/site";
 type BootstrapAuthMode = "signin" | "join";
 type BootstrapEntryMethod = "magic-link" | "device-link";
 type BootstrapField = "email" | "inviteToken" | "deviceLabel" | "ageConfirmed18";
+type MagicLinkStep = 1 | 2;
 
 const STORAGE_KEYS = {
   email: "emberchamber.auth.v1.email",
@@ -44,6 +45,7 @@ function isValidEmail(value: string) {
 
 export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
   const [entryMethod, setEntryMethod] = useState<BootstrapEntryMethod>("magic-link");
+  const [magicLinkStep, setMagicLinkStep] = useState<MagicLinkStep>(1);
   const [email, setEmail] = useState("");
   const [inviteToken, setInviteToken] = useState("");
   const [deviceLabel, setDeviceLabel] = useState("Browser companion");
@@ -73,6 +75,14 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
     setIsReady(true);
   }, []);
 
+  useEffect(() => {
+    if (entryMethod !== "magic-link" || magicLinkStep !== 2) {
+      return;
+    }
+
+    window.setTimeout(() => deviceLabelRef.current?.focus(), 0);
+  }, [entryMethod, magicLinkStep]);
+
   function focusField(field: BootstrapField) {
     if (field === "email") {
       emailRef.current?.focus();
@@ -92,7 +102,7 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
     deviceLabelRef.current?.focus();
   }
 
-  function validateForm(requireInviteToken: boolean) {
+  function validateMagicLinkAccess(requireInviteToken: boolean) {
     const nextErrors: Partial<Record<BootstrapField, string>> = {};
 
     if (!email.trim()) {
@@ -113,21 +123,66 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
       nextErrors.ageConfirmed18 = "EmberChamber beta access is limited to adults 18 and over.";
     }
 
-    if (!deviceLabel.trim()) {
-      nextErrors.deviceLabel = "Name this device so future session reviews stay readable.";
-    } else if (deviceLabel.trim().length < 3) {
-      nextErrors.deviceLabel = "Use at least 3 characters so the device name is recognizable.";
-    }
+    setErrors((current) => ({
+      ...current,
+      email: nextErrors.email,
+      inviteToken: nextErrors.inviteToken,
+      ageConfirmed18: nextErrors.ageConfirmed18,
+    }));
 
-    setErrors(nextErrors);
-
-    const firstError = Object.keys(nextErrors)[0] as BootstrapField | undefined;
+    const firstError = (["email", "inviteToken", "ageConfirmed18"] as const).find((field) => nextErrors[field]);
     if (firstError) {
       focusField(firstError);
       return false;
     }
 
     return true;
+  }
+
+  function validateDeviceLabel() {
+    let nextError: string | undefined;
+
+    if (!deviceLabel.trim()) {
+      nextError = "Name this device so future session reviews stay readable.";
+    } else if (deviceLabel.trim().length < 3) {
+      nextError = "Use at least 3 characters so the device name is recognizable.";
+    }
+
+    setErrors((current) => ({
+      ...current,
+      deviceLabel: nextError,
+    }));
+
+    if (nextError) {
+      focusField("deviceLabel");
+      return false;
+    }
+
+    return true;
+  }
+
+  function moveToDeviceStep(requireInviteToken: boolean) {
+    setChallenge(null);
+    setFormMessage(null);
+
+    if (!validateMagicLinkAccess(requireInviteToken)) {
+      setFormMessage({
+        tone: "error",
+        title: "Fix the access details first",
+        body:
+          mode === "join"
+            ? "Invite-only onboarding still needs a valid email, an adults-only confirmation, and the beta invite token when required."
+            : "Sign-in still needs a valid email, an adults-only confirmation, and the invite token only when this address has never been used for beta access.",
+      });
+      return;
+    }
+
+    setMagicLinkStep(2);
+    setFormMessage({
+      tone: "success",
+      title: "Access confirmed",
+      body: "Give this browser a readable device name, then send the inbox link.",
+    });
   }
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -147,17 +202,28 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
     }
 
     const requireInviteToken = mode === "join" || inviteFieldVisible;
+    if (magicLinkStep === 1) {
+      moveToDeviceStep(requireInviteToken);
+      return;
+    }
+
     setChallenge(null);
     setFormMessage(null);
 
-    if (!validateForm(requireInviteToken)) {
+    const accessValid = validateMagicLinkAccess(requireInviteToken);
+    const deviceValid = validateDeviceLabel();
+    if (!accessValid || !deviceValid) {
+      if (!accessValid) {
+        setMagicLinkStep(1);
+      }
+
       setFormMessage({
         tone: "error",
         title: "Fix the highlighted fields first",
         body:
           mode === "join"
-            ? "Invite-only onboarding needs a valid email, 18+ confirmation, a readable device label, and the beta invite token when required."
-            : "This sign-in link needs a valid email address, 18+ confirmation, and a readable device label before it can be queued.",
+            ? "Invite-only onboarding needs valid access details first, then a readable device name before the inbox link can be queued."
+            : "Sign-in needs valid access details first, then a readable device name before the inbox link can be queued.",
       });
       return;
     }
@@ -187,6 +253,7 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
       } catch (error) {
         if (error instanceof RelayRequestError && error.code === "INVITE_REQUIRED") {
           setInviteFieldVisible(true);
+          setMagicLinkStep(1);
           setErrors({
             inviteToken: "This email does not have a beta account yet. Add an invite token to continue.",
           });
@@ -231,8 +298,8 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
     entryMethod === "device-link"
       ? "Use a readable device name, then either show a QR for a signed-in device to approve or scan a trusted device QR here."
       : mode === "join"
-        ? "Adults-only access stays invite-gated. Your invite token is only needed for a new beta account."
-        : "Returning users only need their private email, an adults-only affirmation, and a readable device name.";
+        ? "First confirm the invite path and adults-only gate, then name the device that should receive the inbox link."
+        : "First confirm the email and adults-only gate, then name the browser that should receive the inbox link.";
   const requiresInviteToken = mode === "join" || inviteFieldVisible;
 
   return (
@@ -256,7 +323,10 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
         <div className="grid gap-2 sm:grid-cols-2">
           <button
             type="button"
-            onClick={() => setEntryMethod("magic-link")}
+            onClick={() => {
+              setEntryMethod("magic-link");
+              setMagicLinkStep(1);
+            }}
             className={`rounded-[1.2rem] border px-4 py-3 text-left transition-colors ${
               entryMethod === "magic-link"
                 ? "border-brand-500 bg-brand-500/5"
@@ -270,7 +340,10 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
           </button>
           <button
             type="button"
-            onClick={() => setEntryMethod("device-link")}
+            onClick={() => {
+              setEntryMethod("device-link");
+              setMagicLinkStep(1);
+            }}
             className={`rounded-[1.2rem] border px-4 py-3 text-left transition-colors ${
               entryMethod === "device-link"
                 ? "border-brand-500 bg-brand-500/5"
@@ -290,29 +363,48 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
           </StatusCallout>
         ) : null}
 
-        <div className="grid gap-2 sm:grid-cols-3">
-          <div className="rounded-[1.2rem] border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-600">Step 1</p>
-            <p className="mt-1 text-sm font-medium text-[var(--text-primary)]">
-              {entryMethod === "device-link"
-                ? "Name device"
-                : requiresInviteToken
-                  ? "Invite + email"
-                  : "Email"}
-            </p>
-          </div>
-          <div className="rounded-[1.2rem] border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-600">Step 2</p>
-            <p className="mt-1 text-sm font-medium text-[var(--text-primary)]">
-              {entryMethod === "device-link" ? "Show or scan QR" : "Confirm 18+"}
-            </p>
-          </div>
-          <div className="rounded-[1.2rem] border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-600">Step 3</p>
-            <p className="mt-1 text-sm font-medium text-[var(--text-primary)]">
-              {entryMethod === "device-link" ? "Approve on trusted device" : "Name device + confirm inbox"}
-            </p>
-          </div>
+        <div className={`grid gap-2 ${entryMethod === "magic-link" ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
+          {entryMethod === "magic-link" ? (
+            <>
+              <div
+                className={`rounded-[1.2rem] border px-3 py-3 ${
+                  magicLinkStep === 1
+                    ? "border-brand-500 bg-brand-500/5"
+                    : "border-[var(--border)] bg-[var(--bg-secondary)]"
+                }`}
+              >
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-600">Step 1</p>
+                <p className="mt-1 text-sm font-medium text-[var(--text-primary)]">
+                  {requiresInviteToken ? "Access details + 18+" : "Email + 18+"}
+                </p>
+              </div>
+              <div
+                className={`rounded-[1.2rem] border px-3 py-3 ${
+                  magicLinkStep === 2
+                    ? "border-brand-500 bg-brand-500/5"
+                    : "border-[var(--border)] bg-[var(--bg-secondary)]"
+                }`}
+              >
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-600">Step 2</p>
+                <p className="mt-1 text-sm font-medium text-[var(--text-primary)]">Name device + send inbox link</p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="rounded-[1.2rem] border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-600">Step 1</p>
+                <p className="mt-1 text-sm font-medium text-[var(--text-primary)]">Name device</p>
+              </div>
+              <div className="rounded-[1.2rem] border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-600">Step 2</p>
+                <p className="mt-1 text-sm font-medium text-[var(--text-primary)]">Show or scan QR</p>
+              </div>
+              <div className="rounded-[1.2rem] border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-600">Step 3</p>
+                <p className="mt-1 text-sm font-medium text-[var(--text-primary)]">Approve on trusted device</p>
+              </div>
+            </>
+          )}
         </div>
 
         {entryMethod === "magic-link" ? (
@@ -324,212 +416,258 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
                 </StatusCallout>
               ) : null}
 
-              <div>
-                <label
-                  htmlFor={`${mode}-email`}
-                  className="mb-1.5 block text-sm font-medium text-[var(--text-primary)]"
-                >
-                  Private email
-                </label>
-                <input
-                  id={`${mode}-email`}
-                  ref={emailRef}
-                  type="email"
-                  value={email}
-                  onChange={(event) => {
-                    setEmail(event.target.value);
-                    if (errors.email) {
-                      setErrors((current) => ({ ...current, email: undefined }));
-                    }
-                  }}
-                  className="input"
-                  placeholder="you@example.com"
-                  required
-                  autoComplete="email"
-                  autoCapitalize="none"
-                  spellCheck={false}
-                  autoFocus
-                  aria-invalid={errors.email ? "true" : "false"}
-                  aria-describedby={errors.email ? `${mode}-email-error` : `${mode}-email-hint`}
-                />
-                <p id={`${mode}-email-hint`} className="mt-1 text-xs text-[var(--text-secondary)]">
-                  Used only for bootstrap and recovery.
-                </p>
-                {errors.email ? (
-                  <p id={`${mode}-email-error`} className="mt-1 text-sm text-red-500">
-                    {errors.email}
-                  </p>
-                ) : null}
-              </div>
-
-              {requiresInviteToken ? (
-                <div>
-                  <div className="mb-1.5 flex items-center justify-between gap-3">
+              {magicLinkStep === 1 ? (
+                <>
+                  <div>
                     <label
-                      htmlFor={`${mode}-invite-token`}
-                      className="block text-sm font-medium text-[var(--text-primary)]"
+                      htmlFor={`${mode}-email`}
+                      className="mb-1.5 block text-sm font-medium text-[var(--text-primary)]"
                     >
-                      Invite token
+                      Private email
                     </label>
-                    {mode === "signin" ? (
-                      <button
-                        type="button"
-                        className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600 hover:text-brand-500"
-                        onClick={() => {
-                          setInviteFieldVisible(false);
-                          setInviteToken("");
-                          setErrors((current) => ({ ...current, inviteToken: undefined }));
-                        }}
-                      >
-                        Hide
-                      </button>
+                    <input
+                      id={`${mode}-email`}
+                      name="email"
+                      ref={emailRef}
+                      type="email"
+                      value={email}
+                      onChange={(event) => {
+                        setEmail(event.target.value);
+                        if (errors.email) {
+                          setErrors((current) => ({ ...current, email: undefined }));
+                        }
+                      }}
+                      className="input"
+                      placeholder="you@example.com"
+                      required
+                      autoComplete="email"
+                      autoCapitalize="none"
+                      spellCheck={false}
+                      aria-invalid={errors.email ? "true" : "false"}
+                      aria-describedby={errors.email ? `${mode}-email-error` : `${mode}-email-hint`}
+                    />
+                    <p id={`${mode}-email-hint`} className="mt-1 text-xs text-[var(--text-secondary)]">
+                      Used only for bootstrap and recovery.
+                    </p>
+                    {errors.email ? (
+                      <p id={`${mode}-email-error`} className="mt-1 text-sm text-red-500">
+                        {errors.email}
+                      </p>
                     ) : null}
                   </div>
-                  <input
-                    id={`${mode}-invite-token`}
-                    ref={inviteTokenRef}
-                    type="text"
-                    value={inviteToken}
-                    onChange={(event) => {
-                      setInviteToken(event.target.value);
-                      if (errors.inviteToken) {
-                        setErrors((current) => ({ ...current, inviteToken: undefined }));
-                      }
-                    }}
-                    className="input"
-                    placeholder="Paste your beta invite token"
-                    required={requiresInviteToken}
-                    autoComplete="off"
-                    autoCapitalize="none"
-                    spellCheck={false}
-                    aria-invalid={errors.inviteToken ? "true" : "false"}
-                    aria-describedby={errors.inviteToken ? `${mode}-invite-token-error` : `${mode}-invite-token-hint`}
-                  />
-                  <p id={`${mode}-invite-token-hint`} className="mt-1 text-xs text-[var(--text-secondary)]">
-                    Only needed when you are bootstrapping a new beta account.
-                  </p>
-                  {errors.inviteToken ? (
-                    <p id={`${mode}-invite-token-error`} className="mt-1 text-sm text-red-500">
-                      {errors.inviteToken}
-                    </p>
-                  ) : null}
-                </div>
+
+                  {requiresInviteToken ? (
+                    <div>
+                      <div className="mb-1.5 flex items-center justify-between gap-3">
+                        <label
+                          htmlFor={`${mode}-invite-token`}
+                          className="block text-sm font-medium text-[var(--text-primary)]"
+                        >
+                          Invite token
+                        </label>
+                        {mode === "signin" ? (
+                          <button
+                            type="button"
+                            className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600 hover:text-brand-500"
+                            onClick={() => {
+                              setInviteFieldVisible(false);
+                              setInviteToken("");
+                              setErrors((current) => ({ ...current, inviteToken: undefined }));
+                            }}
+                          >
+                            Hide
+                          </button>
+                        ) : null}
+                      </div>
+                      <input
+                        id={`${mode}-invite-token`}
+                        name="inviteToken"
+                        ref={inviteTokenRef}
+                        type="text"
+                        value={inviteToken}
+                        onChange={(event) => {
+                          setInviteToken(event.target.value);
+                          if (errors.inviteToken) {
+                            setErrors((current) => ({ ...current, inviteToken: undefined }));
+                          }
+                        }}
+                        className="input"
+                        placeholder="Paste your beta invite token"
+                        required={requiresInviteToken}
+                        autoComplete="off"
+                        autoCapitalize="none"
+                        spellCheck={false}
+                        aria-invalid={errors.inviteToken ? "true" : "false"}
+                        aria-describedby={errors.inviteToken ? `${mode}-invite-token-error` : `${mode}-invite-token-hint`}
+                      />
+                      <p id={`${mode}-invite-token-hint`} className="mt-1 text-xs text-[var(--text-secondary)]">
+                        Only needed when you are bootstrapping a new beta account.
+                      </p>
+                      {errors.inviteToken ? (
+                        <p id={`${mode}-invite-token-error`} className="mt-1 text-sm text-red-500">
+                          {errors.inviteToken}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <div className="rounded-[1.2rem] border border-dashed border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-3 text-sm text-[var(--text-secondary)]">
+                      <p className="font-medium text-[var(--text-primary)]">No invite token on hand?</p>
+                      <p className="mt-1">
+                        Returning users can continue with email alone. If this is your first device on a
+                        new beta account, add the invite token now instead of starting over later.
+                      </p>
+                      <button
+                        type="button"
+                        className="mt-3 text-sm font-semibold text-brand-600 hover:text-brand-500"
+                        onClick={() => {
+                          setInviteFieldVisible(true);
+                          window.setTimeout(() => inviteTokenRef.current?.focus(), 0);
+                        }}
+                      >
+                        Add invite token
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="rounded-[1.2rem] border border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-4">
+                    <label htmlFor={`${mode}-age-confirmed`} className="flex items-start gap-3">
+                      <input
+                        id={`${mode}-age-confirmed`}
+                        name="ageConfirmed18"
+                        ref={ageConfirmed18Ref}
+                        type="checkbox"
+                        checked={ageConfirmed18}
+                        onChange={(event) => {
+                          setAgeConfirmed18(event.target.checked);
+                          if (errors.ageConfirmed18) {
+                            setErrors((current) => ({ ...current, ageConfirmed18: undefined }));
+                          }
+                        }}
+                        className="mt-1 h-4 w-4 rounded border-[var(--border)] text-brand-600"
+                        aria-invalid={errors.ageConfirmed18 ? "true" : "false"}
+                        aria-describedby={
+                          errors.ageConfirmed18 ? `${mode}-age-confirmed-error` : `${mode}-age-confirmed-hint`
+                        }
+                      />
+                      <span>
+                        <span className="block text-sm font-medium text-[var(--text-primary)]">
+                          I confirm I am at least 18 years old
+                        </span>
+                        <span
+                          id={`${mode}-age-confirmed-hint`}
+                          className="mt-1 block text-xs leading-5 text-[var(--text-secondary)]"
+                        >
+                          EmberChamber beta access is adults-only. This is a self-attested gate, not identity verification.
+                        </span>
+                      </span>
+                    </label>
+                    {errors.ageConfirmed18 ? (
+                      <p id={`${mode}-age-confirmed-error`} className="mt-2 text-sm text-red-500">
+                        {errors.ageConfirmed18}
+                      </p>
+                    ) : null}
+                  </div>
+                </>
               ) : (
-                <div className="rounded-[1.2rem] border border-dashed border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-3 text-sm text-[var(--text-secondary)]">
-                  <p className="font-medium text-[var(--text-primary)]">No invite token on hand?</p>
-                  <p className="mt-1">
-                    Returning users can continue with email alone. If this is your first device on a
-                    new beta account, add the invite token now instead of starting over later.
-                  </p>
-                  <button
-                    type="button"
-                    className="mt-3 text-sm font-semibold text-brand-600 hover:text-brand-500"
-                    onClick={() => {
-                      setInviteFieldVisible(true);
-                      window.setTimeout(() => inviteTokenRef.current?.focus(), 0);
-                    }}
-                  >
-                    Add invite token
-                  </button>
-                </div>
+                <>
+                  <div className="rounded-[1.2rem] border border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-[var(--text-primary)]">Access details confirmed</p>
+                        <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
+                          Review the email and invite state below, or go back to edit them.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        className="text-sm font-semibold text-brand-600 hover:text-brand-500"
+                        onClick={() => setMagicLinkStep(1)}
+                      >
+                        Edit
+                      </button>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                      <div className="rounded-[1rem] border border-[var(--border)] bg-[var(--bg-primary)] px-3 py-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-600">Email</p>
+                        <p className="mt-2 break-all text-sm font-medium text-[var(--text-primary)]">{email.trim()}</p>
+                      </div>
+                      <div className="rounded-[1rem] border border-[var(--border)] bg-[var(--bg-primary)] px-3 py-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-600">Invite</p>
+                        <p className="mt-2 text-sm font-medium text-[var(--text-primary)]">
+                          {requiresInviteToken ? "Included" : "Not needed"}
+                        </p>
+                      </div>
+                      <div className="rounded-[1rem] border border-[var(--border)] bg-[var(--bg-primary)] px-3 py-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-600">Adults-only</p>
+                        <p className="mt-2 text-sm font-medium text-[var(--text-primary)]">Confirmed</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor={`${mode}-device-label`}
+                      className="block text-sm font-medium text-[var(--text-primary)]"
+                    >
+                      Device label
+                    </label>
+                    <input
+                      id={`${mode}-device-label`}
+                      name="deviceLabel"
+                      ref={deviceLabelRef}
+                      type="text"
+                      value={deviceLabel}
+                      onChange={(event) => {
+                        setDeviceLabel(event.target.value);
+                        if (errors.deviceLabel) {
+                          setErrors((current) => ({ ...current, deviceLabel: undefined }));
+                        }
+                      }}
+                      className="input mt-1.5"
+                      placeholder="Windows browser"
+                      required
+                      autoComplete="off"
+                      spellCheck={false}
+                      aria-invalid={errors.deviceLabel ? "true" : "false"}
+                      aria-describedby={errors.deviceLabel ? `${mode}-device-label-error` : `${mode}-device-label-hint`}
+                    />
+                    <p id={`${mode}-device-label-hint`} className="mt-1 text-xs text-[var(--text-secondary)]">
+                      This name appears in session review, recovery prompts, and later device linking.
+                    </p>
+                    {errors.deviceLabel ? (
+                      <p id={`${mode}-device-label-error`} className="mt-1 text-sm text-red-500">
+                        {errors.deviceLabel}
+                      </p>
+                    ) : null}
+                  </div>
+                </>
               )}
 
-              <div>
-                <label
-                  htmlFor={`${mode}-device-label`}
-                  className="block text-sm font-medium text-[var(--text-primary)]"
+              <div className="flex flex-col gap-3 sm:flex-row">
+                {magicLinkStep === 2 ? (
+                  <button type="button" className="btn-ghost sm:flex-1" onClick={() => setMagicLinkStep(1)}>
+                    Back
+                  </button>
+                ) : null}
+                <button
+                  type="submit"
+                  className="btn-primary w-full py-3 sm:flex-1"
+                  disabled={isPending || !authBootstrapEnabled || !isReady}
                 >
-                  Device label
-                </label>
-                <input
-                  id={`${mode}-device-label`}
-                  ref={deviceLabelRef}
-                  type="text"
-                  value={deviceLabel}
-                  onChange={(event) => {
-                    setDeviceLabel(event.target.value);
-                    if (errors.deviceLabel) {
-                      setErrors((current) => ({ ...current, deviceLabel: undefined }));
-                    }
-                  }}
-                  className="input mt-1.5"
-                  placeholder="Windows browser"
-                  required
-                  autoComplete="off"
-                  aria-invalid={errors.deviceLabel ? "true" : "false"}
-                  aria-describedby={errors.deviceLabel ? `${mode}-device-label-error` : `${mode}-device-label-hint`}
-                />
-                <p id={`${mode}-device-label-hint`} className="mt-1 text-xs text-[var(--text-secondary)]">
-                  This name appears in session review, recovery prompts, and later device linking.
-                </p>
-                {errors.deviceLabel ? (
-                  <p id={`${mode}-device-label-error`} className="mt-1 text-sm text-red-500">
-                    {errors.deviceLabel}
-                  </p>
-                ) : null}
+                  {authBootstrapEnabled
+                    ? isPending
+                      ? mode === "join"
+                        ? "Queuing magic link…"
+                        : "Sending magic link…"
+                      : magicLinkStep === 1
+                        ? "Continue"
+                        : mode === "join"
+                          ? "Start beta onboarding"
+                          : "Send magic link"
+                    : "Email bootstrap coming soon"}
+                </button>
               </div>
-
-              <div className="rounded-[1.2rem] border border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-4">
-                <label htmlFor={`${mode}-age-confirmed`} className="flex items-start gap-3">
-                  <input
-                    id={`${mode}-age-confirmed`}
-                    ref={ageConfirmed18Ref}
-                    type="checkbox"
-                    checked={ageConfirmed18}
-                    onChange={(event) => {
-                      setAgeConfirmed18(event.target.checked);
-                      if (errors.ageConfirmed18) {
-                        setErrors((current) => ({ ...current, ageConfirmed18: undefined }));
-                      }
-                    }}
-                    className="mt-1 h-4 w-4 rounded border-[var(--border)] text-brand-600"
-                    aria-invalid={errors.ageConfirmed18 ? "true" : "false"}
-                    aria-describedby={
-                      errors.ageConfirmed18 ? `${mode}-age-confirmed-error` : `${mode}-age-confirmed-hint`
-                    }
-                  />
-                  <span>
-                    <span className="block text-sm font-medium text-[var(--text-primary)]">
-                      I confirm I am at least 18 years old
-                    </span>
-                    <span
-                      id={`${mode}-age-confirmed-hint`}
-                      className="mt-1 block text-xs leading-5 text-[var(--text-secondary)]"
-                    >
-                      EmberChamber beta access is adults-only. This is a self-attested gate, not identity verification.
-                    </span>
-                  </span>
-                </label>
-                {errors.ageConfirmed18 ? (
-                  <p id={`${mode}-age-confirmed-error`} className="mt-2 text-sm text-red-500">
-                    {errors.ageConfirmed18}
-                  </p>
-                ) : null}
-              </div>
-
-              <button
-                type="submit"
-                className="btn-primary w-full py-3"
-                disabled={
-                  isPending ||
-                  !authBootstrapEnabled ||
-                  !isReady ||
-                  !email.trim() ||
-                  !ageConfirmed18 ||
-                  !deviceLabel.trim() ||
-                  (requiresInviteToken && !inviteToken.trim())
-                }
-              >
-                {authBootstrapEnabled
-                  ? isPending
-                    ? mode === "join"
-                      ? "Queuing magic link..."
-                      : "Sending magic link..."
-                    : mode === "join"
-                      ? "Start beta onboarding"
-                      : "Send magic link"
-                  : "Email bootstrap coming soon"}
-              </button>
             </form>
 
             <StatusCallout tone="info" title="What happens next">
@@ -555,6 +693,7 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
               </label>
               <input
                 id={`${mode}-qr-device-label`}
+                name="qrDeviceLabel"
                 ref={deviceLabelRef}
                 type="text"
                 value={deviceLabel}
@@ -564,6 +703,7 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
                 className="input"
                 placeholder="Windows browser"
                 autoComplete="off"
+                spellCheck={false}
               />
               <p className="mt-1 text-xs text-[var(--text-secondary)]">
                 This label is what the signed-in device will see before approval.

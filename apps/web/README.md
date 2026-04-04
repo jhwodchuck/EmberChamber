@@ -97,7 +97,7 @@ npm run build --workspace=packages/protocol
 
 ## Environment
 
-Defined in [`.env.example`](/home/jason/gh/PrivateMesh/apps/web/.env.example):
+Defined in [`.env.example`](.env.example):
 
 - `NEXT_PUBLIC_RELAY_URL`: browser-facing relay base URL
 - `NEXT_PUBLIC_WEB_URL`: canonical public web origin
@@ -109,13 +109,15 @@ Also supported:
 
 ## Local Development
 
-From the repo root:
+First-time setup from the repo root:
 
 ```bash
-npm install
-cp .env.example .env
-cp apps/web/.env.example apps/web/.env.local
-npm run build --workspace=packages/protocol
+npm run bootstrap
+```
+
+Then start the active web-plus-relay lane:
+
+```bash
 npm run dev
 ```
 
@@ -123,6 +125,8 @@ That starts:
 
 - `apps/relay` on the relay dev port
 - `apps/web` on port `3000`
+
+The root workspace is `npm`-first. `docs/wiki-site` remains a standalone `pnpm` VitePress site.
 
 To run only the web app:
 
@@ -137,6 +141,8 @@ npm run build --workspace=packages/protocol
 npm run lint --workspace=apps/web
 npm run build --workspace=apps/web
 ```
+
+For a full active-runtime sweep from the repo root, run `npm run verify:all`.
 
 ## CI New-User Flow Automation
 
@@ -171,10 +177,11 @@ The CI workflow uploads screenshots as a GitHub Actions artifact:
 
 ## Documentation Links
 
-- Docs index: [`docs/README.md`](/home/jason/gh/PrivateMesh/docs/README.md)
-- Root overview: [`README.md`](/home/jason/gh/PrivateMesh/README.md)
-- Architecture: [`docs/architecture.md`](/home/jason/gh/PrivateMesh/docs/architecture.md)
-- Launch targets: [`docs/launch-targets.md`](/home/jason/gh/PrivateMesh/docs/launch-targets.md)
-- Roadmap: [`docs/roadmap.md`](/home/jason/gh/PrivateMesh/docs/roadmap.md)
-- Relay API: [`docs/api/relay-http.md`](/home/jason/gh/PrivateMesh/docs/api/relay-http.md)
-- Operator playbook: [`docs/operator-playbook.md`](/home/jason/gh/PrivateMesh/docs/operator-playbook.md)
+- Docs index: [`docs/README.md`](../../docs/README.md)
+- Repo map: [`repo-map.yaml`](../../repo-map.yaml)
+- Root overview: [`README.md`](../../README.md)
+- Architecture: [`docs/architecture.md`](../../docs/architecture.md)
+- Launch targets: [`docs/launch-targets.md`](../../docs/launch-targets.md)
+- Roadmap: [`docs/roadmap.md`](../../docs/roadmap.md)
+- Relay API: [`docs/api/relay-http.md`](../../docs/api/relay-http.md)
+- Operator playbook: [`docs/operator-playbook.md`](../../docs/operator-playbook.md)

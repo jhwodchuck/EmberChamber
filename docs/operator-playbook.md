@@ -56,7 +56,7 @@ supports today and calls out where engineering or direct database access is stil
 ## Communication Defaults
 
 - Do not describe the current relay-native group thread or attachment flow as fully E2EE.
-- Do describe the beta as invite-only, disclosure-based, and mid-migration toward stronger client-side cryptography.
+- Do describe the beta as invite-only, disclosure-based, with new device-encrypted groups and a few legacy compatibility paths still being retired.
 - Keep public language discreet and privacy-first.
 
 ## Android Release Signing
@@ -114,7 +114,7 @@ gh secret set GOOGLE_PLAY_SERVICE_ACCOUNT_JSON < path/to/google-play-service-acc
 ```
 
 The GitHub Actions workflow
-[`deploy-play-store.yml`](/home/jason/gh/PrivateMesh/.github/workflows/deploy-play-store.yml)
+[`deploy-play-store.yml`](../.github/workflows/deploy-play-store.yml)
 builds a signed AAB and uploads it to the chosen Play track.
 
 Keep the Play API key separate from the Android signing keystore. They solve different problems:
@@ -167,8 +167,8 @@ The sender address is `noreply@signup.emberchamber.com` (set via `EMBERCHAMBER_E
 
 ## Relay Deploy
 
-1. Use the manual GitHub Actions workflow [deploy-relay.yml](/home/jason/gh/PrivateMesh/.github/workflows/deploy-relay.yml).
-2. Choose `production` for the live worker or `staging` only after staging Cloudflare resources and IDs have been provisioned in [apps/relay/wrangler.jsonc](/home/jason/gh/PrivateMesh/apps/relay/wrangler.jsonc).
+1. Use the manual GitHub Actions workflow [deploy-relay.yml](../.github/workflows/deploy-relay.yml).
+2. Choose `production` for the live worker or `staging` only after staging Cloudflare resources and IDs have been provisioned in [`apps/relay/wrangler.jsonc`](../apps/relay/wrangler.jsonc).
 3. Let the workflow run protocol build, Rust relay-contract tests, relay build, relay tests, D1 migrations, Worker deploy, and post-deploy `/health` plus `/ready` checks.
 4. Do not bypass migrations or skip the health checks when the relay schema has changed.
 

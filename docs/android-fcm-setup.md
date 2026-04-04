@@ -38,8 +38,8 @@ Register that exact package name in Firebase.
 
 This repo now auto-adds the Expo Android `googleServicesFile` config only when the file exists.
 
-- Config wrapper: [app.config.js](/home/jason/gh/PrivateMesh/apps/mobile/app.config.js)
-- Base Expo config: [app.json](/home/jason/gh/PrivateMesh/apps/mobile/app.json)
+- Config wrapper: [`app.config.js`](../apps/mobile/app.config.js)
+- Base Expo config: [`app.json`](../apps/mobile/app.json)
 
 That means the repo stays buildable before the Firebase file exists, and starts using it as soon as you add it.
 
@@ -100,7 +100,9 @@ openssl rand -base64 32 | npx wrangler secret put EMBERCHAMBER_PUSH_TOKEN_SECRET
 npx wrangler secret put EMBERCHAMBER_FCM_SERVICE_ACCOUNT_JSON --env staging < ../mobile/secrets/google-play-service-account.json
 ```
 
-Local dev already has a non-production fallback `EMBERCHAMBER_PUSH_TOKEN_SECRET` in [wrangler.jsonc](/home/jason/gh/PrivateMesh/apps/relay/wrangler.jsonc). Local FCM delivery still needs a valid service-account JSON if you want to send real pushes from a local relay instance.
+Local dev already has a non-production fallback `EMBERCHAMBER_PUSH_TOKEN_SECRET` in
+[`wrangler.jsonc`](../apps/relay/wrangler.jsonc). Local FCM delivery still needs a valid
+service-account JSON if you want to send real pushes from a local relay instance.
 
 ## What The Repo Now Does
 
