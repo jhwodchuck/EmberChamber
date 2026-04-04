@@ -138,6 +138,31 @@ npm run lint --workspace=apps/web
 npm run build --workspace=apps/web
 ```
 
+## CI New-User Flow Automation
+
+The web CI workflow includes a full non-production new-user journey that captures screenshots for:
+
+- signup (invite + email + 18+ affirmation)
+- magic-link completion
+- profile creation
+- sending a first direct message
+
+### CI auth strategy
+
+The automation uses the relay's existing non-production `log` email provider mode (`EMBERCHAMBER_EMAIL_PROVIDER=log` in local/dev defaults). In this mode, `/v1/auth/start` includes a `debugCompletionToken` used only for test and local bootstrap paths. Production/staging keep `queue` provider behavior and do not depend on this token in CI.
+
+### Flow implementation
+
+- `apps/web/e2e/ci-new-user-flow.spec.ts` runs with Playwright in CI.
+- The test performs signup in UI, reads the CI-only completion token from `/v1/auth/start`, opens `/auth/complete?token=...&browser=1`, updates profile settings, then sends a first DM to a seeded peer account.
+- Screenshots are saved under `apps/web/artifacts/screenshots/new-user-flow`.
+
+### Artifacts
+
+The CI workflow uploads screenshots as a GitHub Actions artifact:
+
+- `emberchamber-web-screenshots-<run_number>`
+
 ## Deployment Notes
 
 - `next.config.js` supports `NEXT_OUTPUT=standalone` for container-oriented builds.
