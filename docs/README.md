@@ -26,6 +26,8 @@
 - [`plansforwork/2026-04-02-ubuntu-copy-polish-plan.md`](plansforwork/2026-04-02-ubuntu-copy-polish-plan.md): Ubuntu copy, docs, and testing alignment plan
 - [`plansforwork/relay-hardening-and-relay-first-migration.md`](plansforwork/relay-hardening-and-relay-first-migration.md): relay hardening and relay-first migration program plan
 
+- [`plansforwork/2026-04-04-ui-surface-punch-list.md`](plansforwork/2026-04-04-ui-surface-punch-list.md): repo-ready UI punch list grouped by surface, component, and priority
+
 ## Legacy Prototype Docs
 
 - [`api/openapi.yaml`](api/openapi.yaml): legacy Express/Postgres prototype API spec for `apps/api`

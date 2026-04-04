@@ -308,6 +308,7 @@ export function ChatListScreen({
   onOpenInvites,
 }: ChatListScreenProps) {
   const [openConversationId, setOpenConversationId] = useState<string | null>(null);
+  const resumeItem = items[0] ?? null;
 
   useEffect(() => {
     if (!items.some((item) => item.group.id === openConversationId)) {
@@ -323,6 +324,44 @@ export function ChatListScreen({
           {profileName ? `${profileName}'s circles` : "Your circles"}
         </Text>
       </View>
+
+      {resumeItem ? (
+        <Pressable
+          style={styles.resumeCard}
+          onPress={() => onSelectConversation(resumeItem.group.id)}
+        >
+          <View style={styles.resumeHeader}>
+            <Text style={styles.resumeEyebrow}>Resume thread</Text>
+            <Text style={styles.resumeTimestamp}>
+              {formatTimestamp(resumeItem.latestMessage?.createdAt ?? resumeItem.group.updatedAt)}
+            </Text>
+          </View>
+          <Text style={styles.resumeTitle} numberOfLines={1}>
+            {resumeItem.group.title}
+          </Text>
+          <Text style={styles.resumePreview} numberOfLines={2}>
+            {previewText(resumeItem.group, resumeItem.latestMessage)}
+          </Text>
+          <View style={styles.resumeFooter}>
+            <Text style={styles.resumeAction}>Continue</Text>
+            {resumeItem.unreadCount > 0 ? (
+              <View style={styles.unreadBadge}>
+                <Text style={styles.unreadBadgeText}>
+                  {unreadBadgeLabel(resumeItem.unreadCount)}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        </Pressable>
+      ) : (
+        <Pressable style={styles.resumeEmptyCard} onPress={onOpenInvites}>
+          <Text style={styles.resumeEmptyTitle}>Start your first trusted circle</Text>
+          <Text style={styles.resumeEmptyBody}>
+            Open invites to join a circle and begin chatting.
+          </Text>
+          <Text style={styles.resumeAction}>Open invites</Text>
+        </Pressable>
+      )}
 
       <TextInput
         placeholder="Search"
