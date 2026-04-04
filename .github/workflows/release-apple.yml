@@ -188,7 +188,7 @@ jobs:
                   block(
                       "extension ExpoSwiftUI.SwiftUIVirtualView: ExpoSwiftUI.ViewWrapper {",
                       "  func getWrappedView() -> Any {",
-                      "    return performSynchronouslyOnMainActor {",
+                      "    let result: NonisolatedUnsafeVar<Any> = performSynchronouslyOnMainActor {",
                       "      let wrappedView: Any",
                       "      if let wrapper = contentView as? ExpoSwiftUI.ViewWrapper {",
                       "        wrappedView = wrapper.getWrappedView()",
@@ -196,7 +196,8 @@ jobs:
                       "        wrappedView = contentView",
                       "      }",
                       "      return NonisolatedUnsafeVar(wrappedView)",
-                      "    }.value",
+                      "    }",
+                      "    return result.value",
                       "  }",
                       "}",
                   ),
