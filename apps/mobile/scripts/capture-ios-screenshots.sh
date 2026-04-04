@@ -85,7 +85,48 @@ xcrun simctl bootstatus "$UDID" -b
 xcrun simctl install "$UDID" "$APP_PATH"
 xcrun simctl launch "$UDID" "$BUNDLE_ID"
 
-sleep 10
+# Wait for the React Native JS bundle to evaluate and the first screen to render.
+# A Debug build on a cold CI simulator typically takes 30-60 s.  We poll every
+# 8 s: once at least 2% of the middle 60% of the screen is brighter than the
+# near-black splash / app background (#140d10 / #0d0809) we declare it ready.
+echo "Waiting for app content to render..."
+POLL_TMP="/tmp/ec_poll.png"
+MAX_WAIT=120
+POLL_INTERVAL=8
+WAITED=0
+
+sleep 20   # minimum — give Hermes time to start evaluating the bundle
+
+while [[ $WAITED -lt $MAX_WAIT ]]; do
+  xcrun simctl io "$UDID" screenshot "$POLL_TMP" 2>/dev/null || true
+  READY=$(python3 -c "
+from PIL import Image
+import sys
+img = Image.open('$POLL_TMP')
+w, h = img.size
+y0, y1 = int(h * 0.20), int(h * 0.80)
+region = img.crop((0, y0, w, y1))
+pixels = list(region.getdata())
+bright = sum(1 for r,g,b,a in pixels if r > 40 or g > 40 or b > 40)
+pct = bright / len(pixels) * 100
+print('ready' if pct > 2.0 else 'loading')
+" 2>/dev/null || echo "loading")
+
+  if [[ "$READY" == "ready" ]]; then
+    echo "App content detected (waited ~${WAITED}s total)."
+    break
+  fi
+
+  echo "  content not yet visible (${WAITED}s elapsed), retrying in ${POLL_INTERVAL}s..."
+  sleep "$POLL_INTERVAL"
+  WAITED=$((WAITED + POLL_INTERVAL))
+done
+
+if [[ "$WAITED" -ge "$MAX_WAIT" ]]; then
+  echo "WARNING: app may not have fully rendered after ${MAX_WAIT}s — screenshot may show a loading state." >&2
+fi
+
+sleep 2   # final settle before capture
 
 xcrun simctl io "$UDID" screenshot "$OUTPUT_DIR/01-onboarding.png"
 
