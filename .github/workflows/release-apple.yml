@@ -212,6 +212,15 @@ jobs:
                   "public final class URLSessionSessionDelegateProxy: NSObject, URLSessionDataDelegate {",
                   "public final class URLSessionSessionDelegateProxy: NSObject, URLSessionDataDelegate, @unchecked Sendable {",
               ),
+                (
+                  Path("apps/mobile/node_modules/expo-notifications/ios/ExpoNotifications/Notifications/DateComponentsSerializer.swift"),
+                  block(
+                    "    if #available(iOS 26.0, *) {",
+                    "      serializedComponents[\"isRepeatedDay\"] = dateComponents.isRepeatedDay ?? false",
+                    "    }",
+                  ),
+                  "    serializedComponents[\"isRepeatedDay\"] = false",
+                ),
           ]
 
           for path, old, new in replacements:
