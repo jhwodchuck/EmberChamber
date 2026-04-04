@@ -19,15 +19,21 @@ GitHub Actions now captures mobile screenshots for both Android and iOS flows:
 2. Gradle builds `app-debug.apk`.
 3. CI boots a Pixel 6 API 34 emulator.
 4. APK is installed and launched.
-5. `adb exec-out screencap -p` writes PNG files to `apps/mobile/artifacts/android-screenshots`.
+5. `adb exec-out screencap -p` writes PNG files to:
+   - `apps/mobile/artifacts/android-screenshots/phone`
+   - `apps/mobile/artifacts/android-screenshots/tablet`
+   - `apps/mobile/artifacts/android-screenshots/chromebook`
+6. Android CI captures **4 screenshots per form factor** (phone/tablet/chromebook).
 
 ### Artifacts
 
 - Artifacts are uploaded from each CI run as:
-  - `emberchamber-android-screenshots-<run_number>`
+  - `emberchamber-android-screenshots-phone-<run_number>`
+  - `emberchamber-android-screenshots-tablet-<run_number>`
+  - `emberchamber-android-screenshots-chromebook-<run_number>`
   - `emberchamber-ios-screenshots-<run_number>`
 - Path in artifact:
-  - `apps/mobile/artifacts/android-screenshots/01-onboarding.png`
+  - `apps/mobile/artifacts/android-screenshots/<form-factor>/01-...png` through `04-...png`
   - `apps/mobile/artifacts/ios-screenshots/01-onboarding.png`
 
 ### Secrets and credentials

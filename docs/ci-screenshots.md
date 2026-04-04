@@ -20,8 +20,11 @@ These choices prioritize reliability and low maintenance with the tooling alread
 
 ## Artifact locations
 
-- Android: `emberchamber-android-screenshots-<run_number>`
-  - `apps/mobile/artifacts/android-screenshots/*.png`
+- Android:
+  - `emberchamber-android-screenshots-phone-<run_number>`
+  - `emberchamber-android-screenshots-tablet-<run_number>`
+  - `emberchamber-android-screenshots-chromebook-<run_number>`
+  - each artifact contains 4 screenshots (`01`-`04`) under `apps/mobile/artifacts/android-screenshots/<form-factor>/`
 - iOS: `emberchamber-ios-screenshots-<run_number>`
   - `apps/mobile/artifacts/ios-screenshots/*.png`
 - Web: `emberchamber-web-screenshots-<run_number>`
