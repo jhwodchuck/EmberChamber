@@ -86,6 +86,9 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
+      - name: Build protocol package
+        run: npm run build --workspace=packages/protocol
+
       - name: Build web app
         env:
           NEXT_PUBLIC_RELAY_URL: http://127.0.0.1:8787
