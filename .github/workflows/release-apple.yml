@@ -275,6 +275,9 @@ jobs:
               "    # -- CI patches (must run after react_native_post_install) --\n"
               "    installer.pods_project.targets.each do |target|\n"
               "      target.build_configurations.each do |config|\n"
+              '        if target.name == "ExpoModulesCore"\n'
+              '          config.build_settings["SWIFT_VERSION"] = "5.10"\n'
+              '        end\n'
               '        flags = config.build_settings["OTHER_SWIFT_FLAGS"] || "$(inherited)"\n'
               '        unless flags.include?("-strict-concurrency")\n'
               '          config.build_settings["OTHER_SWIFT_FLAGS"] = flags + " -strict-concurrency=minimal"\n'
