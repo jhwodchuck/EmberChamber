@@ -12,9 +12,11 @@ mkdir -p "$OUTPUT_DIR"
 adb wait-for-device
 
 # Keep captures deterministic and reduce flakiness from transitions.
-adb shell settings put global window_animation_scale 0
-adb shell settings put global transition_animation_scale 0
-adb shell settings put global animator_duration_scale 0
+# Allow failures here — the settings service may not be ready immediately
+# after sys.boot_completed on emulators, which is a known transient condition.
+adb shell settings put global window_animation_scale 0 || true
+adb shell settings put global transition_animation_scale 0 || true
+adb shell settings put global animator_duration_scale 0 || true
 
 # Wake and unlock if needed.
 adb shell input keyevent KEYCODE_WAKEUP || true
@@ -24,7 +26,7 @@ adb shell input keyevent 82 || true
 # Match Play Store form-factor sizing expectations.
 adb shell wm size "$WM_SIZE"
 adb shell wm density "$WM_DENSITY"
-adb shell input keyevent KEYCODE_HOME
+adb shell input keyevent KEYCODE_HOME || true
 
 LAUNCH_ACTIVITY="$(adb shell cmd package resolve-activity --brief "$PACKAGE_NAME" | tr -d '\r' | tail -n 1)"
 
@@ -40,8 +42,8 @@ sleep 12
 
 tap_text() {
   local target="$1"
-  adb shell uiautomator dump /sdcard/window_dump.xml >/dev/null
-  adb pull /sdcard/window_dump.xml "$OUTPUT_DIR/window_dump.xml" >/dev/null
+  adb shell uiautomator dump /data/local/tmp/window_dump.xml >/dev/null
+  adb pull /data/local/tmp/window_dump.xml "$OUTPUT_DIR/window_dump.xml" >/dev/null
 
   python3 - "$OUTPUT_DIR/window_dump.xml" "$target" <<'PY' | while read -r x y; do
 import re
