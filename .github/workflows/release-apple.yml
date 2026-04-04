@@ -221,44 +221,16 @@ jobs:
                   ),
                   "    serializedComponents[\"isRepeatedDay\"] = false",
                 ),
-                  (
-                    Path("apps/mobile/node_modules/expo-image-picker/ios/MediaHandler.swift"),
-                    block(
-                      "    private func getMimeType(from asset: PHAsset?, fileExtension: String) -> String? {",
-                      "      let utType: UTType? = if #available(iOS 26.0, *) {",
-                      "        asset?.contentType ?? UTType(filenameExtension: fileExtension)",
-                      "      } else {",
-                      "        UTType(filenameExtension: fileExtension)",
-                      "      }",
-                      "      return utType?.preferredMIMEType",
-                      "    }",
+                    (
+                      Path("apps/mobile/node_modules/expo-image-picker/ios/MediaHandler.swift"),
+                      "      asset?.contentType ?? UTType(filenameExtension: fileExtension)",
+                      "      UTType(filenameExtension: fileExtension)",
                     ),
-                    block(
-                      "    private func getMimeType(from asset: PHAsset?, fileExtension: String) -> String? {",
-                      "      let utType = UTType(filenameExtension: fileExtension)",
-                      "      return utType?.preferredMIMEType",
-                      "    }",
+                    (
+                      Path("apps/mobile/node_modules/expo-image-picker/ios/MediaHandler.swift"),
+                      "      resource.contentType",
+                      "      UTType(resource.uniformTypeIdentifier) ?? UTType(filenameExtension: fileExtension)",
                     ),
-                  ),
-                  (
-                    Path("apps/mobile/node_modules/expo-image-picker/ios/MediaHandler.swift"),
-                    block(
-                      "    private func getMimeType(from resource: PHAssetResource, fileExtension: String) -> String? {",
-                      "      let utType: UTType? = if #available(iOS 26.0, *) {",
-                      "        resource.contentType",
-                      "      } else {",
-                      "        UTType(resource.uniformTypeIdentifier) ?? UTType(filenameExtension: fileExtension)",
-                      "      }",
-                      "      return utType?.preferredMIMEType",
-                      "    }",
-                    ),
-                    block(
-                      "    private func getMimeType(from resource: PHAssetResource, fileExtension: String) -> String? {",
-                      "      let utType = UTType(resource.uniformTypeIdentifier) ?? UTType(filenameExtension: fileExtension)",
-                      "      return utType?.preferredMIMEType",
-                      "    }",
-                    ),
-                  ),
           ]
 
           for path, old, new in replacements:
