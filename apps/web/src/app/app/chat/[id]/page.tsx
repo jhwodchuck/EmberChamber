@@ -354,10 +354,10 @@ export default function ChatPage() {
         (conversation?.kind === "room" ? "Room" : conversation?.kind === "community" ? "Community" : "Group");
   const trustLabel =
     conversation?.historyMode === "device_encrypted"
-      ? "Mailbox delivery with local browser history"
+      ? "Local-first history"
       : conversation?.kind === "room"
-        ? "Relay-hosted room history"
-        : "Relay-hosted group history";
+        ? "Room history via relay"
+        : "Group history via relay";
 
   return (
     <div className="flex h-full flex-col">
@@ -367,7 +367,7 @@ export default function ChatPage() {
           <h2 className="truncate font-semibold text-[var(--text-primary)]">{conversationName}</h2>
           <p className="text-xs text-[var(--text-secondary)]">{trustLabel}</p>
           <p className="mt-1 text-xs text-[var(--text-secondary)]">
-            Browser history stays local. The relay keeps metadata and mailbox delivery moving.
+            Relay handles delivery. Your private keys remain on your devices.
           </p>
         </div>
       </div>
@@ -501,7 +501,7 @@ export default function ChatPage() {
           />
           <div className="flex flex-wrap items-center gap-3">
             <label className="btn-ghost cursor-pointer">
-              Attach file
+              Attach
               <input
                 type="file"
                 className="hidden"
@@ -509,7 +509,7 @@ export default function ChatPage() {
               />
             </label>
             <label className="btn-ghost cursor-pointer">
-              Take Photo
+              Camera
               <input
                 type="file"
                 accept="image/*"
@@ -519,11 +519,11 @@ export default function ChatPage() {
               />
             </label>
             {selectedFile ? (
-              <span className="text-sm text-[var(--text-secondary)]">
+              <span className="rounded-full border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-1 text-sm text-[var(--text-secondary)]">
                 {selectedFile.name} · {formatBytes(selectedFile.size)}
               </span>
             ) : null}
-            <button type="submit" className="btn-primary" disabled={isSending}>
+            <button type="submit" className="btn-primary ml-auto" disabled={isSending}>
               {isSending ? "Sending…" : "Send"}
             </button>
           </div>
