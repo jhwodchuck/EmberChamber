@@ -4,6 +4,12 @@ on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      capture_screenshots:
+        description: Capture simulator screenshots
+        required: false
+        type: boolean
+        default: false
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -18,7 +24,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build iOS beta scaffold
+    name: Build iOS simulator artifact
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v6
@@ -27,14 +33,14 @@ jobs:
         with:
           node-version: 22
 
-      - name: Show selected Xcode
+      - name: Show Xcode version
         run: xcodebuild -version
 
-      - name: Get npm cache directory
+      - name: Get npm cache path
         id: npm-cache-dir
         run: echo "dir=$(npm config get cache)" >> $GITHUB_OUTPUT
 
-      - name: Restore npm cache
+      - name: Restore npm package cache
         id: npm-cache-restore
         uses: actions/cache/restore@v4
         with:
@@ -42,10 +48,10 @@ jobs:
           key: node-cache-${{ runner.os }}-${{ runner.arch }}-npm-${{ hashFiles('package-lock.json') }}
           restore-keys: node-cache-${{ runner.os }}-${{ runner.arch }}-npm-
 
-      - name: Install dependencies
+      - name: Install JavaScript dependencies
         run: npm ci --no-audit --no-fund
 
-      - name: Patch expo-modules-core for Xcode 16.4
+      - name: Patch Expo iOS packages for Xcode 16.4
         shell: bash
         run: |
           python3 << 'PYEOF'
@@ -242,7 +248,7 @@ jobs:
               print(f"patched {path}")
           PYEOF
 
-      - name: Save npm cache
+      - name: Save npm package cache
         if: steps.npm-cache-restore.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
@@ -252,7 +258,7 @@ jobs:
       - name: Prebuild iOS app
         run: npm run prebuild:ios --workspace=apps/mobile
 
-      - name: Patch Podfile for CI compatibility
+      - name: Patch Podfile for Xcode 16.4 CI compatibility
         shell: bash
         run: |
           python3 << 'PYEOF'
@@ -320,9 +326,55 @@ jobs:
           echo "--- Podfile post_install section ---"
           grep -A 35 'post_install' apps/mobile/ios/Podfile | head -40
 
-      - name: Install CocoaPods dependencies
+      - name: Compute CocoaPods cache keys
+        id: cocoapods-cache-key
+        shell: bash
+        run: |
+          XCODE_VERSION=$(xcodebuild -version | awk 'NR==1 {print $2}')
+          PODFILE_HASH=$(shasum apps/mobile/ios/Podfile package-lock.json | shasum | awk '{print $1}')
+          LOCK_HASH="missing"
+          if [[ -f apps/mobile/ios/Podfile.lock ]]; then
+            LOCK_HASH=$(shasum apps/mobile/ios/Podfile.lock | awk '{print $1}')
+          fi
+          echo "xcode-version=$XCODE_VERSION" >> "$GITHUB_OUTPUT"
+          echo "restore-key=cocoapods-${{ runner.os }}-${{ runner.arch }}-xcode-$XCODE_VERSION-podfile-$PODFILE_HASH" >> "$GITHUB_OUTPUT"
+          echo "lock-prefix=cocoapods-${{ runner.os }}-${{ runner.arch }}-xcode-$XCODE_VERSION-lock-" >> "$GITHUB_OUTPUT"
+          echo "initial-lock-hash=$LOCK_HASH" >> "$GITHUB_OUTPUT"
+
+      - name: Restore CocoaPods cache
+        id: cocoapods-cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            apps/mobile/ios/Pods
+            apps/mobile/ios/Podfile.lock
+            ~/Library/Caches/CocoaPods
+          key: ${{ steps.cocoapods-cache-key.outputs.restore-key }}
+          restore-keys: |
+            ${{ steps.cocoapods-cache-key.outputs.lock-prefix }}
+            cocoapods-${{ runner.os }}-${{ runner.arch }}-xcode-${{ steps.cocoapods-cache-key.outputs.xcode-version }}-
+
+      - name: Install CocoaPods
         run: pod install
         working-directory: apps/mobile/ios
+
+      - name: Compute CocoaPods cache save key
+        if: steps.cocoapods-cache-restore.outputs.cache-hit != 'true'
+        id: cocoapods-cache-save-key
+        shell: bash
+        run: |
+          LOCK_HASH=$(shasum apps/mobile/ios/Podfile.lock | awk '{print $1}')
+          echo "key=cocoapods-${{ runner.os }}-${{ runner.arch }}-xcode-${{ steps.cocoapods-cache-key.outputs.xcode-version }}-lock-$LOCK_HASH" >> "$GITHUB_OUTPUT"
+
+      - name: Save CocoaPods cache
+        if: steps.cocoapods-cache-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            apps/mobile/ios/Pods
+            apps/mobile/ios/Podfile.lock
+            ~/Library/Caches/CocoaPods
+          key: ${{ steps.cocoapods-cache-save-key.outputs.key }}
 
       - name: Detect Xcode workspace and scheme
         run: |
@@ -343,7 +395,7 @@ jobs:
           echo "Using workspace: $IOS_WORKSPACE"
           echo "Using scheme: $IOS_SCHEME"
 
-      - name: Build simulator app
+      - name: Build iOS simulator app
         run: |
           xcodebuild \
             -workspace "$IOS_WORKSPACE" \
@@ -354,7 +406,7 @@ jobs:
             -quiet \
             CODE_SIGNING_ALLOWED=NO
 
-      - name: Locate simulator app artifact
+      - name: Locate built simulator app
         run: |
           PRODUCT_DIR=apps/mobile/ios/build/Build/Products/Debug-iphonesimulator
           APP_PATH=$(find "$PRODUCT_DIR" -maxdepth 1 -name '*.app' | head -n 1)
@@ -364,10 +416,7 @@ jobs:
           fi
           echo "IOS_SIMULATOR_APP_PATH=$APP_PATH" >> "$GITHUB_ENV"
 
-      - name: Capture iOS simulator screenshots
-        run: bash apps/mobile/scripts/capture-ios-screenshots.sh "$IOS_SIMULATOR_APP_PATH"
-
-      - name: Package simulator artifact
+      - name: Archive simulator app
         run: |
           PRODUCT_DIR=apps/mobile/ios/build/Build/Products/Debug-iphonesimulator
           APP_PATH="$IOS_SIMULATOR_APP_PATH"
@@ -375,7 +424,7 @@ jobs:
           cd "$PRODUCT_DIR"
           zip -r "$GITHUB_WORKSPACE/EmberChamber-ios-simulator.zip" "$APP_NAME"
 
-      - name: Upload iOS artifacts
+      - name: Upload simulator app artifact
         uses: actions/upload-artifact@v7
         with:
           name: emberchamber-ios-beta
@@ -383,7 +432,46 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
-      - name: Upload iOS screenshot artifacts
+      - name: Publish simulator zip to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          prerelease: true
+          files: EmberChamber-ios-simulator.zip
+
+  screenshots:
+    name: Capture iOS simulator screenshots
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.capture_screenshots)
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Download simulator app artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: emberchamber-ios-beta
+          path: .
+
+      - name: Unpack simulator app artifact
+        run: |
+          PRODUCT_DIR=apps/mobile/ios/build/Build/Products/Debug-iphonesimulator
+          mkdir -p "$PRODUCT_DIR"
+          unzip -q EmberChamber-ios-simulator.zip -d "$PRODUCT_DIR"
+          APP_PATH=$(find "$PRODUCT_DIR" -maxdepth 1 -name '*.app' | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "No simulator .app found in $PRODUCT_DIR after unzip" >&2
+            exit 1
+          fi
+          echo "IOS_SIMULATOR_APP_PATH=$APP_PATH" >> "$GITHUB_ENV"
+
+      - name: Capture screenshots from simulator app
+        run: bash apps/mobile/scripts/capture-ios-screenshots.sh "$IOS_SIMULATOR_APP_PATH"
+
+      - name: Upload screenshot artifact
         if: always()
         uses: actions/upload-artifact@v7
         with:
@@ -391,10 +479,3 @@ jobs:
           path: apps/mobile/artifacts/ios-screenshots
           retention-days: 14
           if-no-files-found: warn
-
-      - name: Publish iOS asset to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          prerelease: true
-          files: EmberChamber-ios-simulator.zip
