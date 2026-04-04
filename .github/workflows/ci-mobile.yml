@@ -53,3 +53,70 @@ jobs:
 
       - name: Verify Android mobile project
         run: npm run verify:android --workspace=apps/mobile
+
+  android-screenshots:
+    name: Capture Android screenshots
+    runs-on: ubuntu-22.04
+    needs: verify-android
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      EXPO_NO_TELEMETRY: "1"
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - uses: actions/setup-java@v5
+        with:
+          java-version: 17
+          distribution: temurin
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Generate Android native project
+        run: npm run build:android --workspace=apps/mobile
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x apps/mobile/android/gradlew
+
+      - name: Build Android debug APK
+        run: ./gradlew assembleDebug
+        working-directory: apps/mobile/android
+
+      - name: Capture emulator screenshots
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          avd-name: ci-screenshot-avd
+          disable-animations: true
+          script: |
+            adb install -r apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+            bash apps/mobile/scripts/capture-android-screenshots.sh
+
+      - name: Upload Android screenshot artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: emberchamber-android-screenshots-${{ github.run_number }}
+          path: apps/mobile/artifacts/android-screenshots
+          retention-days: 14
+          if-no-files-found: error
