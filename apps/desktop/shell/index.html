@@ -2268,7 +2268,7 @@
       }
 
       async function ensureAttachmentMedia(attachment) {
-        if (!attachment?.id || attachment.encryptionMode !== "device_encrypted") {
+        if (!attachment?.id) {
           return null;
         }
 
@@ -4540,13 +4540,13 @@
         const watermark = `${viewerIdentityLabel()} · ${formatDateTime(message.createdAt)}`;
         const encryptedAttachment = attachment.encryptionMode === "device_encrypted";
         const inlineMedia = attachment.contentClass === "image" || attachment.contentClass === "video";
-        if (encryptedAttachment && inlineMedia && shouldFetchSensitiveMedia) {
+        if (inlineMedia && shouldFetchSensitiveMedia) {
           void ensureAttachmentMedia(attachment);
         }
         const attachmentAsset = attachmentMediaEntry(attachment.id);
-        const loadingEncryptedMedia = encryptedAttachment && inlineMedia && shouldFetchSensitiveMedia && (!attachmentAsset || attachmentAsset.status === "loading");
-        const encryptedMediaError = encryptedAttachment && inlineMedia && attachmentAsset?.status === "error";
-        const mediaUrl = encryptedAttachment ? attachmentAsset?.objectUrl || "" : attachment.downloadUrl;
+        const loadingEncryptedMedia = inlineMedia && shouldFetchSensitiveMedia && (!attachmentAsset || attachmentAsset.status === "loading");
+        const encryptedMediaError = inlineMedia && attachmentAsset?.status === "error";
+        const mediaUrl = attachmentAsset?.objectUrl || attachment.downloadUrl || "";
 
         if (encryptedMediaError) {
           return `
