@@ -12,6 +12,11 @@ import type {
   ConversationSearchResult,
   ConversationSummary,
   DeviceKeyBundle,
+  DeviceLinkConfirmResponse,
+  DeviceLinkScanRequest,
+  DeviceLinkStartResponse,
+  DeviceLinkStatus,
+  DeviceLinkStatusQuery,
   MailboxAck,
   PrekeyBundle,
   GroupInviteAcceptance,
@@ -32,6 +37,10 @@ export function getRelayWebsocketUrl() {
   const url = new URL(relayUrl);
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
   return url.origin;
+}
+
+export function getRelayOrigin() {
+  return new URL(relayUrl).origin;
 }
 
 const RELAY_SESSION_STORAGE_KEY = "emberchamber.relay.session.v1";
@@ -416,6 +425,48 @@ export const relayDeviceApi = {
     }),
   listBundles: (accountId: string) =>
     relayFetch<DeviceKeyBundle[]>(`/v1/accounts/${accountId}/device-bundles`),
+};
+
+export const relayDeviceLinkApi = {
+  start: () =>
+    relayFetch<DeviceLinkStartResponse>("/v1/devices/link/start", {
+      method: "POST",
+      body: JSON.stringify({}),
+    }),
+  scan: (input: DeviceLinkScanRequest) =>
+    relayFetch<DeviceLinkStatus>("/v1/devices/link/scan", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+  claim: (qrPayload: string, deviceLabel: string) =>
+    relayFetch<DeviceLinkStatus>(
+      "/v1/devices/link/claim",
+      {
+        method: "POST",
+        body: JSON.stringify({ qrPayload, deviceLabel }),
+      },
+      { auth: false },
+    ),
+  status: (input: DeviceLinkStatusQuery) =>
+    relayFetch<DeviceLinkStatus>(
+      `/v1/devices/link/status?token=${encodeURIComponent(input.linkToken)}&qrMode=${encodeURIComponent(input.qrMode)}`,
+      undefined,
+      { auth: false },
+    ),
+  confirm: (linkId: string) =>
+    relayFetch<DeviceLinkConfirmResponse>("/v1/devices/link/confirm", {
+      method: "POST",
+      body: JSON.stringify({ linkId }),
+    }),
+  complete: (input: { linkToken: string; qrMode: DeviceLinkStatus["qrMode"] }) =>
+    relayFetch<AuthSession>(
+      "/v1/devices/link/complete",
+      {
+        method: "POST",
+        body: JSON.stringify(input),
+      },
+      { auth: false },
+    ),
 };
 
 export const relayMailboxApi = {

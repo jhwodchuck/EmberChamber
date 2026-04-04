@@ -18,10 +18,17 @@ import {
 } from "react-native";
 import type { EncryptedConversationPayload } from "@emberchamber/protocol";
 import {
+  createDeviceLinkToken,
   decryptConversationPayload,
+  encodeDeviceLinkQrPayload,
   encryptAttachmentBytes,
   encryptConversationPayload,
+  parseDeviceLinkQrPayload,
+  relayOriginsMatch,
   toPublicPrekeyBundle,
+  type DeviceLinkQrMode,
+  type DeviceLinkStartResponse,
+  type DeviceLinkStatus,
 } from "@emberchamber/protocol";
 
 import type {
@@ -84,6 +91,7 @@ import {
   getNotificationReason,
 } from "./src/lib/push";
 import { styles, theme } from "./src/styles";
+import { DeviceLinkCard } from "./src/components/DeviceLinkCard";
 import { OnboardingScreen } from "./src/screens/OnboardingScreen";
 import { ProfileSetupScreen } from "./src/screens/ProfileSetupScreen";
 import { MainScreen } from "./src/screens/MainScreen";
@@ -102,6 +110,13 @@ const signedInHeroSignals = [
 
 const MAILBOX_CURSOR_STATE_KEY = "mailbox_cursor";
 
+type AuthMethod = "magic-link" | "device-link";
+
+type ActiveDeviceLink = {
+  linkToken: string;
+  qrMode: DeviceLinkQrMode;
+};
+
 // ---------------------------------------------------------------------------
 // App – thin orchestrator
 // ---------------------------------------------------------------------------
@@ -113,6 +128,7 @@ export default function App() {
   const [inviteToken, setInviteToken] = useState("");
   const [deviceLabel, setDeviceLabel] = useState(suggestMobileDeviceLabel());
   const [ageConfirmed18, setAgeConfirmed18] = useState(false);
+  const [authMethod, setAuthMethod] = useState<AuthMethod>("magic-link");
   const [inviteInput, setInviteInput] = useState("");
   const [messageDraft, setMessageDraft] = useState("");
   const [pendingAttachment, setPendingAttachment] = useState<PendingAttachment | null>(null);
@@ -147,6 +163,13 @@ export default function App() {
   const [profileSetupName, setProfileSetupName] = useState("");
   const [isSubmittingProfile, setIsSubmittingProfile] = useState(false);
   const [profileSetupError, setProfileSetupError] = useState<string | null>(null);
+  const [deviceLinkQrValue, setDeviceLinkQrValue] = useState<string | null>(null);
+  const [deviceLinkStatus, setDeviceLinkStatus] = useState<DeviceLinkStatus | null>(null);
+  const [deviceLinkMessage, setDeviceLinkMessage] = useState<FormMessage | null>(null);
+  const [isWorkingDeviceLink, setIsWorkingDeviceLink] = useState(false);
+  const [isApprovingDeviceLink, setIsApprovingDeviceLink] = useState(false);
+  const [activeDeviceLink, setActiveDeviceLink] = useState<ActiveDeviceLink | null>(null);
+  const [completedDeviceLinkSessionId, setCompletedDeviceLinkSessionId] = useState<string | null>(null);
 
   const imageRefreshPendingRef = useRef(false);
   const groupsRef = useRef<GroupMembershipSummary[]>([]);
@@ -252,6 +275,240 @@ export default function App() {
     await saveStoredSession(nextSession);
     setSession(nextSession);
     return nextSession;
+  }
+
+  function getRelayOrigin() {
+    return new URL(relayUrl).origin;
+  }
+
+  function resetDeviceLinkState() {
+    setDeviceLinkQrValue(null);
+    setDeviceLinkStatus(null);
+    setDeviceLinkMessage(null);
+    setIsWorkingDeviceLink(false);
+    setIsApprovingDeviceLink(false);
+    setActiveDeviceLink(null);
+    setCompletedDeviceLinkSessionId(null);
+  }
+
+  function buildSessionReadyMessage(nextSession: AuthSession, source: "magic-link" | "device-link"): FormMessage {
+    if (nextSession.bootstrapConversationTitle) {
+      return {
+        tone: "success",
+        title: source === "device-link" ? "Device linked and thread ready" : "Signed in and thread ready",
+        body: `${nextSession.bootstrapConversationTitle} should appear below as soon as account sync finishes.`,
+      };
+    }
+
+    return {
+      tone: "success",
+      title: source === "device-link" ? "Device linked" : "Session ready",
+      body:
+        source === "device-link"
+          ? "This phone now has a relay session from the trusted-device approval flow."
+          : "This phone now has a relay session. Join or create a trusted circle to send your first message.",
+    };
+  }
+
+  async function persistAuthenticatedSession(nextSession: AuthSession, source: "magic-link" | "device-link") {
+    const normalizedDeviceLabel = deviceLabel.trim() || suggestMobileDeviceLabel();
+
+    await Promise.all([
+      saveStoredSession(nextSession),
+      SecureStore.setItemAsync(STORAGE_KEYS.deviceLabel, normalizedDeviceLabel),
+    ]);
+
+    setSession(nextSession);
+    setChallenge(null);
+    setCompletedDeviceLinkSessionId(nextSession.sessionId);
+    setDeviceLinkQrValue(null);
+    setDeviceLinkStatus(null);
+    setDeviceLinkMessage(null);
+    setActiveDeviceLink(null);
+    setSessionMessage(buildSessionReadyMessage(nextSession, source));
+  }
+
+  async function beginSourceDeviceLink() {
+    const currentSession = sessionRef.current;
+    if (!currentSession) {
+      return;
+    }
+
+    setIsWorkingDeviceLink(true);
+    setDeviceLinkMessage(null);
+    setCompletedDeviceLinkSessionId(null);
+
+    try {
+      const response = await relayFetch<DeviceLinkStartResponse>(currentSession, "/v1/devices/link/start", {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+      const parsed = parseDeviceLinkQrPayload(response.qrPayload);
+
+      setActiveDeviceLink({ linkToken: parsed.linkToken, qrMode: parsed.qrMode });
+      setDeviceLinkQrValue(response.qrPayload);
+      setDeviceLinkStatus(response);
+    } catch (error) {
+      setDeviceLinkMessage({
+        tone: "error",
+        title: "Unable to prepare device link",
+        body: error instanceof Error ? error.message : "Unknown relay error",
+      });
+    } finally {
+      setIsWorkingDeviceLink(false);
+    }
+  }
+
+  async function beginTargetDeviceLink() {
+    if (deviceLabel.trim().length < 3) {
+      setDeviceLinkMessage({
+        tone: "warning",
+        title: "Name this phone first",
+        body: "Use at least 3 characters so the signed-in device can recognize the approval target.",
+      });
+      return;
+    }
+
+    setIsWorkingDeviceLink(true);
+    setDeviceLinkMessage(null);
+    setCompletedDeviceLinkSessionId(null);
+
+    try {
+      const normalizedDeviceLabel = deviceLabel.trim();
+      const linkToken = createDeviceLinkToken();
+      const qrPayload = encodeDeviceLinkQrPayload({
+        relayOrigin: getRelayOrigin(),
+        qrMode: "target_display",
+        linkToken,
+        requesterLabel: normalizedDeviceLabel,
+      });
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+      await SecureStore.setItemAsync(STORAGE_KEYS.deviceLabel, normalizedDeviceLabel);
+
+      setActiveDeviceLink({ linkToken, qrMode: "target_display" });
+      setDeviceLinkQrValue(qrPayload);
+      setDeviceLinkStatus({
+        relayOrigin: getRelayOrigin(),
+        qrMode: "target_display",
+        state: "waiting_for_source",
+        requesterLabel: normalizedDeviceLabel,
+        expiresAt,
+        canComplete: false,
+      });
+    } catch (error) {
+      setDeviceLinkMessage({
+        tone: "error",
+        title: "Unable to prepare device link",
+        body: error instanceof Error ? error.message : "Unknown relay error",
+      });
+    } finally {
+      setIsWorkingDeviceLink(false);
+    }
+  }
+
+  async function scanDeviceLinkQr(qrPayload: string) {
+    setIsWorkingDeviceLink(true);
+    setDeviceLinkMessage(null);
+    setCompletedDeviceLinkSessionId(null);
+
+    try {
+      const parsed = parseDeviceLinkQrPayload(qrPayload);
+      if (!relayOriginsMatch(getRelayOrigin(), parsed.relayOrigin)) {
+        throw new Error("That QR belongs to a different relay environment.");
+      }
+
+      if (sessionRef.current) {
+        if (parsed.qrMode !== "target_display") {
+          throw new Error("That QR is meant for a new device, not a signed-in device.");
+        }
+
+        const response = await relayFetch<DeviceLinkStatus>(sessionRef.current, "/v1/devices/link/scan", {
+          method: "POST",
+          body: JSON.stringify({ qrPayload }),
+        });
+
+        setActiveDeviceLink({ linkToken: parsed.linkToken, qrMode: parsed.qrMode });
+        setDeviceLinkQrValue(null);
+        setDeviceLinkStatus(response);
+        return;
+      }
+
+      if (deviceLabel.trim().length < 3) {
+        throw new Error("Name this phone before scanning so the approval request is readable.");
+      }
+      if (parsed.qrMode !== "source_display") {
+        throw new Error("That QR is meant to be scanned by a signed-in device.");
+      }
+
+      const normalizedDeviceLabel = deviceLabel.trim();
+      await SecureStore.setItemAsync(STORAGE_KEYS.deviceLabel, normalizedDeviceLabel);
+
+      const { response, body } = await fetchJson<DeviceLinkStatus>(`${relayUrl}/v1/devices/link/claim`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ qrPayload, deviceLabel: normalizedDeviceLabel }),
+      });
+      if (!response.ok) {
+        throw new Error(body.error ?? "Unable to claim this device-link request.");
+      }
+
+      setActiveDeviceLink({ linkToken: parsed.linkToken, qrMode: parsed.qrMode });
+      setDeviceLinkQrValue(null);
+      setDeviceLinkStatus(body);
+    } catch (error) {
+      setDeviceLinkMessage({
+        tone: "error",
+        title: "QR scan failed",
+        body: error instanceof Error ? error.message : "Unknown scan error",
+      });
+    } finally {
+      setIsWorkingDeviceLink(false);
+    }
+  }
+
+  async function approveDeviceLink() {
+    const currentSession = sessionRef.current;
+    if (!currentSession || !deviceLinkStatus?.linkId) {
+      return;
+    }
+
+    setIsApprovingDeviceLink(true);
+    setDeviceLinkMessage(null);
+
+    try {
+      const response = await relayFetch<DeviceLinkStatus>(currentSession, "/v1/devices/link/confirm", {
+        method: "POST",
+        body: JSON.stringify({ linkId: deviceLinkStatus.linkId }),
+      });
+      setDeviceLinkStatus(response);
+      setDeviceLinkMessage({
+        tone: "success",
+        title: "Device approved",
+        body: `${response.requesterLabel} can finish sign-in now.`,
+      });
+    } catch (error) {
+      setDeviceLinkMessage({
+        tone: "error",
+        title: "Approval failed",
+        body: error instanceof Error ? error.message : "Unknown relay error",
+      });
+    } finally {
+      setIsApprovingDeviceLink(false);
+    }
+  }
+
+  async function completeDeviceLink(linkToken: string, qrMode: DeviceLinkQrMode) {
+    const { response, body } = await fetchJson<AuthSession>(`${relayUrl}/v1/devices/link/complete`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ linkToken, qrMode }),
+    });
+    if (!response.ok || !("accessToken" in body)) {
+      throw new Error(body.error ?? "Unable to complete device linking.");
+    }
+
+    await persistAuthenticatedSession(body, "device-link");
   }
 
   async function ensureDeviceBundleRegistered(currentSession: AuthSession) {
@@ -480,6 +737,63 @@ export default function App() {
   useEffect(() => {
     groupsRef.current = groups;
   }, [groups]);
+
+  useEffect(() => {
+    if (!activeDeviceLink || completedDeviceLinkSessionId) {
+      return;
+    }
+
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const poll = async () => {
+      try {
+        const { response, body } = await fetchJson<DeviceLinkStatus>(
+          `${relayUrl}/v1/devices/link/status?token=${encodeURIComponent(activeDeviceLink.linkToken)}&qrMode=${encodeURIComponent(activeDeviceLink.qrMode)}`,
+        );
+        if (!response.ok) {
+          throw new Error(body.error ?? "Unable to refresh device-link status.");
+        }
+        if (cancelled) {
+          return;
+        }
+
+        setDeviceLinkStatus(body);
+
+        if (!sessionRef.current && body.state === "approved") {
+          await completeDeviceLink(activeDeviceLink.linkToken, activeDeviceLink.qrMode);
+          return;
+        }
+
+        if (body.state === "consumed" || body.state === "expired") {
+          return;
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setDeviceLinkMessage({
+            tone: "error",
+            title: "Device-link status failed",
+            body: error instanceof Error ? error.message : "Unknown relay error",
+          });
+        }
+      }
+
+      if (!cancelled) {
+        timer = setTimeout(() => {
+          void poll();
+        }, 2000);
+      }
+    };
+
+    void poll();
+
+    return () => {
+      cancelled = true;
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
+  }, [activeDeviceLink, completedDeviceLinkSessionId]);
 
   useEffect(() => {
     let mounted = true;
@@ -1058,16 +1372,7 @@ export default function App() {
         throw new Error(body.error ?? "Unable to complete the magic link");
       }
 
-      await saveStoredSession(body);
-      setSession(body);
-      setChallenge(null);
-      setSessionMessage({
-        tone: "success",
-        title: body.bootstrapConversationTitle ? "Signed in and thread ready" : "Session ready",
-        body: body.bootstrapConversationTitle
-          ? `${body.bootstrapConversationTitle} should appear below as soon as account sync finishes.`
-          : "This phone now has a relay session. Join or create a trusted circle to send your first message.",
-      });
+      await persistAuthenticatedSession(body, "magic-link");
     } catch (error) {
       setSessionMessage({
         tone: "error",
@@ -1098,6 +1403,8 @@ export default function App() {
     setProfileSetupActive(false);
     setProfileSetupName("");
     setProfileSetupError(null);
+    setAuthMethod("magic-link");
+    resetDeviceLinkState();
     setSessionMessage({
       tone: "info",
       title: "Signed out",
@@ -1654,6 +1961,8 @@ export default function App() {
 
           {!session ? (
             <OnboardingScreen
+              authMethod={authMethod}
+              setAuthMethod={setAuthMethod}
               email={email}
               setEmail={setEmail}
               inviteToken={inviteToken}
@@ -1675,6 +1984,13 @@ export default function App() {
               sessionMessage={sessionMessage}
               onSubmit={() => void submitMagicLink()}
               onCompleteMagicLink={(token) => void completeMagicLink(token)}
+              deviceLinkQrValue={deviceLinkQrValue}
+              deviceLinkStatus={deviceLinkStatus}
+              deviceLinkMessage={deviceLinkMessage}
+              isWorkingDeviceLink={isWorkingDeviceLink}
+              onShowDeviceLinkQr={() => void beginTargetDeviceLink()}
+              onScanDeviceLinkQr={(payload) => scanDeviceLinkQr(payload)}
+              onResetDeviceLink={resetDeviceLinkState}
             />
           ) : profileSetupActive ? (
             <ProfileSetupScreen
@@ -1718,7 +2034,16 @@ export default function App() {
               sessionMessage={sessionMessage}
               email={email}
               deviceLabel={deviceLabel}
+              deviceLinkQrValue={deviceLinkQrValue}
+              deviceLinkStatus={deviceLinkStatus}
+              deviceLinkMessage={deviceLinkMessage}
+              isWorkingDeviceLink={isWorkingDeviceLink}
+              isApprovingDeviceLink={isApprovingDeviceLink}
               onSignOut={() => void signOut()}
+              onShowDeviceLinkQr={() => void beginSourceDeviceLink()}
+              onScanDeviceLinkQr={(payload) => scanDeviceLinkQr(payload)}
+              onApproveDeviceLink={() => void approveDeviceLink()}
+              onResetDeviceLink={resetDeviceLinkState}
               onPreviewInvite={() => void previewInvite()}
               onAcceptInvite={() => void acceptInvite()}
               onPickPhoto={() => void pickPhoto()}

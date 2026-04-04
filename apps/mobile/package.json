@@ -2,7 +2,7 @@
   "name": "@emberchamber/mobile",
   "version": "0.1.0",
   "private": true,
-  "main": "App.tsx",
+  "main": "index.js",
   "scripts": {
     "android:patch-build": "node ./scripts/patch-react-native-gradle-plugin.js",
     "dev": "expo start --clear",
