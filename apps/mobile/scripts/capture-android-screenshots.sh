@@ -42,8 +42,8 @@ sleep 12
 
 tap_text() {
   local target="$1"
-  adb shell uiautomator dump /sdcard/window_dump.xml >/dev/null
-  adb pull /sdcard/window_dump.xml "$OUTPUT_DIR/window_dump.xml" >/dev/null
+  adb shell uiautomator dump /data/local/tmp/window_dump.xml >/dev/null
+  adb pull /data/local/tmp/window_dump.xml "$OUTPUT_DIR/window_dump.xml" >/dev/null
 
   python3 - "$OUTPUT_DIR/window_dump.xml" "$target" <<'PY' | while read -r x y; do
 import re

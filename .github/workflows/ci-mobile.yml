@@ -112,12 +112,7 @@ jobs:
           disable-animations: true
           script: |
             adb install -r "$APK_PATH"
-            bash apps/mobile/scripts/capture-android-screenshots.sh \
-              "apps/mobile/artifacts/android-screenshots/${{ matrix.device_class }}" \
-              "com.emberchamber.mobile" \
-              "${{ matrix.device_class }}" \
-              "${{ matrix.wm_size }}" \
-              "${{ matrix.wm_density }}"
+            bash apps/mobile/scripts/capture-android-screenshots.sh "apps/mobile/artifacts/android-screenshots/${{ matrix.device_class }}" "com.emberchamber.mobile" "${{ matrix.device_class }}" "${{ matrix.wm_size }}" "${{ matrix.wm_density }}"
 
       - name: Upload Android screenshot artifacts
         if: always()
