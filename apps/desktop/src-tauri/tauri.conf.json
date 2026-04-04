@@ -33,6 +33,9 @@
         "bundleMediaFramework": true
       }
     },
+    "macOS": {
+      "infoPlist": "Info.plist"
+    },
     "android": {
       "minSdkVersion": 24
     },

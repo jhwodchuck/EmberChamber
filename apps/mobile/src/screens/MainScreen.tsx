@@ -13,9 +13,11 @@ import type {
 } from "../types";
 import { formatBytes } from "../lib/utils";
 import { styles, theme } from "../styles";
+import { DeviceLinkCard } from "../components/DeviceLinkCard";
 import { StatusCard } from "../components/StatusCard";
 import { MessageBubble } from "../components/MessageBubble";
 import { ToggleRow } from "../components/ToggleRow";
+import type { DeviceLinkStatus } from "@emberchamber/protocol";
 
 export type MainScreenProps = {
   session: AuthSession;
@@ -48,7 +50,16 @@ export type MainScreenProps = {
   sessionMessage: FormMessage | null;
   email: string;
   deviceLabel: string;
+  deviceLinkQrValue: string | null;
+  deviceLinkStatus: DeviceLinkStatus | null;
+  deviceLinkMessage: FormMessage | null;
+  isWorkingDeviceLink: boolean;
+  isApprovingDeviceLink: boolean;
   onSignOut: () => void;
+  onShowDeviceLinkQr: () => void;
+  onScanDeviceLinkQr: (payload: string) => void | Promise<void>;
+  onApproveDeviceLink: () => void;
+  onResetDeviceLink: () => void;
   onPreviewInvite: () => void;
   onAcceptInvite: () => void;
   onPickPhoto: () => void;
@@ -69,7 +80,9 @@ export function MainScreen(props: MainScreenProps) {
     isPickingPhoto, isSendingMessage,
     deviceBundleReady, deviceBundleCount, deviceBundleError,
     vaultCount, privacyDefaults, sessionMessage, email, deviceLabel,
-    onSignOut, onPreviewInvite, onAcceptInvite, onPickPhoto, onTakePhoto, onSendMessage,
+    deviceLinkQrValue, deviceLinkStatus, deviceLinkMessage, isWorkingDeviceLink, isApprovingDeviceLink,
+    onSignOut, onShowDeviceLinkQr, onScanDeviceLinkQr, onApproveDeviceLink, onResetDeviceLink,
+    onPreviewInvite, onAcceptInvite, onPickPhoto, onTakePhoto, onSendMessage,
     onUpdatePrivacy, onImageError,
   } = props;
 
@@ -134,6 +147,20 @@ export function MainScreen(props: MainScreenProps) {
             {deviceBundleError ? (
               <Text style={styles.errorText}>{deviceBundleError}</Text>
             ) : null}
+
+            <DeviceLinkCard
+              signedIn
+              deviceLabel={deviceLabel}
+              qrValue={deviceLinkQrValue}
+              status={deviceLinkStatus}
+              message={deviceLinkMessage}
+              isWorking={isWorkingDeviceLink}
+              isApproving={isApprovingDeviceLink}
+              onShowQr={onShowDeviceLinkQr}
+              onScanPayload={onScanDeviceLinkQr}
+              onApprove={onApproveDeviceLink}
+              onReset={onResetDeviceLink}
+            />
 
             <Pressable style={styles.secondaryButton} onPress={onSignOut}>
               <Text style={styles.secondaryButtonLabel}>Sign out</Text>

@@ -434,6 +434,64 @@
         white-space: pre-wrap;
       }
 
+      .auth-mode-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 18px;
+      }
+
+      .auth-mode-button {
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.03);
+        color: var(--muted);
+        padding: 10px 14px;
+      }
+
+      .auth-mode-button.active {
+        border-color: var(--line-strong);
+        background: rgba(234, 111, 63, 0.14);
+        color: var(--text);
+      }
+
+      .qr-surface,
+      .scanner-shell {
+        display: grid;
+        gap: 12px;
+        justify-items: center;
+        margin-top: 16px;
+        border-radius: 20px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.04);
+        padding: 16px;
+      }
+
+      .qr-surface svg {
+        display: block;
+        width: 260px;
+        height: 260px;
+        max-width: 100%;
+        padding: 12px;
+        border-radius: 20px;
+        background: #ffffff;
+      }
+
+      .scanner-video {
+        width: min(100%, 26rem);
+        aspect-ratio: 1;
+        border-radius: 20px;
+        background: #000000;
+        object-fit: cover;
+      }
+
+      .status-meta {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 0.9rem;
+        line-height: 1.6;
+      }
+
       .workspace-header {
         display: flex;
         align-items: center;
@@ -753,6 +811,7 @@
     <div id="app-root" class="shell"></div>
 
     <script src="./vendor/tweetnacl.min.js"></script>
+    <script src="./vendor/zxing-browser.min.js"></script>
     <script>
       const DEFAULT_RELAY_URL = "https://relay.emberchamber.com";
       const LOCAL_RELAY_URL = "http://127.0.0.1:8787";
@@ -813,12 +872,22 @@
         revealedMessages: {},
         attachmentMedia: {},
         authForm: {
+          mode: "magic-link",
           email: "",
           inviteToken: "",
           groupInviteReference: "",
           deviceLabel: suggestDesktopLabel(),
           ageConfirmed18: false,
           completionInput: readCompletionTokenFromLocation(),
+        },
+        deviceLink: {
+          qrPayload: "",
+          activeLink: null,
+          status: null,
+          message: null,
+          scannerOpen: false,
+          scanExpectation: "source_display",
+          completedSessionId: "",
         },
         createGroupForm: {
           title: "",
@@ -855,6 +924,8 @@
       const deviceBundleDirectoryCache = new Map();
       let mailboxSocket = null;
       let mailboxReconnectTimer = 0;
+      let deviceLinkPollTimer = 0;
+      let deviceLinkScannerControls = null;
 
       function readLocalText(key) {
         return globalThis.localStorage?.getItem(key) || "";
@@ -1479,6 +1550,189 @@
         }
 
         return null;
+      }
+
+      const DEVICE_LINK_QR_PREFIX = "emberchamber-device-link:";
+      const LOCAL_RELAY_HOSTS = new Set(["127.0.0.1", "localhost", "10.0.2.2", "tauri.localhost"]);
+
+      function deviceLinkTextToBase64Url(value) {
+        return btoa(value).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+      }
+
+      function deviceLinkTextFromBase64Url(value) {
+        const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+        const padding = normalized.length % 4 === 0 ? "" : "=".repeat(4 - (normalized.length % 4));
+        return atob(normalized + padding);
+      }
+
+      function defaultPort(protocol) {
+        return protocol === "https:" ? "443" : protocol === "http:" ? "80" : "";
+      }
+
+      function normalizeRelayOrigin(value) {
+        return new URL(value).origin.replace(/\/$/, "");
+      }
+
+      function canonicalRelayOrigin(value) {
+        const parsed = new URL(value);
+        const host = parsed.hostname.toLowerCase();
+        const port = parsed.port || defaultPort(parsed.protocol);
+
+        if (LOCAL_RELAY_HOSTS.has(host)) {
+          return `${parsed.protocol}//loopback:${port}`;
+        }
+
+        return `${parsed.protocol}//${host}${port ? `:${port}` : ""}`;
+      }
+
+      function relayOriginsMatch(left, right) {
+        try {
+          return canonicalRelayOrigin(left) === canonicalRelayOrigin(right);
+        } catch {
+          return false;
+        }
+      }
+
+      function createDeviceLinkToken() {
+        if (typeof crypto.randomUUID === "function") {
+          return `${crypto.randomUUID()}-${crypto.randomUUID()}`;
+        }
+
+        const bytes = crypto.getRandomValues(new Uint8Array(24));
+        return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
+      }
+
+      function encodeDeviceLinkQrPayload(input) {
+        const payload = {
+          version: 1,
+          relayOrigin: normalizeRelayOrigin(input.relayOrigin),
+          qrMode: input.qrMode,
+          linkToken: input.linkToken,
+          ...(input.requesterLabel ? { requesterLabel: input.requesterLabel } : {}),
+        };
+
+        return `${DEVICE_LINK_QR_PREFIX}${deviceLinkTextToBase64Url(JSON.stringify(payload))}`;
+      }
+
+      function parseDeviceLinkQrPayload(value) {
+        const trimmed = (value || "").trim();
+        if (!trimmed) {
+          throw new Error("QR payload is empty.");
+        }
+
+        const encoded = trimmed.startsWith(DEVICE_LINK_QR_PREFIX)
+          ? trimmed.slice(DEVICE_LINK_QR_PREFIX.length)
+          : trimmed;
+        const parsed = JSON.parse(deviceLinkTextFromBase64Url(encoded));
+
+        if (parsed.version !== 1) {
+          throw new Error("Unsupported device-link QR version.");
+        }
+
+        if (
+          (parsed.qrMode !== "source_display" && parsed.qrMode !== "target_display") ||
+          typeof parsed.linkToken !== "string" ||
+          parsed.linkToken.length < 16 ||
+          typeof parsed.relayOrigin !== "string"
+        ) {
+          throw new Error("Invalid device-link QR payload.");
+        }
+
+        return {
+          version: 1,
+          relayOrigin: normalizeRelayOrigin(parsed.relayOrigin),
+          qrMode: parsed.qrMode,
+          linkToken: parsed.linkToken,
+          ...(typeof parsed.requesterLabel === "string" && parsed.requesterLabel.trim()
+            ? { requesterLabel: parsed.requesterLabel.trim() }
+            : {}),
+        };
+      }
+
+      function deviceLinkDescription(status, signedIn) {
+        if (!status) {
+          return signedIn
+            ? "Start a QR request from this signed-in device, or scan a waiting QR from the new device."
+            : "Use a readable device label, then either show a QR for a signed-in device to scan or scan a trusted-device QR here.";
+        }
+
+        if (status.state === "waiting_for_source") {
+          return "Waiting for a signed-in device to scan this QR and attach it to your account.";
+        }
+
+        if (status.state === "pending_claim") {
+          return "Waiting for the new device to scan this QR and announce its device label.";
+        }
+
+        if (status.state === "pending_approval") {
+          return signedIn
+            ? `${status.requesterLabel} is ready. Approve it on this device to issue a new session.`
+            : `${status.requesterLabel} is waiting for approval from your signed-in device.`;
+        }
+
+        if (status.state === "approved") {
+          return signedIn
+            ? `${status.requesterLabel} has been approved. The new device can finish sign-in now.`
+            : `${status.requesterLabel} was approved. Finishing sign-in on this desktop now.`;
+        }
+
+        if (status.state === "consumed") {
+          return `${status.requesterLabel} already finished sign-in with this QR.`;
+        }
+
+        if (status.state === "expired") {
+          return "This QR expired. Start a fresh device-link request.";
+        }
+
+        return "Device-link status is updating.";
+      }
+
+      function deviceLinkStatusTone(status) {
+        if (!status) {
+          return "info";
+        }
+
+        if (status.state === "expired") {
+          return "warning";
+        }
+
+        if (status.state === "consumed") {
+          return "success";
+        }
+
+        return "info";
+      }
+
+      function clearDeviceLinkState(options = {}) {
+        const { preserveMessage = false } = options;
+
+        if (deviceLinkPollTimer) {
+          globalThis.clearTimeout(deviceLinkPollTimer);
+          deviceLinkPollTimer = 0;
+        }
+
+        if (deviceLinkScannerControls?.stop) {
+          try {
+            deviceLinkScannerControls.stop();
+          } catch {
+            // Ignore scanner cleanup failures.
+          }
+        }
+        deviceLinkScannerControls = null;
+
+        state.deviceLink.qrPayload = "";
+        state.deviceLink.activeLink = null;
+        state.deviceLink.status = null;
+        state.deviceLink.scannerOpen = false;
+        state.deviceLink.scanExpectation = state.session ? "target_display" : "source_display";
+        state.deviceLink.completedSessionId = "";
+        if (!preserveMessage) {
+          state.deviceLink.message = null;
+        }
+      }
+
+      function currentRelayOrigin() {
+        return normalizeRelayOrigin(state.relayUrl);
       }
 
       function rememberInvite(groupId, invite) {
@@ -2352,6 +2606,269 @@
         }
       }
 
+      async function openAuthenticatedSession(session) {
+        state.session = session;
+        clearPendingChallenge();
+        clearDeviceLinkState();
+        await persistSecureStateNow();
+        state.authStatus = null;
+        resetWorkspaceState();
+        state.activeView = "thread";
+        state.activeGroupId = session.bootstrapConversationId || null;
+        render();
+        await loadWorkspace();
+      }
+
+      async function startDeviceLinkQr() {
+        const deviceLabel = state.authForm.deviceLabel.trim();
+        const signedIn = Boolean(state.session);
+
+        if (!signedIn && deviceLabel.length < 3) {
+          state.deviceLink.message = createStatus(
+            "error",
+            "Name this device first",
+            "Use at least 3 characters so the signed-in device can recognize the approval target."
+          );
+          render();
+          return;
+        }
+
+        setBusy("device-link-start");
+
+        try {
+          state.deviceLink.message = null;
+          state.deviceLink.completedSessionId = "";
+
+          if (signedIn) {
+            const response = await relayFetch("/v1/devices/link/start", {
+              method: "POST",
+              body: JSON.stringify({}),
+            });
+            const parsed = parseDeviceLinkQrPayload(response.qrPayload);
+            state.deviceLink.activeLink = {
+              linkToken: parsed.linkToken,
+              qrMode: parsed.qrMode,
+            };
+            state.deviceLink.qrPayload = response.qrPayload;
+            state.deviceLink.status = response;
+          } else {
+            const linkToken = createDeviceLinkToken();
+            state.deviceLink.activeLink = {
+              linkToken,
+              qrMode: "target_display",
+            };
+            state.deviceLink.qrPayload = encodeDeviceLinkQrPayload({
+              relayOrigin: currentRelayOrigin(),
+              qrMode: "target_display",
+              linkToken,
+              requesterLabel: deviceLabel,
+            });
+            state.deviceLink.status = {
+              relayOrigin: currentRelayOrigin(),
+              qrMode: "target_display",
+              state: "waiting_for_source",
+              requesterLabel: deviceLabel,
+              expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+              canComplete: false,
+            };
+            await persistSecureStateNow();
+          }
+        } catch (error) {
+          state.deviceLink.message = createStatus(
+            "error",
+            "Unable to prepare device link",
+            error instanceof Error ? error.message : "Unknown relay error"
+          );
+        } finally {
+          clearBusy();
+          render();
+          ensureDeviceLinkPolling();
+        }
+      }
+
+      function openDeviceLinkScanner() {
+        const signedIn = Boolean(state.session);
+        const deviceLabel = state.authForm.deviceLabel.trim();
+
+        if (!signedIn && deviceLabel.length < 3) {
+          state.deviceLink.message = createStatus(
+            "error",
+            "Name this device first",
+            "Use at least 3 characters so the signed-in device can recognize the approval target."
+          );
+          render();
+          return;
+        }
+
+        state.deviceLink.scanExpectation = signedIn ? "target_display" : "source_display";
+        state.deviceLink.message = null;
+        state.deviceLink.scannerOpen = true;
+        render();
+      }
+
+      async function handleDeviceLinkScan(qrPayload) {
+        setBusy("device-link-scan");
+
+        try {
+          const parsed = parseDeviceLinkQrPayload(qrPayload);
+          if (!relayOriginsMatch(currentRelayOrigin(), parsed.relayOrigin)) {
+            throw new Error("That QR belongs to a different relay environment.");
+          }
+
+          if (parsed.qrMode !== state.deviceLink.scanExpectation) {
+            throw new Error("That QR is for the opposite device-link flow.");
+          }
+
+          state.deviceLink.message = null;
+          state.deviceLink.completedSessionId = "";
+
+          if (state.session) {
+            const response = await relayFetch("/v1/devices/link/scan", {
+              method: "POST",
+              body: JSON.stringify({ qrPayload }),
+            });
+            state.deviceLink.activeLink = {
+              linkToken: parsed.linkToken,
+              qrMode: parsed.qrMode,
+            };
+            state.deviceLink.qrPayload = "";
+            state.deviceLink.status = response;
+          } else {
+            const response = await relayFetch(
+              "/v1/devices/link/claim",
+              {
+                method: "POST",
+                body: JSON.stringify({
+                  qrPayload,
+                  deviceLabel: state.authForm.deviceLabel.trim(),
+                }),
+              },
+              { auth: false },
+            );
+            state.deviceLink.activeLink = {
+              linkToken: parsed.linkToken,
+              qrMode: parsed.qrMode,
+            };
+            state.deviceLink.qrPayload = "";
+            state.deviceLink.status = response;
+            await persistSecureStateNow();
+          }
+        } catch (error) {
+          state.deviceLink.message = createStatus(
+            "error",
+            "QR scan failed",
+            error instanceof Error ? error.message : "Unknown scan error"
+          );
+        } finally {
+          clearBusy();
+          render();
+          ensureDeviceLinkPolling();
+        }
+      }
+
+      async function approveDeviceLink() {
+        const linkId = state.deviceLink.status?.linkId;
+        if (!state.session || !linkId) {
+          return;
+        }
+
+        setBusy("device-link-approve");
+
+        try {
+          const response = await relayFetch("/v1/devices/link/confirm", {
+            method: "POST",
+            body: JSON.stringify({ linkId }),
+          });
+          state.deviceLink.status = response;
+          state.deviceLink.message = createStatus(
+            "success",
+            "Device approved",
+            `${response.requesterLabel} can finish sign-in now.`
+          );
+        } catch (error) {
+          state.deviceLink.message = createStatus(
+            "error",
+            "Approval failed",
+            error instanceof Error ? error.message : "Unknown relay error"
+          );
+        } finally {
+          clearBusy();
+          render();
+          ensureDeviceLinkPolling();
+        }
+      }
+
+      async function completeDeviceLinkOnDesktop() {
+        if (!state.deviceLink.activeLink) {
+          return;
+        }
+
+        const session = await relayFetch(
+          "/v1/devices/link/complete",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              linkToken: state.deviceLink.activeLink.linkToken,
+              qrMode: state.deviceLink.activeLink.qrMode,
+            }),
+          },
+          { auth: false },
+        );
+        state.deviceLink.completedSessionId = session.sessionId;
+        await openAuthenticatedSession(session);
+      }
+
+      function ensureDeviceLinkPolling() {
+        if (!state.deviceLink.activeLink || state.deviceLink.completedSessionId) {
+          return;
+        }
+
+        if (deviceLinkPollTimer) {
+          globalThis.clearTimeout(deviceLinkPollTimer);
+          deviceLinkPollTimer = 0;
+        }
+
+        const poll = async () => {
+          if (!state.deviceLink.activeLink || state.deviceLink.completedSessionId) {
+            return;
+          }
+
+          try {
+            const status = await relayFetch(
+              `/v1/devices/link/status?token=${encodeURIComponent(state.deviceLink.activeLink.linkToken)}&qrMode=${encodeURIComponent(state.deviceLink.activeLink.qrMode)}`,
+              undefined,
+              { auth: false },
+            );
+            state.deviceLink.status = status;
+
+            if (!state.session && status.state === "approved") {
+              await completeDeviceLinkOnDesktop();
+              return;
+            }
+
+            render();
+
+            if (status.state === "consumed" || status.state === "expired") {
+              return;
+            }
+          } catch (error) {
+            state.deviceLink.message = createStatus(
+              "error",
+              "Device-link status failed",
+              error instanceof Error ? error.message : "Unknown relay error"
+            );
+            render();
+          }
+
+          deviceLinkPollTimer = globalThis.setTimeout(() => {
+            deviceLinkPollTimer = 0;
+            void poll();
+          }, 2000);
+        };
+
+        void poll();
+      }
+
       async function startMagicLink() {
         const email = state.authForm.email.trim();
         const groupInviteReference = state.authForm.groupInviteReference.trim();
@@ -2497,15 +3014,7 @@
             { auth: false },
           );
 
-          state.session = session;
-          clearPendingChallenge();
-          await persistSecureStateNow();
-          state.authStatus = null;
-          resetWorkspaceState();
-          state.activeView = "thread";
-          state.activeGroupId = session.bootstrapConversationId || null;
-          render();
-          await loadWorkspace();
+          await openAuthenticatedSession(session);
         } catch (error) {
           state.authStatus = createStatus(
             "error",
@@ -2856,6 +3365,8 @@
 
         clearStoredSession();
         clearPendingChallenge();
+        clearDeviceLinkState();
+        state.authForm.mode = "magic-link";
         await clearPersistedSecureState();
         state.activeView = "thread";
         state.workspaceStatus = null;
@@ -3020,6 +3531,40 @@
 
         if (action === "sign-out") {
           await signOut();
+          return;
+        }
+
+        if (action === "set-auth-mode") {
+          state.authForm.mode = button.dataset.authMode === "device-link" ? "device-link" : "magic-link";
+          clearDeviceLinkState();
+          render();
+          return;
+        }
+
+        if (action === "start-device-link") {
+          await startDeviceLinkQr();
+          return;
+        }
+
+        if (action === "open-device-link-scanner") {
+          openDeviceLinkScanner();
+          return;
+        }
+
+        if (action === "close-device-link-scanner") {
+          state.deviceLink.scannerOpen = false;
+          render();
+          return;
+        }
+
+        if (action === "clear-device-link") {
+          clearDeviceLinkState();
+          render();
+          return;
+        }
+
+        if (action === "approve-device-link") {
+          await approveDeviceLink();
           return;
         }
 
@@ -3214,6 +3759,96 @@
         }
       }
 
+      function renderDeviceLinkPanel({ signedIn }) {
+        const status = state.deviceLink.status;
+        const statusTitle = signedIn ? "Device-link status" : "Waiting for trusted-device approval";
+        const description = deviceLinkDescription(status, signedIn);
+        const statusMeta = status
+          ? `
+              <div class="status-meta">
+                ${status.expiresAt ? `Expires ${escapeHtml(formatDateTime(status.expiresAt))}.` : ""}
+                ${status.requesterLabel ? `<br />Device label: ${escapeHtml(status.requesterLabel)}` : ""}
+              </div>
+            `
+          : "";
+
+        return `
+          <section class="panel">
+            <div class="view-header">
+              <div>
+                <p class="eyebrow">${signedIn ? "Trusted-device approval" : "Existing account only"}</p>
+                <h2>${signedIn ? "Link another device" : "Link this desktop with another device"}</h2>
+              </div>
+            </div>
+
+            <p class="section-intro" style="margin-top: 12px">
+              ${escapeHtml(description)}
+            </p>
+
+            ${renderStatus(state.deviceLink.message)}
+
+            <div class="inline-actions" style="margin-top: 18px">
+              <button class="primary-button" type="button" data-action="start-device-link" ${isBusy("device-link-start") ? "disabled" : ""}>
+                ${isBusy("device-link-start") ? "Preparing QR..." : signedIn ? "Show my QR" : "Show QR"}
+              </button>
+              <button class="secondary-button" type="button" data-action="open-device-link-scanner" ${isBusy("device-link-scan") ? "disabled" : ""}>
+                ${signedIn ? "Scan new device QR" : "Scan trusted-device QR"}
+              </button>
+              ${
+                state.deviceLink.qrPayload || state.deviceLink.status || state.deviceLink.message
+                  ? '<button class="ghost-button" type="button" data-action="clear-device-link">Clear</button>'
+                  : ""
+              }
+            </div>
+
+            ${
+              state.deviceLink.scannerOpen
+                ? `
+                    <div class="scanner-shell">
+                      <video class="scanner-video" data-device-link-scanner autoplay muted playsinline></video>
+                      <button class="ghost-button" type="button" data-action="close-device-link-scanner">Close scanner</button>
+                    </div>
+                  `
+                : ""
+            }
+
+            ${
+              state.deviceLink.qrPayload
+                ? `
+                    <div class="qr-surface">
+                      <div data-device-link-qr></div>
+                      <div class="hint">Keep this QR visible until the other device scans it and the approval step is complete.</div>
+                    </div>
+                  `
+                : ""
+            }
+
+            ${
+              status
+                ? `
+                    <section class="status ${escapeHtml(deviceLinkStatusTone(status))}" style="margin-top: 16px">
+                      <h3>${escapeHtml(statusTitle)}</h3>
+                      <p>${escapeHtml(description)}</p>
+                      ${statusMeta}
+                    </section>
+                    ${
+                      signedIn && status.state === "pending_approval" && status.linkId
+                        ? `
+                            <div class="inline-actions" style="margin-top: 12px">
+                              <button class="primary-button" type="button" data-action="approve-device-link" ${isBusy("device-link-approve") ? "disabled" : ""}>
+                                ${isBusy("device-link-approve") ? "Approving..." : "Approve"}
+                              </button>
+                            </div>
+                          `
+                        : ""
+                    }
+                  `
+                : ""
+            }
+          </section>
+        `;
+      }
+
       function renderAuthView() {
         const pending = state.pendingChallenge;
         const completionHint = pending
@@ -3311,72 +3946,113 @@
                   </section>
                 ` : ""}
 
-                <form data-form="start-auth" class="field-stack" style="margin-top: 18px">
-                  <div class="field">
-                    <label for="auth-email">Private email</label>
-                    <input id="auth-email" type="email" data-bind="auth.email" value="${escapeHtml(state.authForm.email)}" autocomplete="email" />
-                    <div class="hint">Used only for bootstrap and recovery.</div>
-                  </div>
-
-                  <div class="field">
-                    <label for="auth-group-invite">Group invite URL</label>
-                    <textarea id="auth-group-invite" data-bind="auth.groupInviteReference" placeholder="https://emberchamber.com/invite/<group-id>/<token>">${escapeHtml(state.authForm.groupInviteReference)}</textarea>
-                    <div class="hint">Recommended for first-time users. After email sign-in, the relay will accept the invite and open that group on this device.</div>
-                  </div>
-
-                  <div class="field">
-                    <label for="auth-invite">Beta invite token</label>
-                    <input id="auth-invite" type="text" data-bind="auth.inviteToken" value="${escapeHtml(state.authForm.inviteToken)}" autocomplete="off" />
-                    <div class="hint">Fallback bootstrap path when you do not already have a group invite URL. Local Ubuntu test setups prefill a reusable real beta invite here.</div>
-                  </div>
-
-                  <div class="field">
-                    <label for="auth-device">Device label</label>
-                    <input id="auth-device" type="text" data-bind="auth.deviceLabel" value="${escapeHtml(state.authForm.deviceLabel)}" autocomplete="off" />
-                    <div class="hint">Readable labels make session review and recovery less painful later. The default is already fine for most users.</div>
-                  </div>
-
-                  <label class="checkbox-row">
-                    <input id="auth-age-confirmed" type="checkbox" data-bind="auth.ageConfirmed18" ${state.authForm.ageConfirmed18 ? "checked" : ""} />
-                    <span>
-                      <strong>I confirm I am at least 18 years old</strong>
-                      <div class="hint">EmberChamber beta access is adults-only. This is a self-attested gate, not heavy identity verification.</div>
-                    </span>
-                  </label>
-
-                  <button class="primary-button" type="submit" ${isBusy("start-auth") ? "disabled" : ""}>
-                    ${isBusy("start-auth") ? "Sending magic link..." : "Send magic link"}
+                <div class="auth-mode-row">
+                  <button class="auth-mode-button ${state.authForm.mode === "magic-link" ? "active" : ""}" type="button" data-action="set-auth-mode" data-auth-mode="magic-link">
+                    Magic link
                   </button>
-                </form>
+                  <button class="auth-mode-button ${state.authForm.mode === "device-link" ? "active" : ""}" type="button" data-action="set-auth-mode" data-auth-mode="device-link">
+                    Link with QR
+                  </button>
+                </div>
+
+                ${
+                  state.authForm.mode === "magic-link"
+                    ? `
+                        <form data-form="start-auth" class="field-stack" style="margin-top: 18px">
+                          <div class="field">
+                            <label for="auth-email">Private email</label>
+                            <input id="auth-email" type="email" data-bind="auth.email" value="${escapeHtml(state.authForm.email)}" autocomplete="email" />
+                            <div class="hint">Used only for bootstrap and recovery.</div>
+                          </div>
+
+                          <div class="field">
+                            <label for="auth-group-invite">Group invite URL</label>
+                            <textarea id="auth-group-invite" data-bind="auth.groupInviteReference" placeholder="https://emberchamber.com/invite/<group-id>/<token>">${escapeHtml(state.authForm.groupInviteReference)}</textarea>
+                            <div class="hint">Recommended for first-time users. After email sign-in, the relay will accept the invite and open that group on this device.</div>
+                          </div>
+
+                          <div class="field">
+                            <label for="auth-invite">Beta invite token</label>
+                            <input id="auth-invite" type="text" data-bind="auth.inviteToken" value="${escapeHtml(state.authForm.inviteToken)}" autocomplete="off" />
+                            <div class="hint">Fallback bootstrap path when you do not already have a group invite URL. Local Ubuntu test setups prefill a reusable real beta invite here.</div>
+                          </div>
+
+                          <div class="field">
+                            <label for="auth-device">Device label</label>
+                            <input id="auth-device" type="text" data-bind="auth.deviceLabel" value="${escapeHtml(state.authForm.deviceLabel)}" autocomplete="off" />
+                            <div class="hint">Readable labels make session review and recovery less painful later. The default is already fine for most users.</div>
+                          </div>
+
+                          <label class="checkbox-row">
+                            <input id="auth-age-confirmed" type="checkbox" data-bind="auth.ageConfirmed18" ${state.authForm.ageConfirmed18 ? "checked" : ""} />
+                            <span>
+                              <strong>I confirm I am at least 18 years old</strong>
+                              <div class="hint">EmberChamber beta access is adults-only. This is a self-attested gate, not heavy identity verification.</div>
+                            </span>
+                          </label>
+
+                          <button class="primary-button" type="submit" ${isBusy("start-auth") ? "disabled" : ""}>
+                            ${isBusy("start-auth") ? "Sending magic link..." : "Send magic link"}
+                          </button>
+                        </form>
+                      `
+                    : `
+                        <div class="field-stack" style="margin-top: 18px">
+                          <div class="field">
+                            <label for="auth-device">Device label</label>
+                            <input id="auth-device" type="text" data-bind="auth.deviceLabel" value="${escapeHtml(state.authForm.deviceLabel)}" autocomplete="off" />
+                            <div class="hint">This is what the signed-in device sees before approving the desktop handoff.</div>
+                          </div>
+
+                          <section class="status info">
+                            <h3>Existing account only</h3>
+                            <p>QR linking adds this desktop to an account that already has a signed-in device. It does not replace invite-only account creation or email recovery for the first device.</p>
+                          </section>
+
+                          ${renderDeviceLinkPanel({ signedIn: false })}
+                        </div>
+                      `
+                }
               </section>
 
               <section class="panel">
                 <div class="view-header">
                   <div>
                     <p class="eyebrow">Finish sign-in</p>
-                    <h2>Paste the email link here</h2>
+                    <h2>${state.authForm.mode === "magic-link" ? "Paste the email link here" : "Magic-link fallback"}</h2>
                   </div>
                 </div>
 
-                ${pending ? `
-                  <section class="status info" style="margin-top: 16px">
-                    <h3>Pending magic link</h3>
-                    <p>${escapeHtml(completionHint)}</p>
-                    ${pending.debugCompletionToken ? `<code>${escapeHtml(pending.debugCompletionToken)}</code>` : ""}
-                  </section>
-                ` : ""}
+                ${
+                  state.authForm.mode === "magic-link"
+                    ? `
+                        ${pending ? `
+                          <section class="status info" style="margin-top: 16px">
+                            <h3>Pending magic link</h3>
+                            <p>${escapeHtml(completionHint)}</p>
+                            ${pending.debugCompletionToken ? `<code>${escapeHtml(pending.debugCompletionToken)}</code>` : ""}
+                          </section>
+                        ` : ""}
 
-                <form data-form="complete-auth" class="field-stack" style="margin-top: 18px">
-                  <div class="field">
-                    <label for="completion-input">Magic link or completion token</label>
-                    <textarea id="completion-input" data-bind="auth.completionInput" placeholder="Paste the full /auth/complete link or raw token here">${escapeHtml(state.authForm.completionInput)}</textarea>
-                    <div class="hint">${escapeHtml(completionHint)}</div>
-                  </div>
+                        <form data-form="complete-auth" class="field-stack" style="margin-top: 18px">
+                          <div class="field">
+                            <label for="completion-input">Magic link or completion token</label>
+                            <textarea id="completion-input" data-bind="auth.completionInput" placeholder="Paste the full /auth/complete link or raw token here">${escapeHtml(state.authForm.completionInput)}</textarea>
+                            <div class="hint">${escapeHtml(completionHint)}</div>
+                          </div>
 
-                  <button class="primary-button" type="submit" ${isBusy("complete-auth") ? "disabled" : ""}>
-                    ${isBusy("complete-auth") ? "Completing sign-in..." : "Complete sign-in"}
-                  </button>
-                </form>
+                          <button class="primary-button" type="submit" ${isBusy("complete-auth") ? "disabled" : ""}>
+                            ${isBusy("complete-auth") ? "Completing sign-in..." : "Complete sign-in"}
+                          </button>
+                        </form>
+                      `
+                    : `
+                        <section class="status info" style="margin-top: 16px">
+                          <h3>Email bootstrap still works here</h3>
+                          <p>If the camera is unavailable, the QR expires, or this desktop is your first device on a new account, switch back to the magic-link path above.</p>
+                        </section>
+                      `
+                }
               </section>
 
               <section class="panel">
@@ -4249,6 +4925,7 @@
             </p>
 
             <div class="section-stack" style="margin-top: 18px">
+              ${renderDeviceLinkPanel({ signedIn: true })}
               ${
                 state.sessions.length === 0
                   ? '<div class="empty">No active sessions were returned by the relay.</div>'
@@ -4433,12 +5110,108 @@
         `;
       }
 
+      function mountDeviceLinkQr() {
+        const container = root.querySelector("[data-device-link-qr]");
+        if (!(container instanceof HTMLElement)) {
+          return;
+        }
+
+        container.innerHTML = "";
+        if (!state.deviceLink.qrPayload || !globalThis.ZXingBrowser?.BrowserQRCodeSvgWriter) {
+          return;
+        }
+
+        const writer = new globalThis.ZXingBrowser.BrowserQRCodeSvgWriter();
+        writer.writeToDom(container, state.deviceLink.qrPayload, 260, 260);
+      }
+
+      async function mountDeviceLinkScanner() {
+        if (!state.deviceLink.scannerOpen) {
+          if (deviceLinkScannerControls?.stop) {
+            try {
+              deviceLinkScannerControls.stop();
+            } catch {
+              // Ignore scanner cleanup failures.
+            }
+          }
+          deviceLinkScannerControls = null;
+          return;
+        }
+
+        const video = root.querySelector("[data-device-link-scanner]");
+        if (!(video instanceof HTMLVideoElement)) {
+          return;
+        }
+
+        if (!globalThis.ZXingBrowser?.BrowserQRCodeReader) {
+          state.deviceLink.scannerOpen = false;
+          state.deviceLink.message = createStatus(
+            "error",
+            "QR scanner unavailable",
+            "The desktop scanner library is not loaded."
+          );
+          render();
+          return;
+        }
+
+        if (deviceLinkScannerControls?.stop) {
+          try {
+            deviceLinkScannerControls.stop();
+          } catch {
+            // Ignore scanner cleanup failures.
+          }
+        }
+
+        try {
+          const reader = new globalThis.ZXingBrowser.BrowserQRCodeReader();
+          deviceLinkScannerControls = await reader.decodeFromConstraints(
+            {
+              audio: false,
+              video: {
+                facingMode: { ideal: "environment" },
+              },
+            },
+            video,
+            async (result) => {
+              const text = result?.getText?.();
+              if (!text) {
+                return;
+              }
+
+              try {
+                deviceLinkScannerControls?.stop?.();
+              } catch {
+                // Ignore cleanup failures.
+              }
+              deviceLinkScannerControls = null;
+              state.deviceLink.scannerOpen = false;
+              render();
+              await handleDeviceLinkScan(text);
+            },
+          );
+        } catch (error) {
+          state.deviceLink.scannerOpen = false;
+          state.deviceLink.message = createStatus(
+            "error",
+            "Camera scan unavailable",
+            error instanceof Error ? error.message : "The desktop app could not open a camera for QR scanning."
+          );
+          render();
+        }
+      }
+
+      function syncDeviceLinkUiAfterRender() {
+        mountDeviceLinkQr();
+        void mountDeviceLinkScanner();
+      }
+
       function render() {
         root.innerHTML = state.isHydrating
           ? renderHydratingView()
           : state.session
             ? renderWorkspaceView()
             : renderAuthView();
+        syncDeviceLinkUiAfterRender();
       }
 
       root.addEventListener("input", handleInput);

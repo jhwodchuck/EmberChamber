@@ -396,10 +396,28 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     paddingHorizontal: 16,
   },
+  secondaryButtonPressed: {
+    opacity: 0.92,
+    transform: [{ translateY: 1 }],
+  },
   secondaryButtonLabel: {
     color: colors.textPrimary,
     fontSize: 15,
     fontWeight: "600",
+  },
+  tertiaryButton: {
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.inputBorder,
+    backgroundColor: colors.inputBackground,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  tertiaryButtonLabel: {
+    color: colors.textSoft,
+    fontSize: 13,
+    fontWeight: "700",
   },
   devButton: {
     marginTop: 10,
@@ -464,6 +482,36 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     padding: 14,
     gap: 6,
+  },
+  deviceLinkCard: {
+    gap: 12,
+  },
+  qrScannerCard: {
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    padding: 14,
+    gap: 10,
+  },
+  qrScannerFrame: {
+    width: "100%",
+    aspectRatio: 1,
+    borderRadius: 20,
+    overflow: "hidden",
+    backgroundColor: "#000000",
+  },
+  qrDisplayCard: {
+    alignItems: "center",
+    gap: 10,
+  },
+  qrDisplaySurface: {
+    borderRadius: 28,
+    backgroundColor: "#ffffff",
+    padding: 18,
+  },
+  deviceLinkStatusCard: {
+    gap: 10,
   },
   metricLabel: {
     color: colors.textMuted,

@@ -1,0 +1,1038 @@
+- generic [ref=e2]:
+  - region
+  - generic [ref=e3]:
+    - link "Skip to content" [ref=e4] [cursor=pointer]:
+      - /url: "#start-of-content"
+    - banner [ref=e6]:
+      - heading "Navigation Menu" [level=2] [ref=e7]
+      - generic [ref=e8]:
+        - link "Homepage" [ref=e10] [cursor=pointer]:
+          - /url: /
+          - img [ref=e11]
+        - generic [ref=e13]:
+          - navigation "Global" [ref=e16]:
+            - list [ref=e17]:
+              - listitem [ref=e18]:
+                - button "Platform" [ref=e20] [cursor=pointer]:
+                  - text: Platform
+                  - img [ref=e21]
+              - listitem [ref=e23]:
+                - button "Solutions" [ref=e25] [cursor=pointer]:
+                  - text: Solutions
+                  - img [ref=e26]
+              - listitem [ref=e28]:
+                - button "Resources" [ref=e30] [cursor=pointer]:
+                  - text: Resources
+                  - img [ref=e31]
+              - listitem [ref=e33]:
+                - button "Open Source" [ref=e35] [cursor=pointer]:
+                  - text: Open Source
+                  - img [ref=e36]
+              - listitem [ref=e38]:
+                - button "Enterprise" [ref=e40] [cursor=pointer]:
+                  - text: Enterprise
+                  - img [ref=e41]
+              - listitem [ref=e43]:
+                - link "Pricing" [ref=e44] [cursor=pointer]:
+                  - /url: https://github.com/pricing
+                  - generic [ref=e45]: Pricing
+          - generic [ref=e46]:
+            - button "Search or jump to…" [ref=e49] [cursor=pointer]:
+              - img [ref=e51]
+            - link "Sign in" [ref=e54] [cursor=pointer]:
+              - /url: /login?return_to=https%3A%2F%2Fgithub.com%2Fjhwodchuck%2FEmberChamber
+            - link "Sign up" [ref=e55] [cursor=pointer]:
+              - /url: /signup?ref_cta=Sign+up&ref_loc=header+logged+out&ref_page=%2F%3Cuser-name%3E%2F%3Crepo-name%3E&source=header-repo&source_repo=jhwodchuck%2FEmberChamber
+            - button "Appearance settings" [ref=e58] [cursor=pointer]:
+              - img
+  - main [ref=e62]:
+    - generic [ref=e63]:
+      - generic [ref=e64]:
+        - generic [ref=e66]:
+          - img [ref=e67]
+          - link "jhwodchuck" [ref=e70] [cursor=pointer]:
+            - /url: /jhwodchuck
+          - generic [ref=e71]: /
+          - strong [ref=e72]:
+            - link "EmberChamber" [ref=e73] [cursor=pointer]:
+              - /url: /jhwodchuck/EmberChamber
+          - generic [ref=e74]: Public
+        - generic [ref=e75]:
+          - list:
+            - listitem [ref=e76]:
+              - link "You must be signed in to change notification settings" [ref=e77] [cursor=pointer]:
+                - /url: /login?return_to=%2Fjhwodchuck%2FEmberChamber
+                - img [ref=e78]
+                - text: Notifications
+            - listitem [ref=e80]:
+              - link "Fork 0" [ref=e81] [cursor=pointer]:
+                - /url: /login?return_to=%2Fjhwodchuck%2FEmberChamber
+                - img [ref=e82]
+                - text: Fork
+                - generic "0" [ref=e84]
+            - listitem [ref=e85]:
+              - link "You must be signed in to star a repository" [ref=e87] [cursor=pointer]:
+                - /url: /login?return_to=%2Fjhwodchuck%2FEmberChamber
+                - img [ref=e88]
+                - text: Star
+                - generic "0 users starred this repository" [ref=e90]: "0"
+      - navigation "Repository" [ref=e91]:
+        - list [ref=e92]:
+          - listitem [ref=e93]:
+            - link "Code" [ref=e94] [cursor=pointer]:
+              - /url: /jhwodchuck/EmberChamber
+              - img [ref=e95]
+              - generic [ref=e97]: Code
+          - listitem [ref=e98]:
+            - link "Issues" [ref=e99] [cursor=pointer]:
+              - /url: /jhwodchuck/EmberChamber/issues
+              - img [ref=e100]
+              - generic [ref=e103]: Issues
+          - listitem [ref=e104]:
+            - link "Pull requests" [ref=e105] [cursor=pointer]:
+              - /url: /jhwodchuck/EmberChamber/pulls
+              - img [ref=e106]
+              - generic [ref=e108]: Pull requests
+          - listitem [ref=e109]:
+            - link "Actions" [ref=e110] [cursor=pointer]:
+              - /url: /jhwodchuck/EmberChamber/actions
+              - img [ref=e111]
+              - generic [ref=e113]: Actions
+          - listitem [ref=e114]:
+            - link "Projects" [ref=e115] [cursor=pointer]:
+              - /url: /jhwodchuck/EmberChamber/projects
+              - img [ref=e116]
+              - generic [ref=e118]: Projects
+          - listitem [ref=e119]:
+            - link "Security and quality" [ref=e120] [cursor=pointer]:
+              - /url: /jhwodchuck/EmberChamber/security
+              - img [ref=e121]
+              - generic [ref=e123]: Security and quality
+          - listitem [ref=e124]:
+            - link "Insights" [ref=e125] [cursor=pointer]:
+              - /url: /jhwodchuck/EmberChamber/pulse
+              - img [ref=e126]
+              - generic [ref=e128]: Insights
+    - generic [ref=e141]:
+      - heading "jhwodchuck/EmberChamber" [level=1] [ref=e143]
+      - generic [ref=e144]:
+        - generic [ref=e147]:
+          - generic [ref=e148]:
+            - generic [ref=e149]:
+              - button "main branch" [ref=e151] [cursor=pointer]:
+                - generic [ref=e152]:
+                  - generic [ref=e154]:
+                    - img [ref=e156]
+                    - generic [ref=e159]: main
+                  - generic:
+                    - img
+              - generic [ref=e160]:
+                - link "2 Branches" [ref=e161] [cursor=pointer]:
+                  - /url: /jhwodchuck/EmberChamber/branches
+                  - generic [ref=e162]:
+                    - generic:
+                      - img
+                    - generic [ref=e164]:
+                      - strong [ref=e165]: "2"
+                      - text: Branches
+                - link "9 Tags" [ref=e166] [cursor=pointer]:
+                  - /url: /jhwodchuck/EmberChamber/tags
+                  - generic [ref=e167]:
+                    - generic:
+                      - img
+                    - generic [ref=e169]:
+                      - strong [ref=e170]: "9"
+                      - text: Tags
+            - generic [ref=e171]:
+              - generic [ref=e175]:
+                - img [ref=e177]
+                - combobox "Go to file" [ref=e179]
+              - button "Code" [ref=e180] [cursor=pointer]:
+                - generic [ref=e181]:
+                  - generic:
+                    - img
+                  - generic [ref=e182]: Code
+                  - generic:
+                    - img
+          - generic [ref=e183]:
+            - generic [ref=e184]:
+              - heading "Folders and files" [level=2] [ref=e185]
+              - table "Folders and files" [ref=e186]:
+                - rowgroup:
+                  - row "Name Last commit message Last commit date":
+                    - columnheader "Name"
+                    - columnheader "Last commit message":
+                      - generic "Last commit message"
+                    - columnheader "Last commit date":
+                      - generic "Last commit date"
+                - rowgroup [ref=e187]:
+                  - row "Latest commit author Antigravity Fix Rust formatting in core state success Commit 07b50a6 · Apr 3, 202628 minutes ago History 52 Commits" [ref=e188]:
+                    - cell "Latest commit author Antigravity Fix Rust formatting in core state success Commit 07b50a6 · Apr 3, 202628 minutes ago History 52 Commits" [ref=e189]:
+                      - generic [ref=e190]:
+                        - heading "Latest commit" [level=2] [ref=e191]
+                        - generic [ref=e192]:
+                          - generic [ref=e194]:
+                            - img "author" [ref=e195]
+                            - generic "Antigravity" [ref=e196]
+                          - generic [ref=e197]:
+                            - link "Fix Rust formatting in core state" [ref=e200] [cursor=pointer]:
+                              - /url: /jhwodchuck/EmberChamber/commit/07b50a6e2248e06344247d9dd07d8878561aa98c
+                            - button "success" [ref=e201] [cursor=pointer]:
+                              - img [ref=e202]
+                        - generic [ref=e204]:
+                          - generic [ref=e206]:
+                            - link "Commit 07b50a6" [ref=e207] [cursor=pointer]:
+                              - /url: /jhwodchuck/EmberChamber/commit/07b50a6e2248e06344247d9dd07d8878561aa98c
+                              - text: 07b50a6
+                            - text: ·
+                            - generic "Apr 3, 2026, 2:41 PM CDT" [ref=e208]: Apr 3, 202628 minutes ago
+                          - generic [ref=e209]:
+                            - heading "History" [level=2] [ref=e210]
+                            - link "52 Commits" [ref=e211] [cursor=pointer]:
+                              - /url: /jhwodchuck/EmberChamber/commits/main/
+                              - generic [ref=e212]:
+                                - generic:
+                                  - img
+                                - generic [ref=e213]: 52 Commits
+                  - row ".github/workflows, (Directory) Fix mobile CI workflow validation Apr 3, 202636 minutes ago" [ref=e214]:
+                    - cell ".github/workflows, (Directory)" [ref=e215]:
+                      - generic [ref=e216]:
+                        - img [ref=e217]
+                        - link ".github/workflows, (Directory)" [ref=e222] [cursor=pointer]:
+                          - /url: /jhwodchuck/EmberChamber/tree/main/.github/workflows
+                          - text: .github/workflows
+                    - cell "Fix mobile CI workflow validation" [ref=e223]:
+                      - link "Fix mobile CI workflow validation" [ref=e226] [cursor=pointer]:
+                        - /url: /jhwodchuck/EmberChamber/commit/3bdda14810ccea536150df59c34728b4014680e8
+                    - cell "Apr 3, 202636 minutes ago" [ref=e227]:
+                      - generic [ref=e228]: Apr 3, 202636 minutes ago
+                  - row "apps, (Directory) Optimize Android release generation Apr 3, 202648 minutes ago" [ref=e229]:
+                    - cell "apps, (Directory)" [ref=e230]:
+                      - generic [ref=e231]:
+                        - img [ref=e232]
+                        - link "apps, (Directory)" [ref=e237] [cursor=pointer]:
+                          - /url: /jhwodchuck/EmberChamber/tree/main/apps
+                          - text: apps
+                    - cell "Optimize Android release generation" [ref=e238]:
+                      - link "Optimize Android release generation" [ref=e241] [cursor=pointer]:
+                        - /url: /jhwodchuck/EmberChamber/commit/b0c52699606da7ec491850dee7306f8705cf72ec
+                    - cell "Apr 3, 202648 minutes ago" [ref=e242]:
+                      - generic [ref=e243]: Apr 3, 202648 minutes ago
+                  - 'row "brand, (Directory) fix: commit protocol types and relay/web source needed by CI Apr 2, 2026yesterday" [ref=e244]':
+                    - cell "brand, (Directory)" [ref=e245]:
+                      - generic [ref=e246]:
+                        - img [ref=e247]
+                        - link "brand, (Directory)" [ref=e252] [cursor=pointer]:
+                          - /url: /jhwodchuck/EmberChamber/tree/main/brand
+                          - text: brand
+                    - 'cell "fix: commit protocol types and relay/web source needed by CI" [ref=e253]':
+                      - 'link "fix: commit protocol types and relay/web source needed by CI" [ref=e256] [cursor=pointer]':
+                        - /url: /jhwodchuck/EmberChamber/commit/e9afa0ffc95f5d2ef062e6b877e87b9cfd80d95f
+                    - cell "Apr 2, 2026yesterday" [ref=e257]:
+                      - generic [ref=e258]: Apr 2, 2026yesterday
+                  - row "crates, (Directory) Fix Rust formatting in core state Apr 3, 202628 minutes ago" [ref=e259]:
+                    - cell "crates, (Directory)" [ref=e260]:
+                      - generic [ref=e261]:
+                        - img [ref=e262]
+                        - link "crates, (Directory)" [ref=e267] [cursor=pointer]:
+                          - /url: /jhwodchuck/EmberChamber/tree/main/crates
+                          - text: crates
+                    - cell "Fix Rust formatting in core state" [ref=e268]:
+                      - link "Fix Rust formatting in core state" [ref=e271] [cursor=pointer]:
+                        - /url: /jhwodchuck/EmberChamber/commit/07b50a6e2248e06344247d9dd07d8878561aa98c
+                    - cell "Apr 3, 202628 minutes ago" [ref=e272]:
+                      - generic [ref=e273]: Apr 3, 202628 minutes ago
+                  - row "docs, (Directory) Add Android FCM delivery and CI wiring Apr 3, 20261 hour ago" [ref=e274]:
+                    - cell "docs, (Directory)" [ref=e275]:
+                      - generic [ref=e276]:
+                        - img [ref=e277]
+                        - link "docs, (Directory)" [ref=e282] [cursor=pointer]:
+                          - /url: /jhwodchuck/EmberChamber/tree/main/docs
+                          - text: docs
+                    - cell "Add Android FCM delivery and CI wiring" [ref=e283]:
+                      - link "Add Android FCM delivery and CI wiring" [ref=e286] [cursor=pointer]:
+                        - /url: /jhwodchuck/EmberChamber/commit/ab1d02ed5078fc7198260ac8da417bac5790b7c4
+                    - cell "Apr 3, 20261 hour ago" [ref=e287]:
+                      - generic [ref=e288]: Apr 3, 20261 hour ago
+                  - 'row "infra, (Directory) feat: rebrand as emberchamber and wire beta deployment Apr 1, 20262 days ago" [ref=e289]':
+                    - cell "infra, (Directory)" [ref=e290]:
+                      - generic [ref=e291]:
+                        - img [ref=e292]
+                        - link "infra, (Directory)" [ref=e297] [cursor=pointer]:
+                          - /url: /jhwodchuck/EmberChamber/tree/main/infra
+                          - text: infra
+                    - 'cell "feat: rebrand as emberchamber and wire beta deployment" [ref=e298]':
+                      - 'link "feat: rebrand as emberchamber and wire beta deployment" [ref=e301] [cursor=pointer]':
+                        - /url: /jhwodchuck/EmberChamber/commit/0e5c4882c4ac7996685f0eb210be48028aee8cb0
+                    - cell "Apr 1, 20262 days ago" [ref=e302]:
+                      - generic [ref=e303]: Apr 1, 20262 days ago
+                  - row "packages, (Directory) Add Android FCM delivery and CI wiring Apr 3, 20261 hour ago" [ref=e304]:
+                    - cell "packages, (Directory)" [ref=e305]:
+                      - generic [ref=e306]:
+                        - img [ref=e307]
+                        - link "packages, (Directory)" [ref=e312] [cursor=pointer]:
+                          - /url: /jhwodchuck/EmberChamber/tree/main/packages
+                          - text: packages
+                    - cell "Add Android FCM delivery and CI wiring" [ref=e313]:
+                      - link "Add Android FCM delivery and CI wiring" [ref=e316] [cursor=pointer]:
+                        - /url: /jhwodchuck/EmberChamber/commit/ab1d02ed5078fc7198260ac8da417bac5790b7c4
+                    - cell "Apr 3, 20261 hour ago" [ref=e317]:
+                      - generic [ref=e318]: Apr 3, 20261 hour ago
+                  - 'row "scripts, (Directory) fix: commit protocol types and relay/web source needed by CI Apr 2, 2026yesterday" [ref=e319]':
+                    - cell "scripts, (Directory)" [ref=e320]:
+                      - generic [ref=e321]:
+                        - img [ref=e322]
+                        - link "scripts, (Directory)" [ref=e327] [cursor=pointer]:
+                          - /url: /jhwodchuck/EmberChamber/tree/main/scripts
+                          - text: scripts
+                    - 'cell "fix: commit protocol types and relay/web source needed by CI" [ref=e328]':
+                      - 'link "fix: commit protocol types and relay/web source needed by CI" [ref=e331] [cursor=pointer]':
+                        - /url: /jhwodchuck/EmberChamber/commit/e9afa0ffc95f5d2ef062e6b877e87b9cfd80d95f
+                    - cell "Apr 2, 2026yesterday" [ref=e332]:
+                      - generic [ref=e333]: Apr 2, 2026yesterday
+                  - 'row "services, (Directory) fix: commit protocol types and relay/web source needed by CI Apr 2, 2026yesterday" [ref=e334]':
+                    - cell "services, (Directory)" [ref=e335]:
+                      - generic [ref=e336]:
+                        - img [ref=e337]
+                        - link "services, (Directory)" [ref=e342] [cursor=pointer]:
+                          - /url: /jhwodchuck/EmberChamber/tree/main/services
+                          - text: services
+                    - 'cell "fix: commit protocol types and relay/web source needed by CI" [ref=e343]':
+                      - 'link "fix: commit protocol types and relay/web source needed by CI" [ref=e346] [cursor=pointer]':
+                        - /url: /jhwodchuck/EmberChamber/commit/e9afa0ffc95f5d2ef062e6b877e87b9cfd80d95f
+                    - cell "Apr 2, 2026yesterday" [ref=e347]:
+                      - generic [ref=e348]: Apr 2, 2026yesterday
+                  - 'row ".env.example, (File) chore: sync state Apr 2, 2026yesterday" [ref=e349]':
+                    - cell ".env.example, (File)" [ref=e350]:
+                      - generic [ref=e351]:
+                        - img [ref=e352]
+                        - link ".env.example, (File)" [ref=e357] [cursor=pointer]:
+                          - /url: /jhwodchuck/EmberChamber/blob/main/.env.example
+                          - text: .env.example
+                    - 'cell "chore: sync state" [ref=e358]':
+                      - 'link "chore: sync state" [ref=e361] [cursor=pointer]':
+                        - /url: /jhwodchuck/EmberChamber/commit/72bb3c4c3d9afb9f0b2e80373409758d13d100ea
+                    - cell "Apr 2, 2026yesterday" [ref=e362]:
+                      - generic [ref=e363]: Apr 2, 2026yesterday
+                  - 'row ".gitignore, (File) chore: ignore Play service account key Apr 3, 20269 hours ago" [ref=e364]':
+                    - cell ".gitignore, (File)" [ref=e365]:
+                      - generic [ref=e366]:
+                        - img [ref=e367]
+                        - link ".gitignore, (File)" [ref=e372] [cursor=pointer]:
+                          - /url: /jhwodchuck/EmberChamber/blob/main/.gitignore
+                          - text: .gitignore
+                    - 'cell "chore: ignore Play service account key" [ref=e373]':
+                      - 'link "chore: ignore Play service account key" [ref=e376] [cursor=pointer]':
+                        - /url: /jhwodchuck/EmberChamber/commit/67198857fb416d36f98e0ca1a365367fb8d91e0b
+                    - cell "Apr 3, 20269 hours ago" [ref=e377]:
+                      - generic [ref=e378]: Apr 3, 20269 hours ago
+                  - 'row ".vercelignore, (File) fix: vercelignore - allow packages/protocol and packages/shared for w… Apr 2, 202620 hours ago" [ref=e379]':
+                    - cell ".vercelignore, (File)" [ref=e380]:
+                      - generic [ref=e381]:
+                        - img [ref=e382]
+                        - link ".vercelignore, (File)" [ref=e387] [cursor=pointer]:
+                          - /url: /jhwodchuck/EmberChamber/blob/main/.vercelignore
+                          - text: .vercelignore
+                    - 'cell "fix: vercelignore - allow packages/protocol and packages/shared for w…" [ref=e388]':
+                      - 'link "fix: vercelignore - allow packages/protocol and packages/shared for w…" [ref=e391] [cursor=pointer]':
+                        - /url: /jhwodchuck/EmberChamber/commit/05ad0ecf87527319af81bc3bcdd787ea71d4e6eb
+                    - cell "Apr 2, 202620 hours ago" [ref=e392]:
+                      - generic [ref=e393]: Apr 2, 202620 hours ago
+                  - 'row "AGENTS.md, (File) fix: commit protocol types and relay/web source needed by CI Apr 2, 2026yesterday" [ref=e394]':
+                    - cell "AGENTS.md, (File)" [ref=e395]:
+                      - generic [ref=e396]:
+                        - img [ref=e397]
+                        - link "AGENTS.md, (File)" [ref=e402] [cursor=pointer]:
+                          - /url: /jhwodchuck/EmberChamber/blob/main/AGENTS.md
+                          - text: AGENTS.md
+                    - 'cell "fix: commit protocol types and relay/web source needed by CI" [ref=e403]':
+                      - 'link "fix: commit protocol types and relay/web source needed by CI" [ref=e406] [cursor=pointer]':
+                        - /url: /jhwodchuck/EmberChamber/commit/e9afa0ffc95f5d2ef062e6b877e87b9cfd80d95f
+                    - cell "Apr 2, 2026yesterday" [ref=e407]:
+                      - generic [ref=e408]: Apr 2, 2026yesterday
+                  - 'row "Cargo.toml, (File) chore: sync state Apr 2, 2026yesterday" [ref=e409]':
+                    - cell "Cargo.toml, (File)" [ref=e410]:
+                      - generic [ref=e411]:
+                        - img [ref=e412]
+                        - link "Cargo.toml, (File)" [ref=e417] [cursor=pointer]:
+                          - /url: /jhwodchuck/EmberChamber/blob/main/Cargo.toml
+                          - text: Cargo.toml
+                    - 'cell "chore: sync state" [ref=e418]':
+                      - 'link "chore: sync state" [ref=e421] [cursor=pointer]':
+                        - /url: /jhwodchuck/EmberChamber/commit/72bb3c4c3d9afb9f0b2e80373409758d13d100ea
+                    - cell "Apr 2, 2026yesterday" [ref=e422]:
+                      - generic [ref=e423]: Apr 2, 2026yesterday
+                  - 'row "Dockerfile.service, (File) feat: rebrand as emberchamber and wire beta deployment Apr 1, 20262 days ago" [ref=e424]':
+                    - cell "Dockerfile.service, (File)" [ref=e425]:
+                      - generic [ref=e426]:
+                        - img [ref=e427]
+                        - link "Dockerfile.service, (File)" [ref=e432] [cursor=pointer]:
+                          - /url: /jhwodchuck/EmberChamber/blob/main/Dockerfile.service
+                          - text: Dockerfile.service
+                    - 'cell "feat: rebrand as emberchamber and wire beta deployment" [ref=e433]':
+                      - 'link "feat: rebrand as emberchamber and wire beta deployment" [ref=e436] [cursor=pointer]':
+                        - /url: /jhwodchuck/EmberChamber/commit/0e5c4882c4ac7996685f0eb210be48028aee8cb0
+                    - cell "Apr 1, 20262 days ago" [ref=e437]:
+                      - generic [ref=e438]: Apr 1, 20262 days ago
+                  - 'row "README.md, (File) fix: commit protocol types and relay/web source needed by CI Apr 2, 2026yesterday" [ref=e439]':
+                    - cell "README.md, (File)" [ref=e440]:
+                      - generic [ref=e441]:
+                        - img [ref=e442]
+                        - link "README.md, (File)" [ref=e447] [cursor=pointer]:
+                          - /url: /jhwodchuck/EmberChamber/blob/main/README.md
+                          - text: README.md
+                    - 'cell "fix: commit protocol types and relay/web source needed by CI" [ref=e448]':
+                      - 'link "fix: commit protocol types and relay/web source needed by CI" [ref=e451] [cursor=pointer]':
+                        - /url: /jhwodchuck/EmberChamber/commit/e9afa0ffc95f5d2ef062e6b877e87b9cfd80d95f
+                    - cell "Apr 2, 2026yesterday" [ref=e452]:
+                      - generic [ref=e453]: Apr 2, 2026yesterday
+                  - row "package-lock.json, (File) Fix Android release verification Apr 3, 20261 hour ago" [ref=e454]:
+                    - cell "package-lock.json, (File)" [ref=e455]:
+                      - generic [ref=e456]:
+                        - img [ref=e457]
+                        - link "package-lock.json, (File)" [ref=e462] [cursor=pointer]:
+                          - /url: /jhwodchuck/EmberChamber/blob/main/package-lock.json
+                          - text: package-lock.json
+                    - cell "Fix Android release verification" [ref=e463]:
+                      - link "Fix Android release verification" [ref=e466] [cursor=pointer]:
+                        - /url: /jhwodchuck/EmberChamber/commit/f518855f88bace83eb2c2bf01cb4a35756c8ad34
+                    - cell "Apr 3, 20261 hour ago" [ref=e467]:
+                      - generic [ref=e468]: Apr 3, 20261 hour ago
+                  - 'row "package.json, (File) fix: commit protocol types and relay/web source needed by CI Apr 2, 2026yesterday" [ref=e469]':
+                    - cell "package.json, (File)" [ref=e470]:
+                      - generic [ref=e471]:
+                        - img [ref=e472]
+                        - link "package.json, (File)" [ref=e477] [cursor=pointer]:
+                          - /url: /jhwodchuck/EmberChamber/blob/main/package.json
+                          - text: package.json
+                    - 'cell "fix: commit protocol types and relay/web source needed by CI" [ref=e478]':
+                      - 'link "fix: commit protocol types and relay/web source needed by CI" [ref=e481] [cursor=pointer]':
+                        - /url: /jhwodchuck/EmberChamber/commit/e9afa0ffc95f5d2ef062e6b877e87b9cfd80d95f
+                    - cell "Apr 2, 2026yesterday" [ref=e482]:
+                      - generic [ref=e483]: Apr 2, 2026yesterday
+                  - 'row "pnpm-workspace.yaml, (File) feat(sprint-0): scaffold monorepo, Rust services, shared types, desig… Apr 1, 20262 days ago" [ref=e484]':
+                    - cell "pnpm-workspace.yaml, (File)" [ref=e485]:
+                      - generic [ref=e486]:
+                        - img [ref=e487]
+                        - link "pnpm-workspace.yaml, (File)" [ref=e492] [cursor=pointer]:
+                          - /url: /jhwodchuck/EmberChamber/blob/main/pnpm-workspace.yaml
+                          - text: pnpm-workspace.yaml
+                    - 'cell "feat(sprint-0): scaffold monorepo, Rust services, shared types, desig…" [ref=e493]':
+                      - 'link "feat(sprint-0): scaffold monorepo, Rust services, shared types, desig…" [ref=e496] [cursor=pointer]':
+                        - /url: /jhwodchuck/EmberChamber/commit/900b7fcc0ad457b4e3cdd0f6849d2b748eefb731
+                    - cell "Apr 1, 20262 days ago" [ref=e497]:
+                      - generic [ref=e498]: Apr 1, 20262 days ago
+                  - 'row "turbo.json, (File) feat(sprint-0): scaffold monorepo, Rust services, shared types, desig… Apr 1, 20262 days ago" [ref=e499]':
+                    - cell "turbo.json, (File)" [ref=e500]:
+                      - generic [ref=e501]:
+                        - img [ref=e502]
+                        - link "turbo.json, (File)" [ref=e507] [cursor=pointer]:
+                          - /url: /jhwodchuck/EmberChamber/blob/main/turbo.json
+                          - text: turbo.json
+                    - 'cell "feat(sprint-0): scaffold monorepo, Rust services, shared types, desig…" [ref=e508]':
+                      - 'link "feat(sprint-0): scaffold monorepo, Rust services, shared types, desig…" [ref=e511] [cursor=pointer]':
+                        - /url: /jhwodchuck/EmberChamber/commit/900b7fcc0ad457b4e3cdd0f6849d2b748eefb731
+                    - cell "Apr 1, 20262 days ago" [ref=e512]:
+                      - generic [ref=e513]: Apr 1, 20262 days ago
+                  - 'row "vercel.json, (File) fix: add vercel.json to override turbo build detection for web deploy Apr 2, 202620 hours ago" [ref=e514]':
+                    - cell "vercel.json, (File)" [ref=e515]:
+                      - generic [ref=e516]:
+                        - img [ref=e517]
+                        - link "vercel.json, (File)" [ref=e522] [cursor=pointer]:
+                          - /url: /jhwodchuck/EmberChamber/blob/main/vercel.json
+                          - text: vercel.json
+                    - 'cell "fix: add vercel.json to override turbo build detection for web deploy" [ref=e523]':
+                      - 'link "fix: add vercel.json to override turbo build detection for web deploy" [ref=e526] [cursor=pointer]':
+                        - /url: /jhwodchuck/EmberChamber/commit/060470e10e1884bc5e8ccaf644fd7229272ae51d
+                    - cell "Apr 2, 202620 hours ago" [ref=e527]:
+                      - generic [ref=e528]: Apr 2, 202620 hours ago
+            - generic [ref=e530]:
+              - generic [ref=e531]:
+                - heading "Repository files navigation" [level=2] [ref=e532]
+                - navigation "Repository files" [ref=e533]:
+                  - list [ref=e534]:
+                    - listitem [ref=e535]:
+                      - link "README" [ref=e536] [cursor=pointer]:
+                        - /url: "#"
+                        - img [ref=e538]
+                        - generic [ref=e540]: README
+                - button "Outline" [ref=e541] [cursor=pointer]:
+                  - img [ref=e542]
+              - article [ref=e545]:
+                - generic [ref=e546]:
+                  - heading "EmberChamber" [level=1] [ref=e547]
+                  - 'link "Permalink: EmberChamber" [ref=e548] [cursor=pointer]':
+                    - /url: "#emberchamber"
+                    - img [ref=e549]
+                - paragraph [ref=e551]:
+                  - link "EmberChamber" [ref=e552] [cursor=pointer]:
+                    - /url: /jhwodchuck/EmberChamber/blob/main/brand/emberchamber-lockup.svg
+                    - img "EmberChamber" [ref=e553]
+                - blockquote [ref=e554]:
+                  - paragraph [ref=e555]:
+                    - strong [ref=e556]: Invite-only encrypted messaging for trusted circles.
+                    - text: EmberChamber is being rebuilt as a local-first beta for Android, Windows, Ubuntu, and web with a minimal hosted relay and private email bootstrap. iPhone and macOS remain deferred.
+                - paragraph [ref=e557]:
+                  - 'link "License: MIT" [ref=e558] [cursor=pointer]':
+                    - /url: /jhwodchuck/EmberChamber/blob/main/LICENSE
+                    - 'img "License: MIT" [ref=e559]'
+                - generic [ref=e560]:
+                  - heading "Current Direction" [level=2] [ref=e561]
+                  - 'link "Permalink: Current Direction" [ref=e562] [cursor=pointer]':
+                    - /url: "#current-direction"
+                    - img [ref=e563]
+                - paragraph [ref=e565]: EmberChamber is no longer targeting a Telegram-like centralized MVP.
+                - paragraph [ref=e566]: "The repo now pivots toward:"
+                - list [ref=e567]:
+                  - listitem [ref=e568]:
+                    - code [ref=e569]: email magic link + optional passkey
+                    - text: bootstrap auth
+                  - listitem [ref=e570]:
+                    - code [ref=e571]: migrating toward true E2EE DMs
+                    - text: and
+                    - code [ref=e572]: small E2EE groups
+                  - listitem [ref=e573]:
+                    - code [ref=e574]: invite-only beta access
+                  - listitem [ref=e575]:
+                    - code [ref=e576]: local-first message history
+                  - listitem [ref=e577]:
+                    - code [ref=e578]: Cloudflare Workers + Durable Objects + D1 + R2
+                    - text: as the minimal relay
+                  - listitem [ref=e579]:
+                    - code [ref=e580]: Android + Windows + Ubuntu + web
+                    - text: as the first committed beta surfaces
+                  - listitem [ref=e581]:
+                    - code [ref=e582]: iPhone + macOS
+                    - text: deferred until the first-wave surfaces are stable enough to justify the extra review and reliability work
+                - paragraph [ref=e583]: "What EmberChamber is not:"
+                - list [ref=e584]:
+                  - listitem [ref=e585]: not a public social network
+                  - listitem [ref=e586]: not a channel/discovery platform in beta
+                  - listitem [ref=e587]: not phone-number based
+                  - listitem [ref=e588]: not tied to Google auth
+                  - listitem [ref=e589]: not “perfect anonymity” or “pure P2P forever”
+                - generic [ref=e590]:
+                  - heading "Repo Status" [level=2] [ref=e591]
+                  - 'link "Permalink: Repo Status" [ref=e592] [cursor=pointer]':
+                    - /url: "#repo-status"
+                    - img [ref=e593]
+                - paragraph [ref=e595]: "Working beta scaffolds now in this repo:"
+                - list [ref=e596]:
+                  - listitem [ref=e597]:
+                    - code [ref=e598]: apps/relay
+                    - text: ": Cloudflare relay/control plane scaffold"
+                  - listitem [ref=e599]:
+                    - code [ref=e600]: apps/mobile
+                    - text: ": Expo Android and iPhone client scaffold"
+                  - listitem [ref=e601]:
+                    - code [ref=e602]: apps/desktop
+                    - text: ": Tauri desktop beta shell with bundled local frontend"
+                  - listitem [ref=e603]:
+                    - code [ref=e604]: apps/web
+                    - text: ": public site plus secondary-but-capable web messaging workspace"
+                  - listitem [ref=e605]:
+                    - code [ref=e606]: crates/core
+                    - text: ": Rust local-first sync and secure-state scaffold"
+                  - listitem [ref=e607]:
+                    - code [ref=e608]: crates/relay-protocol
+                    - text: ": canonical Rust relay and envelope contracts"
+                  - listitem [ref=e609]:
+                    - code [ref=e610]: packages/protocol
+                    - text: ": TypeScript mirror of relay contracts"
+                - paragraph [ref=e611]: "Legacy prototype paths retained temporarily:"
+                - list [ref=e612]:
+                  - listitem [ref=e613]:
+                    - code [ref=e614]: apps/api
+                    - text: ": Express/Postgres prototype, now legacy"
+                  - listitem [ref=e615]:
+                    - code [ref=e616]: infra/docker-compose.yml
+                    - text: ": legacy centralized stack"
+                  - listitem [ref=e617]:
+                    - code [ref=e618]: services/
+                    - text: "and several older Rust scaffolds: not part of the active beta runtime"
+                - paragraph [ref=e619]: "Current implementation reality:"
+                - list [ref=e620]:
+                  - listitem [ref=e621]: relay-native bootstrap, sessions, privacy settings, group creation/invites, relay-hosted group threads, and signed attachment tickets are live
+                  - listitem [ref=e622]: the encrypted mailbox and device-bundle path now powers the browser DM flow, but the user-facing encrypted-group migration is still incomplete
+                  - listitem [ref=e623]: current relay-native group threads store readable text in D1 and current attachment uploads are raw blobs in R2
+                  - listitem [ref=e624]: the web workspace now runs on relay APIs for authenticated messaging, joined-space search, invites, and settings
+                - generic [ref=e625]:
+                  - heading "Beta Product Direction" [level=2] [ref=e626]
+                  - 'link "Permalink: Beta Product Direction" [ref=e627] [cursor=pointer]':
+                    - /url: "#beta-product-direction"
+                    - img [ref=e628]
+                - paragraph [ref=e630]: "The intended beta surface includes:"
+                - list [ref=e631]:
+                  - listitem [ref=e632]: adults-only invite-gated access with explicit 18+ affirmation
+                  - listitem [ref=e633]: invite-only signup
+                  - listitem [ref=e634]: email magic-link auth
+                  - listitem [ref=e635]: optional passkey enrollment later
+                  - listitem [ref=e636]: web messaging, search, invite review, and settings as a secondary surface
+                  - listitem [ref=e637]: pseudonymous display names and handles as the social identity
+                  - listitem [ref=e638]: per-device key registration
+                  - listitem [ref=e639]: ciphertext mailbox delivery for direct messages
+                  - listitem [ref=e640]: small groups capped at 12 members
+                  - listitem [ref=e641]: organizer/admin-controlled invites in phase 1
+                  - listitem [ref=e642]: standard media defaults globally, with stronger per-group protections when organizers opt in
+                  - listitem [ref=e643]: signed attachment upload/download with private-vault defaults
+                  - listitem [ref=e644]: local search on device
+                  - listitem [ref=e645]: blocking and disclosure-based reporting
+                  - listitem [ref=e646]: 2-device support
+                - paragraph [ref=e647]: "Deferred beyond first beta:"
+                - list [ref=e648]:
+                  - listitem [ref=e649]: public-discovery-first growth loops
+                  - listitem [ref=e650]: large public-community channel strategy
+                  - listitem [ref=e651]: phone-number identity
+                  - listitem [ref=e652]: voice/video calling
+                  - listitem [ref=e653]: server-side search over private content
+                - generic [ref=e654]:
+                  - heading "Architecture Snapshot" [level=2] [ref=e655]
+                  - 'link "Permalink: Architecture Snapshot" [ref=e656] [cursor=pointer]':
+                    - /url: "#architecture-snapshot"
+                    - img [ref=e657]
+                - region "mermaid rendered output container" [ref=e659]:
+                  - generic [ref=e660]:
+                    - generic [ref=e661]:
+                      - group [ref=e662]:
+                        - button "Open dialog" [ref=e663] [cursor=pointer]:
+                          - img [ref=e664]
+                      - button "Copy mermaid code" [ref=e666] [cursor=pointer]:
+                        - img [ref=e667]
+                    - iframe [ref=e671]:
+                      - generic [active]:
+                        - document [ref=f1e4]:
+                          - generic [ref=f1e6]:
+                            - generic [ref=f1e7]:
+                              - paragraph [ref=f1e14]: Minimal Hosted Relay
+                              - paragraph [ref=f1e21]: Shared Secure Core
+                              - paragraph [ref=f1e28]: Client Layer
+                            - generic [ref=f1e38]:
+                              - paragraph [ref=f1e45]: Expo Mobile Client
+                              - paragraph [ref=f1e52]: Tauri Desktop Client
+                              - paragraph [ref=f1e59]:
+                                - text: Next.js Web App
+                                - text: Relay-First Surface
+                              - paragraph [ref=f1e66]:
+                                - text: crates/core
+                                - text: Local-first sync + state
+                              - paragraph [ref=f1e73]: packages/protocol + crates/relay-protocol
+                              - paragraph [ref=f1e80]: Cloudflare Worker API
+                              - paragraph [ref=f1e87]: DeviceMailboxDO
+                              - paragraph [ref=f1e94]: GroupCoordinatorDO
+                              - paragraph [ref=f1e101]: RateLimitDO
+                              - paragraph [ref=f1e108]: D1 metadata
+                              - paragraph [ref=f1e115]: R2 attachment blobs
+                              - paragraph [ref=f1e122]: "Queues: email / push / cleanup"
+                              - paragraph [ref=f1e129]:
+                                - text: Legacy apps/api
+                                - text: Retained prototype only
+                        - generic [ref=f1e130]:
+                          - button "Zoom in" [ref=f1e131] [cursor=pointer]:
+                            - img [ref=f1e132]
+                          - button "Zoom out" [ref=f1e135] [cursor=pointer]:
+                            - img [ref=f1e136]
+                          - button "Reset view" [ref=f1e139] [cursor=pointer]:
+                            - img [ref=f1e140]
+                          - button "Pan up" [ref=f1e142] [cursor=pointer]:
+                            - img [ref=f1e143]
+                          - button "Pan down" [ref=f1e145] [cursor=pointer]:
+                            - img [ref=f1e146]
+                          - button "Pan left" [ref=f1e148] [cursor=pointer]:
+                            - img [ref=f1e149]
+                          - button "Pan right" [ref=f1e151] [cursor=pointer]:
+                            - img [ref=f1e152]
+                  - generic [ref=e672]:
+                    - img [ref=e673]
+                    - generic [ref=e676]: Loading
+                - generic [ref=e677]:
+                  - heading "Auth Model" [level=2] [ref=e678]
+                  - 'link "Permalink: Auth Model" [ref=e679] [cursor=pointer]':
+                    - /url: "#auth-model"
+                    - img [ref=e680]
+                - list [ref=e682]:
+                  - listitem [ref=e683]: Email is private and used only for auth and recovery.
+                  - listitem [ref=e684]: Beta access is adults-only and currently uses a self-attested 18+ confirmation step.
+                  - listitem [ref=e685]: New beta accounts require a beta invite token or a qualifying group invite.
+                  - listitem [ref=e686]:
+                    - code [ref=e687]: POST /v1/auth/start
+                    - text: creates a 10-minute magic-link challenge.
+                  - listitem [ref=e688]:
+                    - code [ref=e689]: POST /v1/auth/complete
+                    - text: consumes the link and issues device-bound session tokens.
+                  - listitem [ref=e690]: Passkeys are scaffolded in the protocol but not yet fully wired in the relay runtime.
+                  - listitem [ref=e691]: Recovery after total device loss still needs a fuller trusted-device flow and safety-change handling.
+                - generic [ref=e692]:
+                  - heading "Relay Model" [level=2] [ref=e693]
+                  - 'link "Permalink: Relay Model" [ref=e694] [cursor=pointer]':
+                    - /url: "#relay-model"
+                    - img [ref=e695]
+                - paragraph [ref=e697]: "The relay stores:"
+                - list [ref=e698]:
+                  - listitem [ref=e699]: attachment blobs uploaded through signed tickets
+                  - listitem [ref=e700]: ciphertext message envelopes until ack
+                  - listitem [ref=e701]: public key bundles and mailbox metadata
+                  - listitem [ref=e702]: account/session/device metadata
+                  - listitem [ref=e703]: invite and group membership metadata
+                  - listitem [ref=e704]:
+                    - text: relay-hosted group thread text and attachment metadata in the current
+                    - code [ref=e705]: /v1/groups/*
+                    - text: flow
+                - paragraph [ref=e706]: "The target end state does not aim to store:"
+                - list [ref=e707]:
+                  - listitem [ref=e708]: decrypted DM or group history
+                  - listitem [ref=e709]: server-side search indexes for private messages
+                  - listitem [ref=e710]: public contact discovery graphs
+                - generic [ref=e711]:
+                  - heading "Local Development" [level=2] [ref=e712]
+                  - 'link "Permalink: Local Development" [ref=e713] [cursor=pointer]':
+                    - /url: "#local-development"
+                    - img [ref=e714]
+                - generic [ref=e716]:
+                  - heading "Web app + relay" [level=3] [ref=e717]
+                  - 'link "Permalink: Web app + relay" [ref=e718] [cursor=pointer]':
+                    - /url: "#web-app--relay"
+                    - img [ref=e719]
+                - generic [ref=e721]:
+                  - generic [ref=e722]: npm install cp .env.example .env cp apps/web/.env.example apps/web/.env.local npm run build --workspace=packages/protocol npm run dev
+                  - button "Copy" [ref=e724] [cursor=pointer]:
+                    - img [ref=e725]
+                - generic [ref=e728]:
+                  - heading "Relay migrations" [level=3] [ref=e729]
+                  - 'link "Permalink: Relay migrations" [ref=e730] [cursor=pointer]':
+                    - /url: "#relay-migrations"
+                    - img [ref=e731]
+                - generic [ref=e733]:
+                  - generic [ref=e734]: cd apps/relay npx wrangler d1 migrations apply emberchamber-relay-dev --local
+                  - button "Copy" [ref=e736] [cursor=pointer]:
+                    - img [ref=e737]
+                - generic [ref=e740]:
+                  - heading "Desktop shell" [level=3] [ref=e741]
+                  - 'link "Permalink: Desktop shell" [ref=e742] [cursor=pointer]':
+                    - /url: "#desktop-shell"
+                    - img [ref=e743]
+                - generic [ref=e745]:
+                  - generic [ref=e746]: npm run dev:desktop
+                  - button "Copy" [ref=e748] [cursor=pointer]:
+                    - img [ref=e749]
+                - generic [ref=e752]:
+                  - heading "Ubuntu local test lane" [level=3] [ref=e753]
+                  - 'link "Permalink: Ubuntu local test lane" [ref=e754] [cursor=pointer]':
+                    - /url: "#ubuntu-local-test-lane"
+                    - img [ref=e755]
+                - generic [ref=e757]:
+                  - generic [ref=e758]: npm run ubuntu:ready
+                  - button "Copy" [ref=e760] [cursor=pointer]:
+                    - img [ref=e761]
+                - paragraph [ref=e764]:
+                  - text: That prepares the local relay, seeds the reusable
+                  - code [ref=e765]: ubuntu-local-test-invite
+                  - text: token, builds and installs the Ubuntu desktop package, and leaves the relay running in a detached
+                  - code [ref=e766]: screen
+                  - text: session named
+                  - code [ref=e767]: ember-relay
+                  - text: .
+                - paragraph [ref=e768]: When the desktop app opens without a saved relay override, it adopts the local relay automatically and prefills that real local beta invite token for the Ubuntu smoke-test path.
+                - generic [ref=e769]:
+                  - heading "Android-first mobile scaffold" [level=3] [ref=e770]
+                  - 'link "Permalink: Android-first mobile scaffold" [ref=e771] [cursor=pointer]':
+                    - /url: "#android-first-mobile-scaffold"
+                    - img [ref=e772]
+                - generic [ref=e774]:
+                  - generic [ref=e775]: npm run dev:mobile
+                  - button "Copy" [ref=e777] [cursor=pointer]:
+                    - img [ref=e778]
+                - generic [ref=e781]:
+                  - heading "Verification Targets" [level=2] [ref=e782]
+                  - 'link "Permalink: Verification Targets" [ref=e783] [cursor=pointer]':
+                    - /url: "#verification-targets"
+                    - img [ref=e784]
+                - paragraph [ref=e786]: "The new beta scaffold should verify cleanly with:"
+                - list [ref=e787]:
+                  - listitem [ref=e788]:
+                    - code [ref=e789]: npm run build --workspace=packages/protocol
+                  - listitem [ref=e790]:
+                    - code [ref=e791]: npm run build --workspace=apps/relay
+                  - listitem [ref=e792]:
+                    - code [ref=e793]: npm run build --workspace=apps/web
+                  - listitem [ref=e794]:
+                    - code [ref=e795]: npm test --workspace=apps/relay
+                  - listitem [ref=e796]:
+                    - code [ref=e797]: cargo test -p emberchamber-core -p emberchamber-relay-protocol
+                  - listitem [ref=e798]:
+                    - code [ref=e799]: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
+                - generic [ref=e800]:
+                  - heading "Documentation" [level=2] [ref=e801]
+                  - 'link "Permalink: Documentation" [ref=e802] [cursor=pointer]':
+                    - /url: "#documentation"
+                    - img [ref=e803]
+                - list [ref=e805]:
+                  - listitem [ref=e806]:
+                    - text: "Docs index:"
+                    - link "docs/README.md" [ref=e807] [cursor=pointer]:
+                      - /url: /jhwodchuck/EmberChamber/blob/main/docs/README.md
+                      - code [ref=e808]: docs/README.md
+                  - listitem [ref=e809]:
+                    - text: "Architecture:"
+                    - link "docs/architecture.md" [ref=e810] [cursor=pointer]:
+                      - /url: /jhwodchuck/EmberChamber/blob/main/docs/architecture.md
+                      - code [ref=e811]: docs/architecture.md
+                  - listitem [ref=e812]:
+                    - text: "Launch targets:"
+                    - link "docs/launch-targets.md" [ref=e813] [cursor=pointer]:
+                      - /url: /jhwodchuck/EmberChamber/blob/main/docs/launch-targets.md
+                      - code [ref=e814]: docs/launch-targets.md
+                  - listitem [ref=e815]:
+                    - text: "Ubuntu install and test:"
+                    - link "docs/ubuntu-install-and-test.md" [ref=e816] [cursor=pointer]:
+                      - /url: /jhwodchuck/EmberChamber/blob/main/docs/ubuntu-install-and-test.md
+                      - code [ref=e817]: docs/ubuntu-install-and-test.md
+                  - listitem [ref=e818]:
+                    - text: "Roadmap:"
+                    - link "docs/roadmap.md" [ref=e819] [cursor=pointer]:
+                      - /url: /jhwodchuck/EmberChamber/blob/main/docs/roadmap.md
+                      - code [ref=e820]: docs/roadmap.md
+                  - listitem [ref=e821]:
+                    - text: "Relay API:"
+                    - link "docs/api/relay-http.md" [ref=e822] [cursor=pointer]:
+                      - /url: /jhwodchuck/EmberChamber/blob/main/docs/api/relay-http.md
+                      - code [ref=e823]: docs/api/relay-http.md
+                  - listitem [ref=e824]:
+                    - text: "Web app:"
+                    - link "apps/web/README.md" [ref=e825] [cursor=pointer]:
+                      - /url: /jhwodchuck/EmberChamber/blob/main/apps/web/README.md
+                      - code [ref=e826]: apps/web/README.md
+                  - listitem [ref=e827]:
+                    - text: "Operator playbook:"
+                    - link "docs/operator-playbook.md" [ref=e828] [cursor=pointer]:
+                      - /url: /jhwodchuck/EmberChamber/blob/main/docs/operator-playbook.md
+                      - code [ref=e829]: docs/operator-playbook.md
+                  - listitem [ref=e830]:
+                    - text: "Legacy prototype API spec:"
+                    - link "docs/api/openapi.yaml" [ref=e831] [cursor=pointer]:
+                      - /url: /jhwodchuck/EmberChamber/blob/main/docs/api/openapi.yaml
+                      - code [ref=e832]: docs/api/openapi.yaml
+                - generic [ref=e833]:
+                  - heading "Web App" [level=2] [ref=e834]
+                  - 'link "Permalink: Web App" [ref=e835] [cursor=pointer]':
+                    - /url: "#web-app"
+                    - img [ref=e836]
+                - paragraph [ref=e838]: The Next.js app now includes public and authenticated routes.
+                - paragraph [ref=e839]: "Public routes:"
+                - list [ref=e840]:
+                  - listitem [ref=e841]:
+                    - code [ref=e842]: /
+                    - text: for positioning and launch framing
+                  - listitem [ref=e843]:
+                    - code [ref=e844]: /start
+                    - text: for first-time routing
+                  - listitem [ref=e845]:
+                    - code [ref=e846]: /download
+                    - text: for target-platform guidance
+                  - listitem [ref=e847]:
+                    - code [ref=e848]: /privacy
+                    - text: for high-level privacy commitments
+                  - listitem [ref=e849]:
+                    - code [ref=e850]: /beta-terms
+                    - text: for controlled-beta expectations
+                  - listitem [ref=e851]:
+                    - code [ref=e852]: /trust-and-safety
+                    - text: for the anti-abuse boundary model
+                  - listitem [ref=e853]:
+                    - code [ref=e854]: /support
+                    - text: for recovery and reporting guidance
+                  - listitem [ref=e855]:
+                    - code [ref=e856]: /login
+                    - text: ","
+                    - code [ref=e857]: /register
+                    - text: ", and"
+                    - code [ref=e858]: /auth/complete
+                    - text: for bootstrap auth
+                  - listitem [ref=e859]:
+                    - code [ref=e860]: /invite/[code]
+                    - text: and
+                    - code [ref=e861]: /invite/[groupId]/[token]
+                    - text: for invite landing and acceptance
+                - paragraph [ref=e862]: "Authenticated web workspace routes:"
+                - list [ref=e863]:
+                  - listitem [ref=e864]:
+                    - code [ref=e865]: /app
+                    - text: for the web workspace home
+                  - listitem [ref=e866]:
+                    - code [ref=e867]: /app/new-dm
+                    - text: and
+                    - code [ref=e868]: /app/chat/[id]
+                    - text: for direct messaging
+                  - listitem [ref=e869]:
+                    - code [ref=e870]: /app/new-group
+                    - text: for group creation
+                  - listitem [ref=e871]:
+                    - code [ref=e872]: /app/new-channel
+                    - text: as a later-beta placeholder for community-room work
+                  - listitem [ref=e873]:
+                    - code [ref=e874]: /app/channel/[id]
+                    - text: for the retired legacy-channel notice
+                  - listitem [ref=e875]:
+                    - code [ref=e876]: /app/search
+                    - text: for workspace search
+                  - listitem [ref=e877]:
+                    - code [ref=e878]: /app/discover
+                    - text: for invite preview and join
+                  - listitem [ref=e879]:
+                    - code [ref=e880]: /app/settings
+                    - text: for account, session, and privacy controls
+                - paragraph [ref=e881]: "Current backend split:"
+                - list [ref=e882]:
+                  - listitem [ref=e883]: "relay-native: onboarding, adults-only affirmation, invite landing/preview, DM chat, joined-space search, profile and privacy settings, session review, group creation, and group invite creation/acceptance"
+                  - listitem [ref=e884]:
+                    - text: legacy
+                    - code [ref=e885]: apps/api
+                    - text: ": retained prototype only, not part of the active authenticated web workspace"
+                - paragraph [ref=e886]: The web app remains useful, but Android and desktop are still the preferred primary-use surfaces.
+        - generic [ref=e890]:
+          - generic [ref=e893]:
+            - heading "About" [level=2] [ref=e894]
+            - generic [ref=e895]: No description, website, or topics provided.
+            - heading "Resources" [level=3] [ref=e896]
+            - link "Readme" [ref=e898] [cursor=pointer]:
+              - /url: "#readme-ov-file"
+              - img [ref=e899]
+              - text: Readme
+            - link "Activity" [ref=e902] [cursor=pointer]:
+              - /url: /jhwodchuck/EmberChamber/activity
+              - img [ref=e903]
+              - text: Activity
+            - heading "Stars" [level=3] [ref=e905]
+            - link "0 stars" [ref=e907] [cursor=pointer]:
+              - /url: /jhwodchuck/EmberChamber/stargazers
+              - img [ref=e908]
+              - strong [ref=e910]: "0"
+              - text: stars
+            - heading "Watchers" [level=3] [ref=e911]
+            - link "0 watching" [ref=e913] [cursor=pointer]:
+              - /url: /jhwodchuck/EmberChamber/watchers
+              - img [ref=e914]
+              - strong [ref=e916]: "0"
+              - text: watching
+            - heading "Forks" [level=3] [ref=e917]
+            - link "0 forks" [ref=e919] [cursor=pointer]:
+              - /url: /jhwodchuck/EmberChamber/forks
+              - img [ref=e920]
+              - strong [ref=e922]: "0"
+              - text: forks
+            - link "Report repository" [ref=e924] [cursor=pointer]:
+              - /url: /contact/report-content?content_url=https%3A%2F%2Fgithub.com%2Fjhwodchuck%2FEmberChamber&report=jhwodchuck+%28user%29
+          - generic [ref=e926]:
+            - heading "Releases" [level=2] [ref=e927]:
+              - link "Releases" [ref=e928] [cursor=pointer]:
+                - /url: /jhwodchuck/EmberChamber/releases
+            - link "9 tags" [ref=e929] [cursor=pointer]:
+              - /url: /jhwodchuck/EmberChamber/tags
+              - img [ref=e930]
+              - text: 9 tags
+          - generic [ref=e933]:
+            - heading "Packages" [level=2] [ref=e934]:
+              - link "Packages" [ref=e935] [cursor=pointer]:
+                - /url: /users/jhwodchuck/packages?repo_name=EmberChamber
+            - generic [ref=e936]: No packages published
+          - generic [ref=e938]:
+            - heading "Contributors 2" [level=2] [ref=e939]:
+              - link "Contributors 2" [ref=e940] [cursor=pointer]:
+                - /url: /jhwodchuck/EmberChamber/graphs/contributors
+                - text: Contributors
+                - generic "2" [ref=e941]
+            - list [ref=e942]:
+              - listitem [ref=e943]:
+                - link "@jhwodchuck" [ref=e944] [cursor=pointer]:
+                  - /url: https://github.com/jhwodchuck
+                  - img "@jhwodchuck" [ref=e945]
+                - link "jhwodchuck" [ref=e947] [cursor=pointer]:
+                  - /url: https://github.com/jhwodchuck
+                  - strong [ref=e948]: jhwodchuck
+              - listitem [ref=e949]:
+                - link "@Copilot" [ref=e950] [cursor=pointer]:
+                  - /url: https://github.com/apps/copilot-swe-agent
+                  - img "@Copilot" [ref=e951]
+                - link "Copilot" [ref=e953] [cursor=pointer]:
+                  - /url: https://github.com/apps/copilot-swe-agent
+                  - strong [ref=e954]: Copilot
+          - generic [ref=e956]:
+            - heading "Languages" [level=2] [ref=e957]
+            - list [ref=e967]:
+              - listitem [ref=e968]:
+                - link "TypeScript 81.9%" [ref=e969] [cursor=pointer]:
+                  - /url: /jhwodchuck/EmberChamber/search?l=typescript
+                  - img [ref=e970]
+                  - generic [ref=e972]: TypeScript
+                  - generic [ref=e973]: 81.9%
+              - listitem [ref=e974]:
+                - link "HTML 12.2%" [ref=e975] [cursor=pointer]:
+                  - /url: /jhwodchuck/EmberChamber/search?l=html
+                  - img [ref=e976]
+                  - generic [ref=e978]: HTML
+                  - generic [ref=e979]: 12.2%
+              - listitem [ref=e980]:
+                - link "Rust 3.1%" [ref=e981] [cursor=pointer]:
+                  - /url: /jhwodchuck/EmberChamber/search?l=rust
+                  - img [ref=e982]
+                  - generic [ref=e984]: Rust
+                  - generic [ref=e985]: 3.1%
+              - listitem [ref=e986]:
+                - link "CSS 1.4%" [ref=e987] [cursor=pointer]:
+                  - /url: /jhwodchuck/EmberChamber/search?l=css
+                  - img [ref=e988]
+                  - generic [ref=e990]: CSS
+                  - generic [ref=e991]: 1.4%
+              - listitem [ref=e992]:
+                - link "JavaScript 0.7%" [ref=e993] [cursor=pointer]:
+                  - /url: /jhwodchuck/EmberChamber/search?l=javascript
+                  - img [ref=e994]
+                  - generic [ref=e996]: JavaScript
+                  - generic [ref=e997]: 0.7%
+              - listitem [ref=e998]:
+                - link "Shell 0.6%" [ref=e999] [cursor=pointer]:
+                  - /url: /jhwodchuck/EmberChamber/search?l=shell
+                  - img [ref=e1000]
+                  - generic [ref=e1002]: Shell
+                  - generic [ref=e1003]: 0.6%
+              - listitem [ref=e1004]:
+                - link "Dockerfile 0.1%" [ref=e1005] [cursor=pointer]:
+                  - /url: /jhwodchuck/EmberChamber/search?l=dockerfile
+                  - img [ref=e1006]
+                  - generic [ref=e1008]: Dockerfile
+                  - generic [ref=e1009]: 0.1%
+  - contentinfo [ref=e1011]:
+    - heading "Footer" [level=2] [ref=e1012]
+    - generic [ref=e1013]:
+      - generic [ref=e1014]:
+        - link "GitHub Homepage" [ref=e1015] [cursor=pointer]:
+          - /url: https://github.com
+          - img [ref=e1016]
+        - generic [ref=e1018]: © 2026 GitHub, Inc.
+      - navigation "Footer" [ref=e1019]:
+        - heading "Footer navigation" [level=3] [ref=e1020]
+        - list "Footer navigation" [ref=e1021]:
+          - listitem [ref=e1022]:
+            - link "Terms" [ref=e1023] [cursor=pointer]:
+              - /url: https://docs.github.com/site-policy/github-terms/github-terms-of-service
+          - listitem [ref=e1024]:
+            - link "Privacy" [ref=e1025] [cursor=pointer]:
+              - /url: https://docs.github.com/site-policy/privacy-policies/github-privacy-statement
+          - listitem [ref=e1026]:
+            - link "Security" [ref=e1027] [cursor=pointer]:
+              - /url: https://github.com/security
+          - listitem [ref=e1028]:
+            - link "Status" [ref=e1029] [cursor=pointer]:
+              - /url: https://www.githubstatus.com/
+          - listitem [ref=e1030]:
+            - link "Community" [ref=e1031] [cursor=pointer]:
+              - /url: https://github.community/
+          - listitem [ref=e1032]:
+            - link "Docs" [ref=e1033] [cursor=pointer]:
+              - /url: https://docs.github.com/
+          - listitem [ref=e1034]:
+            - link "Contact" [ref=e1035] [cursor=pointer]:
+              - /url: https://support.github.com?tags=dotcom-footer
+          - listitem [ref=e1036]:
+            - button "Manage cookies" [ref=e1038] [cursor=pointer]
+          - listitem [ref=e1039]:
+            - button "Do not share my personal information" [ref=e1041] [cursor=pointer]

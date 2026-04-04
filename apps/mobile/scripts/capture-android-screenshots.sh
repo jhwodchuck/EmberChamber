@@ -35,10 +35,30 @@ if [[ -z "$LAUNCH_ACTIVITY" || "$LAUNCH_ACTIVITY" == "No activity found" ]]; the
   exit 1
 fi
 
-adb shell am start -W -n "$LAUNCH_ACTIVITY"
+adb shell am start -n "$LAUNCH_ACTIVITY" >/dev/null
 
-# Wait for first render and async initialization.
-sleep 12
+# Wait for the launcher activity to actually become foregrounded. Some
+# emulator/release combinations hang on `am start -W` even when the app has
+# launched successfully, so keep this polling explicit and bounded.
+for _ in $(seq 1 30); do
+  CURRENT_FOCUS="$(adb shell dumpsys window windows | tr -d '\r' | grep -F 'mCurrentFocus=' || true)"
+  if [[ "$CURRENT_FOCUS" == *"$PACKAGE_NAME"* ]]; then
+    break
+  fi
+  sleep 1
+done
+
+# Wait for first render and async initialization after focus is acquired.
+sleep 8
+
+capture_png() {
+  local target="$1"
+  local remote_path="/sdcard/emberchamber-screencap.png"
+
+  adb shell screencap -p "$remote_path" >/dev/null
+  adb pull "$remote_path" "$target" >/dev/null
+  adb shell rm -f "$remote_path" >/dev/null
+}
 
 tap_text() {
   local target="$1"
@@ -70,18 +90,18 @@ PY
   return 1
 }
 
-adb exec-out screencap -p > "$OUTPUT_DIR/01-${DEVICE_CLASS}-onboarding-top.png"
+capture_png "$OUTPUT_DIR/01-${DEVICE_CLASS}-onboarding-top.png"
 
 tap_text "Add beta invite token" || true
 sleep 2
-adb exec-out screencap -p > "$OUTPUT_DIR/02-${DEVICE_CLASS}-invite-expanded.png"
+capture_png "$OUTPUT_DIR/02-${DEVICE_CLASS}-invite-expanded.png"
 
 adb shell input swipe 540 1500 540 900 450 || true
 sleep 1
-adb exec-out screencap -p > "$OUTPUT_DIR/03-${DEVICE_CLASS}-mid-form.png"
+capture_png "$OUTPUT_DIR/03-${DEVICE_CLASS}-mid-form.png"
 
 adb shell input swipe 540 1500 540 700 450 || true
 sleep 1
-adb exec-out screencap -p > "$OUTPUT_DIR/04-${DEVICE_CLASS}-bottom-form.png"
+capture_png "$OUTPUT_DIR/04-${DEVICE_CLASS}-bottom-form.png"
 
 echo "Saved screenshots to $OUTPUT_DIR"

@@ -4,6 +4,7 @@ import * as Switch from "@radix-ui/react-switch";
 import { clsx } from "clsx";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { DeviceLinkPanel } from "@/components/device-link-panel";
 import { StatusCallout } from "@/components/status-callout";
 import { formatUtcDate } from "@/lib/format";
 import { relayAccountApi } from "@/lib/relay";
@@ -399,9 +400,16 @@ export default function SettingsPage() {
           aria-labelledby="settings-tab-sessions"
           className="space-y-3"
         >
-          <p className="text-sm text-[var(--text-secondary)]">
-            These are the devices that still have a valid relay session for your account.
-          </p>
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-sm text-[var(--text-secondary)]">
+              These are the devices that still have a valid relay session for your account.
+            </p>
+            <button type="button" onClick={() => void loadSessions()} className="btn-ghost shrink-0">
+              Refresh
+            </button>
+          </div>
+
+          <DeviceLinkPanel signedIn className="space-y-4" />
 
           {sessionsStatus.state === "loading" ? (
             <StatusCallout tone="info" title="Loading active sessions">
