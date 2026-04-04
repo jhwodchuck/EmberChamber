@@ -14,10 +14,7 @@ import { ProductPreview } from "@/components/product-mockup";
 import { StartHereSummary } from "@/components/start-here-guide";
 import { betaScopeItems, faqItems, launchPlatforms, trustFacts } from "@/lib/site";
 
-const heroSignals = [
-  "Invite-only access",
-  "No public discovery surface",
-];
+const heroSignals = ["Invite-only access", "No public discovery surface", "Adults-only beta boundary"];
 
 const liveTodayCards = [
   {
@@ -70,8 +67,17 @@ export default function HomePage() {
                 <Link href="/start" className="btn-primary px-6 py-3 text-base">
                   Start Here
                 </Link>
-                <Link href="/download" className="btn-ghost px-6 py-3 text-base">
-                  View Launch Targets
+                <Link href="/register" className="btn-ghost px-6 py-3 text-base">
+                  Request Access
+                </Link>
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-4 text-sm text-[var(--text-secondary)]">
+                <Link href="/download" className="underline-offset-4 hover:underline">
+                  View launch targets
+                </Link>
+                <Link href="/trust-and-safety" className="underline-offset-4 hover:underline">
+                  Trust & safety
                 </Link>
               </div>
 
@@ -98,7 +104,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="relative">
+            <div className="relative rounded-[2rem] border border-white/10 bg-white/[0.02] p-4 shadow-[0_30px_90px_rgba(0,0,0,0.4)]">
               <ProductPreview />
             </div>
           </div>

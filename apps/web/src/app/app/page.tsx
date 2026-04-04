@@ -53,48 +53,56 @@ const overviewDateFormatter = new Intl.DateTimeFormat(undefined, {
 export default function AppHome() {
   const { conversations, conversationsState, isConnected, refreshShellData, userName } = useCompanionShell();
   const recentConversations = conversations.slice(0, 5);
+  const resumeConversation = recentConversations[0] ?? null;
   const primaryActions = actionCards.slice(0, 4);
   const secondaryActions = actionCards.slice(4);
 
   return (
     <div className="space-y-8 p-6 sm:p-8">
       <section className="panel overflow-hidden px-6 py-7 sm:px-8">
-        <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_18rem]">
+        <div className="space-y-6">
           <div>
             <div className="eyebrow">Overview</div>
             <h2 className="mt-5 text-balance font-display text-4xl font-semibold text-[var(--text-primary)] sm:text-5xl">
-              Continue from where you left off.
+              Continue the conversation.
             </h2>
             <p className="mt-5 max-w-3xl text-base leading-7 text-[var(--text-secondary)]">
-              Welcome back, {userName}. Recent conversations, invite review, search, and quick
-              compose all start here.
+              Welcome back, {userName}. Threads come first, then quick actions.
             </p>
           </div>
 
-          <aside className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
-            {[
-              {
-                label: "Conversations",
-                value: String(conversations.length),
-                detail: conversations.length === 0 ? "Nothing started yet" : "Ready to resume",
-              },
-              {
-                label: "Relay link",
-                value: isConnected ? "Live" : "Waiting",
-                detail: isConnected ? "Mailbox updates are flowing" : "Trying to reconnect",
-              },
-              {
-                label: "Best next move",
-                value: recentConversations.length > 0 ? "Resume" : "Start a DM",
-                detail: recentConversations.length > 0 ? "Pick up an existing thread" : "Open the first conversation",
-              },
-            ].map((item) => (
-              <div key={item.label} className="rounded-[1.45rem] border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">{item.label}</p>
-                <p className="mt-2 text-lg font-semibold text-[var(--text-primary)]">{item.value}</p>
-                <p className="mt-2 text-sm text-[var(--text-secondary)]">{item.detail}</p>
+          {resumeConversation ? (
+            <Link
+              href={resumeConversation.href}
+              className="block rounded-[1.5rem] border border-brand-500/45 bg-brand-500/[0.08] px-5 py-5 transition-[border-color,transform] hover:-translate-y-0.5 hover:border-brand-500"
+            >
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-600">Resume thread</p>
+              <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-lg font-semibold text-[var(--text-primary)]">
+                    {resumeConversation.name ?? conversationDefaultTitle(resumeConversation.type)}
+                  </p>
+                  <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                    {resumeConversation.lastMessage?.content ?? "No local preview yet"}
+                  </p>
+                </div>
+                <span className="rounded-full border border-[var(--border)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-600">
+                  {conversationTypeLabel(resumeConversation.type)}
+                </span>
               </div>
-            ))}
+            </Link>
+          ) : null}
+
+          <aside className="flex flex-wrap gap-3">
+            <span className="rounded-full border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-1 text-xs text-[var(--text-secondary)]">
+              {conversations.length} conversations
+            </span>
+            <span className="rounded-full border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-1 text-xs text-[var(--text-secondary)]">
+              Relay {isConnected ? "live" : "reconnecting"}
+            </span>
+            <span className="rounded-full border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-1 text-xs text-[var(--text-secondary)]">
+              Search and invite review available
+            </span>
           </aside>
         </div>
       </section>
