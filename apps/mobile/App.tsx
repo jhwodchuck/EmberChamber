@@ -2,6 +2,8 @@ import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as Notifications from "expo-notifications";
 import { File as ExpoFile } from "expo-file-system";
+import * as DocumentPicker from "expo-document-picker";
+import * as Location from "expo-location";
 import * as ScreenCapture from "expo-screen-capture";
 import * as SecureStore from "expo-secure-store";
 import * as SQLite from "expo-sqlite";
@@ -36,13 +38,13 @@ import type {
   AttachmentTicket,
   AuthSession,
   ContactCard,
-  ConversationPreference,
   DeviceKeyBundle,
   Field,
   FormMessage,
   GroupInviteAcceptance,
   GroupInvitePreview,
   GroupInviteRecord,
+  GroupMember,
   GroupMembershipSummary,
   GroupThreadMessage,
   MagicLinkResponse,
@@ -50,8 +52,10 @@ import type {
   PendingAttachment,
   PrivacyDefaults,
   RelayErrorResponse,
+  SessionDescriptor,
 } from "./src/types";
 import type { ContextMenuAction } from "./src/components/MessageContextMenu";
+import type { LocationChoice } from "./src/components/LocationPickerSheet";
 import {
   MAX_ATTACHMENT_BYTES,
   STORAGE_KEYS,
@@ -63,9 +67,11 @@ import {
   createDeviceBundleScaffold,
   extractCompletionTokenFromUrl,
   isDefaultDisplayName,
+  isLegacySuggestedDeviceLabel,
   isValidEmail,
   makeOpaqueToken,
   normalizeInviteReference,
+  getMobileDeviceModel,
   suggestMobileDeviceLabel,
 } from "./src/lib/utils";
 import {
@@ -73,12 +79,11 @@ import {
   countVaultItems,
   loadCachedGroupMessages,
   loadCachedGroups,
-  loadConversationPreferences,
-  loadLatestCachedGroupMessage,
+  loadContactLabel,
   loadRelayStateValue,
   loadPrivacyDefaults,
   persistVaultMediaRecord,
-  saveConversationPreference,
+  saveContactLabel,
   saveRelayStateValue,
   savePrivacyDefault,
   saveCachedGroupMessages,
@@ -97,6 +102,10 @@ import {
   getNotificationConversationId,
   getNotificationReason,
 } from "./src/lib/push";
+import {
+  useConversationCatalog,
+} from "./src/hooks/useConversationCatalog";
+import { usePersistedMainShellState } from "./src/hooks/usePersistedMainShellState";
 import { styles, theme } from "./src/styles";
 import { OnboardingScreen } from "./src/screens/OnboardingScreen";
 import { ProfileSetupScreen } from "./src/screens/ProfileSetupScreen";
@@ -108,6 +117,14 @@ const onboardingHeroSignals = [
   "Local-first history",
 ];
 
+const appConfig = require("./app.json") as {
+  expo?: {
+    version?: string;
+    android?: { versionCode?: number };
+    ios?: { buildNumber?: string };
+  };
+};
+
 const MAILBOX_CURSOR_STATE_KEY = "mailbox_cursor";
 
 type AuthMethod = "magic-link" | "device-link";
@@ -116,16 +133,6 @@ type ActiveDeviceLink = {
   linkToken: string;
   qrMode: DeviceLinkQrMode;
 };
-
-function createConversationPreference(conversationId: string): ConversationPreference {
-  return {
-    conversationId,
-    isArchived: false,
-    isPinned: false,
-    isMuted: false,
-    lastReadAt: null,
-  };
-}
 
 // ---------------------------------------------------------------------------
 // App – thin orchestrator
@@ -158,15 +165,6 @@ export default function App() {
   const [groups, setGroups] = useState<GroupMembershipSummary[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [threadMessages, setThreadMessages] = useState<GroupThreadMessage[]>([]);
-  const [conversationPreviews, setConversationPreviews] = useState<
-    Record<string, GroupThreadMessage | null>
-  >({});
-  const [conversationPreferences, setConversationPreferences] = useState<
-    Record<string, ConversationPreference>
-  >({});
-  const [unreadConversationCounts, setUnreadConversationCounts] = useState<Record<string, number>>(
-    {},
-  );
   const [invitePreview, setInvitePreview] = useState<GroupInvitePreview | null>(null);
   const [invitePreviewError, setInvitePreviewError] = useState<string | null>(null);
   const [inviteFieldVisible, setInviteFieldVisible] = useState(false);
@@ -191,6 +189,12 @@ export default function App() {
   const [completedDeviceLinkSessionId, setCompletedDeviceLinkSessionId] = useState<string | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
+  const [isLoadingMembers, setIsLoadingMembers] = useState(false);
+  const [isOpeningDm, setIsOpeningDm] = useState(false);
+  const [sessions, setSessions] = useState<SessionDescriptor[]>([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+  const [sessionsError, setSessionsError] = useState<string | null>(null);
 
   const imageRefreshPendingRef = useRef(false);
   const groupsRef = useRef<GroupMembershipSummary[]>([]);
@@ -204,6 +208,32 @@ export default function App() {
       ? groups.find((group) => group.id === session.bootstrapConversationId) ?? null
       : null);
 
+  const {
+    conversationPreviews,
+    conversationPreferences,
+    getConversationPreference,
+    refreshFromCache: refreshConversationCatalog,
+    unreadConversationCounts,
+    updateConversationPreference,
+  } = useConversationCatalog({
+    db,
+    session,
+    groups,
+    selectedConversationId,
+    threadMessages,
+  });
+  const {
+    isMainShellReady,
+    mainShellState,
+    persistConversationAnchor,
+    persistMainShellState,
+    restoredConversationAnchorId,
+    restoredConversationId,
+  } = usePersistedMainShellState({
+    db,
+    session,
+    selectedConversationId,
+  });
   const unreadConversationIds = new Set(
     Object.entries(unreadConversationCounts)
       .filter(([, count]) => count > 0)
@@ -211,6 +241,22 @@ export default function App() {
   );
 
   // ---- relay helpers (stay here because they close over setSession) ----
+
+  function buildRelayClientHeaders() {
+    const appVersion = appConfig.expo?.version?.trim() || "0.1.0";
+    const buildVersion =
+      Platform.OS === "android"
+        ? String(appConfig.expo?.android?.versionCode ?? "")
+        : String(appConfig.expo?.ios?.buildNumber ?? "");
+    const deviceModel = getMobileDeviceModel();
+
+    return {
+      "x-emberchamber-client-platform": Platform.OS,
+      "x-emberchamber-client-version": appVersion,
+      ...(buildVersion ? { "x-emberchamber-client-build": buildVersion } : {}),
+      ...(deviceModel ? { "x-emberchamber-device-model": deviceModel } : {}),
+    };
+  }
 
   async function fetchJson<T>(
     url: string,
@@ -221,7 +267,12 @@ export default function App() {
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const response = await fetch(url, { ...init, signal: controller.signal });
+      const headers = new Headers(init?.headers ?? {});
+      Object.entries(buildRelayClientHeaders()).forEach(([key, value]) => {
+        headers.set(key, value);
+      });
+
+      const response = await fetch(url, { ...init, headers, signal: controller.signal });
       const rawBody = await response.text();
       let body = {} as T & RelayErrorResponse;
 
@@ -302,6 +353,22 @@ export default function App() {
     await saveStoredSession(nextSession);
     setSession(nextSession);
     return nextSession;
+  }
+
+  async function refreshSignedInSessions(currentSession: AuthSession) {
+    setIsLoadingSessions(true);
+
+    try {
+      const nextSessions = await relayFetch<SessionDescriptor[]>(currentSession, "/v1/sessions");
+      setSessions(nextSessions);
+      setSessionsError(null);
+    } catch (error) {
+      setSessionsError(
+        error instanceof Error ? error.message : "Unable to load signed-in sessions.",
+      );
+    } finally {
+      setIsLoadingSessions(false);
+    }
   }
 
   function getRelayOrigin() {
@@ -759,6 +826,10 @@ export default function App() {
       ),
     );
 
+    if (updatedMessages.size > 0) {
+      refreshConversationCatalog();
+    }
+
     if (sync.cursor.lastSeenEnvelopeId) {
       await saveRelayStateValue(db, MAILBOX_CURSOR_STATE_KEY, sync.cursor.lastSeenEnvelopeId);
     }
@@ -796,6 +867,7 @@ export default function App() {
 
     if (db) {
       await saveCachedGroupMessages(db, conversationId, messages);
+      refreshConversationCatalog();
     }
 
     // Ack the latest message so other members' ✓✓ updates
@@ -841,32 +913,6 @@ export default function App() {
     });
   }
 
-  function updateConversationPreference(
-    conversationId: string,
-    patch: Partial<ConversationPreference>,
-  ) {
-    let nextPreference = createConversationPreference(conversationId);
-
-    setConversationPreferences((currentPreferences) => {
-      const current =
-        currentPreferences[conversationId] ?? createConversationPreference(conversationId);
-      nextPreference = {
-        ...current,
-        ...patch,
-        conversationId,
-      };
-
-      return {
-        ...currentPreferences,
-        [conversationId]: nextPreference,
-      };
-    });
-
-    if (db && session) {
-      void saveConversationPreference(db, session.accountId, nextPreference).catch(() => undefined);
-    }
-  }
-
   // ---- effects ----
 
   useEffect(() => {
@@ -875,113 +921,11 @@ export default function App() {
 
   useEffect(() => {
     selectedConversationIdRef.current = selectedConversationId;
-    if (selectedConversationId) {
-      updateConversationPreference(selectedConversationId, {
-        lastReadAt: new Date().toISOString(),
-      });
-    }
   }, [selectedConversationId]);
 
   useEffect(() => {
     groupsRef.current = groups;
   }, [groups]);
-
-  useEffect(() => {
-    if (!db || !session) {
-      setConversationPreferences({});
-      return;
-    }
-
-    let cancelled = false;
-
-    void (async () => {
-      const preferences = await loadConversationPreferences(db, session.accountId);
-      if (!cancelled) {
-        setConversationPreferences(preferences);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [db, session]);
-
-  useEffect(() => {
-    if (!db || !groups.length) {
-      setConversationPreviews({});
-      return;
-    }
-
-    let cancelled = false;
-
-    void (async () => {
-      const entries = await Promise.all(
-        groups.map(async (group) => [
-          group.id,
-          await loadLatestCachedGroupMessage(db, group.id),
-        ] as const),
-      );
-
-      if (!cancelled) {
-        setConversationPreviews(Object.fromEntries(entries));
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [db, groups]);
-
-  useEffect(() => {
-    if (!selectedConversationId) {
-      return;
-    }
-
-    setConversationPreviews((current) => ({
-      ...current,
-      [selectedConversationId]: threadMessages[threadMessages.length - 1] ?? current[selectedConversationId] ?? null,
-    }));
-  }, [selectedConversationId, threadMessages]);
-
-  useEffect(() => {
-    if (!db || !session || !groups.length) {
-      setUnreadConversationCounts({});
-      return;
-    }
-
-    let cancelled = false;
-
-    void (async () => {
-      const counts = await Promise.all(
-        groups.map(async (group) => {
-          const preference =
-            conversationPreferences[group.id] ?? createConversationPreference(group.id);
-          const messages = await loadCachedGroupMessages(db, group.id);
-          const unreadCount = messages.filter((message) => {
-            if (message.senderAccountId === session.accountId) {
-              return false;
-            }
-
-            if (!preference.lastReadAt) {
-              return true;
-            }
-
-            return message.createdAt > preference.lastReadAt;
-          }).length;
-
-          return [group.id, unreadCount] as const;
-        }),
-      );
-
-      if (!cancelled) {
-        setUnreadConversationCounts(Object.fromEntries(counts));
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [conversationPreviews, conversationPreferences, db, groups, session]);
 
   useEffect(() => {
     if (!activeDeviceLink || completedDeviceLinkSessionId) {
@@ -1084,10 +1028,13 @@ export default function App() {
           return;
         }
 
+        const suggestedDeviceLabel = suggestMobileDeviceLabel();
         setDb(nextDb);
         setEmail(savedEmail ?? "");
         setInviteToken(savedInvite ?? "");
-        setDeviceLabel(savedDeviceLabel ?? suggestMobileDeviceLabel());
+        setDeviceLabel(
+          isLegacySuggestedDeviceLabel(savedDeviceLabel) ? suggestedDeviceLabel : (savedDeviceLabel ?? suggestedDeviceLabel),
+        );
         setPrivacyDefaults(nextPrivacyDefaults);
         setVaultCount(vaultItems);
         setSession(savedSession);
@@ -1244,6 +1191,9 @@ export default function App() {
       setDeviceBundleReady(false);
       setDeviceBundleCount(0);
       setDeviceBundleError(null);
+      setSessions([]);
+      setSessionsError(null);
+      setIsLoadingSessions(false);
       setProfileSetupActive(false);
       setProfileSetupName("");
       setProfileSetupError(null);
@@ -1297,6 +1247,7 @@ export default function App() {
           await saveCachedGroups(db, session.accountId, nextGroups);
         }
 
+        await refreshSignedInSessions(session);
         await syncEncryptedMailbox(session);
 
         setSessionMessage((current) => {
@@ -1345,21 +1296,29 @@ export default function App() {
       return;
     }
 
+    if (!isMainShellReady) {
+      return;
+    }
+
     const selectedStillExists =
       selectedConversationId && groups.some((group) => group.id === selectedConversationId);
     if (selectedStillExists) {
       return;
     }
 
+    const restoredGroup = restoredConversationId
+      ? groups.find((group) => group.id === restoredConversationId) ?? null
+      : null;
     const bootstrapGroup = session?.bootstrapConversationId
       ? groups.find((group) => group.id === session.bootstrapConversationId) ?? null
       : null;
-    setSelectedConversationId(bootstrapGroup?.id ?? groups[0]?.id ?? null);
-  }, [groups, selectedConversationId, session?.bootstrapConversationId]);
+    setSelectedConversationId(restoredGroup?.id ?? bootstrapGroup?.id ?? groups[0]?.id ?? null);
+  }, [groups, isMainShellReady, restoredConversationId, selectedConversationId, session?.bootstrapConversationId]);
 
   useEffect(() => {
     if (!session || !selectedConversationId) {
       setThreadMessages([]);
+      setGroupMembers([]);
       return;
     }
 
@@ -1747,6 +1706,59 @@ export default function App() {
     }
   }
 
+  async function buildPendingAttachmentFromAsset(asset: ImagePicker.ImagePickerAsset) {
+    const assetFile = new ExpoFile(asset.uri);
+    const inferredMimeType =
+      asset.mimeType
+      ?? (asset.type === "video" ? "video/mp4" : "image/jpeg");
+    const inferredByteLength = asset.fileSize ?? assetFile.size ?? 0;
+    const isVideo = asset.type === "video" || inferredMimeType.startsWith("video/");
+
+    if (isVideo) {
+      if (inferredByteLength > MAX_ATTACHMENT_BYTES) {
+        throw new Error("That video exceeds the 20 MB beta attachment limit.");
+      }
+
+      return {
+        uri: asset.uri,
+        fileName: asset.fileName ?? `video-${Date.now()}.mp4`,
+        mimeType: inferredMimeType,
+        byteLength: inferredByteLength,
+        width: asset.width,
+        height: asset.height,
+      } satisfies PendingAttachment;
+    }
+
+    const manipulated = await ImageManipulator.manipulateAsync(
+      asset.uri,
+      [
+        {
+          resize: {
+            width: asset.width > asset.height ? 1920 : undefined,
+            height: asset.height >= asset.width ? 1920 : undefined,
+          },
+        },
+      ],
+      { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG },
+    );
+
+    const manipulatedFile = new ExpoFile(manipulated.uri);
+    const byteLength =
+      manipulatedFile.size || Math.floor(manipulated.width * manipulated.height * 0.3);
+    if (byteLength > MAX_ATTACHMENT_BYTES) {
+      throw new Error("That photo exceeds the 20 MB beta attachment limit.");
+    }
+
+    return {
+      uri: manipulated.uri,
+      fileName: asset.fileName ?? `photo-${Date.now()}.jpg`,
+      mimeType: "image/jpeg",
+      byteLength,
+      width: manipulated.width,
+      height: manipulated.height,
+    } satisfies PendingAttachment;
+  }
+
   async function pickPhoto() {
     setIsPickingPhoto(true);
     setSessionMessage(null);
@@ -1756,14 +1768,14 @@ export default function App() {
       if (!permission.granted) {
         setSessionMessage({
           tone: "warning",
-          title: "Photo access is still blocked",
-          body: "Allow gallery access so EmberChamber can attach a picture to the conversation.",
+          title: "Media access is still blocked",
+          body: "Allow photo and video access so EmberChamber can attach media to the conversation.",
         });
         return;
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
+        mediaTypes: ["images", "videos"],
         quality: 0.85,
         allowsEditing: false,
       });
@@ -1773,35 +1785,12 @@ export default function App() {
       }
 
       const asset = result.assets[0];
-      const manipulated = await ImageManipulator.manipulateAsync(
-        asset.uri,
-        [{ resize: { width: asset.width > asset.height ? 1920 : undefined, height: asset.height >= asset.width ? 1920 : undefined } }],
-        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
-      );
-
-      const fileSize = manipulated.width * manipulated.height * 0.3; // Approx estimation since we lose exact filesize on manipulate in EXPO SDK before fetching
-      if (fileSize > MAX_ATTACHMENT_BYTES) {
-        setSessionMessage({
-          tone: "error",
-          title: "That photo is too large",
-          body: "Keep the file under 20 MB for the beta relay path.",
-        });
-        return;
-      }
-
-      setPendingAttachment({
-        uri: manipulated.uri,
-        fileName: asset.fileName ?? `photo-${Date.now()}.jpg`,
-        mimeType: "image/jpeg",
-        byteLength: Math.floor(fileSize),
-        width: manipulated.width,
-        height: manipulated.height,
-      });
+      setPendingAttachment(await buildPendingAttachmentFromAsset(asset));
     } catch (error) {
       setSessionMessage({
         tone: "error",
-        title: "Photo picker failed",
-        body: error instanceof Error ? error.message : "Unable to open the image library.",
+        title: "Media picker failed",
+        body: error instanceof Error ? error.message : "Unable to open the media library.",
       });
     } finally {
       setIsPickingPhoto(false);
@@ -1818,13 +1807,13 @@ export default function App() {
         setSessionMessage({
           tone: "warning",
           title: "Camera access is still blocked",
-          body: "Allow camera access so EmberChamber can take a picture.",
+          body: "Allow camera access so EmberChamber can capture a photo or video.",
         });
         return;
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ["images"],
+        mediaTypes: ["images", "videos"],
         quality: 0.85,
         allowsEditing: false,
       });
@@ -1834,42 +1823,104 @@ export default function App() {
       }
 
       const asset = result.assets[0];
-      const manipulated = await ImageManipulator.manipulateAsync(
-        asset.uri,
-        [{ resize: { width: asset.width > asset.height ? 1920 : undefined, height: asset.height >= asset.width ? 1920 : undefined } }],
-        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
-      );
-
-      const fileSize = manipulated.width * manipulated.height * 0.3; 
-      if (fileSize > MAX_ATTACHMENT_BYTES) {
-        setSessionMessage({
-          tone: "error",
-          title: "That photo is too large",
-          body: "Keep the file under 20 MB for the beta relay path.",
-        });
-        return;
-      }
-
-      setPendingAttachment({
-        uri: manipulated.uri,
-        fileName: asset.fileName ?? `photo-${Date.now()}.jpg`,
-        mimeType: "image/jpeg",
-        byteLength: Math.floor(fileSize),
-        width: manipulated.width,
-        height: manipulated.height,
-      });
+      setPendingAttachment(await buildPendingAttachmentFromAsset(asset));
     } catch (error) {
       setSessionMessage({
         tone: "error",
-        title: "Taking photo failed",
-        body: error instanceof Error ? error.message : "Unable to take a photo.",
+        title: "Camera capture failed",
+        body: error instanceof Error ? error.message : "Unable to capture media.",
       });
     } finally {
       setIsPickingPhoto(false);
     }
   }
 
-  async function sendMessage() {
+  function getContentClass(mimeType: string): "image" | "video" | "audio" | "file" {
+    if (mimeType.startsWith("image/")) return "image";
+    if (mimeType.startsWith("video/")) return "video";
+    if (mimeType.startsWith("audio/")) return "audio";
+    return "file";
+  }
+
+  async function pickFile() {
+    setIsPickingPhoto(true);
+    setSessionMessage(null);
+    try {
+      const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true });
+      if (result.canceled || !result.assets.length) return;
+      const asset = result.assets[0];
+      if (asset.size && asset.size > MAX_ATTACHMENT_BYTES) {
+        setSessionMessage({
+          tone: "error",
+          title: "File too large",
+          body: "Keep attachments under 20 MB for the beta relay path.",
+        });
+        return;
+      }
+      setPendingAttachment({
+        uri: asset.uri,
+        fileName: asset.name,
+        mimeType: asset.mimeType ?? "application/octet-stream",
+        byteLength: asset.size ?? 0,
+      });
+    } catch (error) {
+      setSessionMessage({
+        tone: "error",
+        title: "File picker failed",
+        body: error instanceof Error ? error.message : "Unable to open the file picker.",
+      });
+    } finally {
+      setIsPickingPhoto(false);
+    }
+  }
+
+  async function pickLocation(choice: LocationChoice) {
+    setSessionMessage(null);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        setSessionMessage({
+          tone: "warning",
+          title: "Location access denied",
+          body: "Allow location access in device settings to share your position.",
+        });
+        return;
+      }
+
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      const { latitude, longitude, accuracy } = loc.coords;
+
+      const latStr = `${Math.abs(latitude).toFixed(5)}° ${latitude >= 0 ? "N" : "S"}`;
+      const lngStr = `${Math.abs(longitude).toFixed(5)}° ${longitude >= 0 ? "E" : "W"}`;
+      const mapsUrl = `https://maps.google.com/?q=${latitude.toFixed(6)},${longitude.toFixed(6)}`;
+
+      let header: string;
+      if (choice.kind === "live") {
+        const dur = choice.durationMinutes < 60
+          ? `${choice.durationMinutes} min`
+          : `${choice.durationMinutes / 60} hr`;
+        header = `\uD83D\uDCCD Live location (${dur} — one-time in beta)`;
+      } else {
+        header = "\uD83D\uDCCD Location";
+      }
+
+      const lines: string[] = [header, `${latStr}, ${lngStr}`];
+      if (accuracy) lines.push(`Accuracy: \u00B1${Math.round(accuracy)} m`);
+      lines.push(mapsUrl);
+
+      await sendMessage(lines.join("\n"));
+    } catch (error) {
+      setSessionMessage({
+        tone: "error",
+        title: "Location failed",
+        body: error instanceof Error ? error.message : "Unable to get your current location.",
+      });
+    }
+  }
+
+  async function sendMessage(overrideText?: string) {
     if (!session || !selectedGroup) {
       setSessionMessage({
         tone: "warning",
@@ -1879,7 +1930,7 @@ export default function App() {
       return;
     }
 
-    const trimmedText = messageDraft.trim();
+    const trimmedText = (overrideText ?? messageDraft).trim();
     if (!trimmedText && !pendingAttachment) {
       return;
     }
@@ -1960,7 +2011,7 @@ export default function App() {
               plaintextSha256B64: encrypted.plaintextSha256B64,
               conversationId: selectedGroup.id,
               conversationEpoch: selectedGroup.epoch,
-              contentClass: "image",
+              contentClass: getContentClass(pendingAttachment.mimeType),
               retentionMode: "private_vault",
               protectionProfile: selectedGroup.sensitiveMediaDefault ? "sensitive_media" : "standard",
             }),
@@ -1978,7 +2029,7 @@ export default function App() {
             fileName: pendingAttachment.fileName,
             mimeType: pendingAttachment.mimeType,
             byteLength: fileBytes.byteLength,
-            contentClass: "image",
+            contentClass: getContentClass(pendingAttachment.mimeType),
             retentionMode: ticket.retentionMode,
             protectionProfile: ticket.protectionProfile,
             previewBlurHash: ticket.previewBlurHash ?? null,
@@ -2067,7 +2118,7 @@ export default function App() {
               byteLength: fileBytes.byteLength,
               conversationId: selectedGroup.id,
               conversationEpoch: selectedGroup.epoch,
-              contentClass: "image",
+              contentClass: getContentClass(pendingAttachment.mimeType),
               retentionMode: "private_vault",
               protectionProfile: selectedGroup.sensitiveMediaDefault ? "sensitive_media" : "standard",
             }),
@@ -2098,11 +2149,12 @@ export default function App() {
 
       const nextThreadMessages = [...threadMessages, createdMessage];
       setThreadMessages(nextThreadMessages);
-      setMessageDraft("");
+      if (!overrideText) setMessageDraft("");
       setPendingAttachment(null);
 
       if (db) {
         await saveCachedGroupMessages(db, selectedGroup.id, nextThreadMessages);
+        refreshConversationCatalog();
 
         if (createdMessage.attachment) {
           await persistVaultMediaRecord(db, createdMessage, profile?.displayName ?? deviceLabel);
@@ -2164,8 +2216,7 @@ export default function App() {
   }
 
   function handleToggleConversationArchived(conversationId: string) {
-    const preference =
-      conversationPreferences[conversationId] ?? createConversationPreference(conversationId);
+    const preference = getConversationPreference(conversationId);
     const nextArchived = !preference.isArchived;
 
     updateConversationPreference(conversationId, {
@@ -2178,8 +2229,7 @@ export default function App() {
   }
 
   function handleToggleConversationPinned(conversationId: string) {
-    const preference =
-      conversationPreferences[conversationId] ?? createConversationPreference(conversationId);
+    const preference = getConversationPreference(conversationId);
 
     updateConversationPreference(conversationId, {
       isPinned: !preference.isPinned,
@@ -2187,8 +2237,7 @@ export default function App() {
   }
 
   function handleToggleConversationMuted(conversationId: string) {
-    const preference =
-      conversationPreferences[conversationId] ?? createConversationPreference(conversationId);
+    const preference = getConversationPreference(conversationId);
 
     updateConversationPreference(conversationId, {
       isMuted: !preference.isMuted,
@@ -2237,16 +2286,33 @@ export default function App() {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
         quality: 0.85,
-        allowsEditing: true,
-        aspect: [1, 1],
+        allowsEditing: false,
+        selectionLimit: 1,
       });
 
       if (result.canceled || !result.assets.length) return;
 
       const asset = result.assets[0];
+      const squareEdge =
+        typeof asset.width === "number" && typeof asset.height === "number"
+          ? Math.min(asset.width, asset.height)
+          : 0;
+      const avatarManipulations: ImageManipulator.Action[] = squareEdge
+        ? [
+            {
+              crop: {
+                originX: Math.floor((asset.width - squareEdge) / 2),
+                originY: Math.floor((asset.height - squareEdge) / 2),
+                width: squareEdge,
+                height: squareEdge,
+              },
+            },
+            { resize: { width: 400, height: 400 } },
+          ]
+        : [{ resize: { width: 400 } }];
       const manipulated = await ImageManipulator.manipulateAsync(
         asset.uri,
-        [{ resize: { width: 400, height: 400 } }],
+        avatarManipulations,
         { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG },
       );
 
@@ -2289,6 +2355,89 @@ export default function App() {
     } finally {
       setIsUploadingAvatar(false);
     }
+  }
+
+  async function handleOpenMembers() {
+    if (!session || !selectedGroup) return;
+    setIsLoadingMembers(true);
+    setGroupMembers([]);
+    try {
+      const members = await relayFetch<GroupMember[]>(
+        session,
+        `/v1/groups/${selectedGroup.id}/members`,
+      );
+      setGroupMembers(members);
+    } catch {
+      // Non-fatal – roster stays empty
+    } finally {
+      setIsLoadingMembers(false);
+    }
+  }
+
+  async function handleLoadMemberNote(accountId: string): Promise<string | null> {
+    if (!db) return null;
+    const { privateNote } = await loadContactLabel(db, accountId);
+    return privateNote;
+  }
+
+  async function handleSaveMemberNote(accountId: string, note: string) {
+    if (!db) return;
+    const label = groupMembers.find((m) => m.accountId === accountId)?.displayName ?? accountId;
+    await saveContactLabel(db, accountId, label, note || null);
+  }
+
+  async function handleOpenDm(targetAccountId: string, displayName: string) {
+    if (!session) return;
+    setIsOpeningDm(true);
+    try {
+      type DmDescriptor = { id: string; epoch: number; historyMode: string; createdAt: string };
+      const dm = await relayFetch<DmDescriptor>(session, "/v1/dm/open", {
+        method: "POST",
+        body: JSON.stringify({ peerAccountId: targetAccountId }),
+      });
+
+      // Build a synthetic GroupMembershipSummary so the existing conversation
+      // screen can render the DM without changes to the chat list data model.
+      const existing = groups.find((g) => g.id === dm.id);
+      if (!existing) {
+        const dmEntry: GroupMembershipSummary = {
+          id: dm.id,
+          title: displayName,
+          epoch: dm.epoch,
+          historyMode: "device_encrypted",
+          memberCount: 2,
+          memberCap: 2,
+          myRole: "member",
+          sensitiveMediaDefault: false,
+          allowMemberInvites: false,
+          inviteFreezeEnabled: false,
+          canCreateInvites: false,
+          canManageMembers: false,
+          joinRuleText: null,
+          createdAt: dm.createdAt,
+          updatedAt: dm.createdAt,
+        };
+        setGroups((prev) => [dmEntry, ...prev.filter((g) => g.id !== dm.id)]);
+      }
+
+      setSelectedConversationId(dm.id);
+      setThreadMessages([]);
+    } catch (error) {
+      setSessionMessage({
+        tone: "error",
+        title: "Could not open DM",
+        body: error instanceof Error ? error.message : "Try again.",
+      });
+    } finally {
+      setIsOpeningDm(false);
+    }
+  }
+
+  function handleSendContactRequest(targetAccountId: string, displayName: string) {
+    // Prepopulate a DM with a contact intro draft
+    void handleOpenDm(targetAccountId, displayName).then(() => {
+      setMessageDraft("Hey! I'd like to connect with you. 👋");
+    });
   }
 
   async function submitProfileSetup() {
@@ -2450,72 +2599,105 @@ export default function App() {
             ) : null}
           </ScrollView>
           ) : (
-            <MainScreen
-              session={session!}
-              profile={profile}
-              contactCard={contactCard}
-              groups={groups}
-              conversationPreviews={conversationPreviews}
-              conversationPreferences={conversationPreferences}
-              unreadCounts={unreadConversationCounts}
-              selectedConversationId={selectedConversationId}
-              setSelectedConversationId={setSelectedConversationId}
-              selectedGroup={selectedGroup ?? null}
-              threadMessages={threadMessages}
-              inviteInput={inviteInput}
-              setInviteInput={setInviteInput}
-              invitePreview={invitePreview}
-              invitePreviewError={invitePreviewError}
-              messageDraft={messageDraft}
-              setMessageDraft={setMessageDraft}
-              pendingAttachment={pendingAttachment}
-              setPendingAttachment={setPendingAttachment}
-              isLoadingAccount={isLoadingAccount}
-              isLoadingThread={isLoadingThread}
-              isPreviewingInvite={isPreviewingInvite}
-              isAcceptingInvite={isAcceptingInvite}
-              isPickingPhoto={isPickingPhoto}
-              isSendingMessage={isSendingMessage}
-              deviceBundleReady={deviceBundleReady}
-              deviceBundleCount={deviceBundleCount}
-              deviceBundleError={deviceBundleError}
-              vaultCount={vaultCount}
-              privacyDefaults={privacyDefaults}
-              sessionMessage={sessionMessage}
-              email={email}
-              deviceLabel={deviceLabel}
-              deviceLinkQrValue={deviceLinkQrValue}
-              deviceLinkStatus={deviceLinkStatus}
-              deviceLinkMessage={deviceLinkMessage}
-              isWorkingDeviceLink={isWorkingDeviceLink}
-              isApprovingDeviceLink={isApprovingDeviceLink}
-              editingMessageId={editingMessageId}
-              isUploadingAvatar={isUploadingAvatar}
-              unreadIds={unreadConversationIds}
-              onSignOut={() => void signOut()}
-              onShowDeviceLinkQr={() => void beginSourceDeviceLink()}
-              onScanDeviceLinkQr={(payload) => scanDeviceLinkQr(payload)}
-              onApproveDeviceLink={() => void approveDeviceLink()}
-              onResetDeviceLink={resetDeviceLinkState}
-              onPreviewInvite={() => void previewInvite()}
-              onAcceptInvite={() => void acceptInvite()}
-              onPickPhoto={() => void pickPhoto()}
-              onTakePhoto={() => void takePhoto()}
-              onSendMessage={() => void sendMessage()}
-              onUpdatePrivacy={updatePrivacyDefaults}
-              onImageError={handleImageError}
-              onCancelEdit={() => {
-                setEditingMessageId(null);
-                setMessageDraft("");
-              }}
-              onMessageAction={handleMessageAction}
-              onUpdateGroup={handleUpdateGroup}
-              onCreateInvite={handleCreateInvite}
-              onChangeAvatar={() => void handleChangeAvatar()}
-              onToggleConversationArchived={handleToggleConversationArchived}
-              onToggleConversationPinned={handleToggleConversationPinned}
-              onToggleConversationMuted={handleToggleConversationMuted}
-            />
+            !isMainShellReady ? (
+              <View style={styles.emptyState}>
+                <ActivityIndicator size="small" color={theme.colors.textSoft} />
+                <Text style={styles.emptyStateTitle}>Restoring workspace</Text>
+                <Text style={styles.emptyStateBody}>
+                  Loading your last section and conversation on this device.
+                </Text>
+              </View>
+            ) : (
+              <MainScreen
+                session={session!}
+                profile={profile}
+                contactCard={contactCard}
+                groups={groups}
+                conversationPreviews={conversationPreviews}
+                conversationPreferences={conversationPreferences}
+                unreadCounts={unreadConversationCounts}
+                selectedConversationId={selectedConversationId}
+                setSelectedConversationId={setSelectedConversationId}
+                selectedGroup={selectedGroup ?? null}
+                threadMessages={threadMessages}
+                inviteInput={inviteInput}
+                setInviteInput={setInviteInput}
+                invitePreview={invitePreview}
+                invitePreviewError={invitePreviewError}
+                messageDraft={messageDraft}
+                setMessageDraft={setMessageDraft}
+                pendingAttachment={pendingAttachment}
+                setPendingAttachment={setPendingAttachment}
+                isLoadingAccount={isLoadingAccount}
+                isLoadingThread={isLoadingThread}
+                isPreviewingInvite={isPreviewingInvite}
+                isAcceptingInvite={isAcceptingInvite}
+                isPickingPhoto={isPickingPhoto}
+                isSendingMessage={isSendingMessage}
+                deviceBundleReady={deviceBundleReady}
+                deviceBundleCount={deviceBundleCount}
+                deviceBundleError={deviceBundleError}
+                vaultCount={vaultCount}
+                privacyDefaults={privacyDefaults}
+                sessionMessage={sessionMessage}
+                email={email}
+                deviceLabel={deviceLabel}
+                deviceLinkQrValue={deviceLinkQrValue}
+                deviceLinkStatus={deviceLinkStatus}
+                deviceLinkMessage={deviceLinkMessage}
+                isWorkingDeviceLink={isWorkingDeviceLink}
+                isApprovingDeviceLink={isApprovingDeviceLink}
+                sessions={sessions}
+                isLoadingSessions={isLoadingSessions}
+                sessionsError={sessionsError}
+                onRefreshSessions={() => {
+                  if (sessionRef.current) {
+                    void refreshSignedInSessions(sessionRef.current);
+                  }
+                }}
+                editingMessageId={editingMessageId}
+                isUploadingAvatar={isUploadingAvatar}
+                unreadIds={unreadConversationIds}
+                onSignOut={() => void signOut()}
+                onShowDeviceLinkQr={() => void beginSourceDeviceLink()}
+                onScanDeviceLinkQr={(payload) => scanDeviceLinkQr(payload)}
+                onApproveDeviceLink={() => void approveDeviceLink()}
+                onResetDeviceLink={resetDeviceLinkState}
+                onPreviewInvite={() => void previewInvite()}
+                onAcceptInvite={() => void acceptInvite()}
+                onPickPhoto={() => void pickPhoto()}
+                onTakePhoto={() => void takePhoto()}
+                onPickFile={() => void pickFile()}
+                onPickLocation={(choice) => void pickLocation(choice)}
+                onSendRawText={(text) => void sendMessage(text)}
+                onSendMessage={() => void sendMessage()}
+                onUpdatePrivacy={updatePrivacyDefaults}
+                onImageError={handleImageError}
+                onCancelEdit={() => {
+                  setEditingMessageId(null);
+                  setMessageDraft("");
+                }}
+                onMessageAction={handleMessageAction}
+                onUpdateGroup={handleUpdateGroup}
+                onCreateInvite={handleCreateInvite}
+                onChangeAvatar={() => void handleChangeAvatar()}
+                onToggleConversationArchived={handleToggleConversationArchived}
+                onToggleConversationPinned={handleToggleConversationPinned}
+                onToggleConversationMuted={handleToggleConversationMuted}
+                groupMembers={groupMembers}
+                isLoadingMembers={isLoadingMembers}
+                isOpeningDm={isOpeningDm}
+                onOpenMembers={() => void handleOpenMembers()}
+                onLoadMemberNote={handleLoadMemberNote}
+                onSaveMemberNote={handleSaveMemberNote}
+                onOpenDm={handleOpenDm}
+                onSendContactRequest={handleSendContactRequest}
+                initialShellState={mainShellState}
+                onPersistShellState={persistMainShellState}
+                restoredConversationAnchorId={restoredConversationAnchorId}
+                onPersistConversationAnchor={persistConversationAnchor}
+              />
+            )
           )}
         </KeyboardAvoidingView>
       </SafeAreaView>

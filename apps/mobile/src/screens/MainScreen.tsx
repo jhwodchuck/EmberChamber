@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, Text, View, useWindowDimensions } from "react-native";
 import type {
   AuthSession,
   ContactCard,
@@ -8,11 +8,13 @@ import type {
   FormMessage,
   GroupInvitePreview,
   GroupInviteRecord,
+  GroupMember,
   GroupMembershipSummary,
   GroupThreadMessage,
   MeProfile,
   PendingAttachment,
   PrivacyDefaults,
+  SessionDescriptor,
 } from "../types";
 import type { ContextMenuAction } from "../components/MessageContextMenu";
 import { styles } from "../styles";
@@ -20,12 +22,13 @@ import { StatusCard } from "../components/StatusCard";
 import type { DeviceLinkStatus } from "@emberchamber/protocol";
 import {
   ChatListScreen,
-  type ChatListFilter,
   type ChatListItem,
 } from "./ChatListScreen";
 import { ConversationScreen } from "./ConversationScreen";
 import { InvitesScreen } from "./InvitesScreen";
 import { SettingsScreen } from "./SettingsScreen";
+import type { PersistedMainShellState } from "../lib/mainShell";
+import type { ChatListFilter, MainChatView, MainTab } from "../lib/mainShell";
 
 export type MainScreenProps = {
   session: AuthSession;
@@ -66,6 +69,10 @@ export type MainScreenProps = {
   deviceLinkMessage: FormMessage | null;
   isWorkingDeviceLink: boolean;
   isApprovingDeviceLink: boolean;
+  sessions: SessionDescriptor[];
+  isLoadingSessions: boolean;
+  sessionsError: string | null;
+  onRefreshSessions: () => void;
   onSignOut: () => void;
   onShowDeviceLinkQr: () => void;
   onScanDeviceLinkQr: (payload: string) => void | Promise<void>;
@@ -75,6 +82,9 @@ export type MainScreenProps = {
   onAcceptInvite: () => void;
   onPickPhoto: () => void;
   onTakePhoto: () => void;
+  onPickFile: () => void;
+  onPickLocation: (choice: import("../components/LocationPickerSheet").LocationChoice) => void;
+  onSendRawText: (text: string) => void;
   onSendMessage: () => void;
   onUpdatePrivacy: <K extends keyof PrivacyDefaults>(key: K, value: PrivacyDefaults[K]) => void;
   onImageError: (messageId: string) => void;
@@ -89,9 +99,20 @@ export type MainScreenProps = {
   onToggleConversationArchived: (conversationId: string) => void;
   onToggleConversationPinned: (conversationId: string) => void;
   onToggleConversationMuted: (conversationId: string) => void;
+  // member roster
+  groupMembers: GroupMember[];
+  isLoadingMembers: boolean;
+  isOpeningDm: boolean;
+  onOpenMembers: () => void;
+  onLoadMemberNote: (accountId: string) => Promise<string | null>;
+  onSaveMemberNote: (accountId: string, note: string) => Promise<void>;
+  onOpenDm: (targetAccountId: string, displayName: string) => Promise<void>;
+  onSendContactRequest: (targetAccountId: string, displayName: string) => void;
+  initialShellState: PersistedMainShellState;
+  onPersistShellState: (state: PersistedMainShellState) => void;
+  restoredConversationAnchorId: string | null;
+  onPersistConversationAnchor: (conversationId: string, messageId: string | null) => void;
 };
-
-type MainTab = "chats" | "invites" | "settings";
 
 export function MainScreen(props: MainScreenProps) {
   const {
@@ -133,6 +154,10 @@ export function MainScreen(props: MainScreenProps) {
     deviceLinkMessage,
     isWorkingDeviceLink,
     isApprovingDeviceLink,
+    sessions,
+    isLoadingSessions,
+    sessionsError,
+    onRefreshSessions,
     onSignOut,
     onShowDeviceLinkQr,
     onScanDeviceLinkQr,
@@ -142,6 +167,9 @@ export function MainScreen(props: MainScreenProps) {
     onAcceptInvite,
     onPickPhoto,
     onTakePhoto,
+    onPickFile,
+    onPickLocation,
+    onSendRawText,
     onSendMessage,
     onUpdatePrivacy,
     onImageError,
@@ -156,11 +184,25 @@ export function MainScreen(props: MainScreenProps) {
     onToggleConversationArchived,
     onToggleConversationPinned,
     onToggleConversationMuted,
+    groupMembers,
+    isLoadingMembers,
+    isOpeningDm,
+    onOpenMembers,
+    onLoadMemberNote,
+    onSaveMemberNote,
+    onOpenDm,
+    onSendContactRequest,
+    initialShellState,
+    onPersistShellState,
+    restoredConversationAnchorId,
+    onPersistConversationAnchor,
   } = props;
 
-  const [activeTab, setActiveTab] = useState<MainTab>("chats");
-  const [chatView, setChatView] = useState<"list" | "conversation">("list");
-  const [chatFilter, setChatFilter] = useState<ChatListFilter>("all");
+  const { width } = useWindowDimensions();
+  const isWideChatsLayout = width >= 980;
+  const [activeTab, setActiveTab] = useState<MainTab>(initialShellState.activeTab);
+  const [chatView, setChatView] = useState<MainChatView>(initialShellState.chatView);
+  const [chatFilter, setChatFilter] = useState<ChatListFilter>(initialShellState.chatFilter);
   const [chatSearch, setChatSearch] = useState("");
 
   useEffect(() => {
@@ -168,6 +210,14 @@ export function MainScreen(props: MainScreenProps) {
       setChatView("list");
     }
   }, [selectedGroup]);
+
+  useEffect(() => {
+    onPersistShellState({
+      activeTab,
+      chatView,
+      chatFilter,
+    });
+  }, [activeTab, chatFilter, chatView, onPersistShellState]);
 
   const chatItems = useMemo<ChatListItem[]>(() => {
     const normalizedSearch = chatSearch.trim().toLowerCase();
@@ -227,48 +277,85 @@ export function MainScreen(props: MainScreenProps) {
     setChatView("conversation");
   }
 
+  const chatListPane = (
+    <ChatListScreen
+      profileName={profile?.displayName ?? null}
+      selectedConversationId={selectedConversationId}
+      items={chatItems}
+      activeFilter={chatFilter}
+      onChangeFilter={setChatFilter}
+      searchQuery={chatSearch}
+      onChangeSearchQuery={setChatSearch}
+      isLoadingAccount={isLoadingAccount}
+      unreadIds={unreadIds}
+      onSelectConversation={openConversation}
+      onToggleConversationArchived={onToggleConversationArchived}
+      onToggleConversationPinned={onToggleConversationPinned}
+      onToggleConversationMuted={onToggleConversationMuted}
+      onOpenInvites={() => setActiveTab("invites")}
+    />
+  );
+
+  const conversationPane = selectedGroup ? (
+    <ConversationScreen
+      session={session}
+      selectedGroup={selectedGroup}
+      threadMessages={threadMessages}
+      messageDraft={messageDraft}
+      setMessageDraft={setMessageDraft}
+      pendingAttachment={pendingAttachment}
+      setPendingAttachment={setPendingAttachment}
+      isLoadingThread={isLoadingThread}
+      isPickingPhoto={isPickingPhoto}
+      isSendingMessage={isSendingMessage}
+      editingMessageId={editingMessageId}
+      onCancelEdit={onCancelEdit}
+      onTakePhoto={onTakePhoto}
+      onPickPhoto={onPickPhoto}
+      onPickFile={onPickFile}
+      onPickLocation={onPickLocation}
+      onSendRawText={onSendRawText}
+      onSendMessage={onSendMessage}
+      onBack={() => setChatView("list")}
+      showBackButton={!isWideChatsLayout}
+      restoredAnchorMessageId={restoredConversationAnchorId}
+      onAnchorMessageChange={(messageId) =>
+        onPersistConversationAnchor(selectedGroup.id, messageId)
+      }
+      onImageError={onImageError}
+      onMessageAction={onMessageAction}
+      onUpdateGroup={onUpdateGroup}
+      onCreateInvite={onCreateInvite}
+      groupMembers={groupMembers}
+      isLoadingMembers={isLoadingMembers}
+      isOpeningDm={isOpeningDm}
+      onOpenMembers={onOpenMembers}
+      onLoadMemberNote={onLoadMemberNote}
+      onSaveMemberNote={onSaveMemberNote}
+      onOpenDm={onOpenDm}
+      onSendContactRequest={onSendContactRequest}
+    />
+  ) : (
+    <View style={styles.chatWorkspaceEmptyPane}>
+      <Text style={styles.chatWorkspaceEmptyTitle}>Pick a circle</Text>
+      <Text style={styles.chatWorkspaceEmptyBody}>
+        The list stays visible here on larger screens, so the conversation pane can hold your
+        place instead of replacing the inbox.
+      </Text>
+    </View>
+  );
+
   const content =
     activeTab === "chats" ? (
-      chatView === "conversation" && selectedGroup ? (
-        <ConversationScreen
-          session={session}
-          selectedGroup={selectedGroup}
-          threadMessages={threadMessages}
-          messageDraft={messageDraft}
-          setMessageDraft={setMessageDraft}
-          pendingAttachment={pendingAttachment}
-          setPendingAttachment={setPendingAttachment}
-          isLoadingThread={isLoadingThread}
-          isPickingPhoto={isPickingPhoto}
-          isSendingMessage={isSendingMessage}
-          editingMessageId={editingMessageId}
-          onCancelEdit={onCancelEdit}
-          onTakePhoto={onTakePhoto}
-          onPickPhoto={onPickPhoto}
-          onSendMessage={onSendMessage}
-          onBack={() => setChatView("list")}
-          onImageError={onImageError}
-          onMessageAction={onMessageAction}
-          onUpdateGroup={onUpdateGroup}
-          onCreateInvite={onCreateInvite}
-        />
+      isWideChatsLayout ? (
+        <View style={styles.chatWorkspaceShell}>
+          <View style={styles.chatWorkspaceListPane}>{chatListPane}</View>
+          <View style={styles.chatWorkspaceDetailPane}>{conversationPane}</View>
+        </View>
+      ) : chatView === "conversation" && selectedGroup ? (
+        conversationPane
       ) : (
-        <ChatListScreen
-          profileName={profile?.displayName ?? null}
-          selectedConversationId={selectedConversationId}
-          items={chatItems}
-          activeFilter={chatFilter}
-          onChangeFilter={setChatFilter}
-          searchQuery={chatSearch}
-          onChangeSearchQuery={setChatSearch}
-          isLoadingAccount={isLoadingAccount}
-          unreadIds={unreadIds}
-          onSelectConversation={openConversation}
-          onToggleConversationArchived={onToggleConversationArchived}
-          onToggleConversationPinned={onToggleConversationPinned}
-          onToggleConversationMuted={onToggleConversationMuted}
-          onOpenInvites={() => setActiveTab("invites")}
-        />
+        chatListPane
       )
     ) : activeTab === "invites" ? (
       <InvitesScreen
@@ -300,6 +387,10 @@ export function MainScreen(props: MainScreenProps) {
         deviceLinkMessage={deviceLinkMessage}
         isWorkingDeviceLink={isWorkingDeviceLink}
         isApprovingDeviceLink={isApprovingDeviceLink}
+        sessions={sessions}
+        isLoadingSessions={isLoadingSessions}
+        sessionsError={sessionsError}
+        onRefreshSessions={onRefreshSessions}
         isUploadingAvatar={isUploadingAvatar}
         onShowDeviceLinkQr={onShowDeviceLinkQr}
         onScanDeviceLinkQr={onScanDeviceLinkQr}

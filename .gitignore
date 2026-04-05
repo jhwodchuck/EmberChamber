@@ -70,6 +70,9 @@ apps/mobile/secrets/
 apps/mobile/secrets/google-play-service-account.json
 apps/relay/.wrangler/
 
+# Screenshot publish working directory (created by publish-screenshots.yml)
+staging/
+
 # AI council artifacts
 review-request.yaml
 changed-files.txt

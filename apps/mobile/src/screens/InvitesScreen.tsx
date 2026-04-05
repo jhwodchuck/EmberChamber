@@ -1,7 +1,8 @@
 import type { Dispatch, SetStateAction } from "react";
-import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { Pressable, Text, TextInput, View } from "react-native";
 import type { GroupInvitePreview } from "../types";
 import { styles, theme } from "../styles";
+import { ScreenScaffold } from "../components/ScreenScaffold";
 
 export type InvitesScreenProps = {
   inviteInput: string;
@@ -29,14 +30,19 @@ export function InvitesScreen({
   onOpenChats,
 }: InvitesScreenProps) {
   return (
-    <ScrollView style={styles.screenScroll} contentContainerStyle={styles.screenScrollContent}>
-      <View style={styles.screenHeader}>
-        <Text style={styles.screenTitle}>Invites</Text>
-        <Text style={styles.screenSubtitle}>
-          Paste a trusted group invite here. Joined circles move straight into your chat list.
-        </Text>
-      </View>
-
+    <ScreenScaffold
+      scrollable
+      title="Invites"
+      subtitle="Paste a trusted group invite here. Joined circles move straight into your chat list."
+      headerAction={
+        <Pressable
+          style={styles.screenHeaderActionButton}
+          onPress={onOpenChats}
+        >
+          <Text style={styles.screenHeaderActionLabel}>Chats</Text>
+        </Pressable>
+      }
+    >
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Join a group</Text>
         <Text style={styles.sectionBody}>
@@ -107,6 +113,6 @@ export function InvitesScreen({
           <Text style={styles.secondaryButtonLabel}>Open chats</Text>
         </Pressable>
       </View>
-    </ScrollView>
+    </ScreenScaffold>
   );
 }

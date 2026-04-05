@@ -8,9 +8,9 @@ import {
   Text,
   View,
 } from "react-native";
-import { decryptAttachmentBytes } from "@emberchamber/protocol";
 import type { GroupThreadMessage } from "../types";
 import { styles, theme } from "../styles";
+import { useAttachmentManager } from "../hooks/useAttachmentManager";
 
 type Attachment = NonNullable<GroupThreadMessage["attachment"]>;
 
@@ -29,61 +29,50 @@ export function ImageViewerModal({
   onClose,
 }: ImageViewerModalProps) {
   const [uri, setUri] = useState<string | null>(plainUri ?? null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    attemptCount,
+    canRetry,
+    error,
+    isBusy,
+    prepareForPreview,
+    reset,
+    retry,
+    status,
+    statusLabel,
+  } = useAttachmentManager(attachment);
 
   useEffect(() => {
     if (!visible) {
+      reset();
       return;
     }
+
     if (plainUri) {
       setUri(plainUri);
       return;
     }
-    if (!attachment) return;
-
-    if (attachment.encryptionMode !== "device_encrypted") {
-      setUri(attachment.downloadUrl ?? null);
-      return;
-    }
-
-    // device_encrypted: fetch + decrypt
-    const url = attachment.downloadUrl;
-    if (!url || !attachment.fileKeyB64 || !attachment.fileIvB64) {
-      setError("Attachment keys are missing – cannot decrypt.");
+    setUri(null);
+    if (!attachment) {
       return;
     }
 
     let cancelled = false;
-    setLoading(true);
-    setError(null);
-    setUri(null);
 
-    (async () => {
-      try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error("Failed to download encrypted attachment.");
-        const ciphertext = await res.arrayBuffer();
-        const plain = decryptAttachmentBytes(
-          ciphertext,
-          attachment.fileKeyB64!,
-          attachment.fileIvB64!,
-        );
-        if (cancelled) return;
-        // Build a data URL so we don't need a file-system write
-        const base64 = uint8ToBase64(plain);
-        setUri(`data:${attachment.mimeType};base64,${base64}`);
-      } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Decryption failed.");
-      } finally {
-        if (!cancelled) setLoading(false);
+    void (async () => {
+      const nextUri = await prepareForPreview();
+      if (!cancelled) {
+        setUri(nextUri);
       }
     })();
 
-    return () => { cancelled = true; };
-  }, [visible, attachment, plainUri]);
+    return () => {
+      cancelled = true;
+    };
+  }, [attachment, plainUri, prepareForPreview, reset, visible]);
 
   const { width, height } = Dimensions.get("window");
+  const loading = !plainUri && isBusy;
+  const errorText = plainUri ? null : error;
 
   return (
     <Modal
@@ -95,11 +84,26 @@ export function ImageViewerModal({
     >
       <View style={styles.imageViewerOverlay}>
         {loading ? (
-          <ActivityIndicator size="large" color={theme.colors.textSoft} />
-        ) : error ? (
+          <View style={styles.imageViewerStatus}>
+            <ActivityIndicator size="large" color={theme.colors.textSoft} />
+            <Text style={styles.imageViewerStatusText}>
+              {statusLabel || "Loading attachment…"}
+            </Text>
+          </View>
+        ) : errorText ? (
           <View style={styles.imageViewerError}>
-            <Text style={styles.imageViewerErrorText}>{error}</Text>
-            <Pressable onPress={onClose} style={[styles.secondaryButton, { marginTop: 16 }]}>
+            <Text style={styles.imageViewerErrorText}>{errorText}</Text>
+            {canRetry ? (
+              <Pressable
+                onPress={() => void retry()}
+                style={[styles.primaryButton, { marginTop: 16 }]}
+              >
+                <Text style={styles.primaryButtonLabel}>
+                  Retry{attemptCount > 1 ? ` (${attemptCount})` : ""}
+                </Text>
+              </Pressable>
+            ) : null}
+            <Pressable onPress={onClose} style={[styles.secondaryButton, { marginTop: 12 }]}>
               <Text style={styles.secondaryButtonLabel}>Close</Text>
             </Pressable>
           </View>
@@ -108,6 +112,10 @@ export function ImageViewerModal({
             source={{ uri }}
             style={{ width, height, resizeMode: "contain" }}
           />
+        ) : status !== "idle" && statusLabel ? (
+          <View style={styles.imageViewerStatus}>
+            <Text style={styles.imageViewerStatusText}>{statusLabel}</Text>
+          </View>
         ) : null}
 
         <Pressable onPress={onClose} style={styles.imageViewerCloseButton}>
@@ -116,14 +124,4 @@ export function ImageViewerModal({
       </View>
     </Modal>
   );
-}
-
-// ----- helpers -----
-
-function uint8ToBase64(bytes: Uint8Array): string {
-  let binary = "";
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
 }
