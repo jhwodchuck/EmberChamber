@@ -1,13 +1,15 @@
-import { ActivityIndicator, Image, Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Image, Pressable, Text, View } from "react-native";
 import type { DeviceLinkStatus } from "@emberchamber/protocol";
 import type {
   ContactCard,
   FormMessage,
   MeProfile,
   PrivacyDefaults,
+  SessionDescriptor,
 } from "../types";
 import { styles, theme } from "../styles";
 import { DeviceLinkCard } from "../components/DeviceLinkCard";
+import { ScreenScaffold } from "../components/ScreenScaffold";
 import { ToggleRow } from "../components/ToggleRow";
 
 export type SettingsScreenProps = {
@@ -26,6 +28,10 @@ export type SettingsScreenProps = {
   deviceLinkMessage: FormMessage | null;
   isWorkingDeviceLink: boolean;
   isApprovingDeviceLink: boolean;
+  sessions: SessionDescriptor[];
+  isLoadingSessions: boolean;
+  sessionsError: string | null;
+  onRefreshSessions: () => void;
   isUploadingAvatar: boolean;
   onShowDeviceLinkQr: () => void;
   onScanDeviceLinkQr: (payload: string) => void | Promise<void>;
@@ -52,6 +58,10 @@ export function SettingsScreen({
   deviceLinkMessage,
   isWorkingDeviceLink,
   isApprovingDeviceLink,
+  sessions,
+  isLoadingSessions,
+  sessionsError,
+  onRefreshSessions,
   isUploadingAvatar,
   onShowDeviceLinkQr,
   onScanDeviceLinkQr,
@@ -66,14 +76,11 @@ export function SettingsScreen({
     : "?";
 
   return (
-    <ScrollView style={styles.screenScroll} contentContainerStyle={styles.screenScrollContent}>
-      <View style={styles.screenHeader}>
-        <Text style={styles.screenTitle}>Settings</Text>
-        <Text style={styles.screenSubtitle}>
-          Privacy defaults, device linking, and account state live here instead of on your chat home.
-        </Text>
-      </View>
-
+    <ScreenScaffold
+      scrollable
+      title="Settings"
+      subtitle="Privacy defaults, device linking, and account state live here instead of on your chat home."
+    >
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Account</Text>
         {isLoadingAccount ? (
@@ -157,6 +164,50 @@ export function SettingsScreen({
         />
       </View>
 
+      <View style={styles.card}>
+        <View style={styles.inlineLabelRow}>
+          <Text style={styles.sectionTitle}>Signed-in sessions</Text>
+          <Pressable onPress={onRefreshSessions}>
+            <Text style={styles.inlineAction}>Refresh</Text>
+          </Pressable>
+        </View>
+
+        {isLoadingSessions && !sessions.length ? (
+          <View style={styles.inlineLoadingRow}>
+            <ActivityIndicator size="small" color={theme.colors.textSoft} />
+            <Text style={styles.helper}>Loading active sessions…</Text>
+          </View>
+        ) : sessions.length ? (
+          <View style={styles.sessionList}>
+            {sessions.map((item) => (
+              <View key={item.id} style={styles.sessionRow}>
+                <View style={styles.sessionRowTop}>
+                  <Text style={styles.sessionRowTitle}>{item.deviceLabel}</Text>
+                  {item.isCurrent ? (
+                    <View style={styles.sessionCurrentBadge}>
+                      <Text style={styles.sessionCurrentBadgeLabel}>Current</Text>
+                    </View>
+                  ) : null}
+                </View>
+                <Text style={styles.sessionRowMeta}>
+                  {describeSessionVersion(item)}
+                </Text>
+                <Text style={styles.sessionRowMeta}>
+                  {item.deviceModel ?? "Device model unavailable"}
+                </Text>
+                <Text style={styles.sessionRowMeta}>
+                  Seen {formatSessionTimestamp(item.lastSeenAt)} · Signed in {formatSessionTimestamp(item.createdAt)}
+                </Text>
+              </View>
+            ))}
+          </View>
+        ) : (
+          <Text style={styles.helper}>Only this device session is visible right now.</Text>
+        )}
+
+        {sessionsError ? <Text style={styles.errorText}>{sessionsError}</Text> : null}
+      </View>
+
       {contactCard ? (
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Contact token</Text>
@@ -235,6 +286,31 @@ export function SettingsScreen({
       <Pressable style={styles.secondaryButton} onPress={onSignOut}>
         <Text style={styles.secondaryButtonLabel}>Sign out</Text>
       </Pressable>
-    </ScrollView>
+    </ScreenScaffold>
   );
+}
+
+function formatSessionTimestamp(value: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "Unknown";
+  }
+
+  return parsed.toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function describeSessionVersion(session: SessionDescriptor) {
+  const version = session.clientVersion
+    ? `${session.clientVersion}${session.clientBuild ? ` (${session.clientBuild})` : ""}`
+    : "Version unknown";
+  const platform = session.clientPlatform
+    ? `${session.clientPlatform.charAt(0).toUpperCase()}${session.clientPlatform.slice(1)}`
+    : "Unknown client";
+
+  return `${platform} · ${version}`;
 }

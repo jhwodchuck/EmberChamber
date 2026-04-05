@@ -1,0 +1,2 @@
+# Mark screenshot PNGs as binary so git doesn't try to diff them.
+docs/wiki-site/public/screenshots/**/*.png binary

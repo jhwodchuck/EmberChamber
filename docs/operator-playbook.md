@@ -142,6 +142,56 @@ npx wrangler d1 execute emberchamber-relay-prod-db --env production --remote \
 
 - Do not frame the product as anonymous, uncensorable, or law-proof.
 
+## Android Push (FCM)
+
+Android push is wired end-to-end in both the mobile client and the relay. The two production secrets that must be set before push delivers reliably are:
+
+| Secret                                | Purpose                                                                                                  |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `EMBERCHAMBER_FCM_SERVICE_ACCOUNT_JSON` | Raw JSON service account key downloaded from Firebase Console for the `com.emberchamber.mobile` project. |
+| `EMBERCHAMBER_PUSH_TOKEN_SECRET`        | A strong random secret used to encrypt push tokens stored in D1. Use a value distinct from the dev placeholder. |
+
+To set them on the production worker:
+
+```bash
+cd apps/relay
+# Paste or pipe the full Firebase service account JSON when prompted:
+npx wrangler secret put EMBERCHAMBER_FCM_SERVICE_ACCOUNT_JSON --env production
+
+# Generate and set a strong push token encryption secret:
+npx wrangler secret put EMBERCHAMBER_PUSH_TOKEN_SECRET --env production
+# then redeploy:
+npx wrangler deploy --env production
+```
+
+The Firebase service account JSON comes from Firebase Console → Project settings → Service accounts → Generate new private key. It must belong to the Firebase project that has `com.emberchamber.mobile` registered as an Android app. The `google-services.json` placed in `apps/mobile/secrets/` is a separate Android app config file — do not confuse the two.
+
+The relay will skip FCM sends silently when `EMBERCHAMBER_FCM_SERVICE_ACCOUNT_JSON` is absent, so missing the secret does not crash the relay but push notifications will not be delivered.
+
+### Verify push is configured
+
+After setting the secrets and redeploying, confirm the relay reports push as ready:
+
+```bash
+curl -s https://relay.emberchamber.com/ready | jq '{pushConfigured, features}'
+```
+
+A correctly configured relay returns:
+
+```json
+{
+  "pushConfigured": true,
+  "features": {
+    "pushTokenSecret": true,
+    "fcmServiceAccountJson": true
+  }
+}
+```
+
+If either flag is `false`, push notifications will be silently skipped. The deploy workflow (`deploy-relay.yml`) also emits a GitHub Actions warning annotation when `pushConfigured` is `false` so the gap is visible in the Actions run summary without blocking the deploy.
+
+See [`docs/android-fcm-setup.md`](../docs/android-fcm-setup.md) for the Firebase Console registration steps.
+
 ## Email Delivery (Resend)
 
 Magic-link emails are sent via the [Resend](https://resend.com) API. The relay enqueues a
