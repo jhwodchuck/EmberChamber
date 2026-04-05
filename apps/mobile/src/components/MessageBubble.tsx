@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Clipboard, Image, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Clipboard, Image, Linking, Pressable, Text, View } from "react-native";
 import type { GroupThreadMessage } from "../types";
-import { formatBytes } from "../lib/utils";
+import { formatBytes, parseSharedLocation } from "../lib/utils";
 import { styles, theme } from "../styles";
 import { ImageViewerModal } from "./ImageViewerModal";
 import { MessageContextMenu, type ContextMenuAction } from "./MessageContextMenu";
+import { useAttachmentManager } from "../hooks/useAttachmentManager";
 
 // ---------------------------------------------------------------------------
 // Lightweight inline markdown renderer
@@ -66,6 +67,24 @@ export function MessageBubble({
   const hasText = Boolean(message.text?.trim());
   const attachment = message.attachment;
   const isImage = attachment?.contentClass === "image";
+  const sharedLocation = hasText && !attachment ? parseSharedLocation(message.text!) : null;
+  const attachmentManager = useAttachmentManager(attachment ?? null);
+
+  async function handleOpenAttachment() {
+    await attachmentManager.openExternally();
+  }
+
+  async function handleOpenLocation() {
+    if (!sharedLocation) {
+      return;
+    }
+
+    try {
+      await Linking.openURL(sharedLocation.mapUrl);
+    } catch {
+      // Ignore map-launch failures and leave the card visible.
+    }
+  }
 
   return (
     <>
@@ -90,7 +109,34 @@ export function MessageBubble({
               : ""}
           </Text>
 
-          {hasText ? (
+          {sharedLocation ? (
+            <Pressable style={styles.locationCard} onPress={() => void handleOpenLocation()}>
+              <View style={styles.locationMapFrame}>
+                <Image
+                  source={{ uri: sharedLocation.tileUrl }}
+                  style={styles.locationMapImage}
+                  resizeMode="cover"
+                />
+                <View
+                  style={[
+                    styles.locationMapMarker,
+                    {
+                      left: `${sharedLocation.markerLeftPercent}%`,
+                      top: `${sharedLocation.markerTopPercent}%`,
+                    },
+                  ]}
+                />
+              </View>
+              <View style={styles.locationCardBody}>
+                <Text style={styles.locationTitle}>{sharedLocation.title}</Text>
+                <Text style={styles.locationDetail}>{sharedLocation.detailLabel}</Text>
+                <View style={styles.locationActionRow}>
+                  <Text style={styles.locationActionLabel}>Open map</Text>
+                  <Text style={styles.locationAttribution}>Map data © OpenStreetMap</Text>
+                </View>
+              </View>
+            </Pressable>
+          ) : hasText ? (
             <Text style={styles.messageText}>
               {renderMarkdown(message.text!)}
             </Text>
@@ -109,10 +155,61 @@ export function MessageBubble({
 
           {isImage && attachment?.encryptionMode === "device_encrypted" ? (
             <Pressable onPress={() => setViewerVisible(true)}>
-              <View style={[styles.messageImage, { alignItems: "center", justifyContent: "center", backgroundColor: theme.colors.inputBackground }]}>
+              <View
+                style={[
+                  styles.messageImage,
+                  {
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: theme.colors.inputBackground,
+                  },
+                ]}
+              >
                 <Text style={styles.attachmentMeta}>Tap to decrypt and view</Text>
               </View>
             </Pressable>
+          ) : null}
+
+          {attachment && !isImage ? (
+            <View style={styles.attachmentActionGroup}>
+              <Pressable
+                style={[
+                  styles.secondaryButton,
+                  styles.attachmentActionButton,
+                  attachmentManager.isBusy ? styles.primaryButtonDisabled : null,
+                ]}
+                onPress={() => void handleOpenAttachment()}
+                disabled={attachmentManager.isBusy}
+              >
+                {attachmentManager.isBusy ? (
+                  <ActivityIndicator size="small" color={theme.colors.textSoft} />
+                ) : (
+                  <Text style={styles.secondaryButtonLabel}>
+                    {attachmentManager.actionLabel}
+                  </Text>
+                )}
+              </Pressable>
+              {attachmentManager.error ? (
+                <>
+                  <Text style={styles.errorText}>{attachmentManager.error}</Text>
+                  {attachmentManager.canRetry ? (
+                    <Pressable
+                      style={styles.attachmentRetryButton}
+                      onPress={() => void attachmentManager.retry()}
+                    >
+                      <Text style={styles.attachmentRetryLabel}>
+                        Retry
+                        {attachmentManager.attemptCount > 1
+                          ? ` (${attachmentManager.attemptCount})`
+                          : ""}
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                </>
+              ) : attachmentManager.statusLabel && attachmentManager.status !== "ready" ? (
+                <Text style={styles.helper}>{attachmentManager.statusLabel}</Text>
+              ) : null}
+            </View>
           ) : null}
 
           {attachment ? (
@@ -127,10 +224,14 @@ export function MessageBubble({
         visible={menuVisible}
         isOwnMessage={isOwnMessage}
         hasText={hasText}
+        isImage={isImage}
         onClose={() => setMenuVisible(false)}
         onAction={(action) => {
           if (action.kind === "copy" && message.text) {
             Clipboard.setString(message.text);
+          } else if (action.kind === "view") {
+            setViewerVisible(true);
+            return;
           }
           onAction?.(message.id, action);
         }}
@@ -146,4 +247,3 @@ export function MessageBubble({
     </>
   );
 }
-

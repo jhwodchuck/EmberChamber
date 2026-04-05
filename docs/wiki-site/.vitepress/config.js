@@ -25,6 +25,8 @@ export default defineConfig({
       },
       { text: 'Security', link: '/privacy-security' },
       { text: 'Roadmap', link: '/roadmap' },
+      { text: 'Platform Status', link: '/platform-status' },
+      { text: 'Screenshots', link: '/screenshots' },
     ],
     sidebar: [
       {
@@ -54,8 +56,10 @@ export default defineConfig({
         text: 'Product',
         items: [
           { text: 'Privacy & Security', link: '/privacy-security' },
+          { text: 'Platform Status', link: '/platform-status' },
           { text: 'Roadmap', link: '/roadmap' },
           { text: 'Operator Playbook', link: '/operator-playbook' },
+          { text: 'Screenshots', link: '/screenshots' },
         ],
       },
     ],

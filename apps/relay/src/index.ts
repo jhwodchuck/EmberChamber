@@ -77,6 +77,20 @@ interface AuthContext {
   sessionId: string;
 }
 
+type ClientMetadata = {
+  clientPlatform: string | null;
+  clientVersion: string | null;
+  clientBuild: string | null;
+  deviceModel: string | null;
+};
+
+const clientHeaderNames = {
+  clientPlatform: "x-emberchamber-client-platform",
+  clientVersion: "x-emberchamber-client-version",
+  clientBuild: "x-emberchamber-client-build",
+  deviceModel: "x-emberchamber-device-model",
+} as const;
+
 const authStartSchema = z.object({
   email: z.string().email(),
   inviteToken: z.string().min(3).max(128).optional(),
@@ -359,11 +373,51 @@ async function requireAuth(request: Request, env: Env): Promise<AuthContext> {
     throw new HttpError(401, "Session expired", "SESSION_EXPIRED");
   }
 
+  await touchSession(env, payload.sessionId, parseClientMetadata(request));
+
   return {
     accountId: payload.sub,
     deviceId: payload.deviceId,
     sessionId: payload.sessionId,
   };
+}
+
+function parseClientMetadata(request: Request): ClientMetadata {
+  return {
+    clientPlatform: readOptionalHeader(request, clientHeaderNames.clientPlatform, 24),
+    clientVersion: readOptionalHeader(request, clientHeaderNames.clientVersion, 32),
+    clientBuild: readOptionalHeader(request, clientHeaderNames.clientBuild, 24),
+    deviceModel: readOptionalHeader(request, clientHeaderNames.deviceModel, 120),
+  };
+}
+
+function readOptionalHeader(request: Request, headerName: string, maxLength: number) {
+  const raw = request.headers.get(headerName)?.trim();
+  if (!raw) {
+    return null;
+  }
+
+  return raw.slice(0, maxLength);
+}
+
+async function touchSession(env: Env, sessionId: string, clientMetadata: ClientMetadata) {
+  const now = new Date().toISOString();
+  await dbRun(
+    env.DB,
+    `UPDATE sessions
+        SET last_seen_at = ?2,
+            client_platform = COALESCE(?3, client_platform),
+            client_version = COALESCE(?4, client_version),
+            client_build = COALESCE(?5, client_build),
+            device_model = COALESCE(?6, device_model)
+      WHERE id = ?1`,
+    sessionId,
+    now,
+    clientMetadata.clientPlatform,
+    clientMetadata.clientVersion,
+    clientMetadata.clientBuild,
+    clientMetadata.deviceModel
+  );
 }
 
 async function isExistingAccount(env: Env, emailBlindIndex: string): Promise<boolean> {
@@ -1364,7 +1418,8 @@ async function createSession(
   env: Env,
   accountId: string,
   deviceId: string,
-  bootstrapConversation?: { conversationId: string; title: string } | null
+  bootstrapConversation?: { conversationId: string; title: string } | null,
+  clientMetadata?: ClientMetadata | null,
 ) {
   const sessionId = crypto.randomUUID();
   const refreshToken = `${crypto.randomUUID()}-${crypto.randomUUID()}`;
@@ -1373,14 +1428,30 @@ async function createSession(
 
   await dbRun(
     env.DB,
-    `INSERT INTO sessions (id, account_id, device_id, refresh_token_hash, expires_at, created_at, last_seen_at)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6)`,
+    `INSERT INTO sessions (
+       id,
+       account_id,
+       device_id,
+       refresh_token_hash,
+       expires_at,
+       created_at,
+       last_seen_at,
+       client_platform,
+       client_version,
+       client_build,
+       device_model
+     )
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6, ?7, ?8, ?9, ?10)`,
     sessionId,
     accountId,
     deviceId,
     refreshTokenHash,
     expiresAt,
-    new Date().toISOString()
+    new Date().toISOString(),
+    clientMetadata?.clientPlatform ?? null,
+    clientMetadata?.clientVersion ?? null,
+    clientMetadata?.clientBuild ?? null,
+    clientMetadata?.deviceModel ?? null
   );
 
   const accessToken = await signAccessToken(
@@ -2239,7 +2310,14 @@ export default {
           emailIndexSecret: Boolean(env.EMBERCHAMBER_EMAIL_INDEX_SECRET),
         };
 
+        // Optional feature secrets — absent means graceful degradation, not a hard failure.
+        const features = {
+          pushTokenSecret: Boolean(env.EMBERCHAMBER_PUSH_TOKEN_SECRET),
+          fcmServiceAccountJson: Boolean(env.EMBERCHAMBER_FCM_SERVICE_ACCOUNT_JSON),
+        };
+
         const ready = Object.values(checks).every(Boolean);
+        const pushConfigured = features.pushTokenSecret && features.fcmServiceAccountJson;
 
         return respond(
           json(
@@ -2249,6 +2327,8 @@ export default {
               requestId,
               timestamp: new Date().toISOString(),
               checks,
+              features,
+              pushConfigured,
               ...(dbError ? { dbError } : {}),
             },
             { status: ready ? 200 : 503 }
@@ -2385,6 +2465,7 @@ export default {
 
       if (request.method === "POST" && pathname === "/v1/auth/complete") {
         const body = authCompleteSchema.parse(await readJson(request));
+        const clientMetadata = parseClientMetadata(request);
         const completionTokenHash = await sha256Hex(`completion:${body.completionToken}`);
         const challenge = await dbFirst<{
           id: string;
@@ -2489,7 +2570,7 @@ export default {
 
         return respond(
           json(
-            await createSession(env, account.account_id, deviceId, bootstrapConversation)
+            await createSession(env, account.account_id, deviceId, bootstrapConversation, clientMetadata)
           )
         );
       }
@@ -2683,9 +2764,21 @@ export default {
           device_label: string;
           created_at: string;
           last_seen_at: string;
+          client_platform: string | null;
+          client_version: string | null;
+          client_build: string | null;
+          device_model: string | null;
         }>(
           env.DB,
-          `SELECT s.id, d.device_label, s.created_at, s.last_seen_at
+          `SELECT
+             s.id,
+             d.device_label,
+             s.created_at,
+             s.last_seen_at,
+             s.client_platform,
+             s.client_version,
+             s.client_build,
+             s.device_model
              FROM sessions s
              JOIN devices d ON d.id = s.device_id
             WHERE s.account_id = ?1
@@ -2702,6 +2795,10 @@ export default {
           createdAt: row.created_at,
           lastSeenAt: row.last_seen_at,
           isCurrent: row.id === auth.sessionId,
+          clientPlatform: row.client_platform,
+          clientVersion: row.client_version,
+          clientBuild: row.client_build,
+          deviceModel: row.device_model,
         }));
 
         return respond(json(sessions));
@@ -3101,6 +3198,7 @@ export default {
 
       if (request.method === "POST" && pathname === "/v1/devices/link/complete") {
         const body = deviceLinkCompleteSchema.parse(await readJson(request));
+        const clientMetadata = parseClientMetadata(request);
         const row = await findDeviceLinkByToken(env, body.linkToken);
         if (!row) {
           throw new HttpError(404, "Device-link request not found", "DEVICE_LINK_NOT_FOUND");
@@ -3133,7 +3231,7 @@ export default {
           now
         );
 
-        const session = await createSession(env, row.account_id, deviceId);
+        const session = await createSession(env, row.account_id, deviceId, null, clientMetadata);
         await dbRun(
           env.DB,
           `UPDATE device_links
@@ -4269,6 +4367,77 @@ export default {
         );
 
         return respond(json({ updated: true, messageId, text: body.text, editedAt }));
+      }
+
+      // GET /v1/groups/{id}/members – list group members (visible to all group members)
+      const groupMembersMatch = pathname.match(/^\/v1\/groups\/([0-9a-f-]{36})\/members$/i);
+      if (request.method === "GET" && groupMembersMatch) {
+        const auth = await requireAuth(request, env);
+        const conversationId = groupMembersMatch[1];
+
+        const membership = await dbFirst<{ role: string; history_mode: string | null }>(
+          env.DB,
+          `SELECT cm.role, c.history_mode
+             FROM conversation_members cm
+             JOIN conversations c ON c.id = cm.conversation_id
+            WHERE cm.conversation_id = ?1
+              AND cm.account_id = ?2
+              AND cm.removed_at IS NULL
+              AND c.kind = 'group'`,
+          conversationId,
+          auth.accountId
+        );
+
+        if (!membership) {
+          throw new HttpError(404, "Group not found", "GROUP_NOT_FOUND");
+        }
+
+        const isRelayHosted = (membership.history_mode ?? "relay_hosted") === "relay_hosted";
+
+        const rows = await dbAll<{
+          account_id: string;
+          display_name: string;
+          role: string;
+          joined_at: string;
+        }>(
+          env.DB,
+          `SELECT cm.account_id, a.display_name, cm.role, cm.joined_at
+             FROM conversation_members cm
+             JOIN accounts a ON a.id = cm.account_id
+            WHERE cm.conversation_id = ?1
+              AND cm.removed_at IS NULL
+            ORDER BY
+              CASE cm.role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 ELSE 2 END,
+              cm.joined_at ASC`,
+          conversationId
+        );
+
+        // For relay-hosted groups, also fetch message counts per member in one query
+        const messageCounts = new Map<string, number>();
+        if (isRelayHosted) {
+          const countRows = await dbAll<{ sender_account_id: string; cnt: number }>(
+            env.DB,
+            `SELECT sender_account_id, COUNT(*) AS cnt
+               FROM conversation_messages
+              WHERE conversation_id = ?1
+                AND deleted_at IS NULL
+              GROUP BY sender_account_id`,
+            conversationId
+          );
+          for (const cr of countRows) {
+            messageCounts.set(cr.sender_account_id, cr.cnt);
+          }
+        }
+
+        const members = rows.map((row) => ({
+          accountId: row.account_id,
+          displayName: row.display_name,
+          role: normalizeConversationRole(row.role),
+          joinedAt: row.joined_at,
+          messageCount: messageCounts.get(row.account_id) ?? 0,
+        }));
+
+        return respond(json(members));
       }
 
       const conversationInviteMatch = pathname.match(/^\/v1\/conversations\/([0-9a-f-]{36})\/invites$/i);

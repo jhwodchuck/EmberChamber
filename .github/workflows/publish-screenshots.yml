@@ -1,0 +1,131 @@
+name: Publish Screenshot Gallery
+
+on:
+  # Trigger after any successful screenshot-producing CI run on main.
+  workflow_run:
+    workflows: ["CI - Mobile", "CI - Relay and Companion Apps"]
+    types: [completed]
+    branches: [main]
+
+  # Allow operators to force a gallery refresh manually.
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+# Serialize publishes; a second trigger while one is running queues behind it
+# so each run sees the latest artifact from both CI workflows.
+concurrency:
+  group: publish-screenshots
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Collect latest CI screenshots and update wiki gallery
+    runs-on: ubuntu-22.04
+    # Only proceed when triggered manually or after a successful CI run.
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      # ── Android screenshots ─────────────────────────────────────────────────
+      - name: Download latest Android screenshots
+        run: |
+          RUN_ID=$(gh run list \
+            --repo "$GITHUB_REPOSITORY" \
+            --workflow ci-mobile.yml \
+            --branch main \
+            --status success \
+            --limit 1 \
+            --json databaseId \
+            --jq '.[0].databaseId // empty')
+
+          if [ -z "$RUN_ID" ]; then
+            echo "No successful CI - Mobile run on main; skipping Android screenshots."
+            exit 0
+          fi
+
+          echo "Downloading Android screenshots from run $RUN_ID"
+
+          gh run download "$RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern "emberchamber-android-screenshots-*" \
+            --dir staging/android 2>/dev/null || true
+
+          for FORM_FACTOR in phone tablet chromebook; do
+            DEST="docs/wiki-site/public/screenshots/android/$FORM_FACTOR"
+            mkdir -p "$DEST"
+            # gh download creates one subdir per artifact; glob into dest.
+            for ARTIFACT_DIR in staging/android/emberchamber-android-screenshots-${FORM_FACTOR}-*/; do
+              [ -d "$ARTIFACT_DIR" ] && cp "${ARTIFACT_DIR}"*.png "$DEST/" 2>/dev/null || true
+            done
+          done
+
+      # ── Web + desktop screenshots ───────────────────────────────────────────
+      - name: Download latest web and desktop screenshots
+        run: |
+          RUN_ID=$(gh run list \
+            --repo "$GITHUB_REPOSITORY" \
+            --workflow ci-web.yml \
+            --branch main \
+            --status success \
+            --limit 1 \
+            --json databaseId \
+            --jq '.[0].databaseId // empty')
+
+          if [ -z "$RUN_ID" ]; then
+            echo "No successful CI - Relay and Companion Apps run on main; skipping web/desktop screenshots."
+            exit 0
+          fi
+
+          echo "Downloading web and desktop screenshots from run $RUN_ID"
+
+          gh run download "$RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern "emberchamber-web-screenshots-*" \
+            --dir staging/web 2>/dev/null || true
+
+          mkdir -p docs/wiki-site/public/screenshots/web
+          # Artifact path is apps/web/artifacts/screenshots/new-user-flow/*.png;
+          # flatten all PNGs regardless of subdirectory.
+          find staging/web -name '*.png' -exec cp {} docs/wiki-site/public/screenshots/web/ \; 2>/dev/null || true
+
+          gh run download "$RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern "emberchamber-desktop-screenshots-*" \
+            --dir staging/desktop 2>/dev/null || true
+
+          mkdir -p docs/wiki-site/public/screenshots/desktop
+          find staging/desktop -name '*.png' -exec cp {} docs/wiki-site/public/screenshots/desktop/ \; 2>/dev/null || true
+
+      # ── Regenerate gallery markdown ─────────────────────────────────────────
+      - name: Generate gallery page
+        run: node scripts/generate-screenshot-gallery.mjs
+
+      # ── Commit and push (triggers deploy-wiki.yml redeploy) ─────────────────
+      - name: Commit and push gallery update
+        run: |
+          git add docs/wiki-site/public/screenshots/ docs/wiki-site/screenshots.md
+          if git diff --cached --quiet; then
+            echo "No screenshot changes detected; skipping commit."
+            exit 0
+          fi
+          STATS=$(git diff --cached --stat | tail -1)
+          git commit -m "chore: update screenshot gallery (${STATS})"
+          git push origin main

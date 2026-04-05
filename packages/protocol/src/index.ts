@@ -378,6 +378,14 @@ export interface GroupMembershipSummary {
   updatedAt: string;
 }
 
+export interface GroupMember {
+  accountId: AccountId;
+  displayName: string;
+  role: "owner" | "admin" | "member";
+  joinedAt: string;
+  messageCount: number;
+}
+
 export interface GroupThreadMessage {
   id: string;
   conversationId: ConversationId;
@@ -427,6 +435,10 @@ export interface SessionDescriptor {
   createdAt: string;
   lastSeenAt: string;
   isCurrent: boolean;
+  clientPlatform?: string | null;
+  clientVersion?: string | null;
+  clientBuild?: string | null;
+  deviceModel?: string | null;
 }
 
 export * from "./e2ee";
