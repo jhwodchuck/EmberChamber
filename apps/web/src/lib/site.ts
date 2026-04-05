@@ -114,7 +114,7 @@ export const surfaceCapabilities = [
       "Native device integration",
       "Installable daily client",
     ],
-    caveat: "Android push wiring exists, but reliable production delivery still depends on deployed relay secrets.",
+    caveat: "Push wiring is complete on mobile and relay. Production delivery requires EMBERCHAMBER_FCM_SERVICE_ACCOUNT_JSON and EMBERCHAMBER_PUSH_TOKEN_SECRET to be configured as relay secrets — see the operator playbook.",
   },
   {
     name: "Windows",

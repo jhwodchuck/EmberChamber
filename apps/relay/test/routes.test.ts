@@ -33,6 +33,13 @@ const relaySecrets = {
   EMBERCHAMBER_PUSH_TOKEN_SECRET: "test-push-token-secret",
 };
 
+const defaultClientHeaders = {
+  "x-emberchamber-client-platform": "android",
+  "x-emberchamber-client-version": "0.1.0",
+  "x-emberchamber-client-build": "1",
+  "x-emberchamber-device-model": "Google Pixel 8",
+};
+
 let worker: Awaited<ReturnType<typeof unstable_dev>>;
 let persistPath: string;
 
@@ -50,7 +57,11 @@ async function bootstrapAccount(email: string, deviceLabel: string) {
     debugCompletionToken?: string;
   }>("/v1/auth/start", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      "cf-connecting-ip": testClientIp(email),
+      ...defaultClientHeaders,
+    },
     body: JSON.stringify({
       email,
       inviteToken: "dev-beta-invite",
@@ -63,7 +74,7 @@ async function bootstrapAccount(email: string, deviceLabel: string) {
 
   return relayJson<RelaySession>("/v1/auth/complete", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", ...defaultClientHeaders },
     body: JSON.stringify({
       completionToken: challenge.debugCompletionToken,
       deviceLabel,
@@ -125,11 +136,17 @@ function authHeaders(session: RelaySession) {
   return {
     authorization: `Bearer ${session.accessToken}`,
     "content-type": "application/json",
+    ...defaultClientHeaders,
   };
 }
 
 function sha256B64(value: string) {
   return createHash("sha256").update(value).digest("base64");
+}
+
+function testClientIp(seed: string) {
+  const digest = createHash("sha256").update(seed).digest();
+  return `198.51.${digest[0]}.${digest[1]}`;
 }
 
 beforeAll(async () => {
@@ -184,6 +201,35 @@ describe("relay routes", () => {
     expect(readyBody.status).toBe("ok");
     expect(readyBody.checks.db).toBe(true);
     expect(readyBody.checks.cleanupQueue).toBe(true);
+  });
+
+  it("lists active sessions with client metadata", async () => {
+    const alice = await bootstrapAccount("session-meta@example.com", "Alice Pixel");
+
+    const sessions = await relayJson<
+      Array<{
+        id: string;
+        deviceLabel: string;
+        isCurrent: boolean;
+        clientPlatform?: string | null;
+        clientVersion?: string | null;
+        clientBuild?: string | null;
+        deviceModel?: string | null;
+      }>
+    >("/v1/sessions", {
+      headers: authHeaders(alice),
+    });
+
+    expect(sessions).toHaveLength(1);
+    expect(sessions[0]).toMatchObject({
+      id: alice.sessionId,
+      deviceLabel: "Alice Pixel",
+      isCurrent: true,
+      clientPlatform: "android",
+      clientVersion: "0.1.0",
+      clientBuild: "1",
+      deviceModel: "Google Pixel 8",
+    });
   });
 
   it("lists conversations and joined-space metadata search results", async () => {

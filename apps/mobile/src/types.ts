@@ -56,6 +56,14 @@ export type GroupMembershipSummary = {
   updatedAt: string;
 };
 
+export type GroupMember = {
+  accountId: string;
+  displayName: string;
+  role: "owner" | "admin" | "member";
+  joinedAt: string;
+  messageCount: number;
+};
+
 export type GroupThreadMessage = {
   id: string;
   conversationId: string;
@@ -120,6 +128,18 @@ export type GroupInviteAcceptance = {
   conversationId: string;
   title: string;
   epoch: number;
+};
+
+export type SessionDescriptor = {
+  id: string;
+  deviceLabel: string;
+  createdAt: string;
+  lastSeenAt: string;
+  isCurrent: boolean;
+  clientPlatform?: string | null;
+  clientVersion?: string | null;
+  clientBuild?: string | null;
+  deviceModel?: string | null;
 };
 
 export type AttachmentTicket = {

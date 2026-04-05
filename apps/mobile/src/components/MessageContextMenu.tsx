@@ -4,12 +4,14 @@ import { styles } from "../styles";
 export type ContextMenuAction =
   | { kind: "copy" }
   | { kind: "edit" }
-  | { kind: "delete" };
+  | { kind: "delete" }
+  | { kind: "view" };
 
 type MessageContextMenuProps = {
   visible: boolean;
   isOwnMessage: boolean;
   hasText: boolean;
+  isImage?: boolean;
   onAction: (action: ContextMenuAction) => void;
   onClose: () => void;
 };
@@ -18,9 +20,44 @@ export function MessageContextMenu({
   visible,
   isOwnMessage,
   hasText,
+  isImage,
   onAction,
   onClose,
 }: MessageContextMenuProps) {
+  // Track whether we have rendered at least one item (for divider placement)
+  let itemCount = 0;
+
+  function Item({
+    label,
+    destructive,
+    action,
+  }: {
+    label: string;
+    destructive?: boolean;
+    action: ContextMenuAction;
+  }) {
+    const needsDivider = itemCount > 0;
+    itemCount += 1;
+    return (
+      <>
+        {needsDivider ? <View style={styles.contextMenuDivider} /> : null}
+        <Pressable
+          style={styles.contextMenuItem}
+          onPress={() => { onClose(); onAction(action); }}
+        >
+          <Text
+            style={[
+              styles.contextMenuItemLabel,
+              destructive ? styles.contextMenuItemDestructive : null,
+            ]}
+          >
+            {label}
+          </Text>
+        </Pressable>
+      </>
+    );
+  }
+
   return (
     <Modal
       visible={visible}
@@ -33,36 +70,20 @@ export function MessageContextMenu({
         <Pressable style={styles.contextMenuSheet}>
           <View style={styles.contextMenuDrag} />
 
+          {isImage ? (
+            <Item label="View image" action={{ kind: "view" }} />
+          ) : null}
+
           {hasText ? (
-            <>
-              <Pressable
-                style={styles.contextMenuItem}
-                onPress={() => { onClose(); onAction({ kind: "copy" }); }}
-              >
-                <Text style={styles.contextMenuItemLabel}>Copy text</Text>
-              </Pressable>
-              <View style={styles.contextMenuDivider} />
-            </>
+            <Item label="Copy text" action={{ kind: "copy" }} />
+          ) : null}
+
+          {isOwnMessage && !isImage ? (
+            <Item label="Edit message" action={{ kind: "edit" }} />
           ) : null}
 
           {isOwnMessage ? (
-            <>
-              <Pressable
-                style={styles.contextMenuItem}
-                onPress={() => { onClose(); onAction({ kind: "edit" }); }}
-              >
-                <Text style={styles.contextMenuItemLabel}>Edit message</Text>
-              </Pressable>
-              <View style={styles.contextMenuDivider} />
-              <Pressable
-                style={styles.contextMenuItem}
-                onPress={() => { onClose(); onAction({ kind: "delete" }); }}
-              >
-                <Text style={[styles.contextMenuItemLabel, styles.contextMenuItemDestructive]}>
-                  Delete (locally)
-                </Text>
-              </Pressable>
-            </>
+            <Item label="Delete (locally)" destructive action={{ kind: "delete" }} />
           ) : null}
         </Pressable>
       </Pressable>

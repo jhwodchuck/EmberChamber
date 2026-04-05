@@ -83,3 +83,18 @@ jobs:
       - name: Check /ready
         if: steps.relay-url.outputs.base_url != ''
         run: curl --fail --show-error --silent --retry 5 --retry-delay 3 "${{ steps.relay-url.outputs.base_url }}/ready"
+
+      - name: Verify push secrets configured
+        if: steps.relay-url.outputs.base_url != ''
+        run: |
+          READY_JSON=$(curl --fail --show-error --silent --retry 3 --retry-delay 3 "${{ steps.relay-url.outputs.base_url }}/ready")
+          PUSH_CONFIGURED=$(echo "$READY_JSON" | jq -r '.pushConfigured')
+          FCM_JSON_SET=$(echo "$READY_JSON" | jq -r '.features.fcmServiceAccountJson')
+          PUSH_TOKEN_SET=$(echo "$READY_JSON" | jq -r '.features.pushTokenSecret')
+          if [ "$PUSH_CONFIGURED" = "true" ]; then
+            echo "Push secrets verified: pushConfigured=true"
+          else
+            echo "::warning title=Push not configured::Android push notifications will be silently skipped. Set EMBERCHAMBER_FCM_SERVICE_ACCOUNT_JSON and EMBERCHAMBER_PUSH_TOKEN_SECRET as Cloudflare Worker secrets, then redeploy. See docs/operator-playbook.md."
+            echo "  features.fcmServiceAccountJson: $FCM_JSON_SET"
+            echo "  features.pushTokenSecret:       $PUSH_TOKEN_SET"
+          fi

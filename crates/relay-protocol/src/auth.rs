@@ -115,4 +115,8 @@ pub struct SessionDescriptor {
     pub created_at: DateTime<Utc>,
     pub last_seen_at: DateTime<Utc>,
     pub is_current: bool,
+    pub client_platform: Option<String>,
+    pub client_version: Option<String>,
+    pub client_build: Option<String>,
+    pub device_model: Option<String>,
 }

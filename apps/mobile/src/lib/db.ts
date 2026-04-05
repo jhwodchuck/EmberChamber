@@ -202,6 +202,41 @@ export async function countVaultItems(db: SQLite.SQLiteDatabase) {
   return row?.count ?? 0;
 }
 
+// ---------------------------------------------------------------------------
+// Contact labels (private notes + local labels on other members)
+// ---------------------------------------------------------------------------
+
+export async function loadContactLabel(
+  db: SQLite.SQLiteDatabase,
+  accountId: string,
+): Promise<{ localLabel: string | null; privateNote: string | null }> {
+  const row = await db.getFirstAsync<{ local_label: string; private_note: string | null }>(
+    "SELECT local_label, private_note FROM contact_labels WHERE account_id = ?",
+    accountId,
+  );
+  return { localLabel: row?.local_label ?? null, privateNote: row?.private_note ?? null };
+}
+
+export async function saveContactLabel(
+  db: SQLite.SQLiteDatabase,
+  accountId: string,
+  localLabel: string,
+  privateNote: string | null,
+) {
+  await db.runAsync(
+    `INSERT INTO contact_labels (account_id, local_label, private_note, updated_at)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(account_id) DO UPDATE SET
+       local_label = excluded.local_label,
+       private_note = excluded.private_note,
+       updated_at = excluded.updated_at`,
+    accountId,
+    localLabel,
+    privateNote,
+    new Date().toISOString(),
+  );
+}
+
 export async function loadCachedGroups(
   db: SQLite.SQLiteDatabase,
   accountId: string,

@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
+  FlatList,
   PanResponder,
   Pressable,
-  ScrollView,
   Text,
   TextInput,
   View,
@@ -14,11 +14,15 @@ import type {
   GroupMembershipSummary,
   GroupThreadMessage,
 } from "../types";
+import {
+  CHAT_LIST_FILTERS,
+  type ChatListFilter,
+} from "../lib/mainShell";
+import { parseSharedLocation } from "../lib/utils";
 import { styles, theme } from "../styles";
+import { ScreenScaffold } from "../components/ScreenScaffold";
 
 const CHAT_ACTION_WIDTH = 216;
-
-export type ChatListFilter = "all" | "unread" | "pinned" | "archived";
 
 export type ChatListItem = {
   group: GroupMembershipSummary;
@@ -26,8 +30,6 @@ export type ChatListItem = {
   preference: ConversationPreference;
   unreadCount: number;
 };
-
-const chatFilters: ChatListFilter[] = ["all", "unread", "pinned", "archived"];
 
 function formatTimestamp(value: string | null) {
   if (!value) {
@@ -61,9 +63,18 @@ function previewText(group: GroupMembershipSummary, message: GroupThreadMessage 
     return message.text ?? "Update";
   }
 
+  const sharedLocation = message.text ? parseSharedLocation(message.text) : null;
+  if (sharedLocation) {
+    return sharedLocation.isLive ? "Live location" : "Shared location";
+  }
+
   const attachmentLabel =
     message.attachment?.contentClass === "image"
       ? "Photo"
+      : message.attachment?.contentClass === "video"
+        ? "Video"
+        : message.attachment?.contentClass === "audio"
+          ? "Audio"
       : message.attachment?.fileName ?? "Attachment";
 
   if (message.text?.trim()) {
@@ -317,14 +328,18 @@ export function ChatListScreen({
   }, [items, openConversationId]);
 
   return (
-    <View style={styles.screenSection}>
-      <View style={styles.screenHeader}>
-        <Text style={styles.screenTitle}>Chats</Text>
-        <Text style={styles.screenSubtitle}>
-          {profileName ? `${profileName}'s circles` : "Your circles"}
-        </Text>
-      </View>
-
+    <ScreenScaffold
+      title="Chats"
+      subtitle={profileName ? `${profileName}'s circles` : "Your circles"}
+      headerAction={
+        <Pressable
+          style={styles.screenHeaderActionButton}
+          onPress={onOpenInvites}
+        >
+          <Text style={styles.screenHeaderActionLabel}>Invites</Text>
+        </Pressable>
+      }
+    >
       {resumeItem ? (
         <Pressable
           style={styles.resumeCard}
@@ -372,7 +387,7 @@ export function ChatListScreen({
       />
 
       <View style={styles.filterRow}>
-        {chatFilters.map((filter) => (
+        {CHAT_LIST_FILTERS.map((filter) => (
           <Pressable
             key={filter}
             onPress={() => onChangeFilter(filter)}
@@ -400,20 +415,27 @@ export function ChatListScreen({
         </View>
       ) : null}
 
-      <ScrollView style={styles.screenScroll} contentContainerStyle={styles.chatListContent}>
-        {!isLoadingAccount && !items.length ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateTitle}>No chats</Text>
-            <Text style={styles.emptyStateBody}>Use an invite to start.</Text>
-            <Pressable style={styles.secondaryButton} onPress={onOpenInvites}>
-              <Text style={styles.secondaryButtonLabel}>Open invites</Text>
-            </Pressable>
-          </View>
-        ) : null}
-
-        {items.map((item) => (
+      <FlatList
+        style={styles.screenScroll}
+        contentContainerStyle={[
+          styles.chatListContent,
+          !items.length ? { flexGrow: 1 } : null,
+        ]}
+        data={items}
+        keyExtractor={(item) => item.group.id}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        initialNumToRender={12}
+        maxToRenderPerBatch={16}
+        windowSize={8}
+        removeClippedSubviews
+        extraData={{
+          selectedConversationId,
+          openConversationId,
+        }}
+        onScrollBeginDrag={() => setOpenConversationId(null)}
+        renderItem={({ item }) => (
           <SwipeableChatRow
-            key={item.group.id}
             item={item}
             isSelected={selectedConversationId === item.group.id}
             isOpen={openConversationId === item.group.id}
@@ -424,8 +446,19 @@ export function ChatListScreen({
             onToggleConversationPinned={onToggleConversationPinned}
             onToggleConversationMuted={onToggleConversationMuted}
           />
-        ))}
-      </ScrollView>
-    </View>
+        )}
+        ListEmptyComponent={
+          !isLoadingAccount ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateTitle}>No chats</Text>
+              <Text style={styles.emptyStateBody}>Use an invite to start.</Text>
+              <Pressable style={styles.secondaryButton} onPress={onOpenInvites}>
+                <Text style={styles.secondaryButtonLabel}>Open invites</Text>
+              </Pressable>
+            </View>
+          ) : null
+        }
+      />
+    </ScreenScaffold>
   );
 }
