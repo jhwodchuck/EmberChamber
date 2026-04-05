@@ -62,6 +62,9 @@ on:
 jobs:
   build:
     name: Build Android (${{ inputs.build_type }})
+    permissions:
+      id-token: write
+      contents: read
     runs-on: ubuntu-22.04
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -254,3 +257,7 @@ jobs:
           path: apps/mobile/artifacts/android-build/*
           retention-days: 30
           if-no-files-found: error
+
+      - name: Fix failing Android build
+        uses: fly-ci/wingman-action@v1
+        if: ${{ failure() && github.event.pull_request != null }}

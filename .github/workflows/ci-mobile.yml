@@ -26,6 +26,9 @@ concurrency:
 jobs:
   verify-android:
     name: Verify Android mobile app
+    permissions:
+      id-token: write
+      contents: read
     runs-on: ubuntu-22.04
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -56,6 +59,10 @@ jobs:
       - name: Verify Android mobile project
         run: npm run verify:android --workspace=apps/mobile
 
+      - name: Fix failing Android verification
+        uses: fly-ci/wingman-action@v1
+        if: ${{ failure() && github.event.pull_request != null }}
+
   build-android-release:
     name: Build Android release APK for screenshots
     needs: verify-android
@@ -68,6 +75,9 @@ jobs:
 
   android-screenshots:
     name: Capture Android screenshots (${{ matrix.device_class }})
+    permissions:
+      id-token: write
+      contents: read
     runs-on: ubuntu-22.04
     needs: build-android-release
     strategy:
@@ -131,3 +141,7 @@ jobs:
           path: apps/mobile/artifacts/android-screenshots/${{ matrix.device_class }}
           retention-days: 14
           if-no-files-found: error
+
+      - name: Fix failing Android screenshot capture
+        uses: fly-ci/wingman-action@v1
+        if: ${{ failure() && github.event.pull_request != null }}
