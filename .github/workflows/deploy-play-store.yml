@@ -112,7 +112,12 @@ jobs:
   deploy:
     name: Upload AAB to Google Play
     runs-on: ubuntu-22.04
-    needs: build
+    needs: [prepare, build]
+    permissions:
+      contents: read
+      actions: read
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Assert Play Store credentials are configured
         env:
@@ -122,6 +127,11 @@ jobs:
             echo "Missing GitHub Actions secret GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" >&2
             exit 1
           fi
+
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.ref }}
+          fetch-depth: 0
 
       - name: Download signed AAB artifact
         uses: actions/download-artifact@v6
@@ -137,6 +147,70 @@ jobs:
             exit 1
           fi
           echo "AAB_PATH=$AAB_PATH" >> "$GITHUB_ENV"
+
+      - name: Generate Play Store changelog
+        env:
+          REF: ${{ github.event.inputs.ref }}
+          VERSION_CODE: ${{ needs.prepare.outputs.version_code }}
+        run: |
+          git fetch --tags --quiet
+          PREV_TAG=$(git tag --sort=-version:refname | grep -v "^${REF}$" | head -1)
+          if [ -n "$PREV_TAG" ]; then
+            RANGE="${PREV_TAG}..${REF}"
+          else
+            RANGE="${REF}"
+          fi
+
+          # Collect feat/fix/perf subjects; drop merge, ci, docs, chore, test, build
+          CHANGES=$(git log "$RANGE" \
+            --pretty="• %s" \
+            --no-merges \
+            | grep -Ev '^[[:space:]]*$' \
+            | grep -Ev '^• (chore|ci|docs|test|build)([(:)]|$)' \
+            | head -15)
+
+          if [ -z "$CHANGES" ]; then
+            CHANGES="• Bug fixes and performance improvements"
+          fi
+
+          # Play Store "What's new" cap is 500 characters
+          BODY=$(printf 'Beta %s\n\n%s' "$REF" "$CHANGES" | head -c 490)
+
+          CHANGELOG_DIR="apps/mobile/fastlane/metadata/android/en-US/changelogs"
+          mkdir -p "$CHANGELOG_DIR"
+          printf '%s\n' "$BODY" > "${CHANGELOG_DIR}/${VERSION_CODE}.txt"
+          echo "--- Play Store changelog ---"
+          cat "${CHANGELOG_DIR}/${VERSION_CODE}.txt"
+
+      - name: Download phone screenshots for Play Store
+        run: |
+          PHONE_DIR="apps/mobile/fastlane/metadata/android/en-US/images/phoneScreenshots"
+          mkdir -p "$PHONE_DIR"
+
+          RUN_ID=$(gh run list \
+            --repo "$GITHUB_REPOSITORY" \
+            --workflow ci-mobile.yml \
+            --branch main \
+            --status success \
+            --limit 1 \
+            --json databaseId \
+            --jq '.[0].databaseId // empty')
+
+          if [ -z "$RUN_ID" ]; then
+            echo "No successful CI - Mobile run on main; phone screenshots will not be uploaded."
+          else
+            echo "Downloading phone screenshots from CI run $RUN_ID"
+            gh run download "$RUN_ID" \
+              --repo "$GITHUB_REPOSITORY" \
+              --pattern "emberchamber-android-screenshots-phone-*" \
+              --dir staging/screenshots 2>/dev/null || true
+
+            find staging/screenshots -name '*.png' \
+              -exec cp {} "$PHONE_DIR/" \; 2>/dev/null || true
+
+            SHOT_COUNT=$(find "$PHONE_DIR" -name '*.png' | wc -l)
+            echo "Staged ${SHOT_COUNT} phone screenshot(s) for Play Store"
+          fi
 
       - uses: ruby/setup-ruby@v1
         with:
@@ -171,10 +245,9 @@ jobs:
             "release_status:$PLAY_RELEASE_STATUS"
             "in_app_update_priority:$PLAY_UPDATE_PRIORITY"
             "validate_only:$PLAY_VALIDATE_ONLY"
+            "metadata_path:apps/mobile/fastlane/metadata/android"
             "skip_upload_metadata:true"
-            "skip_upload_changelogs:true"
             "skip_upload_images:true"
-            "skip_upload_screenshots:true"
             "changes_not_sent_for_review:$PLAY_CHANGES_NOT_SENT_FOR_REVIEW"
           )
 
