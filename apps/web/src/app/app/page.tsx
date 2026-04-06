@@ -10,7 +10,7 @@ const actionCards = [
   {
     href: "/app/new-dm",
     label: "Start a DM",
-    description: "Open a direct conversation.",
+    description: "Open a direct conversation with a shared contact.",
     icon: MessageSquare,
   },
   {
@@ -132,7 +132,9 @@ export default function AppHome() {
               <div className="rounded-[1.45rem] border border-dashed border-[var(--border)] bg-[var(--bg-secondary)] px-5 py-6">
                 <p className="text-base font-semibold text-[var(--text-primary)]">No conversations yet</p>
                 <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                  Start a DM, create a Group, or review an Invite to give the workspace something to resume.
+                  Start a DM, create a Group, or review an Invite to give the workspace something
+                  to resume. If DM search is empty, you probably do not share access with anyone
+                  yet on this account.
                 </p>
                 <div className="mt-4 flex flex-wrap gap-3">
                   <Link href="/app/new-dm" className="btn-primary">

@@ -13,11 +13,11 @@ export const metadata: Metadata = {
 const supportTracks = [
   {
     title: "Invite or bootstrap problem",
-    body: "Include your invite code, the device label you entered, and whether the failure happened before or after the magic-link email step.",
+    body: "Include your invite code, the browser name you entered, and whether the problem happened before the email arrived or after you opened it.",
   },
   {
     title: "Can't sign in",
-    body: "Email us your device label and the private email you used to register. We'll look up the account and get you back in.",
+    body: "Email us the private email and browser name you used. We can confirm whether they match an existing beta account, help you restart sign-in, and tell you whether another session still looks active.",
   },
   {
     title: "Broken page or in-app bug",
@@ -34,7 +34,7 @@ const supportDecisionTree = [
   },
   {
     title: "Need to recover access",
-    body: "Use this if the account already exists and the email or redirect flow is not landing you where it should.",
+    body: "Use this only if the account already exists. If the email does not match a beta account, the login flow will stop and point you back to Join Beta instead.",
     href: "/login",
     label: "Request Sign-In Link",
   },
@@ -64,12 +64,12 @@ const quickAnswers = [
   {
     question: "Didn't get the magic-link email.",
     answer:
-      "Check your spam folder first. If it's not there within a few minutes, email support with the address you used and we'll resend manually.",
+      "Check your spam folder first. If it still does not arrive within a few minutes, email support with the address you used so we can help confirm the request and restart sign-in.",
   },
   {
     question: "Which client should I start with?",
     answer:
-      "Start with the web app — no install needed, works immediately after onboarding. Move to Android or desktop when you want the preferred daily experience.",
+      "Use the web app when you need the fastest path or no install. Move to Android or desktop when you want the preferred daily experience.",
   },
   {
     question: "What data stays on my device?",

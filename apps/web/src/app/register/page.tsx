@@ -16,7 +16,7 @@ export default function RegisterPage() {
           eyebrow="Adults-only onboarding"
           title="Join the beta with an invite and a private inbox."
           description="New accounts still need a trusted invite path, a private email, and an adults-only confirmation."
-          emphasis="Confirm access, name the device, then finish from the inbox."
+          emphasis="Confirm access, name this browser so you can recognize it later, then open the email link on the device you want to use first."
         />
 
         <RegisterForm />

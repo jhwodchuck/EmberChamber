@@ -18,7 +18,7 @@ export function AuthCompleteClient() {
     message: string;
   }>({
     status: "loading",
-    message: "Completing the magic link and creating a relay session for this browser…",
+    message: "Completing the email link and signing this browser in…",
   });
 
   const completionToken = searchParams?.get("token") ?? "";
@@ -58,7 +58,7 @@ export function AuthCompleteClient() {
       setState({
         status: "handoff",
         message:
-          "The app did not open automatically. Tap the button below to launch EmberChamber, or finish sign-in in the browser.",
+          "The app did not open automatically. Tap below to launch EmberChamber, or finish sign-in in this browser.",
       });
     }, 1500);
 
@@ -71,7 +71,7 @@ export function AuthCompleteClient() {
     if (!completionToken) {
       setState({
         status: "error",
-        message: "This link is missing the completion token. Request a fresh magic link.",
+        message: "This link is missing the completion token. Request a fresh email link.",
       });
       return;
     }
@@ -85,13 +85,12 @@ export function AuthCompleteClient() {
 
     setState({
       status: "loading",
-      message: "Completing the magic link and creating a relay session for this browser…",
+      message: "Completing the email link and signing this browser in…",
     });
 
     void (async () => {
       try {
-        const deviceLabel =
-          window.localStorage.getItem(DEVICE_LABEL_STORAGE_KEY) ?? "Browser companion";
+        const deviceLabel = window.localStorage.getItem(DEVICE_LABEL_STORAGE_KEY) ?? "Web browser";
         const session = await completeMagicLink({ completionToken, deviceLabel });
         if (cancelled) {
           return;
@@ -100,7 +99,7 @@ export function AuthCompleteClient() {
         setSession(session);
         setState({
           status: "success",
-          message: "Relay session confirmed. Redirecting you into the companion workspace…",
+          message: "This browser is signed in. Redirecting you into the web workspace…",
         });
 
         window.setTimeout(() => {
@@ -113,7 +112,7 @@ export function AuthCompleteClient() {
 
         setState({
           status: "error",
-          message: error instanceof Error ? error.message : "Unable to complete the magic link.",
+          message: error instanceof Error ? error.message : "Unable to complete the email link.",
         });
       }
     })();
@@ -138,12 +137,12 @@ export function AuthCompleteClient() {
           }
           title={
             state.status === "loading"
-              ? "Completing magic link"
+              ? "Signing in"
               : state.status === "success"
-                ? "Session ready"
+                ? "Browser ready"
                 : state.status === "handoff"
                   ? "Open the app"
-                  : "Magic link failed"
+                  : "Email link failed"
           }
         >
           {state.message}

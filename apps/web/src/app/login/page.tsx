@@ -5,7 +5,7 @@ import { MarketingShell } from "@/components/marketing-shell";
 
 export const metadata: Metadata = {
   title: "Sign In",
-  description: "Request a private adults-only email magic link for EmberChamber beta access.",
+  description: "Request a private adults-only email magic link for an existing EmberChamber beta account.",
 };
 
 export default function LoginPage() {
@@ -15,8 +15,8 @@ export default function LoginPage() {
         <AuthPageIntro
           eyebrow="Email bootstrap"
           title="Sign in with the private email tied to this account."
-          description="Most returning users only need the same private email, an adults-only confirmation, and a readable device name."
-          emphasis="If this email was never used for beta access, the form can add an invite token without making you restart."
+          description="Most returning users only need the same private email, an adults-only confirmation, and a browser name they can recognize later."
+          emphasis="If this email does not match an existing beta account, the form will stop and switch you into a separate join-beta branch before anything new is created."
         />
 
         <LoginForm />

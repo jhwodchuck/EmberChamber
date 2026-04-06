@@ -17,6 +17,7 @@ export default function NewDmPage() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<User[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const trimmedQuery = query.trim();
 
   async function handleSearch(q: string) {
     setQuery(q);
@@ -48,8 +49,8 @@ export default function NewDmPage() {
       <div className="border-b border-[var(--border)] px-4 py-3">
         <h2 className="mb-2 font-semibold text-[var(--text-primary)]">New Message</h2>
         <p className="mb-3 text-sm text-[var(--text-secondary)]">
-          Start a DM on web when it is the fastest path. Native stays preferred for longer and
-          media-heavier conversations.
+          Search by display name or username. Results only include people you already share access
+          with in EmberChamber.
         </p>
         <input
           type="text"
@@ -65,8 +66,26 @@ export default function NewDmPage() {
           <div className="flex justify-center py-8">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
           </div>
-        ) : results.length === 0 && query.length >= 2 ? (
-          <p className="py-8 text-center text-[var(--text-secondary)]">No users found</p>
+        ) : trimmedQuery.length === 0 ? (
+          <div className="rounded-[1.35rem] border border-dashed border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-5">
+            <p className="text-sm font-semibold text-[var(--text-primary)]">Search shared contacts</p>
+            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+              Search by display name or username. If someone is missing, ask them to invite you
+              into the same space or send you an invite link first.
+            </p>
+          </div>
+        ) : trimmedQuery.length < 2 ? (
+          <p className="py-8 text-center text-[var(--text-secondary)]">
+            Type at least 2 characters to search shared contacts.
+          </p>
+        ) : results.length === 0 ? (
+          <div className="rounded-[1.35rem] border border-dashed border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-5">
+            <p className="text-sm font-semibold text-[var(--text-primary)]">No shared contacts matched</p>
+            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+              Results only come from people you already share access with. If this person is
+              missing, ask them to invite you into the same space or send you an invite link.
+            </p>
+          </div>
         ) : (
           results.map((user) => (
             <button

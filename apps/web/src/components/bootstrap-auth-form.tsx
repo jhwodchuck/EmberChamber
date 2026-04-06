@@ -43,13 +43,18 @@ function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+function normalizeEmail(value: string) {
+  return value.trim().toLowerCase();
+}
+
 export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
   const [entryMethod, setEntryMethod] = useState<BootstrapEntryMethod>("magic-link");
   const [magicLinkStep, setMagicLinkStep] = useState<MagicLinkStep>(1);
   const [email, setEmail] = useState("");
   const [inviteToken, setInviteToken] = useState("");
-  const [deviceLabel, setDeviceLabel] = useState("Browser companion");
+  const [deviceLabel, setDeviceLabel] = useState("Web browser");
   const [ageConfirmed18, setAgeConfirmed18] = useState(false);
+  const [missingAccountEmail, setMissingAccountEmail] = useState<string | null>(null);
   const [challenge, setChallenge] = useState<{
     expiresAt: string;
     debugCompletionToken?: string;
@@ -143,9 +148,9 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
     let nextError: string | undefined;
 
     if (!deviceLabel.trim()) {
-      nextError = "Name this device so future session reviews stay readable.";
+      nextError = "Name this browser so you can recognize it later.";
     } else if (deviceLabel.trim().length < 3) {
-      nextError = "Use at least 3 characters so the device name is recognizable.";
+      nextError = "Use at least 3 characters so the browser name is recognizable.";
     }
 
     setErrors((current) => ({
@@ -162,6 +167,7 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
   }
 
   function moveToDeviceStep(requireInviteToken: boolean) {
+    const isJoinPath = mode === "join" || missingAccountEmail === normalizeEmail(email);
     setChallenge(null);
     setFormMessage(null);
 
@@ -170,9 +176,9 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
         tone: "error",
         title: "Fix the access details first",
         body:
-          mode === "join"
+          isJoinPath
             ? "Invite-only onboarding still needs a valid email, an adults-only confirmation, and the beta invite token when required."
-            : "Sign-in still needs a valid email, an adults-only confirmation, and the invite token only when this address has never been used for beta access.",
+            : "Sign-in still needs the email tied to an existing beta account plus an adults-only confirmation.",
       });
       return;
     }
@@ -181,8 +187,24 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
     setFormMessage({
       tone: "success",
       title: "Access confirmed",
-      body: "Give this browser a readable device name, then send the inbox link.",
+      body:
+        isJoinPath
+          ? "Name this browser so you can recognize it later, then send the join link."
+          : "Name this browser so you can recognize it later, then send the sign-in link.",
     });
+  }
+
+  function resetSigninFallback() {
+    setMissingAccountEmail(null);
+    setInviteFieldVisible(false);
+    setInviteToken("");
+    setChallenge(null);
+    setFormMessage(null);
+    setErrors((current) => ({
+      ...current,
+      inviteToken: undefined,
+    }));
+    window.setTimeout(() => emailRef.current?.focus(), 0);
   }
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -201,7 +223,7 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
       return;
     }
 
-    const requireInviteToken = mode === "join" || inviteFieldVisible;
+    const requireInviteToken = mode === "join" || inviteFieldVisible || isMissingAccountBranch;
     if (magicLinkStep === 1) {
       moveToDeviceStep(requireInviteToken);
       return;
@@ -213,6 +235,7 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
     const accessValid = validateMagicLinkAccess(requireInviteToken);
     const deviceValid = validateDeviceLabel();
     if (!accessValid || !deviceValid) {
+      const isJoinPath = mode === "join" || missingAccountEmail === normalizeEmail(email);
       if (!accessValid) {
         setMagicLinkStep(1);
       }
@@ -221,9 +244,9 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
         tone: "error",
         title: "Fix the highlighted fields first",
         body:
-          mode === "join"
-            ? "Invite-only onboarding needs valid access details first, then a readable device name before the inbox link can be queued."
-            : "Sign-in needs valid access details first, then a readable device name before the inbox link can be queued.",
+          isJoinPath
+            ? "Invite-only onboarding needs valid access details first, then a readable browser name before the inbox link can be queued."
+            : "Sign-in needs valid access details first, then a readable browser name before the inbox link can be queued.",
       });
       return;
     }
@@ -247,29 +270,27 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
         setFormMessage({
           tone: "success",
           title: "Check your inbox",
-          body: `The current magic link expires ${formatUtcDateTime(nextChallenge.expiresAt)}.`,
+          body: `The current email link expires ${formatUtcDateTime(nextChallenge.expiresAt)}.`,
         });
-        toast.success(mode === "join" ? "Beta link queued" : "Magic link queued");
+        toast.success("Email link queued");
       } catch (error) {
         if (error instanceof RelayRequestError && error.code === "INVITE_REQUIRED") {
+          const failedEmail = normalizeEmail(email);
           setInviteFieldVisible(true);
+          setMissingAccountEmail(failedEmail);
           setMagicLinkStep(1);
           setErrors({
-            inviteToken: "This email does not have a beta account yet. Add an invite token to continue.",
+            inviteToken: "Add an invite token to create a beta account for this email.",
           });
-          setFormMessage({
-            tone: "warning",
-            title: "Invite token required",
-            body: "Returning users can sign in with email alone. New beta accounts still need an invite token for the first bootstrap.",
-          });
-          toast.error("Add an invite token to start a new beta account.");
+          setFormMessage(null);
+          toast.error("No beta account found for this email.");
           window.setTimeout(() => inviteTokenRef.current?.focus(), 0);
           return;
         }
 
         setFormMessage({
           tone: "error",
-          title: mode === "join" ? "Unable to start beta onboarding" : "Unable to send the magic link",
+          title: mode === "join" ? "Unable to start beta onboarding" : "Unable to send the email link",
           body:
             error instanceof Error
               ? error.message
@@ -282,26 +303,32 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
             ? error.message
             : mode === "join"
               ? "Unable to start beta onboarding"
-              : "Unable to send magic link",
+              : "Unable to send email link",
         );
       }
     });
   }
 
+  const normalizedEmail = normalizeEmail(email);
+  const isMissingAccountBranch = mode === "signin" && missingAccountEmail === normalizedEmail;
   const title =
     entryMethod === "device-link"
       ? "Link this browser from a trusted device"
+      : isMissingAccountBranch
+        ? "No beta account found for this email"
       : mode === "join"
         ? "Join the invite-only beta"
         : "Continue with a private email";
   const subtitle =
     entryMethod === "device-link"
       ? "Use QR only when another EmberChamber device is already signed in."
+      : isMissingAccountBranch
+        ? "This address is on the join-beta path now. Add an invite token to create a new account, or switch back to a different sign-in email."
       : mode === "join"
-        ? "Confirm the invite and adults-only gate first, then name this device and send the inbox link."
-        : "Confirm the email and adults-only gate first, then name this device and send the inbox link.";
+        ? "Confirm the invite and adults-only gate first, then name this browser so you can recognize it later and send the inbox link."
+        : "Use the email tied to your existing beta account. If no account is found, the form will stop and offer the join-beta path before anything new is created.";
   const canUseDeviceLink = mode === "signin";
-  const requiresInviteToken = mode === "join" || inviteFieldVisible;
+  const requiresInviteToken = mode === "join" || inviteFieldVisible || isMissingAccountBranch;
 
   return (
     <div className="panel p-6 sm:p-7">
@@ -398,14 +425,14 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
                 }`}
               >
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-600">Step 2</p>
-                <p className="mt-1 text-sm font-medium text-[var(--text-primary)]">Name device + send link</p>
+                <p className="mt-1 text-sm font-medium text-[var(--text-primary)]">Name browser + send link</p>
               </div>
             </>
           ) : (
             <>
               <div className="rounded-[1.2rem] border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-600">Step 1</p>
-                <p className="mt-1 text-sm font-medium text-[var(--text-primary)]">Name device</p>
+                <p className="mt-1 text-sm font-medium text-[var(--text-primary)]">Name browser</p>
               </div>
               <div className="rounded-[1.2rem] border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-600">Step 2</p>
@@ -422,6 +449,34 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
         {entryMethod === "magic-link" ? (
           <>
             <form onSubmit={submit} className="space-y-4">
+              {isMissingAccountBranch && magicLinkStep === 1 ? (
+                <StatusCallout
+                  tone="warning"
+                  title="No existing beta account found"
+                  action={
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        className="btn-primary"
+                        onClick={() => {
+                          setInviteFieldVisible(true);
+                          setFormMessage(null);
+                          window.setTimeout(() => inviteTokenRef.current?.focus(), 0);
+                        }}
+                      >
+                        Continue to Join Beta
+                      </button>
+                      <button type="button" className="btn-ghost" onClick={resetSigninFallback}>
+                        Use a different email
+                      </button>
+                    </div>
+                  }
+                >
+                  This email does not have a beta account yet. Add an invite token to create one,
+                  or switch back to the sign-in path with a different email.
+                </StatusCallout>
+              ) : null}
+
               {formMessage ? (
                 <StatusCallout tone={formMessage.tone} title={formMessage.title}>
                   {formMessage.body}
@@ -444,9 +499,21 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
                       type="email"
                       value={email}
                       onChange={(event) => {
-                        setEmail(event.target.value);
+                        const nextEmail = event.target.value;
+                        setEmail(nextEmail);
                         if (errors.email) {
                           setErrors((current) => ({ ...current, email: undefined }));
+                        }
+                        if (
+                          mode === "signin" &&
+                          missingAccountEmail &&
+                          normalizeEmail(nextEmail) !== missingAccountEmail
+                        ) {
+                          setMissingAccountEmail(null);
+                          setInviteFieldVisible(false);
+                          setInviteToken("");
+                          setFormMessage(null);
+                          setErrors((current) => ({ ...current, inviteToken: undefined }));
                         }
                       }}
                       className="input"
@@ -477,7 +544,7 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
                         >
                           Invite token
                         </label>
-                        {mode === "signin" ? (
+                        {mode === "signin" && !isMissingAccountBranch ? (
                           <button
                             type="button"
                             className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600 hover:text-brand-500"
@@ -593,7 +660,10 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
                       <button
                         type="button"
                         className="text-sm font-semibold text-brand-600 hover:text-brand-500"
-                        onClick={() => setMagicLinkStep(1)}
+                        onClick={() => {
+                          setMagicLinkStep(1);
+                          setChallenge(null);
+                        }}
                       >
                         Edit
                       </button>
@@ -645,7 +715,7 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
                       aria-describedby={errors.deviceLabel ? `${mode}-device-label-error` : `${mode}-device-label-hint`}
                     />
                     <p id={`${mode}-device-label-hint`} className="mt-1 text-xs text-[var(--text-secondary)]">
-                      This name appears in session review, recovery prompts, and later device linking.
+                      We&apos;ll use this name in your device list.
                     </p>
                     {errors.deviceLabel ? (
                       <p id={`${mode}-device-label-error`} className="mt-1 text-sm text-red-500">
@@ -670,13 +740,19 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
                   {authBootstrapEnabled
                     ? isPending
                       ? mode === "join"
-                        ? "Queuing magic link…"
-                        : "Sending magic link…"
-                      : magicLinkStep === 1
+                        ? "Queuing onboarding email…"
+                        : isMissingAccountBranch
+                          ? "Sending join link…"
+                          : "Sending email link…"
+                      : isMissingAccountBranch && magicLinkStep === 1
+                        ? "Continue to Join Beta"
+                        : magicLinkStep === 1
                         ? "Continue"
                         : mode === "join"
                           ? "Start beta onboarding"
-                          : "Send magic link"
+                          : isMissingAccountBranch
+                            ? "Send Join Link"
+                          : "Send email link"
                     : "Email bootstrap coming soon"}
                 </button>
               </div>
@@ -685,9 +761,9 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
             <StatusCallout tone="info" title="What happens next">
               1. Open the inbox for the email you entered here.
               <br />
-              2. Confirm the link from the device you want to use first.
+              2. Open the email link on the device you want to use first.
               <br />
-              3. Finish profile setup with a pseudonymous name, then review active devices and settings later.
+              3. Finish profile setup with a pseudonymous name, then review devices and settings later.
             </StatusCallout>
           </>
         ) : (
@@ -739,8 +815,8 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
 
         {challenge ? (
           <StatusCallout tone="success" title="Inbox check required">
-            The link expires {formatUtcDateTime(challenge.expiresAt)}. Open it from the device you
-            named above so the first session and device inventory stay readable.
+            The link expires {formatUtcDateTime(challenge.expiresAt)}. Open it on the browser you
+            named above so this device signs in first and shows up clearly in your device list.
             {showDebugCompletionToken && challenge.debugCompletionToken ? (
               <span className="mt-3 block break-all font-mono text-xs text-brand-500">
                 Dev token: {challenge.debugCompletionToken}
