@@ -1,14 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import type { ConversationDetail, GroupThreadMessage } from "@emberchamber/protocol";
 import { Avatar } from "@/components/avatar";
 import { useCompanionShell } from "@/components/companion-shell";
+import { StatusCallout } from "@/components/status-callout";
 import {
   ensureRelayAccessToken,
   getRelayWebsocketUrl,
+  RelayRequestError,
   relayAttachmentApi,
   relayConversationApi,
   uploadAttachment,
@@ -50,6 +53,34 @@ function formatBytes(value: number) {
   return `${value} B`;
 }
 
+type ConversationLoadError = {
+  title: string;
+  message: string;
+};
+
+function describeConversationLoadError(error: unknown): ConversationLoadError {
+  if (error instanceof RelayRequestError) {
+    if (error.status === 404) {
+      return {
+        title: "Conversation not found",
+        message: "This chat link is stale, or the conversation is no longer available on this account.",
+      };
+    }
+
+    if (error.status === 401 || error.status === 403) {
+      return {
+        title: "Access to this conversation is unavailable",
+        message: "Your browser session does not currently have access to this chat. Sign in again or ask an organizer to restore access.",
+      };
+    }
+  }
+
+  return {
+    title: "Conversation failed to load",
+    message: error instanceof Error ? error.message : "The relay did not return this conversation yet. Try the route again in a moment.",
+  };
+}
+
 export default function ChatPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id ?? "";
@@ -63,6 +94,7 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [loadError, setLoadError] = useState<ConversationLoadError | null>(null);
 
   async function loadRelayHostedMessages(conversationId: string) {
     try {
@@ -85,34 +117,30 @@ export default function ChatPage() {
     }
   }
 
+  const loadConversation = useCallback(async (conversationId: string) => {
+    setIsLoading(true);
+    setLoadError(null);
+    setConversation(null);
+    setGroupMessages([]);
+    setDmMessages([]);
+
+    try {
+      const data = await relayConversationApi.get(conversationId);
+      setConversation(data);
+    } catch (error) {
+      setLoadError(describeConversationLoadError(error));
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!id) {
       return;
     }
 
-    let cancelled = false;
-
-    void (async () => {
-      setIsLoading(true);
-      try {
-        const data = await relayConversationApi.get(id);
-        if (!cancelled) {
-          setConversation(data);
-        }
-      } catch {
-        if (!cancelled) {
-          router.push("/app");
-        }
-      }
-      if (!cancelled) {
-        setIsLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [id, router]);
+    void loadConversation(id);
+  }, [id, loadConversation]);
 
   useEffect(() => {
     if (!conversation) {
@@ -358,6 +386,32 @@ export default function ChatPage() {
       : conversation?.kind === "room"
         ? "Room history via relay"
         : "Group history via relay";
+
+  if (loadError) {
+    return (
+      <div className="space-y-6 p-4 sm:p-6">
+        <StatusCallout
+          tone="error"
+          title={loadError.title}
+          action={
+            <div className="flex flex-wrap gap-2">
+              <button type="button" className="btn-primary" onClick={() => void loadConversation(id)}>
+                Try again
+              </button>
+              <Link href="/app" className="btn-ghost">
+                Back to overview
+              </Link>
+            </div>
+          }
+        >
+          {loadError.message}
+        </StatusCallout>
+        <div className="rounded-[1.45rem] border border-[var(--border)] bg-[var(--bg-secondary)] px-5 py-5 text-sm leading-6 text-[var(--text-secondary)]">
+          Keep this route open if you are checking whether access changed. The retry action will re-fetch the same conversation id instead of dropping you back to overview.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full flex-col">

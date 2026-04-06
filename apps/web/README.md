@@ -144,6 +144,15 @@ npm run lint --workspace=apps/web
 npm run build --workspace=apps/web
 ```
 
+Targeted browser-route coverage is also available for the active relay-backed auth flows:
+
+```bash
+CI_WEB_BASE_URL=http://127.0.0.1:3000 \
+CI_RELAY_BASE_URL=http://127.0.0.1:8787 \
+CI_AUTH_INVITE_TOKEN=dev-beta-invite \
+npm run e2e --workspace=apps/web
+```
+
 For a full active-runtime sweep from the repo root, run `npm run verify:all`.
 
 ## CI New-User Flow Automation
@@ -162,7 +171,9 @@ The automation uses the relay's existing non-production `log` email provider mod
 ### Flow implementation
 
 - `apps/web/e2e/ci-new-user-flow.spec.ts` runs with Playwright in CI.
+- `apps/web/e2e/invite-continuation.spec.ts` covers signed-out invite preview, `/login?next=...`, and browser auth completion back into the same invite route.
 - The test performs signup in UI, reads the CI-only completion token from `/v1/auth/start`, opens `/auth/complete?token=...&browser=1`, updates profile settings, then sends a first DM to a seeded peer account.
+- The invite continuation test keeps `next` local to safe in-app paths and verifies that `auth/complete` returns the browser to the same invite preview instead of dropping the user into generic `/app`.
 - Screenshots are saved under `apps/web/artifacts/screenshots/new-user-flow`.
 
 ### Artifacts

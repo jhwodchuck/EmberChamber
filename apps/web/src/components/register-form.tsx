@@ -1,5 +1,5 @@
 import { BootstrapAuthForm } from "@/components/bootstrap-auth-form";
 
-export function RegisterForm() {
-  return <BootstrapAuthForm mode="join" />;
+export function RegisterForm({ continueTo }: { continueTo?: string | null }) {
+  return <BootstrapAuthForm mode="join" continueTo={continueTo} />;
 }
