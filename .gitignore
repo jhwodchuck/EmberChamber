@@ -70,6 +70,9 @@ apps/mobile/secrets/
 apps/mobile/secrets/google-play-service-account.json
 apps/relay/.wrangler/
 
+# Wrangler local dev secrets
+apps/relay/.dev.vars
+
 # Screenshot publish working directory (created by publish-screenshots.yml)
 staging/
 

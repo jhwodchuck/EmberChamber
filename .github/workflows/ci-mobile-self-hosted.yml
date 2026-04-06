@@ -53,6 +53,9 @@ jobs:
   build-android-release:
     name: Build Android release APK for screenshots
     needs: verify-android
+    permissions:
+      id-token: write
+      contents: read
     uses: ./.github/workflows/build-android.yml
     with:
       build_type: release
