@@ -11,8 +11,8 @@
     "EMBERCHAMBER_EMAIL_PROVIDER": "log",
     "EMBERCHAMBER_EMAIL_FROM": "noreply@emberchamber.local",
     "EMBERCHAMBER_DEV_INVITE_TOKEN": "dev-beta-invite",
-    "EMBERCHAMBER_ALLOWED_ORIGINS": "http://127.0.0.1:3000,http://localhost:3000,https://tauri.localhost,http://tauri.localhost,tauri://localhost",
-    "EMBERCHAMBER_PUSH_TOKEN_SECRET": "dev-push-token-secret"
+    "EMBERCHAMBER_ALLOWED_ORIGINS": "http://127.0.0.1:3000,http://localhost:3000,https://tauri.localhost,http://tauri.localhost,tauri://localhost"
+    // EMBERCHAMBER_PUSH_TOKEN_SECRET is in .dev.vars for local dev; set via wrangler secret put for production.
   },
   "durable_objects": {
     "bindings": [
