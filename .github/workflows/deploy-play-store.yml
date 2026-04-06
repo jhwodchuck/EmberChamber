@@ -182,10 +182,21 @@ jobs:
           echo "--- Play Store changelog ---"
           cat "${CHANGELOG_DIR}/${VERSION_CODE}.txt"
 
-      - name: Download phone screenshots for Play Store
+      - name: Download Android screenshots for Play Store
         run: |
-          PHONE_DIR="apps/mobile/fastlane/metadata/android/en-US/images/phoneScreenshots"
-          mkdir -p "$PHONE_DIR"
+          IMAGE_ROOT="apps/mobile/fastlane/metadata/android/en-US/images"
+          declare -a SCREENSHOT_MAP=(
+            "phone:phoneScreenshots"
+            "tablet:sevenInchScreenshots"
+            "chromebook:tenInchScreenshots"
+          )
+
+          for ENTRY in "${SCREENSHOT_MAP[@]}"; do
+            PLAY_DIR="${ENTRY#*:}"
+            DEST_DIR="$IMAGE_ROOT/$PLAY_DIR"
+            rm -rf "$DEST_DIR"
+            mkdir -p "$DEST_DIR"
+          done
 
           RUN_ID=$(gh run list \
             --repo "$GITHUB_REPOSITORY" \
@@ -197,19 +208,25 @@ jobs:
             --jq '.[0].databaseId // empty')
 
           if [ -z "$RUN_ID" ]; then
-            echo "No successful CI - Mobile run on main; phone screenshots will not be uploaded."
+            echo "No successful CI - Mobile run on main; continuing without screenshot upload."
           else
-            echo "Downloading phone screenshots from CI run $RUN_ID"
-            gh run download "$RUN_ID" \
-              --repo "$GITHUB_REPOSITORY" \
-              --pattern "emberchamber-android-screenshots-phone-*" \
-              --dir staging/screenshots 2>/dev/null || true
+            echo "Downloading Android screenshots from CI run $RUN_ID"
+            for ENTRY in "${SCREENSHOT_MAP[@]}"; do
+              FORM_FACTOR="${ENTRY%%:*}"
+              PLAY_DIR="${ENTRY#*:}"
+              DEST_DIR="$IMAGE_ROOT/$PLAY_DIR"
 
-            find staging/screenshots -name '*.png' \
-              -exec cp {} "$PHONE_DIR/" \; 2>/dev/null || true
+              gh run download "$RUN_ID" \
+                --repo "$GITHUB_REPOSITORY" \
+                --pattern "emberchamber-android-screenshots-${FORM_FACTOR}-*" \
+                --dir "staging/screenshots/$FORM_FACTOR" 2>/dev/null || true
 
-            SHOT_COUNT=$(find "$PHONE_DIR" -name '*.png' | wc -l)
-            echo "Staged ${SHOT_COUNT} phone screenshot(s) for Play Store"
+              find "staging/screenshots/$FORM_FACTOR" -name '*.png' \
+                -exec cp {} "$DEST_DIR/" \; 2>/dev/null || true
+
+              SHOT_COUNT=$(find "$DEST_DIR" -name '*.png' | wc -l)
+              echo "Staged ${SHOT_COUNT} ${FORM_FACTOR} screenshot(s) to ${PLAY_DIR}"
+            done
           fi
 
       - uses: ruby/setup-ruby@v1
@@ -247,7 +264,7 @@ jobs:
             "validate_only:$PLAY_VALIDATE_ONLY"
             "metadata_path:apps/mobile/fastlane/metadata/android"
             "skip_upload_metadata:true"
-            "skip_upload_images:true"
+            "skip_upload_images:false"
             "changes_not_sent_for_review:$PLAY_CHANGES_NOT_SENT_FOR_REVIEW"
           )
 
