@@ -424,6 +424,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           prerelease: true
+          generate_release_notes: true
           files: EmberChamber-ios-simulator.zip
 
   screenshots:
