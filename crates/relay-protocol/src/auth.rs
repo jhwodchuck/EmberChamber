@@ -3,6 +3,7 @@ use emberchamber_domain::{AccountId, ConversationId, DeviceId, SessionId};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AuthStartRequest {
     pub email: String,
     pub invite_token: Option<String>,
@@ -13,12 +14,14 @@ pub struct AuthStartRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AuthCompleteRequest {
     pub completion_token: String,
     pub device_label: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MagicLinkChallenge {
     pub id: String,
     pub expires_at: DateTime<Utc>,
@@ -27,6 +30,7 @@ pub struct MagicLinkChallenge {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AuthSession {
     pub account_id: AccountId,
     pub device_id: DeviceId,
@@ -49,6 +53,7 @@ pub struct AccessTokenClaims {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PasskeyCredentialRef {
     pub credential_id: String,
     pub transports: Vec<String>,
@@ -56,6 +61,7 @@ pub struct PasskeyCredentialRef {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DevicePushTokenRegistration {
     pub provider: String,
     pub platform: String,
@@ -65,6 +71,7 @@ pub struct DevicePushTokenRegistration {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DevicePushTokenStatus {
     pub registered: bool,
     pub device_id: DeviceId,
@@ -73,12 +80,14 @@ pub struct DevicePushTokenStatus {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DevicePushTokenClearResult {
     pub cleared: bool,
     pub device_id: DeviceId,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ContactCard {
     pub account_id: AccountId,
     pub label: String,
@@ -86,6 +95,7 @@ pub struct ContactCard {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AttachmentTicket {
     pub attachment_id: String,
     pub upload_url: String,
@@ -100,15 +110,35 @@ pub struct AttachmentTicket {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NotificationPreviewMode {
+    Discreet,
+    Expanded,
+    None,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MeProfile {
     pub id: AccountId,
     pub username: String,
     pub display_name: String,
     pub email: String,
     pub bio: Option<String>,
+    pub avatar_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PrivacySettings {
+    pub notification_preview_mode: NotificationPreviewMode,
+    pub auto_download_sensitive_media: bool,
+    pub allow_sensitive_export: bool,
+    pub secure_app_switcher: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SessionDescriptor {
     pub id: SessionId,
     pub device_label: String,

@@ -46,6 +46,9 @@
     },
     "ios": {
       "bundleIdentifier": "com.emberchamber.mobile",
+      "associatedDomains": [
+        "applinks:emberchamber.com"
+      ],
       "supportsTablet": false,
       "config": {
         "usesNonExemptEncryption": false

@@ -29,6 +29,10 @@ After it finishes:
 6. The completion token should appear in-app.
 7. Complete sign-in, create a group, and send the first message.
 
+The desktop shell only auto-adopts the local relay when no explicit relay override is saved. Use the
+desktop diagnostics controls or sign out to clear a saved override before expecting the Ubuntu local
+lane to take over again.
+
 ## Current State
 
 GitHub Releases is the source of truth for posted Linux artifacts. Check the current release feed
@@ -133,6 +137,7 @@ Run this checklist after installing a public build or creating a local bundle:
 4. Confirm the account lands in a usable overview or group thread.
 5. Send the first photo from the desktop composer.
 6. Review sessions and privacy settings from the same install.
+7. In desktop diagnostics, clear any saved relay override back to default, then verify the app only re-adopts the local relay when the local Ubuntu lane is actually running.
 
 ## Known Limitations
 

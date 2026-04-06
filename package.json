@@ -38,11 +38,11 @@
     "dev:mobile": "npm run dev --workspace=apps/mobile",
     "build:android": "npm run build:android --workspace=apps/mobile",
     "build:ios": "npm run build:ios --workspace=apps/mobile",
-    "test": "npm run test --workspace=apps/relay && cargo test -p emberchamber-core -p emberchamber-relay-protocol",
+    "test": "npm run test --workspace=packages/protocol && npm run test --workspace=apps/relay && cargo test -p emberchamber-core -p emberchamber-relay-protocol",
     "test:legacy": "npm run test --workspace=apps/api",
     "lint": "npm run lint --workspace=apps/web && npm run lint --workspace=apps/relay",
     "type-check": "npm run type-check --workspace=packages/protocol && npm run type-check --workspace=apps/relay && npm run type-check --workspace=apps/web && npm run build --workspace=packages/shared && cargo check -p emberchamber-core -p emberchamber-relay-protocol",
-    "verify:all": "npm run check:repo-contracts && npm run build --workspace=packages/protocol && npm run build --workspace=apps/relay && npm test --workspace=apps/relay && npm run lint --workspace=apps/web && npm run build --workspace=apps/web && npm run type-check --workspace=apps/mobile && cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml && cargo test -p emberchamber-core -p emberchamber-relay-protocol",
+    "verify:all": "npm run check:repo-contracts && npm test --workspace=packages/protocol && npm run build --workspace=apps/relay && npm test --workspace=apps/relay && npm run lint --workspace=apps/web && npm run build --workspace=apps/web && npm run type-check --workspace=apps/mobile && cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml && cargo test -p emberchamber-core -p emberchamber-relay-protocol",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\" --ignore-path .gitignore"
   },
   "devDependencies": {

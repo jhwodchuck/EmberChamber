@@ -24,4 +24,6 @@ Desktop is a bundled local shell. Do not turn it back into a remote URL wrapper.
 ## Validation
 
 - `cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml`
-- `npm run doctor --workspace=apps/desktop` when changing packaging or local toolchain assumptions
+- `npm run verify --workspace=apps/desktop` for shell runtime, packaging, or relay-bootstrap changes
+- `npm run doctor --workspace=apps/desktop` when changing packaging or local toolchain assumptions without needing a full build
+- When relay adoption, auth bootstrap, messaging, or Linux packaging changes, capture Ubuntu smoke evidence from `docs/ubuntu-install-and-test.md` when the environment is available

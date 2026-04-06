@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "tauri dev",
     "doctor": "tauri info",
+    "verify": "npm run doctor && npm run build",
     "build": "tauri build",
     "android:init": "tauri android init",
     "build:android": "tauri android build",

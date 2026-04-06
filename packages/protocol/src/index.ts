@@ -122,8 +122,15 @@ export interface CipherEnvelope {
 }
 
 export interface EnvelopeBatch {
-  conversationId: ConversationId;
+  cursor: MailboxCursor;
   envelopes: CipherEnvelope[];
+  stats?: {
+    enqueued: number;
+    acknowledged: number;
+    expired: number;
+    rejected: number;
+    queued: number;
+  };
 }
 
 export interface MailboxCursor {
