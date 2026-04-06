@@ -23,4 +23,6 @@ The mobile app currently keeps most behavior in `App.tsx`. If a feature grows ma
 
 ## Validation
 
-- `npm run type-check --workspace=apps/mobile`
+- `npm run verify --workspace=apps/mobile`
+- `npm run verify:android --workspace=apps/mobile`
+- When `app.json` or iPhone deep-link config changes, run `npm run prebuild:ios --workspace=apps/mobile` on macOS when available

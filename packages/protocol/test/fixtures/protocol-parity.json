@@ -1,0 +1,291 @@
+{
+  "authStartRequest": {
+    "email": "member@example.com",
+    "inviteToken": "invite-token-123",
+    "groupId": "11111111-1111-4111-8111-111111111111",
+    "groupInviteToken": "group-token-456",
+    "deviceLabel": "Pixel 9",
+    "ageConfirmed18": true
+  },
+  "authSession": {
+    "accountId": "22222222-2222-4222-8222-222222222222",
+    "deviceId": "33333333-3333-4333-8333-333333333333",
+    "sessionId": "44444444-4444-4444-8444-444444444444",
+    "accessToken": "access-token",
+    "refreshToken": "refresh-token",
+    "expiresAt": "2026-04-06T12:00:00Z",
+    "passkeyEnrollmentSuggested": true,
+    "bootstrapConversationId": "55555555-5555-4555-8555-555555555555",
+    "bootstrapConversationTitle": "Bootstrap DM"
+  },
+  "attachmentTicket": {
+    "attachmentId": "attachment-1",
+    "uploadUrl": "https://relay.example.com/upload/attachment-1",
+    "downloadUrl": "https://relay.example.com/download/attachment-1",
+    "expiresAt": "2026-04-06T12:15:00Z",
+    "maxBytes": 8192,
+    "encryptionMode": "device_encrypted",
+    "contentClass": "image",
+    "retentionMode": "private_vault",
+    "protectionProfile": "sensitive_media",
+    "previewBlurHash": "LKO2?U%2Tw=w]~RBVZRi};RPxuwH"
+  },
+  "mailboxAck": {
+    "envelopeIds": [
+      "env-1",
+      "env-2"
+    ]
+  },
+  "envelopeBatch": {
+    "cursor": {
+      "lastSeenEnvelopeId": "env-2"
+    },
+    "envelopes": [
+      {
+        "envelopeId": "env-1",
+        "conversationId": "66666666-6666-4666-8666-666666666666",
+        "epoch": 7,
+        "senderAccountId": "22222222-2222-4222-8222-222222222222",
+        "senderDeviceId": "33333333-3333-4333-8333-333333333333",
+        "recipientDeviceId": "77777777-7777-4777-8777-777777777777",
+        "ciphertext": "ciphertext-payload",
+        "attachmentIds": [
+          "attachment-1"
+        ],
+        "clientMessageId": "client-msg-1",
+        "createdAt": "2026-04-06T12:01:00Z",
+        "expiresAt": "2026-04-06T13:01:00Z"
+      }
+    ],
+    "stats": {
+      "enqueued": 14,
+      "acknowledged": 9,
+      "expired": 1,
+      "rejected": 0,
+      "queued": 4
+    }
+  },
+  "conversationSummary": {
+    "id": "66666666-6666-4666-8666-666666666666",
+    "kind": "group",
+    "title": "Project Thread",
+    "epoch": 7,
+    "historyMode": "device_encrypted",
+    "parentConversationId": "88888888-8888-4888-8888-888888888888",
+    "memberAccountIds": [
+      "22222222-2222-4222-8222-222222222222",
+      "99999999-9999-4999-8999-999999999999"
+    ],
+    "memberCount": 2,
+    "roomCount": 1,
+    "memberCap": 12,
+    "sensitiveMediaDefault": true,
+    "joinRuleText": "Invite only",
+    "allowMemberInvites": false,
+    "inviteFreezeEnabled": true,
+    "roomAccessPolicy": "restricted",
+    "createdAt": "2026-04-01T12:00:00Z",
+    "updatedAt": "2026-04-06T11:00:00Z",
+    "lastMessageAt": "2026-04-06T11:59:00Z",
+    "lastMessageKind": "media",
+    "capabilities": {
+      "relayHostedMessages": false,
+      "mailboxTransport": true,
+      "encryptedAttachments": true,
+      "canCreateInvites": true,
+      "canManageMembers": true,
+      "canManagePolicies": false,
+      "canManageRooms": false,
+      "canGrantRoomAccess": false
+    }
+  },
+  "conversationDetail": {
+    "id": "66666666-6666-4666-8666-666666666666",
+    "kind": "group",
+    "title": "Project Thread",
+    "epoch": 7,
+    "historyMode": "device_encrypted",
+    "parentConversationId": "88888888-8888-4888-8888-888888888888",
+    "memberAccountIds": [
+      "22222222-2222-4222-8222-222222222222",
+      "99999999-9999-4999-8999-999999999999"
+    ],
+    "memberCount": 2,
+    "roomCount": 1,
+    "memberCap": 12,
+    "sensitiveMediaDefault": true,
+    "joinRuleText": "Invite only",
+    "allowMemberInvites": false,
+    "inviteFreezeEnabled": true,
+    "roomAccessPolicy": "restricted",
+    "createdAt": "2026-04-01T12:00:00Z",
+    "updatedAt": "2026-04-06T11:00:00Z",
+    "lastMessageAt": "2026-04-06T11:59:00Z",
+    "lastMessageKind": "media",
+    "capabilities": {
+      "relayHostedMessages": false,
+      "mailboxTransport": true,
+      "encryptedAttachments": true,
+      "canCreateInvites": true,
+      "canManageMembers": true,
+      "canManagePolicies": false,
+      "canManageRooms": false,
+      "canGrantRoomAccess": false
+    },
+    "members": [
+      {
+        "accountId": "22222222-2222-4222-8222-222222222222",
+        "username": "ember-alpha",
+        "displayName": "Ember Alpha",
+        "role": "owner",
+        "joinedAt": "2026-04-01T12:00:00Z",
+        "removedAt": null
+      }
+    ],
+    "rooms": [
+      {
+        "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "kind": "room",
+        "title": "Announcements",
+        "epoch": 1,
+        "historyMode": "relay_hosted",
+        "parentConversationId": "66666666-6666-4666-8666-666666666666",
+        "memberAccountIds": [
+          "22222222-2222-4222-8222-222222222222",
+          "99999999-9999-4999-8999-999999999999"
+        ],
+        "memberCount": 2,
+        "roomCount": 0,
+        "memberCap": 12,
+        "sensitiveMediaDefault": false,
+        "joinRuleText": "All members",
+        "allowMemberInvites": false,
+        "inviteFreezeEnabled": false,
+        "roomAccessPolicy": "all_members",
+        "createdAt": "2026-04-01T12:05:00Z",
+        "updatedAt": "2026-04-06T11:05:00Z",
+        "lastMessageAt": "2026-04-06T11:30:00Z",
+        "lastMessageKind": "text",
+        "capabilities": {
+          "relayHostedMessages": true,
+          "mailboxTransport": false,
+          "encryptedAttachments": false,
+          "canCreateInvites": false,
+          "canManageMembers": false,
+          "canManagePolicies": false,
+          "canManageRooms": false,
+          "canGrantRoomAccess": false
+        }
+      }
+    ]
+  },
+  "deviceLinkStatus": {
+    "linkId": "link-123",
+    "relayOrigin": "https://relay.example.com",
+    "qrMode": "source_display",
+    "state": "approved",
+    "requesterLabel": "Ubuntu desktop",
+    "expiresAt": "2026-04-06T12:20:00Z",
+    "createdAt": "2026-04-06T12:00:00Z",
+    "claimedAt": "2026-04-06T12:02:00Z",
+    "approvedAt": "2026-04-06T12:03:00Z",
+    "approvedByDeviceId": "33333333-3333-4333-8333-333333333333",
+    "consumedAt": "2026-04-06T12:04:00Z",
+    "completedDeviceId": "77777777-7777-4777-8777-777777777777",
+    "completedSessionId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    "canComplete": true
+  },
+  "groupInviteRecord": {
+    "id": "invite-record-1",
+    "conversationId": "66666666-6666-4666-8666-666666666666",
+    "createdAt": "2026-04-05T10:00:00Z",
+    "expiresAt": "2026-04-10T10:00:00Z",
+    "maxUses": 5,
+    "useCount": 2,
+    "note": "For trusted testers",
+    "inviterDisplayName": "Ember Alpha",
+    "status": "active",
+    "createdByCurrentAccount": true
+  },
+  "groupMembershipSummary": {
+    "id": "66666666-6666-4666-8666-666666666666",
+    "title": "Project Thread",
+    "epoch": 7,
+    "historyMode": "relay_hosted",
+    "memberCount": 2,
+    "memberCap": 12,
+    "myRole": "owner",
+    "sensitiveMediaDefault": false,
+    "joinRuleText": "Invite only",
+    "allowMemberInvites": false,
+    "inviteFreezeEnabled": false,
+    "canCreateInvites": true,
+    "canManageMembers": true,
+    "createdAt": "2026-04-01T12:00:00Z",
+    "updatedAt": "2026-04-06T11:00:00Z"
+  },
+  "groupThreadMessage": {
+    "id": "message-1",
+    "conversationId": "66666666-6666-4666-8666-666666666666",
+    "historyMode": "relay_hosted",
+    "senderAccountId": "22222222-2222-4222-8222-222222222222",
+    "senderDisplayName": "Ember Alpha",
+    "kind": "media",
+    "text": "See attached",
+    "attachment": {
+      "id": "attachment-1",
+      "downloadUrl": "https://relay.example.com/download/attachment-1",
+      "fileName": "photo.jpg",
+      "mimeType": "image/jpeg",
+      "byteLength": 4096,
+      "contentClass": "image",
+      "retentionMode": "private_vault",
+      "protectionProfile": "standard",
+      "previewBlurHash": "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
+      "encryptionMode": "device_encrypted",
+      "fileKeyB64": "ZmFrZS1rZXk=",
+      "fileIvB64": "ZmFrZS1pdg=="
+    },
+    "createdAt": "2026-04-06T11:59:00Z",
+    "editedAt": null,
+    "readByCount": 1
+  },
+  "meProfile": {
+    "id": "22222222-2222-4222-8222-222222222222",
+    "username": "ember-alpha",
+    "displayName": "Ember Alpha",
+    "email": "member@example.com",
+    "bio": "Invite-only beta tester",
+    "avatarUrl": "https://relay.example.com/download/avatar-1"
+  },
+  "privacySettings": {
+    "notificationPreviewMode": "discreet",
+    "autoDownloadSensitiveMedia": false,
+    "allowSensitiveExport": false,
+    "secureAppSwitcher": true
+  },
+  "sessionDescriptor": {
+    "id": "44444444-4444-4444-8444-444444444444",
+    "deviceLabel": "Pixel 9",
+    "createdAt": "2026-04-01T12:00:00Z",
+    "lastSeenAt": "2026-04-06T11:58:00Z",
+    "isCurrent": true,
+    "clientPlatform": "android",
+    "clientVersion": "0.1.0",
+    "clientBuild": "42",
+    "deviceModel": "Pixel 9"
+  },
+  "reportDisclosure": {
+    "targetConversationId": "66666666-6666-4666-8666-666666666666",
+    "targetAccountId": "99999999-9999-4999-8999-999999999999",
+    "targetAttachmentId": "attachment-1",
+    "reason": "harassment",
+    "evidenceMessageIds": [
+      "message-1"
+    ],
+    "disclosedPayload": {
+      "excerpt": "See attached",
+      "source": "manual_report"
+    }
+  }
+}

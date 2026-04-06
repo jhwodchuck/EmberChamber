@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import type { DeviceLinkStatus } from "@emberchamber/protocol";
-import type { Field, FormMessage, MagicLinkResponse } from "../types";
+import type { Field, FormMessage, GroupInvitePreview, MagicLinkResponse } from "../types";
 import { styles, theme } from "../styles";
 import { DeviceLinkCard } from "../components/DeviceLinkCard";
 import { StatusCard } from "../components/StatusCard";
@@ -19,6 +19,9 @@ export type OnboardingScreenProps = {
   setAgeConfirmed18: Dispatch<SetStateAction<boolean>>;
   inviteInput: string;
   setInviteInput: Dispatch<SetStateAction<string>>;
+  invitePreview: GroupInvitePreview | null;
+  invitePreviewError: string | null;
+  isPreviewingInvite: boolean;
   inviteFieldVisible: boolean;
   setInviteFieldVisible: Dispatch<SetStateAction<boolean>>;
   isSending: boolean;
@@ -30,6 +33,7 @@ export type OnboardingScreenProps = {
   sessionMessage: FormMessage | null;
   onSubmit: () => void;
   onCompleteMagicLink: (token: string) => void;
+  onPreviewInvite: () => void;
   deviceLinkQrValue: string | null;
   deviceLinkStatus: DeviceLinkStatus | null;
   deviceLinkMessage: FormMessage | null;
@@ -53,6 +57,9 @@ export function OnboardingScreen(props: OnboardingScreenProps) {
     setAgeConfirmed18,
     inviteInput,
     setInviteInput,
+    invitePreview,
+    invitePreviewError,
+    isPreviewingInvite,
     inviteFieldVisible,
     setInviteFieldVisible,
     isSending,
@@ -64,6 +71,7 @@ export function OnboardingScreen(props: OnboardingScreenProps) {
     sessionMessage,
     onSubmit,
     onCompleteMagicLink,
+    onPreviewInvite,
     deviceLinkQrValue,
     deviceLinkStatus,
     deviceLinkMessage,
@@ -159,7 +167,16 @@ export function OnboardingScreen(props: OnboardingScreenProps) {
       {authMethod === "magic-link" ? (
         <>
           <View style={styles.fieldBlock}>
-            <Text style={styles.label}>Group invite link</Text>
+            <View style={styles.inlineLabelRow}>
+              <Text style={styles.label}>Group invite link</Text>
+              {inviteInput.trim() ? (
+                <Pressable onPress={onPreviewInvite} disabled={isPreviewingInvite}>
+                  <Text style={styles.inlineAction}>
+                    {isPreviewingInvite ? "Previewing…" : "Preview"}
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
             <TextInput
               autoCapitalize="none"
               placeholder="Paste /invite/{groupId}/{token}"
@@ -177,6 +194,20 @@ export function OnboardingScreen(props: OnboardingScreenProps) {
               Optional, but it can drop you into the right circle right away.
             </Text>
             {errors.groupInvite ? <Text style={styles.errorText}>{errors.groupInvite}</Text> : null}
+            {invitePreviewError ? <Text style={styles.errorText}>{invitePreviewError}</Text> : null}
+            {invitePreview ? (
+              <View style={styles.infoCard}>
+                <Text style={styles.infoTitle}>{invitePreview.group.title}</Text>
+                <Text style={styles.infoBody}>
+                  Invited by {invitePreview.invite.inviterDisplayName}. Members{" "}
+                  {invitePreview.group.memberCount}/{invitePreview.group.memberCap}. Status{" "}
+                  {invitePreview.invite.status}.
+                </Text>
+                {invitePreview.group.joinRuleText ? (
+                  <Text style={styles.helper}>{invitePreview.group.joinRuleText}</Text>
+                ) : null}
+              </View>
+            ) : null}
           </View>
 
           <View style={styles.fieldBlock}>

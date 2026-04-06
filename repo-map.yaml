@@ -67,7 +67,8 @@ paths:
       - apps/relay
       - packages/protocol
     verify:
-      - npm run type-check --workspace=apps/mobile
+      - npm run verify --workspace=apps/mobile
+      - npm run verify:android --workspace=apps/mobile
   - path: apps/desktop
     status: active
     purpose: Tauri desktop shell and packaged local frontend
@@ -88,6 +89,7 @@ paths:
       - packages/protocol
     verify:
       - cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
+      - npm run verify --workspace=apps/desktop
   - path: crates/core
     status: active
     purpose: Shared Rust secure-state and local-first scaffold
@@ -158,6 +160,7 @@ paths:
     depends_on: []
     verify:
       - npm run build --workspace=packages/protocol
+      - npm test --workspace=packages/protocol
   - path: docs
     status: active
     purpose: Active architecture, product, API, operator, and security docs that define the beta contract

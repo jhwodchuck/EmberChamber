@@ -147,6 +147,7 @@ export default function App() {
   const [ageConfirmed18, setAgeConfirmed18] = useState(false);
   const [authMethod, setAuthMethod] = useState<AuthMethod>("magic-link");
   const [inviteInput, setInviteInput] = useState("");
+  const [inviteFocusToken, setInviteFocusToken] = useState(0);
   const [messageDraft, setMessageDraft] = useState("");
   const [pendingAttachment, setPendingAttachment] = useState<PendingAttachment | null>(null);
   const [isBooting, setIsBooting] = useState(true);
@@ -475,6 +476,7 @@ export default function App() {
 
   async function persistAuthenticatedSession(nextSession: AuthSession, source: "magic-link" | "device-link") {
     const normalizedDeviceLabel = deviceLabel.trim() || suggestMobileDeviceLabel();
+    const bootstrapInvite = normalizeInviteReference(inviteInput);
 
     await Promise.all([
       saveStoredSession(nextSession),
@@ -488,7 +490,16 @@ export default function App() {
     setDeviceLinkStatus(null);
     setDeviceLinkMessage(null);
     setActiveDeviceLink(null);
-    setSessionMessage(buildSessionReadyMessage(nextSession, source));
+    if (bootstrapInvite) {
+      setInviteFocusToken((current) => current + 1);
+      setSessionMessage({
+        tone: "success",
+        title: source === "device-link" ? "Device linked and invite ready" : "Signed in and invite ready",
+        body: "The incoming invite is loaded under Invites. Review the preview there and join when you are ready.",
+      });
+    } else {
+      setSessionMessage(buildSessionReadyMessage(nextSession, source));
+    }
   }
 
   async function beginSourceDeviceLink() {
@@ -994,10 +1005,12 @@ export default function App() {
   useEffect(() => {
     let mounted = true;
 
-    function captureIncomingUrl(url: string | null) {
+    function captureIncomingUrl(url: string | null, options: { signedIn?: boolean } = {}) {
       if (!url || !mounted) {
         return;
       }
+
+      const signedIn = options.signedIn ?? !!sessionRef.current;
 
       const completionToken = extractCompletionTokenFromUrl(url);
       if (completionToken) {
@@ -1006,7 +1019,15 @@ export default function App() {
 
       const invite = normalizeInviteReference(url);
       if (invite) {
-        setInviteInput(`${invite.groupId}/${invite.inviteToken}`);
+        const normalizedValue = `${invite.groupId}/${invite.inviteToken}`;
+        if (!signedIn) {
+          setAuthMethod("magic-link");
+        }
+        void previewInviteReference(normalizedValue, {
+          source: "deep-link",
+          routeToInvites: signedIn,
+          signedIn,
+        });
       }
     }
 
@@ -1039,7 +1060,7 @@ export default function App() {
         setVaultCount(vaultItems);
         setSession(savedSession);
         setIsBooting(false);
-        captureIncomingUrl(initialUrl);
+        captureIncomingUrl(initialUrl, { signedIn: !!savedSession });
       })();
     });
 
@@ -1381,54 +1402,85 @@ export default function App() {
           }
 
           if (!cancelled) {
-          const wsUrlBase = relayUrl.replace(/^http/, "ws");
-          const clearReconnectTimer = () => {
-            if (reconnectTimer !== null) {
-              clearTimeout(reconnectTimer);
-              reconnectTimer = null;
-            }
-          };
+            const wsUrlBase = relayUrl.replace(/^http/, "ws");
+            const clearReconnectTimer = () => {
+              if (reconnectTimer !== null) {
+                clearTimeout(reconnectTimer);
+                reconnectTimer = null;
+              }
+            };
 
-          const connectSocket = () => {
-            ws = new WebSocket(`${wsUrlBase}/v1/conversations/${selectedConversationId}/ws?token=${session.accessToken}`);
-            ws.onmessage = (event) => {
+            const connectSocket = async (refreshBeforeConnect = false) => {
               try {
-                const message = JSON.parse(event.data) as GroupThreadMessage;
-                setThreadMessages((prev) => {
-                  if (prev.some((m) => m.id === message.id)) return prev;
-                  const next = [message, ...prev].sort(
-                    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-                  );
-                  if (db) saveCachedGroupMessages(db, selectedConversationId, next).catch(() => {});
-                  return next;
-                });
-                // Ack if conversation is still open
-                if (selectedConversationIdRef.current === selectedConversationId) {
-                  void relayFetch<{ acked: boolean }>(session, `/v1/groups/${selectedConversationId}/messages/ack`, {
-                    method: "POST",
-                    body: JSON.stringify({ lastReadMessageCreatedAt: message.createdAt }),
-                  }).catch(() => undefined);
+                const activeSession = sessionRef.current ?? session;
+                if (!activeSession) {
+                  return;
                 }
-              } catch {
-                // Ignore unparseable messages
-              }
-            };
-            ws.onclose = () => {
-              if (!cancelled) {
-                clearReconnectTimer();
-                reconnectTimer = setTimeout(() => {
-                  reconnectTimer = null;
-                  connectSocket();
-                }, 1500);
-              }
-            };
-            ws.onerror = () => {
-              ws?.close();
-            };
-          };
 
-          connectSocket();
-        }
+                const socketSession = refreshBeforeConnect
+                  ? ((await refreshRelaySession(activeSession)) ?? sessionRef.current)
+                  : activeSession;
+                if (cancelled || !socketSession?.accessToken) {
+                  return;
+                }
+
+                ws = new WebSocket(
+                  `${wsUrlBase}/v1/conversations/${selectedConversationId}/ws?token=${socketSession.accessToken}`,
+                );
+                ws.onmessage = (event) => {
+                  try {
+                    const message = JSON.parse(event.data) as GroupThreadMessage;
+                    setThreadMessages((prev) => {
+                      if (prev.some((entry) => entry.id === message.id)) {
+                        return prev;
+                      }
+                      const next = [message, ...prev].sort(
+                        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+                      );
+                      if (db) {
+                        saveCachedGroupMessages(db, selectedConversationId, next).catch(() => {});
+                      }
+                      return next;
+                    });
+                    if (selectedConversationIdRef.current === selectedConversationId) {
+                      void relayFetch<{ acked: boolean }>(
+                        socketSession,
+                        `/v1/groups/${selectedConversationId}/messages/ack`,
+                        {
+                          method: "POST",
+                          body: JSON.stringify({ lastReadMessageCreatedAt: message.createdAt }),
+                        },
+                      ).catch(() => undefined);
+                    }
+                  } catch {
+                    // Ignore unparseable messages
+                  }
+                };
+                ws.onclose = () => {
+                  if (!cancelled) {
+                    clearReconnectTimer();
+                    reconnectTimer = setTimeout(() => {
+                      reconnectTimer = null;
+                      void connectSocket(true);
+                    }, 1500);
+                  }
+                };
+                ws.onerror = () => {
+                  ws?.close();
+                };
+              } catch {
+                if (!cancelled) {
+                  clearReconnectTimer();
+                  reconnectTimer = setTimeout(() => {
+                    reconnectTimer = null;
+                    void connectSocket(true);
+                  }, 1500);
+                }
+              }
+            };
+
+            void connectSocket();
+          }
         }
       } catch (error) {
         if (!cancelled) {
@@ -1639,12 +1691,38 @@ export default function App() {
     });
   }
 
-  async function previewInvite() {
-    const normalized = normalizeInviteReference(inviteInput);
+  async function previewInviteReference(
+    rawValue: string,
+    options: { routeToInvites?: boolean; signedIn?: boolean; source?: "deep-link" | "manual" } = {},
+  ) {
+    const { routeToInvites = false, signedIn = !!sessionRef.current, source = "manual" } = options;
+    const normalized = normalizeInviteReference(rawValue);
+    const normalizedValue = normalized
+      ? `${normalized.groupId}/${normalized.inviteToken}`
+      : rawValue.trim();
+
+    setInviteInput(normalizedValue);
+    if (routeToInvites) {
+      setInviteFocusToken((current) => current + 1);
+    }
+
     if (!normalized?.groupId || !normalized.inviteToken) {
+      const message = "Paste a full invite link or a groupId/token pair first.";
       setInvitePreview(null);
-      setInvitePreviewError("Paste a full invite link or a groupId/token pair first.");
-      return;
+      setInvitePreviewError(message);
+      if (source === "deep-link") {
+        const nextMessage = {
+          tone: "warning" as const,
+          title: "Invite link needs attention",
+          body: message,
+        };
+        if (signedIn) {
+          setSessionMessage(nextMessage);
+        } else {
+          setFormMessage(nextMessage);
+        }
+      }
+      return null;
     }
 
     setIsPreviewingInvite(true);
@@ -1658,12 +1736,48 @@ export default function App() {
       }
 
       setInvitePreview(body);
+
+      if (source === "deep-link") {
+        if (signedIn) {
+          setSessionMessage({
+            tone: "info",
+            title: "Invite ready",
+            body: `${body.group.title} is open under Invites. Review the preview and accept it when ready.`,
+          });
+        } else {
+          setFormMessage({
+            tone: "info",
+            title: "Invite ready",
+            body: `${body.group.title} is loaded on this phone. Finish sign-in here when you want to join it.`,
+          });
+        }
+      }
+
+      return body;
     } catch (error) {
+      const message = error instanceof Error ? error.message : "Invite preview failed";
       setInvitePreview(null);
-      setInvitePreviewError(error instanceof Error ? error.message : "Invite preview failed");
+      setInvitePreviewError(message);
+      if (source === "deep-link") {
+        const nextMessage = {
+          tone: "error" as const,
+          title: "Invite preview failed",
+          body: message,
+        };
+        if (signedIn) {
+          setSessionMessage(nextMessage);
+        } else {
+          setFormMessage(nextMessage);
+        }
+      }
+      return null;
     } finally {
       setIsPreviewingInvite(false);
     }
+  }
+
+  async function previewInvite() {
+    await previewInviteReference(inviteInput);
   }
 
   async function acceptInvite() {
@@ -2556,6 +2670,9 @@ export default function App() {
                 setAgeConfirmed18={setAgeConfirmed18}
                 inviteInput={inviteInput}
                 setInviteInput={setInviteInput}
+                invitePreview={invitePreview}
+                invitePreviewError={invitePreviewError}
+                isPreviewingInvite={isPreviewingInvite}
                 inviteFieldVisible={inviteFieldVisible}
                 setInviteFieldVisible={setInviteFieldVisible}
                 isSending={isSending}
@@ -2567,6 +2684,7 @@ export default function App() {
                 sessionMessage={sessionMessage}
                 onSubmit={() => void submitMagicLink()}
                 onCompleteMagicLink={(token) => void completeMagicLink(token)}
+                onPreviewInvite={() => void previewInvite()}
                 deviceLinkQrValue={deviceLinkQrValue}
                 deviceLinkStatus={deviceLinkStatus}
                 deviceLinkMessage={deviceLinkMessage}
@@ -2616,6 +2734,7 @@ export default function App() {
                 conversationPreviews={conversationPreviews}
                 conversationPreferences={conversationPreferences}
                 unreadCounts={unreadConversationCounts}
+                inviteFocusToken={inviteFocusToken}
                 selectedConversationId={selectedConversationId}
                 setSelectedConversationId={setSelectedConversationId}
                 selectedGroup={selectedGroup ?? null}

@@ -1176,6 +1176,21 @@
         globalThis.localStorage?.setItem(key, JSON.stringify(value));
       }
 
+      function clearStoredRelayOverride() {
+        removeLocalKey(localStorageKeys.relayUrl);
+      }
+
+      function writeStoredRelayOverride(value) {
+        const normalized = normalizeRelayUrl(value);
+        if (normalized === DEFAULT_RELAY_URL) {
+          clearStoredRelayOverride();
+          return normalized;
+        }
+
+        writeLocalText(localStorageKeys.relayUrl, normalized);
+        return normalized;
+      }
+
       function readRelayUrl() {
         const raw = readLocalText(localStorageKeys.relayUrl);
         return normalizeRelayUrl(raw || DEFAULT_RELAY_URL);
@@ -1313,10 +1328,12 @@
           applyPersistedSecureState(snapshot?.state || {});
           clearLegacySecureState();
         } catch (error) {
-          applyPersistedSecureState(legacyState);
-          state.secureStorageMode = "browser";
+          applyPersistedSecureState({});
+          state.secureStorageMode = "memory";
           state.secureStorageDetail =
-            error instanceof Error ? error.message : "Desktop secure storage is unavailable.";
+            error instanceof Error
+              ? `${error.message} This install is running in volatile memory only until native secure storage recovers.`
+              : "Desktop secure storage is unavailable. This install is running in volatile memory only until native secure storage recovers.";
         }
       }
 
@@ -1333,10 +1350,11 @@
           updateSecureStorageStatus(snapshot);
           clearLegacySecureState();
         } catch (error) {
-          writeBrowserSecureState(payload);
-          state.secureStorageMode = "browser";
+          state.secureStorageMode = "memory";
           state.secureStorageDetail =
-            error instanceof Error ? error.message : "Desktop secure storage is unavailable.";
+            error instanceof Error
+              ? `${error.message} Changes are staying in memory only until native secure storage recovers.`
+              : "Desktop secure storage is unavailable. Changes are staying in memory only until native secure storage recovers.";
         }
       }
 
@@ -1368,9 +1386,11 @@
           clearLegacySecureState();
         } catch (error) {
           clearLegacySecureState();
-          state.secureStorageMode = "browser";
+          state.secureStorageMode = "memory";
           state.secureStorageDetail =
-            error instanceof Error ? error.message : "Desktop secure storage is unavailable.";
+            error instanceof Error
+              ? `${error.message} Desktop secure storage could not be cleared natively, so this install is staying in volatile memory only.`
+              : "Desktop secure storage is unavailable. This install is staying in volatile memory only.";
         }
       }
 
@@ -1419,13 +1439,13 @@
 
       async function maybeAdoptLocalRelay() {
         if (state.session || hasStoredRelayOverride()) {
-          return;
+          return false;
         }
 
         try {
           const response = await fetch(`${LOCAL_RELAY_URL}/health`);
           if (!response.ok) {
-            return;
+            return false;
           }
 
           const body = (await response.json().catch(() => null)) || null;
@@ -1434,11 +1454,10 @@
             body.relay !== "cloudflare-workers" ||
             body.localAutoconnectMarker !== LOCAL_RELAY_AUTOCONNECT_MARKER
           ) {
-            return;
+            return false;
           }
 
           state.relayUrl = LOCAL_RELAY_URL;
-          writeLocalText(localStorageKeys.relayUrl, state.relayUrl);
 
           if (!state.authForm.groupInviteReference.trim() && !state.authForm.inviteToken.trim()) {
             state.authForm.inviteToken = LOCAL_RELAY_TEST_INVITE_TOKEN;
@@ -1454,8 +1473,10 @@
           state.authStatus = status;
           state.settingsStatus = status;
           render();
+          return true;
         } catch {
           // Leave the hosted relay as the default when local dev infrastructure is absent.
+          return false;
         }
       }
 
@@ -2148,36 +2169,53 @@
         }
       }
 
-      async function connectMailboxSocket() {
+      async function connectMailboxSocket(refreshBeforeConnect = false) {
         stopMailboxSocket();
-        if (!state.session?.accessToken) {
-          return;
-        }
 
-        const wsUrl = `${state.relayUrl.replace(/^http/, "ws")}/v1/mailbox/ws?token=${encodeURIComponent(
-          state.session.accessToken
-        )}`;
-        mailboxSocket = new WebSocket(wsUrl);
-        mailboxSocket.onmessage = () => {
-          void syncEncryptedMailbox().catch(() => undefined);
-        };
-        mailboxSocket.onclose = () => {
-          mailboxSocket = null;
+        try {
+          const activeSession = state.session;
+          if (!activeSession?.accessToken) {
+            return;
+          }
+
+          const socketSession = refreshBeforeConnect ? await refreshRelaySession() : activeSession;
+          if (!socketSession?.accessToken) {
+            return;
+          }
+
+          const wsUrl = `${state.relayUrl.replace(/^http/, "ws")}/v1/mailbox/ws?token=${encodeURIComponent(
+            socketSession.accessToken
+          )}`;
+          mailboxSocket = new WebSocket(wsUrl);
+          mailboxSocket.onmessage = () => {
+            void syncEncryptedMailbox().catch(() => undefined);
+          };
+          mailboxSocket.onclose = () => {
+            mailboxSocket = null;
+            if (!state.session) {
+              return;
+            }
+            mailboxReconnectTimer = globalThis.setTimeout(() => {
+              mailboxReconnectTimer = 0;
+              void connectMailboxSocket(true);
+            }, 1500);
+          };
+          mailboxSocket.onerror = () => {
+            try {
+              mailboxSocket?.close();
+            } catch {
+              // Ignore close failures.
+            }
+          };
+        } catch {
           if (!state.session) {
             return;
           }
           mailboxReconnectTimer = globalThis.setTimeout(() => {
             mailboxReconnectTimer = 0;
-            void connectMailboxSocket();
+            void connectMailboxSocket(true);
           }, 1500);
-        };
-        mailboxSocket.onerror = () => {
-          try {
-            mailboxSocket?.close();
-          } catch {
-            // Ignore close failures.
-          }
-        };
+        }
       }
 
       function viewerIdentityLabel() {
@@ -3567,12 +3605,42 @@
       }
 
       function saveRelayUrl() {
-        state.relayUrl = normalizeRelayUrl(state.relayUrl);
-        writeLocalText(localStorageKeys.relayUrl, state.relayUrl);
+        state.relayUrl = writeStoredRelayOverride(state.relayUrl);
+        state.settingsStatus =
+          state.relayUrl === DEFAULT_RELAY_URL
+            ? createStatus(
+                "success",
+                "Using default relay",
+                "The saved relay override is cleared. New requests will use the hosted relay until you deliberately switch again or restart into the Ubuntu local lane.",
+                state.relayUrl,
+              )
+            : createStatus(
+                "success",
+                "Relay URL saved",
+                "New requests will use the updated relay endpoint until this install is reset or you switch back to the default relay.",
+                state.relayUrl,
+              );
+        render();
+      }
+
+      function useDefaultRelay() {
+        clearStoredRelayOverride();
+        state.relayUrl = DEFAULT_RELAY_URL;
         state.settingsStatus = createStatus(
           "success",
-          "Relay URL saved",
-          "New requests will use the updated relay endpoint.",
+          "Using default relay",
+          "This desktop cleared the saved override and is back on the hosted relay. Restart or sign out again when you want Ubuntu local auto-adoption to run.",
+          state.relayUrl,
+        );
+        render();
+      }
+
+      function useLocalRelayOverride() {
+        state.relayUrl = writeStoredRelayOverride(LOCAL_RELAY_URL);
+        state.settingsStatus = createStatus(
+          "success",
+          "Using local relay",
+          "This desktop saved an explicit localhost override for the Ubuntu test lane. Clear it when you want the hosted relay again.",
           state.relayUrl,
         );
         render();
@@ -3597,22 +3665,27 @@
         clearStoredSession();
         clearPendingChallenge();
         clearDeviceLinkState();
+        clearStoredRelayOverride();
+        state.relayUrl = DEFAULT_RELAY_URL;
         state.authForm.mode = "magic-link";
         state.authForm.inviteTokenVisible = false;
         await clearPersistedSecureState();
         state.activeView = "thread";
         state.workspaceStatus = null;
         resetWorkspaceState();
+        const adoptedLocalRelay = await maybeAdoptLocalRelay();
         state.authStatus = revokeError
           ? createStatus(
               "warning",
               "Signed out locally",
-              `This install cleared the local session, but the relay did not confirm server-side revocation for the current device: ${revokeError}`
+              `This install cleared the local session and reset the saved relay override, but the relay did not confirm server-side revocation for the current device: ${revokeError}`
             )
           : createStatus(
               "info",
               "Signed out",
-              "The desktop app revoked the current relay session and cleared local desktop state for this device."
+              adoptedLocalRelay
+                ? "The desktop app revoked the current relay session, cleared local desktop state for this device, and re-adopted the local Ubuntu relay because it is still running."
+                : "The desktop app revoked the current relay session, cleared local desktop state for this device, and returned to the default hosted relay."
             );
         clearBusy();
         render();
@@ -3830,6 +3903,16 @@
 
         if (action === "check-relay") {
           await checkRelayHealth();
+          return;
+        }
+
+        if (action === "use-default-relay") {
+          useDefaultRelay();
+          return;
+        }
+
+        if (action === "use-local-relay") {
+          useLocalRelayOverride();
           return;
         }
 
@@ -4399,8 +4482,10 @@
                     <button class="ghost-button" type="button" data-action="check-relay" ${isBusy("check-relay") ? "disabled" : ""}>
                       ${isBusy("check-relay") ? "Checking relay..." : "Check relay"}
                     </button>
+                    <button class="ghost-button" type="button" data-action="use-default-relay">Use default relay</button>
+                    <button class="ghost-button" type="button" data-action="use-local-relay">Use local relay</button>
                   </div>
-                  <div class="hint">If a local relay is already running on this Ubuntu box, the app adopts it automatically. Override the URL here only when you need staging or the hosted relay.</div>
+                  <div class="hint">If a local relay is already running on this Ubuntu box, the app adopts it automatically only when no explicit override is saved. Use the buttons here to switch between the hosted default and the local Ubuntu lane on purpose.</div>
                 </form>
               </section>
             </aside>
@@ -5363,6 +5448,8 @@
                   <button class="ghost-button" type="button" data-action="check-relay" ${isBusy("check-relay") ? "disabled" : ""}>
                     ${isBusy("check-relay") ? "Checking relay..." : "Check relay"}
                   </button>
+                  <button class="ghost-button" type="button" data-action="use-default-relay">Use default relay</button>
+                  <button class="ghost-button" type="button" data-action="use-local-relay">Use local relay</button>
                 </div>
               </form>
             </div>

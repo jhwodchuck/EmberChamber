@@ -349,7 +349,19 @@ async function requireAuth(request: Request, env: Env): Promise<AuthContext> {
     throw new HttpError(401, "Missing bearer token", "UNAUTHENTICATED");
   }
 
-  const payload = await verifyAccessToken(authorization.slice("Bearer ".length), env.EMBERCHAMBER_ACCESS_TOKEN_SECRET);
+  return requireAccessTokenSession(
+    authorization.slice("Bearer ".length),
+    env,
+    parseClientMetadata(request),
+  );
+}
+
+async function requireAccessTokenSession(
+  token: string,
+  env: Env,
+  clientMetadata?: ClientMetadata | null,
+): Promise<AuthContext> {
+  const payload = await verifyAccessToken(token, env.EMBERCHAMBER_ACCESS_TOKEN_SECRET);
   if (!payload) {
     throw new HttpError(401, "Invalid access token", "INVALID_ACCESS_TOKEN");
   }
@@ -373,7 +385,9 @@ async function requireAuth(request: Request, env: Env): Promise<AuthContext> {
     throw new HttpError(401, "Session expired", "SESSION_EXPIRED");
   }
 
-  await touchSession(env, payload.sessionId, parseClientMetadata(request));
+  if (clientMetadata) {
+    await touchSession(env, payload.sessionId, clientMetadata);
+  }
 
   return {
     accountId: payload.sub,
@@ -1672,6 +1686,45 @@ async function listActiveConversationMembers(
   }));
 }
 
+async function syncRelayHostedConversationSockets(env: Env, conversationId: string): Promise<void> {
+  const conversation = await dbFirst<{
+    id: string;
+    kind: RelayConversationKind;
+    epoch: number;
+    history_mode: string | null;
+  }>(
+    env.DB,
+    "SELECT id, kind, epoch, history_mode FROM conversations WHERE id = ?1",
+    conversationId,
+  );
+
+  if (!conversation) {
+    return;
+  }
+
+  const historyMode = coerceConversationHistoryMode(conversation.history_mode, conversation.kind);
+  if (historyMode !== "relay_hosted") {
+    return;
+  }
+
+  const memberRows = await dbAll<{ account_id: string }>(
+    env.DB,
+    "SELECT account_id FROM conversation_members WHERE conversation_id = ?1 AND removed_at IS NULL",
+    conversationId,
+  );
+
+  const id = env.GROUP_COORDINATOR.idFromName(conversationId);
+  const stub = env.GROUP_COORDINATOR.get(id);
+  await stub.fetch("https://do/rotate", {
+    method: "POST",
+    body: JSON.stringify({
+      conversationId,
+      epoch: conversation.epoch,
+      memberAccountIds: memberRows.map((row) => row.account_id),
+    }),
+  });
+}
+
 async function syncCommunityMemberIntoAllMemberRooms(
   env: Env,
   communityId: string,
@@ -1759,7 +1812,21 @@ async function ensureRestrictedRoomMembership(
   );
 }
 
-async function removeMemberFromCommunityRooms(env: Env, communityId: string, accountId: string, removedAt: string) {
+async function removeMemberFromCommunityRooms(
+  env: Env,
+  communityId: string,
+  accountId: string,
+  removedAt: string
+): Promise<string[]> {
+  const roomRows = await dbAll<{ id: string }>(
+    env.DB,
+    `SELECT id
+       FROM conversations
+      WHERE parent_conversation_id = ?1
+        AND kind = 'room'`,
+    communityId
+  );
+
   await dbRun(
     env.DB,
     `UPDATE conversation_members
@@ -1776,6 +1843,8 @@ async function removeMemberFromCommunityRooms(env: Env, communityId: string, acc
     accountId,
     communityId
   );
+
+  return roomRows.map((row) => row.id);
 }
 
 async function createCommunityRoom(
@@ -3602,7 +3671,7 @@ export default {
           );
         }
 
-        await createCommunityRoom(env, {
+        const defaultRoomId = await createCommunityRoom(env, {
           communityId,
           createdBy: auth.accountId,
           title: body.defaultRoomTitle,
@@ -3611,6 +3680,9 @@ export default {
           roomAccessPolicy: "all_members",
           createdAt,
         });
+
+        await syncRelayHostedConversationSockets(env, communityId);
+        await syncRelayHostedConversationSockets(env, defaultRoomId);
 
         return respond(
           json({
@@ -3738,6 +3810,8 @@ export default {
           createdAt,
         });
 
+        await syncRelayHostedConversationSockets(env, roomId);
+
         const [room] = await loadAccessibleConversations(env, auth.accountId, roomId);
         if (!room) {
           throw new HttpError(404, "Room not found", "ROOM_NOT_FOUND");
@@ -3769,6 +3843,7 @@ export default {
         }
 
         await ensureRestrictedRoomMembership(env, communityId, roomId, targetAccountId, new Date().toISOString());
+        await syncRelayHostedConversationSockets(env, roomId);
         return respond(json({ added: true, communityId, roomId, targetAccountId }));
       }
 
@@ -3840,6 +3915,8 @@ export default {
           targetAccountId
         );
 
+        await syncRelayHostedConversationSockets(env, roomId);
+
         return respond(json({ removed: true, communityId, roomId, targetAccountId }));
       }
 
@@ -3900,7 +3977,7 @@ export default {
           communityId,
           targetAccountId
         );
-        await removeMemberFromCommunityRooms(env, communityId, targetAccountId, removedAt);
+        const affectedRoomIds = await removeMemberFromCommunityRooms(env, communityId, targetAccountId, removedAt);
         await dbRun(
           env.DB,
           `UPDATE conversations
@@ -3909,6 +3986,8 @@ export default {
           removedAt,
           communityId
         );
+        await syncRelayHostedConversationSockets(env, communityId);
+        await Promise.all(affectedRoomIds.map((roomId) => syncRelayHostedConversationSockets(env, roomId)));
 
         return respond(json({ removed: true, communityId, targetAccountId }));
       }
@@ -4154,10 +4233,7 @@ export default {
           throw new HttpError(401, "Missing websocket auth token", "INVALID_TOKEN");
         }
 
-        const payload = await verifyAccessToken(token, env.EMBERCHAMBER_ACCESS_TOKEN_SECRET);
-        if (!payload || !payload.sub) {
-          throw new HttpError(401, "Invalid websocket auth token", "INVALID_TOKEN");
-        }
+        const auth = await requireAccessTokenSession(token, env, parseClientMetadata(request));
 
         const membership = await dbFirst<{ account_id: string }>(
           env.DB,
@@ -4165,15 +4241,35 @@ export default {
              FROM conversation_members
             WHERE conversation_id = ?1 AND account_id = ?2 AND removed_at IS NULL`,
           conversationId,
-          payload.sub
+          auth.accountId
         );
-        if (!membership) {
+        const conversation = await dbFirst<{
+          id: string;
+          kind: RelayConversationKind;
+          history_mode: string | null;
+        }>(
+          env.DB,
+          "SELECT id, kind, history_mode FROM conversations WHERE id = ?1",
+          conversationId,
+        );
+        if (
+          !membership ||
+          !conversation ||
+          conversation.kind === "community" ||
+          coerceConversationHistoryMode(conversation.history_mode, conversation.kind) !== "relay_hosted"
+        ) {
           throw new HttpError(403, "Not a member of this conversation", "FORBIDDEN");
         }
 
         const doId = env.GROUP_COORDINATOR.idFromName(conversationId);
         const stub = env.GROUP_COORDINATOR.get(doId);
-        return stub.fetch(new Request("http://do/ws", request));
+        const upstream = new Request("http://do/ws", request);
+        const headers = new Headers(upstream.headers);
+        headers.set("x-emberchamber-conversation-id", conversationId);
+        headers.set("x-emberchamber-account-id", auth.accountId);
+        headers.set("x-emberchamber-device-id", auth.deviceId);
+        headers.set("x-emberchamber-session-id", auth.sessionId);
+        return stub.fetch(new Request(upstream, { headers }));
       }
 
       const groupMessagesMatch = pathname.match(/^\/v1\/groups\/([0-9a-f-]{36})\/messages$/i);
@@ -4199,7 +4295,7 @@ export default {
           throw new HttpError(404, "Group not found", "GROUP_NOT_FOUND");
         }
 
-        if ((conversation.history_mode ?? "relay_hosted") !== "relay_hosted") {
+        if (coerceConversationHistoryMode(conversation.history_mode, "group") !== "relay_hosted") {
           throw new HttpError(
             409,
             "Relay-hosted group history is not available for encrypted groups.",
@@ -4239,7 +4335,7 @@ export default {
           throw new HttpError(404, "Group not found", "GROUP_NOT_FOUND");
         }
 
-        if ((conversation.history_mode ?? "relay_hosted") !== "relay_hosted") {
+        if (coerceConversationHistoryMode(conversation.history_mode, "group") !== "relay_hosted") {
           throw new HttpError(
             409,
             "Relay-hosted group history is not available for encrypted groups.",
@@ -4288,14 +4384,19 @@ export default {
 
         const fields: string[] = [];
         const values: unknown[] = [];
-        if (body.title !== undefined) { fields.push("title = ?"); values.push(body.title); }
-        if (body.sensitiveMediaDefault !== undefined) { fields.push("sensitive_media_default = ?"); values.push(body.sensitiveMediaDefault ? 1 : 0); }
+        if (body.title !== undefined) {
+          values.push(body.title);
+          fields.push(`title = ?${values.length}`);
+        }
+        if (body.sensitiveMediaDefault !== undefined) {
+          values.push(body.sensitiveMediaDefault ? 1 : 0);
+          fields.push(`sensitive_media_default = ?${values.length}`);
+        }
         if (fields.length) {
-          fields.push("updated_at = ?");
           values.push(new Date().toISOString());
+          fields.push(`updated_at = ?${values.length}`);
           values.push(conversationId);
-          // D1 doesn't support prepared statement reuse with dynamic columns; build the SQL manually
-          const sql = `UPDATE conversations SET ${fields.join(", ").replace(/\?/g, (_, i) => `?${i + 1}`)} WHERE id = ?${values.length}`;
+          const sql = `UPDATE conversations SET ${fields.join(", ")} WHERE id = ?${values.length}`;
           await dbRun(env.DB, sql, ...values);
         }
 
@@ -4392,7 +4493,7 @@ export default {
           throw new HttpError(404, "Group not found", "GROUP_NOT_FOUND");
         }
 
-        const isRelayHosted = (membership.history_mode ?? "relay_hosted") === "relay_hosted";
+        const isRelayHosted = coerceConversationHistoryMode(membership.history_mode, "group") === "relay_hosted";
 
         const rows = await dbAll<{
           account_id: string;
@@ -5203,21 +5304,7 @@ export default {
           conversationId
         );
 
-        const memberRows = await dbAll<{ account_id: string }>(
-          env.DB,
-          "SELECT account_id FROM conversation_members WHERE conversation_id = ?1 AND removed_at IS NULL",
-          conversationId
-        );
-        const id = env.GROUP_COORDINATOR.idFromName(conversationId);
-        const stub = env.GROUP_COORDINATOR.get(id);
-        await stub.fetch("https://do/rotate", {
-          method: "POST",
-          body: JSON.stringify({
-            conversationId,
-            epoch: nextEpoch,
-            memberAccountIds: memberRows.map((row) => row.account_id),
-          }),
-        });
+        await syncRelayHostedConversationSockets(env, conversationId);
 
         return respond(json({ removed: true, conversationId, targetAccountId, epoch: nextEpoch }));
       }
@@ -5418,24 +5505,21 @@ export default {
           throw new HttpError(401, "Missing websocket auth token", "INVALID_TOKEN");
         }
 
-        const payload = await verifyAccessToken(token, env.EMBERCHAMBER_ACCESS_TOKEN_SECRET);
-        if (!payload?.sub || !payload.deviceId) {
-          throw new HttpError(401, "Invalid websocket auth token", "INVALID_TOKEN");
-        }
+        const auth = await requireAccessTokenSession(token, env, parseClientMetadata(request));
 
         const device = await dbFirst<{ id: string }>(
           env.DB,
           `SELECT id
              FROM devices
             WHERE id = ?1 AND account_id = ?2`,
-          payload.deviceId,
-          payload.sub
+          auth.deviceId,
+          auth.accountId
         );
         if (!device) {
           throw new HttpError(403, "Device is not available for this account", "FORBIDDEN");
         }
 
-        const id = env.DEVICE_MAILBOX.idFromName(payload.deviceId);
+        const id = env.DEVICE_MAILBOX.idFromName(auth.deviceId);
         const stub = env.DEVICE_MAILBOX.get(id);
         return stub.fetch(new Request("https://do/ws", request));
       }

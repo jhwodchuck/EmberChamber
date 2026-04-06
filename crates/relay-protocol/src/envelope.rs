@@ -39,6 +39,7 @@ pub struct RelayReceipt {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PrekeyBundle {
     pub identity_key_b64: String,
     pub signed_prekey_b64: String,
@@ -47,6 +48,7 @@ pub struct PrekeyBundle {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DeviceKeyBundle {
     pub account_id: AccountId,
     pub device_id: DeviceId,
@@ -56,6 +58,7 @@ pub struct DeviceKeyBundle {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CipherEnvelope {
     pub envelope_id: String,
     pub conversation_id: ConversationId,

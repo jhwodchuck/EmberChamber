@@ -38,6 +38,7 @@ export type MainScreenProps = {
   conversationPreviews: Record<string, GroupThreadMessage | null>;
   conversationPreferences: Record<string, ConversationPreference>;
   unreadCounts: Record<string, number>;
+  inviteFocusToken: number;
   selectedConversationId: string | null;
   setSelectedConversationId: Dispatch<SetStateAction<string | null>>;
   selectedGroup: GroupMembershipSummary | null;
@@ -123,6 +124,7 @@ export function MainScreen(props: MainScreenProps) {
     conversationPreviews,
     conversationPreferences,
     unreadCounts,
+    inviteFocusToken,
     selectedConversationId,
     setSelectedConversationId,
     selectedGroup,
@@ -210,6 +212,15 @@ export function MainScreen(props: MainScreenProps) {
       setChatView("list");
     }
   }, [selectedGroup]);
+
+  useEffect(() => {
+    if (inviteFocusToken === 0) {
+      return;
+    }
+
+    setActiveTab("invites");
+    setChatView("list");
+  }, [inviteFocusToken]);
 
   useEffect(() => {
     onPersistShellState({

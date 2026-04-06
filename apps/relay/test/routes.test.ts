@@ -52,6 +52,29 @@ async function relayJson<T>(pathname: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
+function executeLocalSql(sql: string) {
+  execFileSync(
+    "npx",
+    [
+      "wrangler",
+      "d1",
+      "execute",
+      "emberchamber-relay-dev",
+      "--local",
+      "--persist-to",
+      persistPath,
+      "--config",
+      "wrangler.jsonc",
+      "--command",
+      sql,
+    ],
+    {
+      cwd: relayDir,
+      stdio: "pipe",
+    },
+  );
+}
+
 async function bootstrapAccount(email: string, deviceLabel: string) {
   const challenge = await relayJson<{
     debugCompletionToken?: string;
@@ -147,6 +170,82 @@ function sha256B64(value: string) {
 function testClientIp(seed: string) {
   const digest = createHash("sha256").update(seed).digest();
   return `198.51.${digest[0]}.${digest[1]}`;
+}
+
+function relayWebSocketUrl(pathname: string) {
+  return `ws://${worker.address}:${worker.port}${pathname}`;
+}
+
+async function openWebSocket(url: string): Promise<WebSocket> {
+  return new Promise((resolve, reject) => {
+    const socket = new WebSocket(url);
+    const timeout = setTimeout(() => {
+      try {
+        socket.close();
+      } catch {
+        // Ignore close failures while timing out.
+      }
+      reject(new Error(`Timed out opening websocket ${url}`));
+    }, 5_000);
+
+    socket.onopen = () => {
+      clearTimeout(timeout);
+      resolve(socket);
+    };
+    socket.onerror = () => {
+      clearTimeout(timeout);
+      reject(new Error(`Websocket handshake failed for ${url}`));
+    };
+  });
+}
+
+async function expectWebSocketRejected(url: string) {
+  await new Promise<void>((resolve, reject) => {
+    const socket = new WebSocket(url);
+    let settled = false;
+    const finish = (callback: () => void) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timeout);
+      callback();
+    };
+    const timeout = setTimeout(() => {
+      try {
+        socket.close();
+      } catch {
+        // Ignore close failures while timing out.
+      }
+      finish(() => reject(new Error(`Timed out waiting for websocket rejection ${url}`)));
+    }, 5_000);
+
+    socket.onopen = () => {
+      socket.close();
+      finish(() => reject(new Error(`Websocket unexpectedly opened for ${url}`)));
+    };
+    socket.onerror = () => {
+      finish(resolve);
+    };
+    socket.onclose = () => {
+      finish(resolve);
+    };
+  });
+}
+
+async function createRelayHostedGroup(session: RelaySession, title: string) {
+  const group = await relayJson<{ id: string; historyMode: string }>("/v1/groups", {
+    method: "POST",
+    headers: authHeaders(session),
+    body: JSON.stringify({
+      title,
+      memberAccountIds: [],
+      memberCap: 6,
+      sensitiveMediaDefault: false,
+    }),
+  });
+  executeLocalSql(`UPDATE conversations SET history_mode = 'relay_hosted' WHERE id = '${group.id}'`);
+  return group.id;
 }
 
 beforeAll(async () => {
@@ -602,5 +701,117 @@ describe("relay routes", () => {
       cleared: true,
       deviceId: alice.deviceId,
     });
+  });
+
+  it("rejects websocket upgrades for revoked sessions", async () => {
+    const alice = await bootstrapAccount("revoked-ws@example.com", "Revoked websocket device");
+    const groupId = await createRelayHostedGroup(alice, "Revoked WS group");
+
+    const mailboxSocket = await openWebSocket(
+      relayWebSocketUrl(`/v1/mailbox/ws?token=${encodeURIComponent(alice.accessToken)}`),
+    );
+    mailboxSocket.close();
+
+    const conversationSocket = await openWebSocket(
+      relayWebSocketUrl(`/v1/conversations/${groupId}/ws?token=${encodeURIComponent(alice.accessToken)}`),
+    );
+    conversationSocket.close();
+
+    const revokeResponse = await relayFetch(`/v1/sessions/${alice.sessionId}`, {
+      method: "DELETE",
+      headers: { authorization: `Bearer ${alice.accessToken}` },
+    });
+    expect(revokeResponse.status).toBe(200);
+
+    await expectWebSocketRejected(
+      relayWebSocketUrl(`/v1/mailbox/ws?token=${encodeURIComponent(alice.accessToken)}`),
+    );
+
+    await expectWebSocketRejected(
+      relayWebSocketUrl(`/v1/conversations/${groupId}/ws?token=${encodeURIComponent(alice.accessToken)}`),
+    );
+  });
+
+  it("updates group settings with dynamic PATCH combinations", async () => {
+    const owner = await bootstrapAccount("group-patch-owner@example.com", "Group patch owner");
+    const group = await relayJson<{ id: string }>("/v1/groups", {
+      method: "POST",
+      headers: authHeaders(owner),
+      body: JSON.stringify({
+        title: "Patchable group",
+        memberAccountIds: [],
+        memberCap: 6,
+        sensitiveMediaDefault: false,
+      }),
+    });
+
+    const titleOnly = await relayFetch(`/v1/groups/${group.id}`, {
+      method: "PATCH",
+      headers: authHeaders(owner),
+      body: JSON.stringify({ title: "Patch title only" }),
+    });
+    expect(titleOnly.status).toBe(200);
+
+    const sensitiveOnly = await relayFetch(`/v1/groups/${group.id}`, {
+      method: "PATCH",
+      headers: authHeaders(owner),
+      body: JSON.stringify({ sensitiveMediaDefault: true }),
+    });
+    expect(sensitiveOnly.status).toBe(200);
+
+    const bothFields = await relayFetch(`/v1/groups/${group.id}`, {
+      method: "PATCH",
+      headers: authHeaders(owner),
+      body: JSON.stringify({ title: "Patch both fields", sensitiveMediaDefault: false }),
+    });
+    expect(bothFields.status).toBe(200);
+
+    const groups = await relayJson<Array<{ id: string; title?: string; sensitiveMediaDefault?: boolean }>>(
+      "/v1/groups",
+      {
+        headers: { authorization: `Bearer ${owner.accessToken}` },
+      },
+    );
+
+    expect(groups.find((entry) => entry.id === group.id)).toMatchObject({
+      title: "Patch both fields",
+      sensitiveMediaDefault: false,
+    });
+  });
+
+  it("treats invalid stored group history mode as device-encrypted on group routes", async () => {
+    const owner = await bootstrapAccount("null-history-owner@example.com", "Null history owner");
+    const group = await relayJson<{ id: string; historyMode: string }>("/v1/groups", {
+      method: "POST",
+      headers: authHeaders(owner),
+      body: JSON.stringify({
+        title: "Null history group",
+        memberAccountIds: [],
+        memberCap: 6,
+        sensitiveMediaDefault: false,
+      }),
+    });
+    expect(group.historyMode).toBe("device_encrypted");
+
+    executeLocalSql(`UPDATE conversations SET history_mode = '' WHERE id = '${group.id}'`);
+
+    const list = await relayJson<Array<{ id: string; historyMode: string }>>("/v1/conversations", {
+      headers: { authorization: `Bearer ${owner.accessToken}` },
+    });
+    expect(list.find((entry) => entry.id === group.id)?.historyMode).toBe("device_encrypted");
+
+    const getMessages = await relayFetch(`/v1/groups/${group.id}/messages?limit=20`, {
+      headers: { authorization: `Bearer ${owner.accessToken}` },
+    });
+    expect(getMessages.status).toBe(409);
+    expect(await getMessages.json()).toMatchObject({ code: "HISTORY_MODE_UNSUPPORTED" });
+
+    const postMessage = await relayFetch(`/v1/groups/${group.id}/messages`, {
+      method: "POST",
+      headers: authHeaders(owner),
+      body: JSON.stringify({ text: "Should stay encrypted" }),
+    });
+    expect(postMessage.status).toBe(409);
+    expect(await postMessage.json()).toMatchObject({ code: "HISTORY_MODE_UNSUPPORTED" });
   });
 });
