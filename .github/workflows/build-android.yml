@@ -76,7 +76,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.ref != '' && inputs.ref || github.ref }}
+          ref: ${{ inputs.ref || github.ref_name }}
 
       - uses: actions/setup-node@v6
         with:
@@ -224,7 +224,7 @@ jobs:
           BUILD_TYPE: ${{ inputs.build_type }}
           INPUT_ARTIFACT_NAME: ${{ inputs.artifact_name }}
         run: |
-          SAFE_REF=$(printf '%s' "${{ inputs.ref != '' && inputs.ref || github.ref_name }}" | tr '/:@' '-')
+          SAFE_REF=$(printf '%s' "${{ inputs.ref || github.ref_name }}" | tr '/:@' '-')
           OUT_DIR=apps/mobile/artifacts/android-build
           mkdir -p "$OUT_DIR"
 
