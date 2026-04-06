@@ -63,6 +63,7 @@ export default function SettingsPage() {
   const [privacyStatus, setPrivacyStatus] = useState<{ state: LoadStatus; message?: string }>({
     state: "idle",
   });
+  const [revokedSessionNotice, setRevokedSessionNotice] = useState<{ deviceLabel: string } | null>(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSavingPrivacy, setIsSavingPrivacy] = useState(false);
   const [revokingSessionId, setRevokingSessionId] = useState<string | null>(null);
@@ -153,7 +154,13 @@ export default function SettingsPage() {
   }
 
   async function revokeSession(sessionId: string) {
-    if (!window.confirm("Revoke this session? The device will need a new magic link to sign back in.")) {
+    const targetSession = sessions.find((session) => session.id === sessionId);
+    const targetLabel = targetSession?.deviceLabel ?? "This device";
+    if (
+      !window.confirm(
+        `Revoke the session for ${targetLabel}? That device will lose this sign-in and must request a new magic link to get back in.`,
+      )
+    ) {
       return;
     }
 
@@ -162,7 +169,8 @@ export default function SettingsPage() {
     try {
       await relayAccountApi.revokeSession(sessionId);
       setSessions((prev) => prev.filter((session) => session.id !== sessionId));
-      toast.success("Session revoked");
+      setRevokedSessionNotice({ deviceLabel: targetLabel });
+      toast.success("Session access removed");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to revoke session");
     } finally {
@@ -410,6 +418,13 @@ export default function SettingsPage() {
           </div>
 
           <DeviceLinkPanel signedIn className="space-y-4" />
+
+          {revokedSessionNotice ? (
+            <StatusCallout tone="success" title="Session revoked">
+              {revokedSessionNotice.deviceLabel} lost this sign-in. That device must request a new
+              magic link before it can get back into the account.
+            </StatusCallout>
+          ) : null}
 
           {sessionsStatus.state === "loading" ? (
             <StatusCallout tone="info" title="Loading active sessions">

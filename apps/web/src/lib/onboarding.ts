@@ -2,17 +2,17 @@ export const onboardingSteps = [
   {
     number: "01",
     title: "Confirm access",
-    body: "Bring the private email and invite details that belong to this account.",
+    body: "Bring the private email tied to this account. New beta accounts also need an invite token.",
   },
   {
     number: "02",
-    title: "Name the device",
-    body: "Use a readable label so session review and later device linking stay clear.",
+    title: "Name this browser",
+    body: "Use a name you will recognize later in your device list.",
   },
   {
     number: "03",
     title: "Finish from the inbox",
-    body: "Open the link on the device you want to use first so the first session lands cleanly.",
+    body: "Open the email link on the device you want to use first.",
   },
 ] as const;
 
@@ -33,7 +33,7 @@ export const onboardingAssurances = [
 
 export function suggestBrowserDeviceLabel() {
   if (typeof navigator === "undefined") {
-    return "Browser companion";
+    return "Web browser";
   }
 
   const browserNavigator = navigator as Navigator & {
@@ -66,5 +66,5 @@ export function suggestBrowserDeviceLabel() {
     return "Linux browser";
   }
 
-  return "Browser companion";
+  return "Web browser";
 }
