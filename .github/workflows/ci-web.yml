@@ -110,9 +110,9 @@ jobs:
       - name: Install Playwright Chromium
         run: npx -y playwright@1.54.2 install --with-deps chromium
 
-      - name: Capture web new-user flow screenshots
+      - name: Capture web route flow screenshots
         run: |
-          mkdir -p apps/web/artifacts/screenshots/new-user-flow
+          mkdir -p apps/web/artifacts/screenshots
 
           npm run relay:local > /tmp/emberchamber-relay.log 2>&1 &
           RELAY_PID=$!
@@ -126,8 +126,7 @@ jobs:
           CI_WEB_BASE_URL=http://127.0.0.1:3000 \
           CI_RELAY_BASE_URL=http://127.0.0.1:8787 \
           CI_AUTH_INVITE_TOKEN=dev-beta-invite \
-          CI_SCREENSHOT_DIR=apps/web/artifacts/screenshots/new-user-flow \
-          npx -y playwright@1.54.2 test apps/web/e2e/ci-new-user-flow.spec.ts --workers=1 --reporter=line
+          npm run e2e --workspace=apps/web
 
       - name: Capture desktop shell screenshot
         run: |

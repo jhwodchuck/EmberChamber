@@ -8,7 +8,15 @@ export const metadata: Metadata = {
   description: "Start adults-only invite-only EmberChamber beta onboarding with a private email bootstrap.",
 };
 
-export default function RegisterPage() {
+export default async function RegisterPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ next?: string | string[] }>;
+}) {
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const continueTo =
+    typeof resolvedSearchParams?.next === "string" ? resolvedSearchParams.next : null;
+
   return (
     <MarketingShell>
       <section className="mx-auto grid max-w-6xl gap-8 px-6 py-16 sm:py-20 lg:grid-cols-[minmax(0,0.95fr)_28rem] lg:items-start">
@@ -19,7 +27,7 @@ export default function RegisterPage() {
           emphasis="Confirm access, name this browser so you can recognize it later, then open the email link on the device you want to use first."
         />
 
-        <RegisterForm />
+        <RegisterForm continueTo={continueTo} />
       </section>
     </MarketingShell>
   );

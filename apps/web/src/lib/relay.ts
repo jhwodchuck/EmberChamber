@@ -107,7 +107,7 @@ export function hasRelaySession() {
 }
 
 function decodeTokenPayload(token: string): { exp?: number } | null {
-  const [encoded] = token.split(".");
+  const [, encoded] = token.split(".");
   if (!encoded) {
     return null;
   }

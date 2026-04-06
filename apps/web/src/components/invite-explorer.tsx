@@ -312,7 +312,7 @@ export function InviteExplorer({
                 >
                   Request Sign-In Link
                 </Link>
-                <Link href="/register" className="btn-ghost">
+                <Link href={`/register?next=${encodeURIComponent(nextInvitePath)}`} className="btn-ghost">
                   Join the Beta
                 </Link>
               </>

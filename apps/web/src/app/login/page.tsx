@@ -8,7 +8,15 @@ export const metadata: Metadata = {
   description: "Request a private adults-only email magic link for an existing EmberChamber beta account.",
 };
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ next?: string | string[] }>;
+}) {
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const continueTo =
+    typeof resolvedSearchParams?.next === "string" ? resolvedSearchParams.next : null;
+
   return (
     <MarketingShell>
       <section className="mx-auto grid max-w-6xl gap-8 px-6 py-16 sm:py-20 lg:grid-cols-[minmax(0,0.95fr)_28rem] lg:items-start">
@@ -19,7 +27,7 @@ export default function LoginPage() {
           emphasis="If this email does not match an existing beta account, the form will stop and switch you into a separate join-beta branch before anything new is created."
         />
 
-        <LoginForm />
+        <LoginForm continueTo={continueTo} />
       </section>
     </MarketingShell>
   );

@@ -6,6 +6,10 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import toast from "react-hot-toast";
 import { DeviceLinkPanel } from "@/components/device-link-panel";
 import { StatusCallout } from "@/components/status-callout";
+import {
+  normalizeAuthContinuationPath,
+  syncStoredAuthContinuationPath,
+} from "@/lib/auth-continuation";
 import { formatUtcDateTime } from "@/lib/format";
 import { suggestBrowserDeviceLabel } from "@/lib/onboarding";
 import { RelayRequestError, startMagicLink } from "@/lib/relay";
@@ -47,7 +51,13 @@ function normalizeEmail(value: string) {
   return value.trim().toLowerCase();
 }
 
-export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
+export function BootstrapAuthForm({
+  mode,
+  continueTo,
+}: {
+  mode: BootstrapAuthMode;
+  continueTo?: string | null;
+}) {
   const [entryMethod, setEntryMethod] = useState<BootstrapEntryMethod>("magic-link");
   const [magicLinkStep, setMagicLinkStep] = useState<MagicLinkStep>(1);
   const [email, setEmail] = useState("");
@@ -79,6 +89,12 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
     setDeviceLabel(readDraft("deviceLabel") || suggestBrowserDeviceLabel());
     setIsReady(true);
   }, []);
+
+  const safeContinuationPath = normalizeAuthContinuationPath(continueTo);
+
+  useEffect(() => {
+    syncStoredAuthContinuationPath(safeContinuationPath);
+  }, [safeContinuationPath]);
 
   useEffect(() => {
     if (entryMethod !== "magic-link" || magicLinkStep !== 2) {
@@ -326,9 +342,14 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
         ? "This address is on the join-beta path now. Add an invite token to create a new account, or switch back to a different sign-in email."
       : mode === "join"
         ? "Confirm the invite and adults-only gate first, then name this browser so you can recognize it later and send the inbox link."
-        : "Use the email tied to your existing beta account. If no account is found, the form will stop and offer the join-beta path before anything new is created.";
+      : "Use the email tied to your existing beta account. If no account is found, the form will stop and offer the join-beta path before anything new is created.";
   const canUseDeviceLink = mode === "signin";
   const requiresInviteToken = mode === "join" || inviteFieldVisible || isMissingAccountBranch;
+  const alternateAuthHref = safeContinuationPath
+    ? `${mode === "join" ? "/login" : "/register"}?next=${encodeURIComponent(safeContinuationPath)}`
+    : mode === "join"
+      ? "/login"
+      : "/register";
 
   return (
     <div className="panel p-6 sm:p-7">
@@ -830,14 +851,14 @@ export function BootstrapAuthForm({ mode }: { mode: BootstrapAuthMode }) {
         {mode === "join" ? (
           <>
             Already have access?{" "}
-            <Link href="/login" className="font-medium text-brand-600 hover:underline">
+            <Link href={alternateAuthHref} className="font-medium text-brand-600 hover:underline">
               Request a sign-in link
             </Link>
           </>
         ) : (
           <>
             First device on a new account?{" "}
-            <Link href="/register" className="font-medium text-brand-600 hover:underline">
+            <Link href={alternateAuthHref} className="font-medium text-brand-600 hover:underline">
               Start invite-only onboarding
             </Link>
           </>

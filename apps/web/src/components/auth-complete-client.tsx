@@ -4,6 +4,11 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { StatusCallout } from "@/components/status-callout";
+import {
+  clearStoredAuthContinuationPath,
+  normalizeAuthContinuationPath,
+  readStoredAuthContinuationPath,
+} from "@/lib/auth-continuation";
 import { completeMagicLink } from "@/lib/relay";
 import { useAuthStore } from "@/lib/store";
 
@@ -23,6 +28,8 @@ export function AuthCompleteClient() {
 
   const completionToken = searchParams?.get("token") ?? "";
   const forceBrowser = searchParams?.get("browser") === "1";
+  const requestedContinuationPath = normalizeAuthContinuationPath(searchParams?.get("next"));
+  const [storedContinuationPath, setStoredContinuationPath] = useState<string | null>(null);
 
   const prefersAppHandoff = useMemo(() => {
     if (typeof navigator === "undefined") {
@@ -35,6 +42,19 @@ export function AuthCompleteClient() {
   const appDeepLink = completionToken
     ? `emberchamber://auth/complete?token=${encodeURIComponent(completionToken)}`
     : "emberchamber://auth/complete";
+  const continuationPath = requestedContinuationPath ?? storedContinuationPath;
+  const browserCompletionHref = completionToken
+    ? `/auth/complete?token=${encodeURIComponent(completionToken)}&browser=1${
+        continuationPath ? `&next=${encodeURIComponent(continuationPath)}` : ""
+      }`
+    : "/auth/complete?browser=1";
+  const requestAnotherLinkHref = continuationPath
+    ? `/login?next=${encodeURIComponent(continuationPath)}`
+    : "/login";
+
+  useEffect(() => {
+    setStoredContinuationPath(readStoredAuthContinuationPath());
+  }, []);
 
   // Attempt an immediate deep-link redirect on mobile. If the app is installed
   // Android/iOS will open it and the user never sees this page. If it is not
@@ -102,8 +122,10 @@ export function AuthCompleteClient() {
           message: "This browser is signed in. Redirecting you into the web workspace…",
         });
 
+        const redirectTarget = requestedContinuationPath ?? readStoredAuthContinuationPath() ?? "/app";
+        clearStoredAuthContinuationPath();
         window.setTimeout(() => {
-          router.replace("/app");
+          router.replace(redirectTarget);
         }, 800);
       } catch (error) {
         if (cancelled) {
@@ -120,7 +142,7 @@ export function AuthCompleteClient() {
     return () => {
       cancelled = true;
     };
-  }, [completionToken, forceBrowser, prefersAppHandoff, router, setSession]);
+  }, [completionToken, forceBrowser, prefersAppHandoff, requestedContinuationPath, router, setSession]);
 
   return (
     <>
@@ -154,10 +176,7 @@ export function AuthCompleteClient() {
           <a href={appDeepLink} className="btn-primary">
             Open in EmberChamber App
           </a>
-          <Link
-            href={`/auth/complete?token=${encodeURIComponent(completionToken)}&browser=1`}
-            className="btn-ghost"
-          >
+          <Link href={browserCompletionHref} className="btn-ghost">
             Finish in Browser Instead
           </Link>
         </div>
@@ -165,7 +184,7 @@ export function AuthCompleteClient() {
 
       {state.status === "error" ? (
         <div className="mt-6 flex flex-wrap gap-3">
-          <Link href="/login" className="btn-primary">
+          <Link href={requestAnotherLinkHref} className="btn-primary">
             Request another link
           </Link>
           <Link href="/support" className="btn-ghost">
