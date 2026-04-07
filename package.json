@@ -12,6 +12,7 @@
     "packages/*"
   ],
   "scripts": {
+    "prepare": "bash scripts/install-git-hooks.sh",
     "bootstrap": "bash scripts/bootstrap-dev.sh",
     "check:repo-contracts": "node scripts/check-repo-contracts.mjs",
     "council:review": "bash llm_council/scripts/orchestrate_review.sh",
