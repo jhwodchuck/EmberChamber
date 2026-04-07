@@ -83,3 +83,7 @@ changed-files.md
 repo-facts.md
 evidence-pack.md
 recommended-reviewers.txt
+
+# Manim render output
+media/
+__pycache__/
