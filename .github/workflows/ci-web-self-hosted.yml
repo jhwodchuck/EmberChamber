@@ -104,7 +104,7 @@ jobs:
           WEB_PID=$!
           trap 'echo "=== relay log ==="; cat /tmp/emberchamber-relay.log; kill $WEB_PID $RELAY_PID 2>/dev/null' EXIT
 
-          npx -y wait-on@8.0.3 --timeout 120000 http://127.0.0.1:8787/health
+          npx -y wait-on@8.0.3 --timeout 120000 http-get://127.0.0.1:8787/health
           npx -y wait-on@8.0.3 --timeout 120000 http://127.0.0.1:3000/start
           CI_WEB_BASE_URL=http://127.0.0.1:3000 \
           CI_RELAY_BASE_URL=http://127.0.0.1:8787 \
