@@ -181,10 +181,6 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x apps/mobile/android/gradlew
 
-      - name: Enable R8 minification and extend ProGuard rules
-        if: inputs.build_type == 'release'
-        run: npm run android:patch-release-config --workspace=apps/mobile
-
       - name: Assert Android signing secrets are configured
         if: inputs.sign
         env:
