@@ -78,7 +78,6 @@ jobs:
       artifact_name: emberchamber-play-store-aab
       require_google_services: true
       validate_release_inputs: true
-      version_code: ${{ github.run_number }}
     secrets: inherit
 
   deploy:
@@ -90,7 +89,7 @@ jobs:
       actions: read
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      VERSION_CODE: ${{ github.run_number }}
+      VERSION_CODE: ${{ needs.build.outputs.version_code }}
     steps:
       - name: Validate inputs
         env:
