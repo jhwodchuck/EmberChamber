@@ -181,6 +181,50 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x apps/mobile/android/gradlew
 
+      - name: Enable R8 minification and extend ProGuard rules
+        if: inputs.build_type == 'release' && inputs.sign
+        run: |
+          PROPS=apps/mobile/android/gradle.properties
+          RULES=apps/mobile/android/app/proguard-rules.pro
+
+          # --- gradle.properties: enable R8 full-mode + resource shrinking ---
+          if ! grep -q 'enableMinifyInReleaseBuilds' "$PROPS"; then
+            printf '\n# R8 full-mode minification (produces mapping.txt for Play crash symbolication)\nandroid.enableMinifyInReleaseBuilds=true\nandroid.enableShrinkResourcesInReleaseBuilds=true\n' >> "$PROPS"
+            echo "gradle.properties: Enabled R8 minification and resource shrinking"
+          else
+            echo "gradle.properties: R8 already enabled, skipping"
+          fi
+
+          # --- proguard-rules.pro: keep rules for RN/Expo ecosystem ---
+          if ! grep -q 'emberchamber-r8-rules' "$RULES"; then
+            printf '\n# emberchamber-r8-rules — appended by CI workflow\n' >> "$RULES"
+            printf -- '-keep class com.facebook.react.** { *; }\n' >> "$RULES"
+            printf -- '-keep class com.facebook.hermes.** { *; }\n' >> "$RULES"
+            printf -- '-keep class com.facebook.jni.** { *; }\n' >> "$RULES"
+            printf -- '-keep class com.facebook.soloader.** { *; }\n' >> "$RULES"
+            printf -- '-keep class com.facebook.react.bridge.** { *; }\n' >> "$RULES"
+            printf -- '-keepclassmembers class * { @com.facebook.react.bridge.ReactMethod *; }\n' >> "$RULES"
+            printf -- '-keepclassmembers class * { @com.facebook.react.bridge.ReactProp *; }\n' >> "$RULES"
+            printf -- '-keepclassmembers class * { @com.facebook.react.bridge.ReactPropGroup *; }\n' >> "$RULES"
+            printf -- '-keep class com.facebook.hermes.unicode.** { *; }\n' >> "$RULES"
+            printf -- '-keep class expo.modules.** { *; }\n' >> "$RULES"
+            printf -- '-keep class host.exp.** { *; }\n' >> "$RULES"
+            printf -- '-keep class com.google.firebase.** { *; }\n' >> "$RULES"
+            printf -- '-keep class com.google.android.gms.** { *; }\n' >> "$RULES"
+            printf -- '-keep class com.facebook.react.fabric.** { *; }\n' >> "$RULES"
+            printf -- '-keep class com.facebook.react.uimanager.** { *; }\n' >> "$RULES"
+            printf -- '-keep class com.facebook.react.turbomodule.** { *; }\n' >> "$RULES"
+            printf -- '-dontwarn okhttp3.**\n' >> "$RULES"
+            printf -- '-dontwarn okio.**\n' >> "$RULES"
+            printf -- '-keep class okhttp3.** { *; }\n' >> "$RULES"
+            printf -- '-keep interface okhttp3.** { *; }\n' >> "$RULES"
+            printf -- '-dontwarn kotlinx.coroutines.**\n' >> "$RULES"
+            printf -- '-keep class kotlinx.coroutines.** { *; }\n' >> "$RULES"
+            echo "proguard-rules.pro: Appended React Native / Expo keep rules"
+          else
+            echo "proguard-rules.pro: Keep rules already present, skipping"
+          fi
+
       - name: Assert Android signing secrets are configured
         if: inputs.sign
         env:
