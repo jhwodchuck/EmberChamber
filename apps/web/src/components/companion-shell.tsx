@@ -21,6 +21,7 @@ import {
   ingestRelayEnvelopes,
 } from "@/lib/relay-workspace";
 import { useAuthStore } from "@/lib/store";
+import { calcReconnectDelayMs } from "@/lib/backoff";
 
 type LoadState = {
   status: "idle" | "loading" | "ready" | "error";
@@ -105,6 +106,7 @@ export function CompanionShell({ children }: { children: ReactNode }) {
   const [isConnected, setIsConnected] = useState(false);
   const [mailboxRevision, setMailboxRevision] = useState(0);
   const mailboxReconnectTimerRef = useRef<number | null>(null);
+  const mailboxReconnectAttemptRef = useRef(0);
   const loadUser = useAuthStore((state) => state.loadUser);
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
@@ -210,10 +212,12 @@ export function CompanionShell({ children }: { children: ReactNode }) {
         return;
       }
 
+      const delay = calcReconnectDelayMs(mailboxReconnectAttemptRef.current);
+      mailboxReconnectAttemptRef.current += 1;
       mailboxReconnectTimerRef.current = window.setTimeout(() => {
         mailboxReconnectTimerRef.current = null;
         void connectMailbox();
-      }, 1500);
+      }, delay);
     };
 
     const connectMailbox = async () => {
@@ -227,6 +231,7 @@ export function CompanionShell({ children }: { children: ReactNode }) {
         ws = createRelayMailboxWebSocket(session.accessToken);
         ws.onopen = () => {
           if (!cancelled) {
+            mailboxReconnectAttemptRef.current = 0; // reset backoff on successful connection
             setIsConnected(true);
           }
         };
@@ -374,6 +379,8 @@ export function CompanionShell({ children }: { children: ReactNode }) {
                     ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                     : "border-amber-200 bg-amber-50 text-amber-700",
                 )}
+                aria-live="polite"
+                aria-label={isConnected ? "Relay link: live" : "Relay link: reconnecting"}
               >
                 {isConnected ? "Live relay link" : "Reconnecting"}
               </div>

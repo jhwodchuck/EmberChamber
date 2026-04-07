@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import type { ConversationSearchResult } from "@emberchamber/protocol";
 import { Avatar } from "@/components/avatar";
+import { StatusCallout } from "@/components/status-callout";
 import { conversationDefaultTitle, conversationTypeLabel } from "@/lib/conversation-labels";
 import { relayConversationApi } from "@/lib/relay";
 import { conversationHref } from "@/lib/conversation-routes";
@@ -25,10 +26,12 @@ export default function SearchPage() {
     accounts: [],
   });
   const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<SearchTab>("all");
 
   async function handleSearch(nextQuery: string) {
     setQuery(nextQuery);
+    setSearchError(null);
     if (nextQuery.trim().length < 2) {
       setResults({
         query: nextQuery,
@@ -41,6 +44,11 @@ export default function SearchPage() {
     setIsSearching(true);
     try {
       setResults(await relayConversationApi.search(nextQuery.trim(), scopedCommunityId));
+    } catch (error) {
+      setSearchError(
+        error instanceof Error ? error.message : "Search failed — the relay may be temporarily unavailable.",
+      );
+      toast.error("Search failed");
     } finally {
       setIsSearching(false);
     }
@@ -70,20 +78,40 @@ export default function SearchPage() {
           Scoped to one joined community
         </p>
       ) : null}
+
+      <label htmlFor="search-input" className="sr-only">
+        Search conversations and contacts
+      </label>
       <input
-        type="text"
+        id="search-input"
+        type="search"
         name="search"
         value={query}
         onChange={(event) => void handleSearch(event.target.value)}
         className="input mb-4"
         placeholder="Search conversations and shared contacts…"
+        aria-describedby={searchError ? "search-error" : undefined}
       />
 
-      <div className="mb-4 flex gap-1 border-b border-[var(--border)]">
+      {searchError ? (
+        <div id="search-error" className="mb-4">
+          <StatusCallout tone="error" title="Search unavailable">
+            {searchError}
+          </StatusCallout>
+        </div>
+      ) : null}
+
+      <div
+        role="tablist"
+        aria-label="Search result filters"
+        className="mb-4 flex gap-1 border-b border-[var(--border)]"
+      >
         {searchTabs.map((tab) => (
           <button
             key={tab}
             type="button"
+            role="tab"
+            aria-selected={activeTab === tab}
             onClick={() => setActiveTab(tab)}
             className={`px-3 py-2 text-sm font-medium capitalize transition-colors ${
               activeTab === tab
@@ -97,7 +125,7 @@ export default function SearchPage() {
       </div>
 
       {isSearching ? (
-        <div className="flex justify-center py-8">
+        <div className="flex justify-center py-8" aria-label="Searching…" role="status">
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
         </div>
       ) : (
@@ -163,6 +191,7 @@ export default function SearchPage() {
 
           {query.trim().length >= 2 &&
           !isSearching &&
+          !searchError &&
           results.conversations.length === 0 &&
           results.accounts.length === 0 ? (
             <p className="py-8 text-center text-[var(--text-secondary)]">

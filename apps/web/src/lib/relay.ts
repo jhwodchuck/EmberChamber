@@ -130,37 +130,71 @@ function isAccessTokenNearExpiry(token: string, thresholdSeconds = 60) {
   return payload.exp <= Math.floor(Date.now() / 1000) + thresholdSeconds;
 }
 
+// ---------------------------------------------------------------------------
+// Token refresh serialization
+//
+// Multiple concurrent requests can all detect an expiring token at the same
+// time and race to call the refresh endpoint with the same refresh token.
+// Only one refresh should be in flight at a time; the rest should await the
+// same promise.  A stale reference is cleared after the refresh settles so
+// the next natural expiry starts a fresh refresh cycle.
+// ---------------------------------------------------------------------------
+let inflightRefreshPromise: Promise<RelayStoredSession | null> | null = null;
+
 async function refreshRelaySession(): Promise<RelayStoredSession | null> {
-  const current = readRelaySession();
-  if (!current?.refreshToken) {
-    clearRelaySession();
-    return null;
+  if (inflightRefreshPromise) {
+    return inflightRefreshPromise;
   }
 
-  const response = await fetch(`${relayUrl}/v1/auth/refresh`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({ refreshToken: current.refreshToken }),
-  });
+  inflightRefreshPromise = (async () => {
+    const current = readRelaySession();
+    if (!current?.refreshToken) {
+      clearRelaySession();
+      return null;
+    }
 
-  const body = ((await response.json().catch(() => ({}))) ?? {}) as
-    | { accessToken: string; sessionId: string; deviceId: string }
-    | RelayErrorBody;
-  if (!response.ok || !("accessToken" in body)) {
-    clearRelaySession();
-    return null;
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), RELAY_FETCH_TIMEOUT_MS);
+
+    try {
+      const response = await fetch(`${relayUrl}/v1/auth/refresh`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ refreshToken: current.refreshToken }),
+        signal: controller.signal,
+      });
+
+      const body = ((await response.json().catch(() => ({}))) ?? {}) as
+        | { accessToken: string; sessionId: string; deviceId: string }
+        | RelayErrorBody;
+      if (!response.ok || !("accessToken" in body)) {
+        clearRelaySession();
+        return null;
+      }
+
+      const nextSession: RelayStoredSession = {
+        ...current,
+        accessToken: body.accessToken,
+        sessionId: body.sessionId,
+        deviceId: body.deviceId,
+      };
+      storeRelaySession(nextSession);
+      return nextSession;
+    } catch {
+      // Network error or timeout – keep the existing session so the caller
+      // can decide whether to propagate the error or retry later.
+      return null;
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
+  })();
+
+  try {
+    return await inflightRefreshPromise;
+  } finally {
+    // Clear the in-flight reference so a future expiry starts a new attempt.
+    inflightRefreshPromise = null;
   }
-
-  const nextSession: RelayStoredSession = {
-    ...current,
-    accessToken: body.accessToken,
-    sessionId: body.sessionId,
-    deviceId: body.deviceId,
-  };
-  storeRelaySession(nextSession);
-  return nextSession;
 }
 
 export async function ensureRelayAccessToken(minTtlSeconds = 60): Promise<RelayStoredSession | null> {
@@ -176,6 +210,15 @@ export async function ensureRelayAccessToken(minTtlSeconds = 60): Promise<RelayS
   return current;
 }
 
+// ---------------------------------------------------------------------------
+// Relay fetch timeout
+//
+// All relay requests are given a hard deadline so that a slow or unreachable
+// relay never silently hangs the UI indefinitely.  The AbortController signal
+// is composed with any signal already present in the caller's options.
+// ---------------------------------------------------------------------------
+const RELAY_FETCH_TIMEOUT_MS = 30_000;
+
 async function relayFetch<T>(
   path: string,
   options: RequestInit = {},
@@ -189,10 +232,34 @@ async function relayFetch<T>(
     ...options.headers,
   };
 
-  const response = await fetch(`${relayUrl}${path}`, {
-    ...options,
-    headers,
-  });
+  const controller = new AbortController();
+  const timeoutId =
+    typeof window !== "undefined"
+      ? window.setTimeout(() => controller.abort(), RELAY_FETCH_TIMEOUT_MS)
+      : undefined;
+
+  // Honour any signal already supplied by the caller by chaining it.
+  if (options.signal) {
+    options.signal.addEventListener("abort", () => controller.abort(), { once: true });
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${relayUrl}${path}`, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new RelayRequestError("Relay request timed out", 0, "TIMEOUT");
+    }
+    throw error;
+  } finally {
+    if (timeoutId !== undefined) {
+      window.clearTimeout(timeoutId);
+    }
+  }
 
   const body = ((await response.json().catch(() => ({}))) ?? {}) as T & RelayErrorBody;
   if (response.ok) {

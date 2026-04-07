@@ -45,13 +45,46 @@ jobs:
         run: |
           echo "Waiting 90s for build + CDN propagation…"
           sleep 90
-          STATUS=$(curl --silent --output /dev/null --write-out "%{http_code}" \
-            --retry 6 --retry-delay 15 --retry-all-errors \
-            https://emberchamber.com)
-          echo "HTTP status: $STATUS"
-          if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 400 ]; then
-            echo "Site is live."
-          else
-            echo "Unexpected status $STATUS after deploy trigger." >&2
+
+          # ---------------------------------------------------------------------------
+          # Route smoke tests – verify that core public routes are reachable and return
+          # expected HTTP status codes.  A redirect (3xx) is also acceptable on some
+          # routes when the CDN enforces HTTPS or canonical domains.
+          # ---------------------------------------------------------------------------
+          BASE="https://emberchamber.com"
+          FAIL=0
+
+          check_route() {
+            local path="$1"
+            local description="$2"
+            local status
+            status=$(curl --silent --output /dev/null --write-out "%{http_code}" \
+              --retry 4 --retry-delay 10 --retry-all-errors \
+              --max-time 20 \
+              "${BASE}${path}")
+            if [ "$status" -ge 200 ] && [ "$status" -lt 400 ]; then
+              echo "  OK  ${status}  ${description} (${path})"
+            else
+              echo "  FAIL ${status}  ${description} (${path})" >&2
+              FAIL=1
+            fi
+          }
+
+          echo "--- Route smoke checks ---"
+          check_route "/"              "Homepage"
+          check_route "/start"         "Start here (onboarding)"
+          check_route "/download"      "Download / launch targets"
+          check_route "/privacy"       "Privacy policy"
+          check_route "/trust-and-safety" "Trust and safety"
+          check_route "/login"         "Sign-in page"
+          check_route "/register"      "Join-beta page"
+          check_route "/support"       "Support guide"
+          check_route "/beta-terms"    "Beta terms"
+          echo "--------------------------"
+
+          if [ "$FAIL" -ne 0 ]; then
+            echo "One or more route smoke checks failed." >&2
             exit 1
           fi
+
+          echo "All route smoke checks passed."
