@@ -337,7 +337,10 @@ mod tests {
         });
 
         for (key, label) in &state.contact_labels {
-            assert_eq!(*key, label.account_id, "map key must equal embedded account_id");
+            assert_eq!(
+                *key, label.account_id,
+                "map key must equal embedded account_id"
+            );
         }
     }
 
@@ -368,8 +371,7 @@ mod tests {
         });
 
         let json = serde_json::to_string(&state).expect("state must serialise");
-        let recovered: ClientState =
-            serde_json::from_str(&json).expect("state must deserialise");
+        let recovered: ClientState = serde_json::from_str(&json).expect("state must deserialise");
 
         assert_eq!(recovered.conversations.len(), state.conversations.len());
         assert_eq!(recovered.outbox.len(), state.outbox.len());
@@ -396,7 +398,10 @@ mod tests {
         assert!(!state.outbox[&envelope_id].delivered);
 
         state.mark_delivered(&envelope_id);
-        assert!(state.outbox[&envelope_id].delivered, "entry must be marked delivered");
+        assert!(
+            state.outbox[&envelope_id].delivered,
+            "entry must be marked delivered"
+        );
         assert!(
             state.outbox.contains_key(&envelope_id),
             "entry must not be removed on delivery"
