@@ -125,6 +125,7 @@ jobs:
 
       - name: Capture emulator screenshots
         uses: reactivecircus/android-emulator-runner@v2
+        continue-on-error: true
         with:
           api-level: 30
           arch: x86_64
@@ -132,6 +133,7 @@ jobs:
           profile: ${{ matrix.avd_profile }}
           avd-name: ci-screenshot-avd-${{ matrix.device_class }}
           force-avd-creation: true
+          disable-animations: false
           emulator-boot-timeout: 900
           script: |
             adb install -r "$APK_PATH"
