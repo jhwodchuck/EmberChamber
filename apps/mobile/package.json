@@ -5,7 +5,6 @@
   "main": "index.js",
   "scripts": {
     "android:patch-build": "node ./scripts/patch-react-native-gradle-plugin.js",
-    "android:patch-release-config": "node ./scripts/patch-android-release-config.js",
     "dev": "expo start --clear",
     "android": "expo run:android",
     "ios": "expo run:ios",
