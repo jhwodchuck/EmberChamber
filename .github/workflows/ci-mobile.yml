@@ -56,6 +56,9 @@ jobs:
           mkdir -p apps/mobile/secrets
           printf '%s' "$ANDROID_GOOGLE_SERVICES_JSON" > apps/mobile/secrets/google-services.json
 
+      - name: Build protocol package
+        run: npm run build --workspace=packages/protocol
+
       - name: Verify Android mobile project
         run: npm run verify:android --workspace=apps/mobile
 
