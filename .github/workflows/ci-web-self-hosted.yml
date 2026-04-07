@@ -67,6 +67,7 @@ jobs:
     name: Capture web auth-flow and desktop shell screenshots
     runs-on: [self-hosted, Linux, X64, emberchamber-trusted]
     needs: verify
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
 
@@ -103,8 +104,8 @@ jobs:
           WEB_PID=$!
           trap 'kill $WEB_PID $RELAY_PID' EXIT
 
-          npx -y wait-on@8.0.3 http://127.0.0.1:8787/health
-          npx -y wait-on@8.0.3 http://127.0.0.1:3000/start
+          npx -y wait-on@8.0.3 --timeout 60000 http://127.0.0.1:8787/health
+          npx -y wait-on@8.0.3 --timeout 60000 http://127.0.0.1:3000/start
           CI_WEB_BASE_URL=http://127.0.0.1:3000 \
           CI_RELAY_BASE_URL=http://127.0.0.1:8787 \
           CI_AUTH_INVITE_TOKEN=dev-beta-invite \
