@@ -58,6 +58,9 @@ on:
       aab_path:
         description: Built AAB path (release only)
         value: ${{ jobs.build.outputs.aab_path }}
+      version_code:
+        description: Android versionCode used for the build
+        value: ${{ jobs.build.outputs.version_code }}
 
 jobs:
   build:
@@ -73,6 +76,7 @@ jobs:
       artifact_name: ${{ steps.meta.outputs.artifact_name }}
       apk_path: ${{ steps.meta.outputs.apk_path }}
       aab_path: ${{ steps.meta.outputs.aab_path }}
+      version_code: ${{ steps.version-code.outputs.version_code }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -134,10 +138,25 @@ jobs:
           mkdir -p apps/mobile/secrets
           printf '%s' "$ANDROID_GOOGLE_SERVICES_JSON" > apps/mobile/secrets/google-services.json
 
-      - name: Inject Android versionCode into Expo config
-        if: inputs.version_code != ''
+      - name: Resolve Android versionCode
+        id: version-code
         env:
-          VERSION_CODE: ${{ inputs.version_code }}
+          INPUT_VERSION_CODE: ${{ inputs.version_code }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          if [ -n "$INPUT_VERSION_CODE" ]; then
+            VERSION_CODE="$INPUT_VERSION_CODE"
+          else
+            DATE_CODE=$(date -u +%Y%m%d)
+            RUN_SUFFIX=$(printf '%02d' $((GITHUB_RUN_NUMBER % 100)))
+            VERSION_CODE="${DATE_CODE}${RUN_SUFFIX}"
+          fi
+
+          echo "Using Android versionCode: $VERSION_CODE"
+          echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
+          echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+
+      - name: Inject Android versionCode into Expo config
         run: |
           node -e "const fs=require('fs'); const p='apps/mobile/app.json'; const d=JSON.parse(fs.readFileSync(p,'utf8')); d.expo=d.expo||{}; d.expo.android=d.expo.android||{}; d.expo.android.versionCode=Number(process.env.VERSION_CODE); fs.writeFileSync(p, JSON.stringify(d, null, 2)+'\\n');"
 
