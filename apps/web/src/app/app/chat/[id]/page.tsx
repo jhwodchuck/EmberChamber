@@ -26,6 +26,7 @@ import {
   type StoredDmMessage,
 } from "@/lib/relay-workspace";
 import { useAuthStore } from "@/lib/store";
+import { calcReconnectDelayMs } from "@/lib/backoff";
 
 function contentClassForMimeType(mimeType: string) {
   if (mimeType.startsWith("video/")) {
@@ -156,6 +157,7 @@ export default function ChatPage() {
       let cancelled = false;
       let ws: WebSocket | null = null;
       let reconnectTimer: number | null = null;
+      let reconnectAttempt = 0;
 
       void loadRelayHostedMessages(conversation.id);
 
@@ -174,6 +176,9 @@ export default function ChatPage() {
 
         const wsUrl = `${getRelayWebsocketUrl()}/v1/conversations/${conversation.id}/ws?token=${session.accessToken}`;
         ws = new WebSocket(wsUrl);
+        ws.onopen = () => {
+          reconnectAttempt = 0; // reset backoff on successful connection
+        };
         ws.onmessage = (event) => {
           try {
             const message = JSON.parse(event.data) as GroupThreadMessage;

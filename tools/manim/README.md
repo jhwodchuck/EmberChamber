@@ -4,6 +4,9 @@ This directory contains a [Manim](https://www.manim.community/) Python script
 that produces an animated explainer video for the EmberChamber E2EE messaging
 codebase.
 
+It also includes a second script for a full product/runtime overview of the
+entire EmberChamber app.
+
 ## What the video covers
 
 | Scene | Content |
@@ -31,9 +34,15 @@ Manim also requires **FFmpeg** and **LaTeX** (optional, for math scenes):
 ```bash
 # High quality (1080p, H.264)
 manim -pqh tools/manim/emberchamber_e2ee.py EmberChamberVideo
+
+# High quality app overview (1080p, H.264)
+manim -pqh tools/manim/emberchamber_app_overview.py EmberChamberAppOverviewVideo
 ```
 
 Output is written to `media/videos/emberchamber_e2ee/1080p60/EmberChamberVideo.mp4`.
+
+App overview output is written to
+`media/videos/emberchamber_app_overview/1080p60/EmberChamberAppOverviewVideo.mp4`.
 
 ## Render individual scenes
 
@@ -44,6 +53,9 @@ manim -pql tools/manim/emberchamber_e2ee.py DeviceBundleScene
 manim -pql tools/manim/emberchamber_e2ee.py E2EEMessageScene
 manim -pql tools/manim/emberchamber_e2ee.py AttachmentScene
 manim -pql tools/manim/emberchamber_e2ee.py ArchitectureScene
+
+# Full app overview preview
+manim -pql tools/manim/emberchamber_app_overview.py EmberChamberAppOverviewVideo
 ```
 
 ## Quality flags
@@ -60,5 +72,6 @@ manim -pql tools/manim/emberchamber_e2ee.py ArchitectureScene
 ```
 tools/manim/
 ├── emberchamber_e2ee.py   # animation scenes
+├── emberchamber_app_overview.py  # full app overview video
 └── README.md              # this file
 ```
