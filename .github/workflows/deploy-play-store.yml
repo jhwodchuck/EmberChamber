@@ -78,7 +78,14 @@ jobs:
       artifact_name: emberchamber-play-store-aab
       require_google_services: true
       validate_release_inputs: true
-    secrets: inherit
+      build_apk: false
+      build_aab: true
+    secrets:
+      ANDROID_GOOGLE_SERVICES_JSON: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON }}
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
   deploy:
     name: Upload AAB to Google Play
@@ -192,19 +199,28 @@ jobs:
             mkdir -p "$DEST_DIR"
           done
 
+          # Resolve the exact commit SHA for the ref being deployed so screenshots
+          # match the binary, not whatever happened to be latest on main.
+          DEPLOY_SHA=$(git rev-parse "${{ github.event.inputs.ref }}" 2>/dev/null || true)
+          if [ -z "$DEPLOY_SHA" ]; then
+            echo "Could not resolve commit SHA for ref '${{ github.event.inputs.ref }}'; skipping screenshot upload."
+            exit 0
+          fi
+          echo "Resolved deploy ref to commit $DEPLOY_SHA"
+
           RUN_ID=$(gh run list \
             --repo "$GITHUB_REPOSITORY" \
             --workflow ci-mobile.yml \
-            --branch main \
+            --commit "$DEPLOY_SHA" \
             --status success \
             --limit 1 \
             --json databaseId \
             --jq '.[0].databaseId // empty')
 
           if [ -z "$RUN_ID" ]; then
-            echo "No successful CI - Mobile run on main; continuing without screenshot upload."
+            echo "No successful CI - Mobile run found for commit $DEPLOY_SHA; continuing without screenshot upload."
           else
-            echo "Downloading Android screenshots from CI run $RUN_ID"
+            echo "Downloading Android screenshots from CI run $RUN_ID (commit $DEPLOY_SHA)"
             for ENTRY in "${SCREENSHOT_MAP[@]}"; do
               FORM_FACTOR="${ENTRY%%:*}"
               PLAY_DIR="${ENTRY#*:}"
