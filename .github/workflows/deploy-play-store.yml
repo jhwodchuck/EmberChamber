@@ -78,6 +78,7 @@ jobs:
       artifact_name: emberchamber-play-store-aab
       require_google_services: true
       validate_release_inputs: true
+      version_code: ${{ github.run_number }}
     secrets: inherit
 
   deploy:
@@ -89,8 +90,9 @@ jobs:
       actions: read
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      VERSION_CODE: ${{ github.run_number }}
     steps:
-      - name: Validate inputs and generate version code
+      - name: Validate inputs
         env:
           PLAY_RELEASE_STATUS: ${{ github.event.inputs.release_status }}
           PLAY_ROLLOUT: ${{ github.event.inputs.rollout }}
@@ -104,10 +106,6 @@ jobs:
             echo "rollout must be between 0.0 and 1.0" >&2
             exit 1
           fi
-
-          VERSION_CODE=$(date +%s)
-          echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
-          echo "Generated versionCode: $VERSION_CODE (Unix timestamp seconds)"
 
       - name: Assert Play Store credentials are configured
         env:
