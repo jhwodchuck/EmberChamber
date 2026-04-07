@@ -20,11 +20,11 @@ on:
       release_status:
         description: "Release status for the uploaded bundle"
         required: true
-        default: completed
+        default: draft
         type: choice
         options:
-          - completed
           - draft
+          - completed
           - halted
           - inProgress
       rollout:
