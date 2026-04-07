@@ -220,6 +220,9 @@ jobs:
             printf -- '-keep interface okhttp3.** { *; }\n' >> "$RULES"
             printf -- '-dontwarn kotlinx.coroutines.**\n' >> "$RULES"
             printf -- '-keep class kotlinx.coroutines.** { *; }\n' >> "$RULES"
+            printf -- '-dontwarn com.google.firebase.ktx.Firebase\n' >> "$RULES"
+            printf -- '-dontwarn com.google.firebase.ktx.FirebaseExtensionsKt\n' >> "$RULES"
+            printf -- '-dontwarn com.google.firebase.installations.ktx.InstallationsKt\n' >> "$RULES"
             echo "proguard-rules.pro: Appended React Native / Expo keep rules"
           else
             echo "proguard-rules.pro: Keep rules already present, skipping"
