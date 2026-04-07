@@ -230,6 +230,52 @@ jobs:
           printf '%s' "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" > "$KEY_PATH"
           echo "PLAY_JSON_KEY=$KEY_PATH" >> "$GITHUB_ENV"
 
+      - name: Resolve retained Play version codes
+        env:
+          PLAY_TRACK: ${{ github.event.inputs.track }}
+        run: |
+          RETAINED_CODES=$(ruby <<'RUBY'
+          require 'google/apis/androidpublisher_v3'
+          require 'googleauth'
+
+          package_name = ENV.fetch('PLAY_PACKAGE_NAME')
+          track_name = ENV.fetch('PLAY_TRACK')
+          json_key_path = ENV.fetch('PLAY_JSON_KEY')
+          current_version_code = ENV.fetch('VERSION_CODE').to_i
+
+          service = Google::Apis::AndroidpublisherV3::AndroidPublisherService.new
+          scope = 'https://www.googleapis.com/auth/androidpublisher'
+          service.authorization = Google::Auth::ServiceAccountCredentials.make_creds(
+            json_key_io: File.open(json_key_path),
+            scope: scope
+          )
+
+          edit = service.insert_edit(package_name, Google::Apis::AndroidpublisherV3::AppEdit.new)
+          begin
+            track = service.get_edit_track(package_name, edit.id, track_name)
+            version_codes = Array(track.releases)
+              .flat_map { |release| Array(release.version_codes) }
+              .compact
+              .map(&:to_i)
+              .uniq
+              .reject { |code| code == current_version_code }
+            puts version_codes.join(',')
+          ensure
+            begin
+              service.delete_edit(package_name, edit.id)
+            rescue StandardError
+            end
+          end
+          RUBY
+          )
+
+          if [ -n "$RETAINED_CODES" ]; then
+            echo "Retaining existing Play version codes: $RETAINED_CODES"
+            echo "PLAY_VERSION_CODES_TO_RETAIN=$RETAINED_CODES" >> "$GITHUB_ENV"
+          else
+            echo "No existing version codes to retain for track $PLAY_TRACK"
+          fi
+
       - name: Upload AAB to Google Play
         env:
           PLAY_TRACK: ${{ github.event.inputs.track }}
@@ -256,6 +302,10 @@ jobs:
 
           if [ -n "$PLAY_ROLLOUT" ]; then
             cmd+=("rollout:$PLAY_ROLLOUT")
+          fi
+
+          if [ -n "$PLAY_VERSION_CODES_TO_RETAIN" ]; then
+            cmd+=("version_codes_to_retain:$PLAY_VERSION_CODES_TO_RETAIN")
           fi
 
           "${cmd[@]}"
