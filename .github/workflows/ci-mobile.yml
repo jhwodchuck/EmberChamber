@@ -96,7 +96,7 @@ jobs:
             wm_size: 1080x2400
             wm_density: 420
           - device_class: tablet
-            avd_profile: pixel_tablet
+            avd_profile: Nexus 10
             orientation: portrait
             wm_size: 1600x2560
             wm_density: 320
@@ -126,13 +126,13 @@ jobs:
       - name: Capture emulator screenshots
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 34
+          api-level: 30
           arch: x86_64
           target: google_apis
           profile: ${{ matrix.avd_profile }}
-          avd-name: ci-screenshot-avd-${{ matrix.device_class }}-${{ matrix.avd_profile }}
+          avd-name: ci-screenshot-avd-${{ matrix.device_class }}
           force-avd-creation: true
-          disable-animations: true
+          emulator-boot-timeout: 900
           script: |
             adb install -r "$APK_PATH"
             adb shell screencap -p /sdcard/emberchamber-ci-warmup.png >/dev/null || true
