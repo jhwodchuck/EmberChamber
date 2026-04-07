@@ -135,6 +135,14 @@ jobs:
           fi
           echo "AAB_PATH=$AAB_PATH" >> "$GITHUB_ENV"
 
+          MAPPING_PATH=$(find apps/mobile/artifacts/android-build -name 'mapping.txt' | head -n 1)
+          if [ -n "$MAPPING_PATH" ]; then
+            echo "Found R8 mapping file: $MAPPING_PATH"
+            echo "PLAY_MAPPING_PATH=$MAPPING_PATH" >> "$GITHUB_ENV"
+          else
+            echo "No mapping file present; skipping deobfuscation upload"
+          fi
+
       - name: Generate Play Store changelog
         env:
           REF: ${{ github.event.inputs.ref }}
@@ -306,6 +314,10 @@ jobs:
 
           if [ -n "$PLAY_VERSION_CODES_TO_RETAIN" ]; then
             cmd+=("version_codes_to_retain:$PLAY_VERSION_CODES_TO_RETAIN")
+          fi
+
+          if [ -n "$PLAY_MAPPING_PATH" ]; then
+            cmd+=("mapping:$PLAY_MAPPING_PATH")
           fi
 
           "${cmd[@]}"
