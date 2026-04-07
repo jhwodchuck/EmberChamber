@@ -1,0 +1,55 @@
+name: Prune old workflow runs
+
+on:
+  schedule:
+    # Weekly on Monday at 03:00 UTC
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+    inputs:
+      keep:
+        description: "Number of most-recent runs to keep per workflow"
+        default: "10"
+        required: false
+
+jobs:
+  prune:
+    name: Delete old runs
+    runs-on: ubuntu-22.04
+    permissions:
+      actions: write
+
+    steps:
+      - name: Prune runs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          KEEP: ${{ inputs.keep || '10' }}
+        run: |
+          echo "Keeping $KEEP most-recent runs per workflow in $REPO"
+
+          workflow_ids=$(gh api "repos/$REPO/actions/workflows?per_page=100" \
+            --jq '.workflows[].id')
+
+          total_deleted=0
+
+          for wf_id in $workflow_ids; do
+            wf_name=$(gh api "repos/$REPO/actions/workflows/$wf_id" --jq '.name')
+
+            run_ids=$(gh api "repos/$REPO/actions/workflows/$wf_id/runs?per_page=100&status=completed" \
+              --jq ".workflow_runs[$KEEP:] | .[].id" 2>/dev/null || true)
+
+            if [[ -z "$run_ids" ]]; then
+              echo "  $wf_name — nothing to prune"
+              continue
+            fi
+
+            count=0
+            for run_id in $run_ids; do
+              gh api -X DELETE "repos/$REPO/actions/runs/$run_id" 2>/dev/null && count=$((count + 1)) || true
+            done
+
+            echo "  $wf_name — deleted $count run(s)"
+            total_deleted=$((total_deleted + count))
+          done
+
+          echo "Total deleted: $total_deleted"
