@@ -37,6 +37,16 @@ on:
         required: false
         type: string
         default: ""
+      build_apk:
+        description: Build APK (assembleRelease / assembleDebug)
+        required: false
+        type: boolean
+        default: true
+      build_aab:
+        description: Build AAB via bundleRelease (release builds only)
+        required: false
+        type: boolean
+        default: true
     secrets:
       ANDROID_GOOGLE_SERVICES_JSON:
         required: false
@@ -266,6 +276,8 @@ jobs:
         env:
           BUILD_TYPE: ${{ inputs.build_type }}
           USE_PROD_SIGNING: ${{ inputs.sign }}
+          BUILD_APK: ${{ inputs.build_apk }}
+          BUILD_AAB: ${{ inputs.build_aab }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
@@ -275,8 +287,19 @@ jobs:
             exit 0
           fi
 
+          # Compose release task list from build_apk / build_aab inputs
+          GRADLE_TASKS=""
+          [ "$BUILD_APK" = "true" ] && GRADLE_TASKS="$GRADLE_TASKS assembleRelease"
+          [ "$BUILD_AAB" = "true" ] && GRADLE_TASKS="$GRADLE_TASKS bundleRelease"
+          GRADLE_TASKS="${GRADLE_TASKS# }"  # strip leading space
+          if [ -z "$GRADLE_TASKS" ]; then
+            echo "build_apk and build_aab are both false — nothing to build" >&2
+            exit 1
+          fi
+
           if [ "$USE_PROD_SIGNING" = "true" ]; then
-            ./gradlew assembleRelease bundleRelease \
+            # shellcheck disable=SC2086
+            ./gradlew $GRADLE_TASKS \
               -Pandroid.injected.signing.store.file="$GITHUB_WORKSPACE/apps/mobile/android/app/emberchamber-release.keystore" \
               -Pandroid.injected.signing.store.password="$ANDROID_STORE_PASSWORD" \
               -Pandroid.injected.signing.key.alias="$ANDROID_KEY_ALIAS" \
@@ -284,7 +307,8 @@ jobs:
             exit 0
           fi
 
-          ./gradlew assembleRelease bundleRelease \
+          # shellcheck disable=SC2086
+          ./gradlew $GRADLE_TASKS \
             -Pandroid.injected.signing.store.file="$HOME/.android/debug.keystore" \
             -Pandroid.injected.signing.store.password="android" \
             -Pandroid.injected.signing.key.alias="androiddebugkey" \
@@ -295,30 +319,40 @@ jobs:
         id: meta
         env:
           BUILD_TYPE: ${{ inputs.build_type }}
+          BUILD_APK: ${{ inputs.build_apk }}
+          BUILD_AAB: ${{ inputs.build_aab }}
           INPUT_ARTIFACT_NAME: ${{ inputs.artifact_name }}
         run: |
           SAFE_REF=$(printf '%s' "${{ inputs.ref || github.ref_name }}" | tr '/:@' '-')
           OUT_DIR=apps/mobile/artifacts/android-build
           mkdir -p "$OUT_DIR"
 
+          APK_DEST=""
+          AAB_DEST=""
+          MAPPING_DEST=""
+
           if [ "$BUILD_TYPE" = "debug" ]; then
             APK_SRC=apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
             APK_DEST="$OUT_DIR/emberchamber-${SAFE_REF}-debug.apk"
             cp "$APK_SRC" "$APK_DEST"
-            AAB_DEST=""
             ARTIFACT_NAME=${INPUT_ARTIFACT_NAME:-emberchamber-android-debug}
           else
-            APK_SRC=apps/mobile/android/app/build/outputs/apk/release/app-release.apk
-            AAB_SRC=apps/mobile/android/app/build/outputs/bundle/release/app-release.aab
-            APK_DEST="$OUT_DIR/emberchamber-${SAFE_REF}-release.apk"
-            AAB_DEST="$OUT_DIR/emberchamber-${SAFE_REF}-release.aab"
-            cp "$APK_SRC" "$APK_DEST"
-            cp "$AAB_SRC" "$AAB_DEST"
             ARTIFACT_NAME=${INPUT_ARTIFACT_NAME:-emberchamber-android-release}
+
+            if [ "$BUILD_APK" = "true" ]; then
+              APK_SRC=apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+              APK_DEST="$OUT_DIR/emberchamber-${SAFE_REF}-release.apk"
+              cp "$APK_SRC" "$APK_DEST"
+            fi
+
+            if [ "$BUILD_AAB" = "true" ]; then
+              AAB_SRC=apps/mobile/android/app/build/outputs/bundle/release/app-release.aab
+              AAB_DEST="$OUT_DIR/emberchamber-${SAFE_REF}-release.aab"
+              cp "$AAB_SRC" "$AAB_DEST"
+            fi
 
             # Collect R8/ProGuard mapping file when present
             MAPPING_SRC=apps/mobile/android/app/build/outputs/mapping/release/mapping.txt
-            MAPPING_DEST=""
             if [ -f "$MAPPING_SRC" ]; then
               MAPPING_DEST="$OUT_DIR/mapping.txt"
               cp "$MAPPING_SRC" "$MAPPING_DEST"

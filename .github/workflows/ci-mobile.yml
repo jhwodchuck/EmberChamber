@@ -5,19 +5,19 @@ on:
     branches: [main]
     paths:
       - "apps/mobile/**"
+      - "packages/protocol/**"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/ci-mobile.yml"
       - ".github/workflows/build-android.yml"
-      - ".github/workflows/release-android.yml"
   pull_request:
     paths:
       - "apps/mobile/**"
+      - "packages/protocol/**"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/ci-mobile.yml"
       - ".github/workflows/build-android.yml"
-      - ".github/workflows/release-android.yml"
 
 concurrency:
   group: ci-mobile-${{ github.ref }}
@@ -27,7 +27,6 @@ jobs:
   verify-android:
     name: Verify Android mobile app
     permissions:
-      id-token: write
       contents: read
     runs-on: ubuntu-22.04
     env:
@@ -68,21 +67,24 @@ jobs:
 
   build-android-release:
     name: Build Android release APK for screenshots
+    if: github.event_name == 'push'
     needs: verify-android
     permissions:
-      id-token: write
       contents: read
     uses: ./.github/workflows/build-android.yml
     with:
       build_type: release
       sign: false
       artifact_name: emberchamber-android-release-screenshots
-    secrets: inherit
+      build_apk: true
+      build_aab: false
+    secrets:
+      ANDROID_GOOGLE_SERVICES_JSON: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON }}
 
   android-screenshots:
     name: Capture Android screenshots (${{ matrix.device_class }})
+    if: github.event_name == 'push'
     permissions:
-      id-token: write
       contents: read
     runs-on: ubuntu-22.04
     needs: build-android-release
