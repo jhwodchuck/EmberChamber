@@ -87,3 +87,4 @@ recommended-reviewers.txt
 # Manim render output
 media/
 __pycache__/
+docs/wiki/

@@ -1,3 +1,4 @@
+import path from "node:path";
 import { expect, test } from "@playwright/test";
 import {
   bootstrapAccount,
@@ -10,7 +11,7 @@ import {
 } from "./helpers";
 
 const screenshotDir =
-  process.env.CI_NEW_USER_SCREENSHOT_DIR ?? "apps/web/artifacts/screenshots/new-user-flow";
+  process.env.CI_NEW_USER_SCREENSHOT_DIR ?? path.resolve(__dirname, "../artifacts/screenshots/new-user-flow");
 
 test.describe("CI new-user bootstrap flow", () => {
   test("signs up, completes magic link, creates profile, and sends first DM", async ({

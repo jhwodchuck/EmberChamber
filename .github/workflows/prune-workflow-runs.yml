@@ -7,8 +7,8 @@ on:
   workflow_dispatch:
     inputs:
       keep:
-        description: "Override keep count for all workflows (blank = tiered: 30 for deploy/release, 10 for CI)"
-        default: ""
+        description: "Number of most-recent runs to keep per workflow"
+        default: "10"
         required: false
 
 jobs:
@@ -23,31 +23,23 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
-          KEEP_MANUAL: ${{ inputs.keep || '' }}
+          KEEP: ${{ inputs.keep || '10' }}
         run: |
-          # Tiered retention: deploy/release workflows keep 30 runs, CI keeps 10.
-          # Manual override (workflow_dispatch input) takes precedence over both.
-          echo "Pruning workflow runs in $REPO"
+          echo "Keeping $KEEP most-recent runs per workflow in $REPO"
 
           workflow_ids=$(gh api "repos/$REPO/actions/workflows?per_page=100" \
-            --jq '.workflows[] | "\(.id) \(.name)"')
+            --jq '.workflows[].id')
 
           total_deleted=0
 
-          while IFS=' ' read -r wf_id wf_name; do
-            if [[ -n "$KEEP_MANUAL" ]]; then
-              keep="$KEEP_MANUAL"
-            elif echo "$wf_name" | grep -qiE "deploy|release"; then
-              keep=30
-            else
-              keep=10
-            fi
+          for wf_id in $workflow_ids; do
+            wf_name=$(gh api "repos/$REPO/actions/workflows/$wf_id" --jq '.name')
 
             run_ids=$(gh api "repos/$REPO/actions/workflows/$wf_id/runs?per_page=100&status=completed" \
-              --jq ".workflow_runs[$keep:] | .[].id" 2>/dev/null || true)
+              --jq ".workflow_runs[$KEEP:] | .[].id" 2>/dev/null || true)
 
             if [[ -z "$run_ids" ]]; then
-              echo "  $wf_name (keep=$keep) — nothing to prune"
+              echo "  $wf_name — nothing to prune"
               continue
             fi
 
@@ -56,8 +48,8 @@ jobs:
               gh api -X DELETE "repos/$REPO/actions/runs/$run_id" 2>/dev/null && count=$((count + 1)) || true
             done
 
-            echo "  $wf_name (keep=$keep) — deleted $count run(s)"
+            echo "  $wf_name — deleted $count run(s)"
             total_deleted=$((total_deleted + count))
-          done <<< "$workflow_ids"
+          done
 
           echo "Total deleted: $total_deleted"

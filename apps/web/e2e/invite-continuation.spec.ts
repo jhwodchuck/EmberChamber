@@ -1,3 +1,4 @@
+import path from "node:path";
 import { expect, test } from "@playwright/test";
 import {
   bootstrapAccount,
@@ -8,7 +9,7 @@ import {
 } from "./helpers";
 
 const screenshotDir =
-  process.env.CI_INVITE_SCREENSHOT_DIR ?? "apps/web/artifacts/screenshots/invite-continuation";
+  process.env.CI_INVITE_SCREENSHOT_DIR ?? path.resolve(__dirname, "../artifacts/screenshots/invite-continuation");
 
 test.describe("Invite continuation", () => {
   test("returns signed-out users to the same invite preview after browser auth completes", async ({
