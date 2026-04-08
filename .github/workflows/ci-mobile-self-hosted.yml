@@ -24,4 +24,5 @@ jobs:
       runner: '["self-hosted","Linux","X64","emberchamber-trusted"]'
       capture_screenshots: true
       emulator_options: "-no-snapshot -no-window -no-audio -no-boot-anim -netdelay none -netspeed full -gpu swiftshader_indirect"
-    secrets: inherit
+    secrets:
+      ANDROID_GOOGLE_SERVICES_JSON: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON }}
