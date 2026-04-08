@@ -94,7 +94,7 @@ for _ in $(seq 1 30); do
 done
 
 # Wait for first render and async initialization after focus is acquired.
-sleep 8
+sleep 12
 
 capture_png() {
   local target="$1"
