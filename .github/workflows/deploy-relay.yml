@@ -36,19 +36,14 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: package-lock.json
+      - name: Setup Node workspace
+        uses: ./.github/actions/setup-node-workspace
 
-      - uses: dtolnay/rust-toolchain@stable
-
-      - name: Install dependencies
-        run: npm ci --no-audit --no-fund
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/setup-rust-toolchain
 
       - name: Build protocol package
-        run: npm run build --workspace=packages/protocol
+        uses: ./.github/actions/build-protocol
 
       - name: Verify Rust relay contracts
         run: cargo test -p emberchamber-relay-protocol
