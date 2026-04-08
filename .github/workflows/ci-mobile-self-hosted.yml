@@ -93,7 +93,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Download release APK artifact
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: ${{ needs.build-android-release.outputs.artifact_name }}
           path: apps/mobile/artifacts/android-build
