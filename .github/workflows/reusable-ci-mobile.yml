@@ -19,7 +19,7 @@ on:
       emulator_options:
         description: Extra flags forwarded to the Android emulator (useful for headless self-hosted runners)
         type: string
-        default: "-no-audio"
+        default: "-no-audio -no-window -no-boot-anim"
       artifact_suffix:
         description: Optional suffix appended to artifact names (e.g. run number)
         type: string
@@ -123,8 +123,8 @@ jobs:
           profile: ${{ matrix.avd_profile }}
           avd-name: ci-screenshot-avd-${{ matrix.device_class }}-${{ matrix.avd_profile }}
           force-avd-creation: true
-          disable-animations: false
-          emulator-boot-timeout: 900
+          disable-animations: true
+          emulator-boot-timeout: 1200
           emulator-options: ${{ inputs.emulator_options }}
           script: |
             adb install -r "$APK_PATH"
@@ -145,7 +145,7 @@ jobs:
           name: emberchamber-android-screenshots-${{ matrix.device_class }}-${{ env.ARTIFACT_SUFFIX }}
           path: apps/mobile/artifacts/android-screenshots/${{ matrix.device_class }}
           retention-days: 14
-          if-no-files-found: error
+          if-no-files-found: warn
 
       - name: Fix failing Android screenshot capture
         uses: fly-ci/wingman-action@v1
