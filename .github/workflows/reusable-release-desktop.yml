@@ -1,0 +1,106 @@
+name: Release - Desktop (Reusable)
+# Canonical Tauri desktop build and publish logic shared by Linux, macOS, and
+# Windows release wrappers.  Callers supply the platform label and runner;
+# this workflow handles setup, build, artifact upload, and GitHub Release.
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        description: >
+          JSON-encoded runner label or label array.
+          Linux  : '"ubuntu-22.04"'
+          macOS  : '"macos-14"'
+          Windows: '"windows-latest"'
+        type: string
+        required: true
+      platform:
+        description: "Target OS: linux | macos | windows"
+        type: string
+        required: true
+      artifact_name:
+        description: Name for the uploaded artifact
+        type: string
+        required: true
+      install_linux_deps:
+        description: Install Tauri Linux system dependencies before building
+        type: boolean
+        default: false
+      prerelease:
+        description: Mark the GitHub Release as a pre-release
+        type: boolean
+        default: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ inputs.platform }} desktop artifact
+    runs-on: ${{ fromJSON(inputs.runner) }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: ./.github/actions/setup-node-workspace
+
+      - uses: ./.github/actions/setup-rust-toolchain
+
+      - uses: ./.github/actions/install-tauri-linux-deps
+        if: inputs.install_linux_deps
+
+      - name: Build desktop shell
+        run: npm run build --workspace=apps/desktop
+
+      - name: Resolve platform artifact paths
+        id: paths
+        shell: bash
+        run: |
+          case "${{ inputs.platform }}" in
+            linux)
+              {
+                echo "globs<<HEREDOC"
+                echo "target/release/bundle/deb/*.deb"
+                echo "target/release/bundle/appimage/*.AppImage"
+                echo "HEREDOC"
+              } >> "$GITHUB_OUTPUT"
+              ;;
+            macos)
+              {
+                echo "globs<<HEREDOC"
+                echo "target/release/bundle/macos/*.app"
+                echo "target/release/bundle/dmg/*.dmg"
+                echo "HEREDOC"
+              } >> "$GITHUB_OUTPUT"
+              ;;
+            windows)
+              {
+                echo "globs<<HEREDOC"
+                echo "target/release/bundle/msi/*.msi"
+                echo "target/release/bundle/nsis/*.exe"
+                echo "HEREDOC"
+              } >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "::error::Unknown platform '${{ inputs.platform }}'" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Upload desktop artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: ${{ steps.paths.outputs.globs }}
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Publish to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          prerelease: ${{ inputs.prerelease }}
+          generate_release_notes: true
+          files: ${{ steps.paths.outputs.globs }}

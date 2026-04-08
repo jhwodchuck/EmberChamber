@@ -1,0 +1,26 @@
+name: Configure git bot identity
+description: >
+  Sets git user.name and user.email so that automated commits produced by
+  workflow jobs have a recognisable author instead of an anonymous identity.
+
+inputs:
+  name:
+    description: Git user.name value
+    default: "github-actions[bot]"
+    required: false
+  email:
+    description: Git user.email value
+    default: "github-actions[bot]@users.noreply.github.com"
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - name: Configure git identity
+      shell: bash
+      env:
+        GIT_USER_NAME: ${{ inputs.name }}
+        GIT_USER_EMAIL: ${{ inputs.email }}
+      run: |
+        git config user.name  "$GIT_USER_NAME"
+        git config user.email "$GIT_USER_EMAIL"

@@ -1,0 +1,42 @@
+name: CI - Rust Core (Reusable)
+# Canonical Rust CI logic.  Wrap this in thin trigger files rather than
+# duplicating the steps across hosted and self-hosted variants.
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        description: >
+          JSON-encoded runner label or label array.
+          Hosted example  : '"ubuntu-latest"'
+          Self-hosted      : '["self-hosted","Linux","X64","emberchamber-trusted"]'
+        type: string
+        required: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  check:
+    name: Format, test, and check Rust core crates
+    runs-on: ${{ fromJSON(inputs.runner) }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: ./.github/actions/setup-rust-toolchain
+        with:
+          components: clippy, rustfmt
+
+      - name: cargo fmt --check
+        run: cargo fmt --all -- --check
+
+      - name: cargo clippy
+        run: cargo clippy -p emberchamber-core -p emberchamber-relay-protocol --all-targets --all-features
+
+      - name: cargo test
+        run: cargo test -p emberchamber-core -p emberchamber-relay-protocol
+
+      - name: Fix failing Rust CI checks
+        uses: fly-ci/wingman-action@v1
+        if: ${{ failure() && github.event.pull_request != null }}

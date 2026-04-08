@@ -1,0 +1,19 @@
+name: Install Tauri Linux dependencies
+description: >
+  Installs the system packages required to compile and link the Tauri desktop
+  shell on Ubuntu runners.
+
+runs:
+  using: composite
+  steps:
+    - name: Install Tauri system dependencies
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends \
+          libwebkit2gtk-4.1-dev \
+          libappindicator3-dev \
+          librsvg2-dev \
+          patchelf \
+          libssl-dev \
+          pkg-config

@@ -1,0 +1,35 @@
+name: Write Android Google Services config
+description: >
+  Writes the Firebase google-services.json file to apps/mobile/secrets/ from
+  the provided secret value.  Pass `required: 'true'` to fail the job when the
+  secret is absent (e.g. production builds); omit or pass `required: 'false'`
+  to continue without the file (e.g. unsigned CI builds).
+
+inputs:
+  google-services-json:
+    description: Raw contents of the google-services.json secret
+    required: true
+  required:
+    description: Fail if the secret value is empty
+    default: "false"
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - name: Write Firebase Android app config
+      shell: bash
+      env:
+        GOOGLE_SERVICES_JSON: ${{ inputs.google-services-json }}
+        REQUIRED: ${{ inputs.required }}
+      run: |
+        if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+          if [ "$REQUIRED" = "true" ]; then
+            echo "::error::Missing ANDROID_GOOGLE_SERVICES_JSON secret" >&2
+            exit 1
+          fi
+          echo "ANDROID_GOOGLE_SERVICES_JSON is not configured; continuing without google-services.json"
+          exit 0
+        fi
+        mkdir -p apps/mobile/secrets
+        printf '%s' "$GOOGLE_SERVICES_JSON" > apps/mobile/secrets/google-services.json

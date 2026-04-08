@@ -79,7 +79,6 @@ jobs:
   build:
     name: Build Android (${{ inputs.build_type }})
     permissions:
-      id-token: write
       contents: read
     runs-on: ubuntu-22.04
     env:
@@ -110,7 +109,7 @@ jobs:
       - uses: android-actions/setup-android@v3
 
       - name: Cache Gradle packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.gradle/caches
