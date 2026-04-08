@@ -1,0 +1,128 @@
+name: CI - Relay and Companion Apps (Reusable)
+# Canonical web/relay/desktop CI logic.  Wrap this in thin trigger files
+# rather than duplicating the steps across hosted and self-hosted variants.
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        description: >
+          JSON-encoded runner label or label array.
+          Hosted example  : '"ubuntu-22.04"'
+          Self-hosted      : '["self-hosted","Linux","X64","emberchamber-trusted"]'
+        type: string
+        required: true
+      capture_screenshots:
+        description: Run the screenshot capture job after verify
+        type: boolean
+        default: true
+      artifact_suffix:
+        description: Optional suffix appended to artifact names (e.g. run number)
+        type: string
+        default: ""
+
+jobs:
+  verify:
+    name: Type-check relay, build web, test relay, and check desktop
+    runs-on: ${{ fromJSON(inputs.runner) }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: ./.github/actions/setup-node-workspace
+
+      - uses: ./.github/actions/setup-rust-toolchain
+
+      - uses: ./.github/actions/install-tauri-linux-deps
+
+      - uses: ./.github/actions/build-protocol
+
+      - name: Check relay and web
+        run: npm run type-check
+
+      - name: Lint web companion
+        run: npm run lint --workspace=apps/web
+
+      - name: Build web companion
+        run: npm run build --workspace=apps/web
+
+      - name: Test relay helpers
+        run: npm test --workspace=apps/relay
+
+      - name: Check desktop shell
+        run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
+
+      - name: Fix failing relay and companion app checks
+        uses: fly-ci/wingman-action@v1
+        if: ${{ failure() && github.event.pull_request != null }}
+
+  screenshots:
+    name: Capture web auth-flow and desktop shell screenshots
+    runs-on: ${{ fromJSON(inputs.runner) }}
+    needs: verify
+    if: inputs.capture_screenshots
+    timeout-minutes: 20
+    env:
+      ARTIFACT_SUFFIX: ${{ inputs.artifact_suffix != '' && inputs.artifact_suffix || github.run_number }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: ./.github/actions/setup-node-workspace
+
+      - uses: ./.github/actions/build-protocol
+
+      - name: Build web app
+        env:
+          NEXT_PUBLIC_RELAY_URL: http://127.0.0.1:8787
+          NEXT_PUBLIC_WEB_URL: http://127.0.0.1:3000
+          NEXT_PUBLIC_EMBERCHAMBER_AUTH_BOOTSTRAP_ENABLED: "true"
+        run: npm run build --workspace=apps/web
+
+      - name: Install Playwright Chromium
+        run: npx -y playwright@1.54.2 install --with-deps chromium
+
+      - name: Capture web route flow screenshots
+        run: |
+          mkdir -p apps/web/artifacts/screenshots
+
+          npm run relay:local > /tmp/emberchamber-relay.log 2>&1 &
+          RELAY_PID=$!
+
+          npm run start --workspace=apps/web -- --hostname 127.0.0.1 --port 3000 &
+          WEB_PID=$!
+          trap 'echo "=== relay log ==="; cat /tmp/emberchamber-relay.log; kill $WEB_PID $RELAY_PID 2>/dev/null' EXIT
+
+          npx -y wait-on@8.0.3 --timeout 120000 http-get://127.0.0.1:8787/health
+          npx -y wait-on@8.0.3 --timeout 120000 http://127.0.0.1:3000/start
+          CI_WEB_BASE_URL=http://127.0.0.1:3000 \
+          CI_RELAY_BASE_URL=http://127.0.0.1:8787 \
+          CI_AUTH_INVITE_TOKEN=dev-beta-invite \
+          npm run e2e --workspace=apps/web
+
+      - name: Capture desktop shell screenshot
+        run: |
+          mkdir -p apps/desktop/artifacts/screenshots
+          npx -y playwright@1.54.2 screenshot --device="Desktop Chrome" \
+            "file://$GITHUB_WORKSPACE/apps/desktop/shell/index.html" \
+            apps/desktop/artifacts/screenshots/01-shell.png
+
+      - name: Upload web screenshot artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: emberchamber-web-screenshots-${{ env.ARTIFACT_SUFFIX }}
+          path: apps/web/artifacts/screenshots
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Upload desktop screenshot artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: emberchamber-desktop-screenshots-${{ env.ARTIFACT_SUFFIX }}
+          path: apps/desktop/artifacts/screenshots
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Fix failing web screenshot capture
+        uses: fly-ci/wingman-action@v1
+        if: ${{ failure() && github.event.pull_request != null }}

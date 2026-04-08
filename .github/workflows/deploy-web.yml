@@ -43,8 +43,30 @@ jobs:
 
       - name: Wait and verify deployment is live
         run: |
-          echo "Waiting 90s for build + CDN propagation…"
-          sleep 90
+          # Poll the homepage until Vercel's build completes and the CDN
+          # propagates, then do a full set of route smoke checks.
+          # Polling cap: 5 minutes; probe interval: 15 s.
+          BASE="https://emberchamber.com"
+          MAX_WAIT=300
+          INTERVAL=15
+          ELAPSED=0
+
+          echo "Polling $BASE/ for deployment readiness (up to ${MAX_WAIT}s)…"
+          while true; do
+            STATUS=$(curl --silent --output /dev/null --write-out "%{http_code}" \
+              --max-time 10 "${BASE}/")
+            if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 400 ]; then
+              echo "Deployment live after ${ELAPSED}s (${BASE}/ → ${STATUS})"
+              break
+            fi
+            if [ "$ELAPSED" -ge "$MAX_WAIT" ]; then
+              echo "::error::Timed out waiting for deployment after ${MAX_WAIT}s (last status: ${STATUS})" >&2
+              exit 1
+            fi
+            echo "  ${STATUS} — retrying in ${INTERVAL}s (${ELAPSED}s elapsed)…"
+            sleep "$INTERVAL"
+            ELAPSED=$((ELAPSED + INTERVAL))
+          done
 
           # ---------------------------------------------------------------------------
           # Route smoke tests – verify that core public routes are reachable and return

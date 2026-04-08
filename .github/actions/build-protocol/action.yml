@@ -1,0 +1,11 @@
+name: Build protocol package
+description: >
+  Compiles the packages/protocol TypeScript package.  Must be called after
+  setup-node-workspace so that node_modules are present.
+
+runs:
+  using: composite
+  steps:
+    - name: Build protocol package
+      shell: bash
+      run: npm run build --workspace=packages/protocol

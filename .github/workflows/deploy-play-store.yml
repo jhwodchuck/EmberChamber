@@ -61,7 +61,6 @@ env:
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: deploy-play-store-${{ github.event.inputs.track }}-${{ github.event.inputs.ref }}

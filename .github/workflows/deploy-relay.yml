@@ -65,6 +65,15 @@ jobs:
       - name: Deploy Worker
         run: npx wrangler deploy --config apps/relay/wrangler.jsonc --env "$RELAY_ENV"
 
+      - name: Emit deployment provenance
+        run: |
+          echo "┌── Deployment provenance ──────────────────────────"
+          echo "│  Commit : $GITHUB_SHA"
+          echo "│  Ref    : $GITHUB_REF_NAME"
+          echo "│  Actor  : $GITHUB_ACTOR"
+          echo "│  Run ID : $GITHUB_RUN_ID"
+          echo "└────────────────────────────────────────────────────"
+
       - name: Resolve post-deploy health URL
         id: relay-url
         run: |
@@ -79,6 +88,13 @@ jobs:
       - name: Check /health
         if: steps.relay-url.outputs.base_url != ''
         run: curl --fail --show-error --silent --retry 5 --retry-delay 3 "${{ steps.relay-url.outputs.base_url }}/health"
+
+      - name: Log deployed Worker version
+        if: steps.relay-url.outputs.base_url != ''
+        run: |
+          HEALTH=$(curl --silent --retry 3 --retry-delay 3 "${{ steps.relay-url.outputs.base_url }}/health" || echo '{}')
+          VERSION=$(printf '%s' "$HEALTH" | python3 -c "import sys,json; print(json.load(sys.stdin).get('version','n/a'))" 2>/dev/null || echo "n/a")
+          echo "Deployed Worker reports version: $VERSION"
 
       - name: Check /ready
         if: steps.relay-url.outputs.base_url != ''

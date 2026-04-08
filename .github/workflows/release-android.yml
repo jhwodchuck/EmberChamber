@@ -4,15 +4,9 @@ on:
   push:
     tags: ["v*"]
   workflow_dispatch:
-    inputs:
-      ref:
-        description: "Git ref to release (tag or branch)"
-        required: true
-        type: string
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  EXPO_NO_TELEMETRY: "1"
+permissions:
+  contents: write
 
 concurrency:
   group: release-android-${{ github.ref }}
@@ -20,39 +14,30 @@ concurrency:
 
 jobs:
   build:
-    name: Build signed Android release
+    name: Build Android release artifacts
     uses: ./.github/workflows/build-android.yml
     with:
       build_type: release
       sign: true
-      ref: ${{ github.event.inputs.ref || github.ref_name }}
-      artifact_name: emberchamber-android-release
-      require_google_services: true
       validate_release_inputs: true
-      build_apk: true
-      build_aab: true
-    secrets:
-      ANDROID_GOOGLE_SERVICES_JSON: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON }}
-      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-      ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
-      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      require_google_services: true
+    secrets: inherit
 
   publish:
-    name: Publish GitHub Release
+    name: Publish Android artifacts to GitHub Release
     runs-on: ubuntu-22.04
     needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write
     steps:
       - name: Download Android artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v4
         with:
           name: ${{ needs.build.outputs.artifact_name }}
           path: dist/android
 
-      - name: Publish Android assets to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Publish to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           prerelease: ${{ contains(github.ref_name, '-beta.') || contains(github.ref_name, '-rc.') }}

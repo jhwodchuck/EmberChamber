@@ -8,10 +8,20 @@ on:
       - "README.md"
       - "CONTRIBUTING.md"
       - "repo-map.yaml"
-      - "docs/**"
+      - "docs/*.md"
+      - "docs/api/**"
+      - "docs/architecture/**"
+      - "docs/plansforwork/**"
+      - "docs/product/**"
+      - "docs/security/**"
+      - "docs/wiki/**"
+      - "docs/wiki-site/screenshots.md"
+      - "docs/wiki-site/.vitepress/**"
+      - "docs/wiki-site/package.json"
       - "llm_council/**"
       - "scripts/**"
       - ".github/workflows/**"
+      - ".github/actions/**"
       - "apps/web/README.md"
       - "apps/web/src/app/app/**"
       - "apps/relay/src/index.ts"
@@ -23,10 +33,20 @@ on:
       - "README.md"
       - "CONTRIBUTING.md"
       - "repo-map.yaml"
-      - "docs/**"
+      - "docs/*.md"
+      - "docs/api/**"
+      - "docs/architecture/**"
+      - "docs/plansforwork/**"
+      - "docs/product/**"
+      - "docs/security/**"
+      - "docs/wiki/**"
+      - "docs/wiki-site/screenshots.md"
+      - "docs/wiki-site/.vitepress/**"
+      - "docs/wiki-site/package.json"
       - "llm_council/**"
       - "scripts/**"
       - ".github/workflows/**"
+      - ".github/actions/**"
       - "apps/web/README.md"
       - "apps/web/src/app/app/**"
       - "apps/relay/src/index.ts"
@@ -41,7 +61,6 @@ jobs:
   verify:
     name: Verify repo contracts and doc/runtime alignment
     permissions:
-      id-token: write
       contents: read
     runs-on: ubuntu-22.04
     steps:

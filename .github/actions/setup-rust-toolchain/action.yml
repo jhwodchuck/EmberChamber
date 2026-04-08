@@ -1,0 +1,29 @@
+name: Setup Rust toolchain
+description: >
+  Installs the stable Rust toolchain with optional extra components and
+  configures a cargo registry/target cache keyed by Cargo.lock.
+
+inputs:
+  components:
+    description: Comma-separated list of additional Rust toolchain components (e.g. "clippy, rustfmt")
+    default: ""
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - name: Install stable Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: ${{ inputs.components }}
+
+    - name: Cache cargo registry and build output
+      uses: actions/cache@v5
+      with:
+        path: |
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: ${{ runner.os }}-cargo-

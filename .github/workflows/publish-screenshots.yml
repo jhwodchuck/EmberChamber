@@ -39,10 +39,7 @@ jobs:
         with:
           node-version: 22
 
-      - name: Configure git identity
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+      - uses: ./.github/actions/configure-bot-git
 
       # ── Android screenshots ─────────────────────────────────────────────────
       - name: Download latest Android screenshots
