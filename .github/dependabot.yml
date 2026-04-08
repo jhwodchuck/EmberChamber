@@ -1,0 +1,37 @@
+version: 2
+updates:
+  # npm – root workspace (apps/relay, apps/web, packages/*)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  # Cargo – root workspace (crates/*, apps/desktop/src-tauri)
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    ignore:
+      # glib >=0.20.0 requires gtk-rs 0.20.x which tauri has not adopted yet.
+      # The root gtk->glib constraint comes from tauri and cannot be overridden.
+      # Re-enable once tauri ships a release using gtk-rs 0.20.x.
+      # Tracks: https://github.com/tauri-apps/tauri/issues
+      - dependency-name: "glib"
+        versions: [">=0.20.0"]
+
+  # Cargo – desktop Tauri crate (has its own Cargo.lock)
+  - package-ecosystem: "cargo"
+    directory: "/apps/desktop/src-tauri"
+    schedule:
+      interval: "weekly"
+    ignore:
+      # Same upstream blocker as above – glib 0.20.x is incompatible with
+      # the gtk 0.18.x that tauri 2.x currently depends on.
+      - dependency-name: "glib"
+        versions: [">=0.20.0"]
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
