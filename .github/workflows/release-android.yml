@@ -4,6 +4,12 @@ on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to build (branch, tag, or SHA). Must be a v* tag for the publish job to run."
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: write
@@ -21,13 +27,19 @@ jobs:
       sign: true
       validate_release_inputs: true
       require_google_services: true
-    secrets: inherit
+      ref: ${{ inputs.ref || github.ref }}
+    secrets:
+      ANDROID_GOOGLE_SERVICES_JSON: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON }}
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
   publish:
     name: Publish Android artifacts to GitHub Release
     runs-on: ubuntu-22.04
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || startsWith(inputs.ref, 'refs/tags/v')
     permissions:
       contents: write
     steps:

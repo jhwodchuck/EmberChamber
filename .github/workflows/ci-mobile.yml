@@ -30,5 +30,6 @@ jobs:
     uses: ./.github/workflows/reusable-ci-mobile.yml
     with:
       runner: '"ubuntu-22.04"'
-      capture_screenshots: true
-    secrets: inherit
+      capture_screenshots: ${{ github.event_name == 'push' }}
+    secrets:
+      ANDROID_GOOGLE_SERVICES_JSON: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON }}
