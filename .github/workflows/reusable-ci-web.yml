@@ -102,7 +102,7 @@ jobs:
       - name: Capture desktop shell screenshot
         run: |
           mkdir -p apps/desktop/artifacts/screenshots
-          npx -y playwright@1.54.2 screenshot --device="Desktop Chrome" \
+          npx --yes playwright screenshot --device="Desktop Chrome" \
             "file://$GITHUB_WORKSPACE/apps/desktop/shell/index.html" \
             apps/desktop/artifacts/screenshots/01-shell.png
 
