@@ -2,6 +2,38 @@
 
 Screenshots are captured automatically from CI on every successful build and published here by the [Publish Screenshot Gallery](https://github.com/jhwodchuck/EmberChamber/actions/workflows/publish-screenshots.yml) workflow.
 
+## Android · Tablet
+
+_Pixel Tablet · 1600 × 2560 · portrait_
+
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin:1.5rem 0">
+
+<img src="/screenshots/android/tablet/01-tablet-onboarding-top.png" alt="Android · Tablet — 01 tablet onboarding top" loading="lazy" style="width:100%;border-radius:6px;border:1px solid var(--vp-c-divider)">
+
+<img src="/screenshots/android/tablet/02-tablet-invite-expanded.png" alt="Android · Tablet — 02 tablet invite expanded" loading="lazy" style="width:100%;border-radius:6px;border:1px solid var(--vp-c-divider)">
+
+<img src="/screenshots/android/tablet/03-tablet-mid-form.png" alt="Android · Tablet — 03 tablet mid form" loading="lazy" style="width:100%;border-radius:6px;border:1px solid var(--vp-c-divider)">
+
+<img src="/screenshots/android/tablet/04-tablet-bottom-form.png" alt="Android · Tablet — 04 tablet bottom form" loading="lazy" style="width:100%;border-radius:6px;border:1px solid var(--vp-c-divider)">
+
+</div>
+
+## Android · Chromebook
+
+_Pixel C · 1366 × 768 · landscape_
+
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin:1.5rem 0">
+
+<img src="/screenshots/android/chromebook/01-chromebook-onboarding-top.png" alt="Android · Chromebook — 01 chromebook onboarding top" loading="lazy" style="width:100%;border-radius:6px;border:1px solid var(--vp-c-divider)">
+
+<img src="/screenshots/android/chromebook/02-chromebook-invite-expanded.png" alt="Android · Chromebook — 02 chromebook invite expanded" loading="lazy" style="width:100%;border-radius:6px;border:1px solid var(--vp-c-divider)">
+
+<img src="/screenshots/android/chromebook/03-chromebook-mid-form.png" alt="Android · Chromebook — 03 chromebook mid form" loading="lazy" style="width:100%;border-radius:6px;border:1px solid var(--vp-c-divider)">
+
+<img src="/screenshots/android/chromebook/04-chromebook-bottom-form.png" alt="Android · Chromebook — 04 chromebook bottom form" loading="lazy" style="width:100%;border-radius:6px;border:1px solid var(--vp-c-divider)">
+
+</div>
+
 ## Web companion
 
 _New-user auth flow · Playwright + Chromium_
