@@ -1,5 +1,6 @@
 {
-  "buildCommand": "npm run build --workspace=packages/shared && npm run build --workspace=packages/protocol && npm run build --workspace=apps/web",
-  "outputDirectory": "apps/web/.next",
-  "installCommand": "npm ci --no-fund --loglevel=error"
+  "rootDirectory": "apps/web",
+  "installCommand": "npm ci --no-fund --loglevel=error",
+  "buildCommand": "cd ../.. && npm run build --workspace=packages/shared && npm run build --workspace=packages/protocol && npm run build --workspace=apps/web",
+  "outputDirectory": ".next"
 }
