@@ -19,7 +19,7 @@ on:
       emulator_options:
         description: Extra flags forwarded to the Android emulator (useful for headless self-hosted runners)
         type: string
-        default: ""
+        default: "-no-audio"
       artifact_suffix:
         description: Optional suffix appended to artifact names (e.g. run number)
         type: string
@@ -84,7 +84,7 @@ jobs:
             wm_size: 1080x2400
             wm_density: 420
           - device_class: tablet
-            avd_profile: Nexus 10
+            avd_profile: nexus_10
             orientation: portrait
             wm_size: 1600x2560
             wm_density: 320
