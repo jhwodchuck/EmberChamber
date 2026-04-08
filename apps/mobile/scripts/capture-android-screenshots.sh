@@ -112,8 +112,8 @@ capture_png() {
     sleep 1
   done
 
-  echo "Unable to capture screenshot after retries: $target" >&2
-  exit 1
+  echo "::warning::Unable to capture screenshot after retries: $target" >&2
+  return 1
 }
 
 tap_text() {
@@ -129,7 +129,7 @@ dump_path = sys.argv[1]
 needle = sys.argv[2].lower()
 xml = open(dump_path, encoding="utf-8").read()
 
-pattern = re.compile(r'text="([^"]*)"[^>]*bounds="\\[(\\d+),(\\d+)\\]\\[(\\d+),(\\d+)\\]"')
+pattern = re.compile(r'text="([^"]*)"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"')
 for text, x1, y1, x2, y2 in pattern.findall(xml):
     if needle in text.lower():
         cx = (int(x1) + int(x2)) // 2
@@ -151,18 +151,18 @@ PY
 adb shell screencap -p /sdcard/emberchamber-warmup.png >/dev/null 2>&1 || true
 adb shell rm -f /sdcard/emberchamber-warmup.png >/dev/null 2>&1 || true
 
-capture_png "$OUTPUT_DIR/01-${DEVICE_CLASS}-onboarding-top.png"
+capture_png "$OUTPUT_DIR/01-${DEVICE_CLASS}-onboarding-top.png" || true
 
 tap_text "Add beta invite token" || true
 sleep 2
-capture_png "$OUTPUT_DIR/02-${DEVICE_CLASS}-invite-expanded.png"
+capture_png "$OUTPUT_DIR/02-${DEVICE_CLASS}-invite-expanded.png" || true
 
 adb shell input swipe "$CENTER_X" "$SWIPE_START_Y" "$CENTER_X" "$SWIPE_MID_Y" 450 || true
 sleep 1
-capture_png "$OUTPUT_DIR/03-${DEVICE_CLASS}-mid-form.png"
+capture_png "$OUTPUT_DIR/03-${DEVICE_CLASS}-mid-form.png" || true
 
 adb shell input swipe "$CENTER_X" "$SWIPE_START_Y" "$CENTER_X" "$SWIPE_BOTTOM_Y" 450 || true
 sleep 1
-capture_png "$OUTPUT_DIR/04-${DEVICE_CLASS}-bottom-form.png"
+capture_png "$OUTPUT_DIR/04-${DEVICE_CLASS}-bottom-form.png" || true
 
 echo "Saved screenshots to $OUTPUT_DIR"
