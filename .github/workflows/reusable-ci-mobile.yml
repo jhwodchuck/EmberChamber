@@ -79,9 +79,9 @@ jobs:
       matrix:
         include:
           - device_class: phone
-            avd_profile: pixel_4
+            avd_profile: pixel_2
             orientation: portrait
-            wm_size: 1080x2400
+            wm_size: 1080x1920
             wm_density: 420
           - device_class: tablet
             avd_profile: nexus_10

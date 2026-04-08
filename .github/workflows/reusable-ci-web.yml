@@ -78,7 +78,7 @@ jobs:
         run: npm run build --workspace=apps/web
 
       - name: Install Playwright Chromium
-        run: npx -y playwright@1.54.2 install --with-deps chromium
+        run: npx --yes playwright install --with-deps chromium
 
       - name: Capture web route flow screenshots
         run: |
