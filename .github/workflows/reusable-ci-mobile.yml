@@ -126,20 +126,7 @@ jobs:
           disable-animations: true
           emulator-boot-timeout: 1200
           emulator-options: ${{ inputs.emulator_options }}
-          script: |
-            if ! adb install -r "$APK_PATH"; then
-              echo "::warning::APK install failed for ${{ matrix.device_class }}, no screenshots will be captured"
-              exit 0
-            fi
-            adb shell screencap -p /sdcard/emberchamber-ci-warmup.png >/dev/null || true
-            adb shell rm -f /sdcard/emberchamber-ci-warmup.png >/dev/null || true
-            bash apps/mobile/scripts/capture-android-screenshots.sh \
-              "apps/mobile/artifacts/android-screenshots/${{ matrix.device_class }}" \
-              "com.emberchamber.mobile" \
-              "${{ matrix.device_class }}" \
-              "${{ matrix.wm_size }}" \
-              "${{ matrix.wm_density }}" \
-              "${{ matrix.orientation }}" || true
+          script: bash apps/mobile/scripts/run-emulator-screenshots.sh "$APK_PATH" "${{ matrix.device_class }}" "${{ matrix.wm_size }}" "${{ matrix.wm_density }}" "${{ matrix.orientation }}"
 
       - name: Upload Android screenshot artifacts
         if: always()
