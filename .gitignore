@@ -88,3 +88,6 @@ recommended-reviewers.txt
 media/
 __pycache__/
 docs/wiki/
+
+# Playwright test artifacts
+apps/web/test-results/
