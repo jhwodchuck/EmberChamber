@@ -103,7 +103,7 @@ ensure(
   typeof packageJson.packageManager === "string" && packageJson.packageManager.startsWith("npm@10"),
   "package.json must keep npm 10 as the canonical root package manager."
 );
-ensure(packageJson.engines?.node === ">=20 <23", "package.json must keep the Node engine range in sync.");
+ensure(packageJson.engines?.node === ">=20 <25", "package.json must keep the Node engine range in sync.");
 ensure(packageJson.engines?.npm === ">=10 <11", "package.json must keep the npm engine range in sync.");
 ensure(
   packageJson.scripts?.["check:repo-contracts"] === "node scripts/check-repo-contracts.mjs",
