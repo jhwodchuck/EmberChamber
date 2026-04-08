@@ -106,7 +106,7 @@ jobs:
           java-version: 17
           distribution: temurin
 
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v4
 
       - name: Cache Gradle packages
         uses: actions/cache@v5
