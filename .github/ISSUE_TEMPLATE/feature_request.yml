@@ -1,0 +1,65 @@
+name: Feature request
+description: Suggest a new capability that fits EmberChamber's beta direction
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Intended surface
+      options:
+        - Android
+        - Web
+        - Desktop (Windows)
+        - Desktop (Ubuntu)
+        - Relay/API
+        - Shared core/protocol
+        - Cross-platform
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Start with the user or operator pain, not the implementation.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+
+  - type: textarea
+    id: beta_fit
+    attributes:
+      label: Why this fits the current beta
+      description: Explain why this belongs in the current invite-only encrypted messaging beta instead of later.
+      placeholder: This improves invite review for organizers and does not add public discovery or large-community behavior.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: non_goals
+    attributes:
+      label: Confirmations
+      options:
+        - label: This is not asking for public-discovery or channel-growth behavior
+        - label: This is not asking for phone-number identity
+        - label: This is not asking for voice/video calling
+        - label: This is not asking for server-side search over private content
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+
+  - type: textarea
+    id: success
+    attributes:
+      label: What would success look like?
+      description: Describe the observable outcome, not just the code change.

@@ -1,0 +1,52 @@
+name: UX issue
+description: Report confusing, awkward, or frustrating behavior that may not be a code defect
+title: "[UX]: "
+labels:
+  - ux
+body:
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Affected surface
+      options:
+        - Android
+        - Web
+        - Desktop (Windows)
+        - Desktop (Ubuntu)
+        - Docs/site
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What feels wrong?
+      placeholder: The chat composer is technically present, but when the keyboard opens it is hidden and the screen feels broken.
+    validations:
+      required: true
+
+  - type: textarea
+    id: user_goal
+    attributes:
+      label: What were you trying to do?
+    validations:
+      required: true
+
+  - type: textarea
+    id: current_flow
+    attributes:
+      label: What happens now?
+    validations:
+      required: true
+
+  - type: textarea
+    id: better_flow
+    attributes:
+      label: What would feel better?
+      description: Describe the preferred interaction, layout, wording, or visual treatment.
+
+  - type: textarea
+    id: references
+    attributes:
+      label: Comparisons or references
+      description: Mention apps or screens that handle this better, if any.

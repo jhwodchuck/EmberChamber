@@ -1,0 +1,52 @@
+name: Beta contract gap
+description: Report behavior, copy, roadmap, or implementation that conflicts with EmberChamber's intended beta boundaries
+title: "[Contract Gap]: "
+labels:
+  - product
+  - scope
+body:
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - Public copy or marketing mismatch
+        - Wrong platform promise
+        - Privacy/security framing mismatch
+        - Invite-only beta boundary drift
+        - Social/discovery drift
+        - Roadmap/scope drift
+        - Architecture/runtime mismatch
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: mismatch
+    attributes:
+      label: What is the mismatch?
+      placeholder: The site or UI implies a public social network behavior, but the repo says EmberChamber is invite-only and not a discovery platform.
+    validations:
+      required: true
+
+  - type: textarea
+    id: source_of_truth
+    attributes:
+      label: What should be true instead?
+      description: Reference the README, docs, code behavior, or launch boundary that should govern this.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Link the screen, page, doc, PR, or code path that shows the drift.
+    validations:
+      required: true
+
+  - type: textarea
+    id: risk
+    attributes:
+      label: Why this matters
+      description: Confuses beta users, creates false expectations, raises privacy risk, wastes engineering effort, etc.

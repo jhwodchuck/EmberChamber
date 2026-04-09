@@ -1,0 +1,122 @@
+name: Bug report
+description: Report a broken flow, defect, crash, or incorrect behavior in EmberChamber
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Affected surface
+      options:
+        - Android
+        - Web
+        - Desktop (Windows)
+        - Desktop (Ubuntu)
+        - Relay/API
+        - Shared core/protocol
+        - Docs/site
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Sign in / magic link
+        - Invite flow
+        - Profile / identity
+        - Direct messages
+        - Group messaging
+        - Attachments
+        - Search
+        - Settings / privacy
+        - Notifications
+        - Sync / local-first history
+        - Build / CI / release
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: What is broken?
+      description: Describe the bug in one or two plain sentences.
+      placeholder: After tapping the message composer on Android, the keyboard covers the input field and I cannot see what I am typing.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open ...
+        2. Tap ...
+        3. Enter ...
+        4. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - blocker
+        - high
+        - medium
+        - low
+    validations:
+      required: true
+
+  - type: dropdown
+    id: regression
+    attributes:
+      label: Regression?
+      options:
+        - "Yes"
+        - "No"
+        - "Not sure"
+    validations:
+      required: true
+
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: Include device, OS, app build, browser version, and any relay/backend info you know.
+      placeholder: |
+        Pixel 9 Pro
+        Android 16
+        app build ...
+        relay commit/build ...
+        browser/version if web ...
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs, screenshots, or screen recording
+      description: Paste logs and drag in screenshots if available.
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope / frequency
+      description: Does this happen every time, only on one device, only on one account, or only in one group?
