@@ -120,17 +120,7 @@ jobs:
           disable-animations: false
           emulator-boot-timeout: 900
           emulator-options: -no-snapshot -no-window -no-audio -no-boot-anim -netdelay none -netspeed full -gpu swiftshader_indirect
-          script: |
-            adb install -r "$APK_PATH"
-            adb shell screencap -p /sdcard/emberchamber-ci-warmup.png >/dev/null || true
-            adb shell rm -f /sdcard/emberchamber-ci-warmup.png >/dev/null || true
-            bash apps/mobile/scripts/capture-android-screenshots.sh \
-              "apps/mobile/artifacts/android-screenshots/${{ matrix.device_class }}" \
-              "com.emberchamber.mobile" \
-              "${{ matrix.device_class }}" \
-              "${{ matrix.wm_size }}" \
-              "${{ matrix.wm_density }}" \
-              "${{ matrix.orientation }}"
+          script: bash apps/mobile/scripts/run-emulator-screenshots.sh "$APK_PATH" "${{ matrix.device_class }}" "${{ matrix.wm_size }}" "${{ matrix.wm_density }}" "${{ matrix.orientation }}"
 
       - name: Upload Android screenshot artifacts
         if: always()

@@ -80,6 +80,13 @@ jobs:
       - name: Install Playwright Chromium
         run: node_modules/.bin/playwright install --with-deps chromium
 
+      - name: Kill any stale processes on CI ports
+        run: |
+          # On self-hosted runners a prior cancelled run may leave Next.js or
+          # wrangler listening on :3000/:8787. Kill them before we start ours.
+          fuser -k 3000/tcp 2>/dev/null || true
+          fuser -k 8787/tcp 2>/dev/null || true
+
       - name: Capture web route flow screenshots
         run: |
           mkdir -p apps/web/artifacts/screenshots
