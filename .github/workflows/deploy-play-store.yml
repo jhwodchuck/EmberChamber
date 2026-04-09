@@ -96,6 +96,7 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       VERSION_CODE: ${{ needs.build.outputs.version_code }}
+      VERSION_NAME: ${{ needs.build.outputs.version_name }}
     steps:
       - name: Validate inputs
         env:
@@ -174,7 +175,7 @@ jobs:
           fi
 
           # Play Store "What's new" cap is 500 characters
-          BODY=$(printf 'Beta %s\n\n%s' "$REF" "$CHANGES" | head -c 490)
+          BODY=$(printf '%s\n\n%s' "$VERSION_NAME" "$CHANGES" | head -c 490)
 
           CHANGELOG_DIR="apps/mobile/fastlane/metadata/android/en-US/changelogs"
           mkdir -p "$CHANGELOG_DIR"
