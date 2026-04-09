@@ -426,6 +426,11 @@ export function ConversationScreen({
   return (
     <KeyboardAvoidingView
       style={styles.conversationShell}
+      // iOS: "padding" keeps the composer above the keyboard.
+      // Android: app.json sets softwareKeyboardLayoutMode="resize" so the OS
+      // shrinks the window; KAV is intentionally inert here to avoid
+      // double-adjusting. The tab bar is hidden by MainScreen while this
+      // screen is fullscreen, giving the composer direct access to the bottom.
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={0}
     >

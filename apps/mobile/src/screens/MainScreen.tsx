@@ -204,6 +204,16 @@ export function MainScreen(props: MainScreenProps) {
   const isWideChatsLayout = width >= 980;
   const [activeTab, setActiveTab] = useState<MainTab>(initialShellState.activeTab);
   const [chatView, setChatView] = useState<MainChatView>(initialShellState.chatView);
+
+  // On narrow layouts the tab bar is a flex sibling of appBody. When Android's
+  // resize mode shrinks the window for the keyboard, the tab bar's fixed height
+  // (~80 px including gap and shell padding) eats space that the conversation
+  // composer needs. Hide it while a conversation fills the screen.
+  const isNarrowConversation =
+    !isWideChatsLayout &&
+    activeTab === "chats" &&
+    chatView === "conversation" &&
+    !!selectedGroup;
   const [chatFilter, setChatFilter] = useState<ChatListFilter>(initialShellState.chatFilter);
   const [chatSearch, setChatSearch] = useState("");
 
@@ -423,31 +433,33 @@ export function MainScreen(props: MainScreenProps) {
 
       <View style={styles.appBody}>{content}</View>
 
-      <View style={styles.appTabBar}>
-        {([
-          ["chats", "Chats"],
-          ["invites", "Invites"],
-          ["settings", "Settings"],
-        ] as const).map(([tab, label]) => (
-          <Pressable
-            key={tab}
-            onPress={() => setActiveTab(tab)}
-            style={[
-              styles.appTabButton,
-              activeTab === tab ? styles.appTabButtonActive : null,
-            ]}
-          >
-            <Text
+      {!isNarrowConversation ? (
+        <View style={styles.appTabBar}>
+          {([
+            ["chats", "Chats"],
+            ["invites", "Invites"],
+            ["settings", "Settings"],
+          ] as const).map(([tab, label]) => (
+            <Pressable
+              key={tab}
+              onPress={() => setActiveTab(tab)}
               style={[
-                styles.appTabLabel,
-                activeTab === tab ? styles.appTabLabelActive : null,
+                styles.appTabButton,
+                activeTab === tab ? styles.appTabButtonActive : null,
               ]}
             >
-              {label}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
+              <Text
+                style={[
+                  styles.appTabLabel,
+                  activeTab === tab ? styles.appTabLabelActive : null,
+                ]}
+              >
+                {label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 }
