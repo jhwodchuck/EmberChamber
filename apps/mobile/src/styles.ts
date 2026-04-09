@@ -748,6 +748,11 @@ export const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 21,
   },
+  inlineLink: {
+    color: colors.textSoft,
+    textDecorationLine: "underline",
+    textDecorationColor: colors.textSoft,
+  },
   attachmentMeta: {
     color: colors.textMuted,
     fontSize: 12,

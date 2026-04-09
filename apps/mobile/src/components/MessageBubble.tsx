@@ -11,7 +11,7 @@ import { useAttachmentManager } from "../hooks/useAttachmentManager";
 // Lightweight inline markdown renderer
 // Bold **x**, italic _x_, inline `code`.
 // ---------------------------------------------------------------------------
-function renderMarkdown(text: string): React.ReactNode[] {
+function renderMarkdown(text: string, keyPrefix = "md"): React.ReactNode[] {
   // Split on bold, italic, code markers in order of precedence
   const parts: React.ReactNode[] = [];
   const re = /(\*\*(.+?)\*\*|_(.+?)_|`(.+?)`)/g;
@@ -24,12 +24,12 @@ function renderMarkdown(text: string): React.ReactNode[] {
       parts.push(text.slice(last, m.index));
     }
     if (m[2] !== undefined) {
-      parts.push(<Text key={key++} style={{ fontWeight: "700" }}>{m[2]}</Text>);
+      parts.push(<Text key={`${keyPrefix}-${key++}`} style={{ fontWeight: "700" }}>{m[2]}</Text>);
     } else if (m[3] !== undefined) {
-      parts.push(<Text key={key++} style={{ fontStyle: "italic" }}>{m[3]}</Text>);
+      parts.push(<Text key={`${keyPrefix}-${key++}`} style={{ fontStyle: "italic" }}>{m[3]}</Text>);
     } else if (m[4] !== undefined) {
       parts.push(
-        <Text key={key++} style={{ fontFamily: "monospace", backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 4 }}>
+        <Text key={`${keyPrefix}-${key++}`} style={{ fontFamily: "monospace", backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 4 }}>
           {m[4]}
         </Text>
       );
@@ -37,6 +37,42 @@ function renderMarkdown(text: string): React.ReactNode[] {
     last = m.index + m[0].length;
   }
   if (last < text.length) parts.push(text.slice(last));
+  return parts;
+}
+
+function renderMessageText(text: string, onOpenUrl: (url: string) => void): React.ReactNode[] {
+  const parts: React.ReactNode[] = [];
+  const urlPattern = /\bhttps?:\/\/[^\s<>"']+[^\s<>"'.,!?;:)]/gi;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+
+  while ((match = urlPattern.exec(text)) !== null) {
+    const rawUrl = match[0];
+    const trailingPunctuation = rawUrl.match(/[.,!?;:)]*$/)?.[0] || "";
+    const cleanUrl = trailingPunctuation ? rawUrl.slice(0, -trailingPunctuation.length) : rawUrl;
+
+    if (match.index > lastIndex) {
+      parts.push(...renderMarkdown(text.slice(lastIndex, match.index), `md-${key}`));
+    }
+
+    parts.push(
+      <Text key={`link-${key++}`} style={styles.inlineLink} onPress={() => onOpenUrl(cleanUrl)}>
+        {cleanUrl}
+      </Text>
+    );
+
+    if (trailingPunctuation) {
+      parts.push(trailingPunctuation);
+    }
+
+    lastIndex = match.index + rawUrl.length;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(...renderMarkdown(text.slice(lastIndex), `md-tail-${key}`));
+  }
+
   return parts;
 }
 
@@ -56,10 +92,20 @@ export function MessageBubble({
   const [menuVisible, setMenuVisible] = useState(false);
   const [viewerVisible, setViewerVisible] = useState(false);
 
+  async function handleOpenUrl(url: string) {
+    try {
+      await Linking.openURL(url);
+    } catch {
+      // Ignore browser-launch failures and leave the message visible.
+    }
+  }
+
   if (message.kind === "system_notice") {
     return (
       <View style={styles.systemMessageCard}>
-        <Text style={styles.systemMessageText}>{message.text ?? "System notice"}</Text>
+        <Text style={styles.systemMessageText}>
+          {renderMessageText(message.text ?? "System notice", handleOpenUrl)}
+        </Text>
       </View>
     );
   }
@@ -138,7 +184,7 @@ export function MessageBubble({
             </Pressable>
           ) : hasText ? (
             <Text style={styles.messageText}>
-              {renderMarkdown(message.text!)}
+              {renderMessageText(message.text!, handleOpenUrl)}
             </Text>
           ) : null}
 
