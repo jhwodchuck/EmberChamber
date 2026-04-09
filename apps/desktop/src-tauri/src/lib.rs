@@ -22,13 +22,28 @@ fn clear_secure_state(app: tauri::AppHandle) -> Result<secure_state::SecureState
     secure_state::clear(&app)
 }
 
+#[tauri::command]
+fn open_external_url(url: String) -> Result<(), String> {
+    let parsed = url::Url::parse(&url).map_err(|error| error.to_string())?;
+    match parsed.scheme() {
+        "http" | "https" => {}
+        scheme => {
+            return Err(format!("Unsupported URL scheme: {scheme}"));
+        }
+    }
+
+    webbrowser::open(parsed.as_str()).map_err(|error| error.to_string())?;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             load_secure_state,
             save_secure_state,
-            clear_secure_state
+            clear_secure_state,
+            open_external_url
         ])
         .setup(|app| {
             let _bootstrap_state = ClientState::default();

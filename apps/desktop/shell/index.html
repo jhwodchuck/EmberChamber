@@ -689,6 +689,23 @@
         white-space: pre-wrap;
       }
 
+      .inline-link {
+        appearance: none;
+        display: inline;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: var(--accent);
+        font: inherit;
+        text-decoration: underline;
+        text-underline-offset: 0.14em;
+        cursor: pointer;
+      }
+
+      .inline-link:hover {
+        color: var(--accent-ink);
+      }
+
       .media-shell {
         position: relative;
         margin-top: 12px;
@@ -3989,6 +4006,25 @@
           return;
         }
 
+        if (action === "open-external-url") {
+          const url = button.dataset.url;
+          if (!url) {
+            return;
+          }
+
+          try {
+            await invoke("open_external_url", { url });
+          } catch (error) {
+            state.workspaceStatus = createStatus(
+              "warning",
+              "Unable to open link",
+              error instanceof Error ? error.message : "The desktop shell could not launch the system browser."
+            );
+            render();
+          }
+          return;
+        }
+
         if (action === "close-lightbox") {
           state.lightboxMessageId = null;
           render();
@@ -4762,13 +4798,40 @@
         `;
       }
 
+      function renderMessageText(text) {
+        const urlPattern = /\bhttps?:\/\/[^\s<>"']+[^\s<>"'.,!?;:)]/gi;
+        let lastIndex = 0;
+        let output = "";
+        let match;
+
+        while ((match = urlPattern.exec(text)) !== null) {
+          const rawUrl = match[0];
+          const trailingPunctuation = rawUrl.match(/[.,!?;:)]*$/)?.[0] || "";
+          const cleanUrl = trailingPunctuation ? rawUrl.slice(0, -trailingPunctuation.length) : rawUrl;
+
+          output += escapeHtml(text.slice(lastIndex, match.index));
+          output += `
+            <button
+              class="inline-link"
+              type="button"
+              data-action="open-external-url"
+              data-url="${escapeHtml(cleanUrl)}"
+            >${escapeHtml(cleanUrl)}</button>${escapeHtml(trailingPunctuation)}
+          `;
+          lastIndex = match.index + rawUrl.length;
+        }
+
+        output += escapeHtml(text.slice(lastIndex));
+        return output;
+      }
+
       function renderThreadMessage(message) {
         if (message.kind === "system_notice") {
           return `
             <article class="message-row system">
               <div class="message-bubble">
                 <p class="label">System notice</p>
-                <p class="message-copy">${escapeHtml(message.text || "")}</p>
+                <p class="message-copy">${renderMessageText(message.text || "")}</p>
               </div>
             </article>
           `;
@@ -4790,7 +4853,7 @@
                 ${message.editedAt ? `<span style="opacity:0.55;font-size:0.8rem">edited</span>` : ""}
                 ${receiptMark}
               </div>
-              ${message.text ? `<p class="message-copy">${escapeHtml(message.text)}</p>` : ""}
+              ${message.text ? `<p class="message-copy">${renderMessageText(message.text)}</p>` : ""}
               ${renderAttachmentBlock(message)}
             </div>
           </article>
