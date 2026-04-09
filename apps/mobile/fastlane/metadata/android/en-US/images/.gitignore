@@ -1,5 +1,5 @@
-# Screenshots are populated at deploy time by the CI workflow from CI artifacts.
+# Screenshot directories are populated at deploy time by the CI workflow.
 # Do not commit generated screenshots here.
-*.png
-*.jpg
-*.jpeg
+phoneScreenshots/
+sevenInchScreenshots/
+tenInchScreenshots/
