@@ -1,0 +1,5 @@
+# Screenshots are populated at deploy time by the CI workflow from CI artifacts.
+# Do not commit generated screenshots here.
+*.png
+*.jpg
+*.jpeg

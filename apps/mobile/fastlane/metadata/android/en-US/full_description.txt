@@ -1,0 +1,14 @@
+EmberChamber is an invite-only messaging app built for adults who want private, trusted conversations — not another social platform competing for your attention.
+
+Every circle is closed. You join by invitation only, and every member was vouched for by someone who was already inside. There are no public profiles, no discovery feeds, and no strangers in your inbox.
+
+Key features:
+• End-to-end encrypted direct messages and group chats
+• Invite-gated communities and rooms — you control who gets in
+• Local-first message history — your conversations live on your device
+• No public profile or discoverability — you share what you choose, with whom you choose
+• Magic-link sign-in — no passwords to forget or lose
+
+EmberChamber is currently in invite-only beta. If you received an invite link, install the app and follow the link to get started. If you haven't received an invite yet, you can request access at emberchamber.com.
+
+Adults only (18+).

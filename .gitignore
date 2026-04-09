@@ -13,6 +13,8 @@ src-tauri/gen/
 .expo/
 android/
 ios/
+# Fastlane Play Store metadata lives inside an android/ path; un-ignore it.
+!apps/mobile/fastlane/metadata/android/
 
 # Environment files
 .env
