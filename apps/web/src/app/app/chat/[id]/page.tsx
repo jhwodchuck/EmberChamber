@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import type { ConversationDetail, GroupThreadMessage } from "@emberchamber/protocol";
 import { Avatar } from "@/components/avatar";
 import { useCompanionShell } from "@/components/companion-shell";
+import { FormattedMessage } from "@/components/formatted-message";
 import { StatusCallout } from "@/components/status-callout";
 import {
   ensureRelayAccessToken,
@@ -455,7 +456,7 @@ export default function ChatPage() {
                       {isOwn ? "You" : message.senderDisplayName}{isOwn ? "  ✓✓" : ""}
                     </p>
                     {message.text ? (
-                      <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--text-primary)]">{message.text}</p>
+                      <FormattedMessage text={message.text} />
                     ) : null}
                     {message.attachment ? (
                       <button
@@ -492,7 +493,7 @@ export default function ChatPage() {
                       {isOwn ? "You" : message.senderDisplayName}{isOwn ? "  ✓✓" : ""}
                     </p>
                     {message.text ? (
-                      <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--text-primary)]">{message.text}</p>
+                      <FormattedMessage text={message.text} />
                     ) : null}
                     {message.attachment ? (
                       <button
@@ -526,7 +527,7 @@ export default function ChatPage() {
                     {isOwn ? "You" : message.senderDisplayName}{isOwn ? "  ✓✓" : ""}
                   </p>
                   {message.text ? (
-                    <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--text-primary)]">{message.text}</p>
+                    <FormattedMessage text={message.text} />
                   ) : null}
                   {message.attachment ? (
                     <button

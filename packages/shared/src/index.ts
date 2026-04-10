@@ -1,4 +1,5 @@
 // Shared types for EmberChamber
+export * from "./message-format";
 
 export type UserRole = "owner" | "admin" | "moderator" | "member";
 export type ConversationType = "dm" | "group" | "channel";
