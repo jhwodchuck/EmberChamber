@@ -44,6 +44,9 @@
         }
       ]
     },
+    "androidStatusBar": {
+      "translucent": false
+    },
     "ios": {
       "bundleIdentifier": "com.emberchamber.mobile",
       "associatedDomains": [

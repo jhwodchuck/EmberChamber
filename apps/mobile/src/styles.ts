@@ -61,8 +61,12 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.background,
     position: "relative",
   },
+  // Android IME resize needs each flex boundary above the thread list to be
+  // allowed to shrink, otherwise the list can keep too much height and push
+  // the composer below the visible viewport.
   keyboardShell: {
     flex: 1,
+    minHeight: 0,
   },
   backgroundOrbTop: {
     position: "absolute",
@@ -748,10 +752,85 @@ export const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 21,
   },
+  formattedMessage: {
+    gap: 8,
+  },
+  inlineBold: {
+    fontWeight: "700",
+  },
+  inlineItalic: {
+    fontStyle: "italic",
+  },
+  inlineStrikethrough: {
+    textDecorationLine: "line-through",
+  },
   inlineLink: {
     color: colors.textSoft,
     textDecorationLine: "underline",
     textDecorationColor: colors.textSoft,
+  },
+  inlineMention: {
+    color: colors.textSoft,
+    fontWeight: "700",
+  },
+  inlineCode: {
+    borderRadius: 6,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    color: colors.textSoft,
+    fontFamily: Platform.select({
+      ios: "Menlo",
+      android: "monospace",
+      default: "monospace",
+    }),
+    fontSize: 14,
+  },
+  inlineSpoiler: {
+    borderRadius: 6,
+    backgroundColor: colors.brandMuted,
+    color: colors.textSoft,
+    fontSize: 14,
+    fontWeight: "700",
+    paddingHorizontal: 6,
+    overflow: "hidden",
+  },
+  inlineSpoilerRevealed: {
+    borderRadius: 6,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    color: colors.textPrimary,
+    paddingHorizontal: 6,
+    overflow: "hidden",
+  },
+  quoteBlock: {
+    borderLeftWidth: 2,
+    borderLeftColor: colors.borderStrong,
+    backgroundColor: colors.inputBackground,
+    paddingLeft: 12,
+    paddingVertical: 8,
+    paddingRight: 10,
+    borderRadius: 12,
+  },
+  quoteText: {
+    color: colors.textSecondary,
+    fontSize: 15,
+    lineHeight: 21,
+  },
+  codeBlock: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.inputBackground,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  codeBlockText: {
+    color: colors.textSoft,
+    fontFamily: Platform.select({
+      ios: "Menlo",
+      android: "monospace",
+      default: "monospace",
+    }),
+    fontSize: 13,
+    lineHeight: 19,
   },
   attachmentMeta: {
     color: colors.textMuted,
@@ -876,6 +955,7 @@ export const styles = StyleSheet.create({
   },
   appShell: {
     flex: 1,
+    minHeight: 0,
     paddingHorizontal: 14,
     paddingTop: 10,
     paddingBottom: 12,
@@ -886,6 +966,7 @@ export const styles = StyleSheet.create({
   },
   appBody: {
     flex: 1,
+    minHeight: 0,
   },
   appTabBar: {
     flexDirection: "row",
@@ -1180,6 +1261,7 @@ export const styles = StyleSheet.create({
   },
   conversationShell: {
     flex: 1,
+    minHeight: 0,
     gap: 12,
   },
   conversationHeader: {
@@ -1209,6 +1291,7 @@ export const styles = StyleSheet.create({
   },
   conversationMessages: {
     flex: 1,
+    minHeight: 0,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.border,
@@ -1220,6 +1303,7 @@ export const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   conversationComposer: {
+    flexShrink: 0,
     gap: 10,
     borderRadius: 18,
     borderWidth: 1,
@@ -1518,6 +1602,8 @@ export const styles = StyleSheet.create({
   },
   chatWorkspaceShell: {
     flex: 1,
+    minHeight: 0,
+    minWidth: 0,
     flexDirection: "row",
     gap: 12,
   },
@@ -1525,9 +1611,12 @@ export const styles = StyleSheet.create({
     flex: 0.95,
     minWidth: 320,
     maxWidth: 420,
+    minHeight: 0,
   },
   chatWorkspaceDetailPane: {
     flex: 1.35,
+    minHeight: 0,
+    minWidth: 0,
   },
   chatWorkspaceEmptyPane: {
     flex: 1,
@@ -1555,6 +1644,7 @@ export const styles = StyleSheet.create({
   conversationTopBar: {
     flexDirection: "row",
     alignItems: "center",
+    flexShrink: 0,
     gap: 8,
     paddingBottom: 2,
   },
