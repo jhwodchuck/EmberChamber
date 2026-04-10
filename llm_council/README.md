@@ -3,6 +3,7 @@
 This kit is a lower-token, higher-discipline review council for EmberChamber.
 
 It is designed around the current repo reality:
+
 - active beta runtime in `apps/relay`, `apps/web`, `apps/mobile`, `apps/desktop`, `crates/core`, `crates/relay-protocol`, and `packages/protocol`
 - retained legacy paths in `apps/api`, `infra`, and `services/*`
 - cross-surface risk areas around encrypted groups, attachment encryption, recovery, push maturity, and release reliability
@@ -19,11 +20,14 @@ Version 2 improves the council in four major ways:
 ## Recommended operating model
 
 ### Step 1 — intake
+
 Create `review-request.yaml` from `llm_council/templates/review-request.template.yaml`.
 
 ### Step 2 — evidence
+
 Run `C-13` first for any non-trivial review.
 It should produce:
+
 - `changed-files.txt`
 - `changed-files.md`
 - `repo-facts.md`
@@ -31,15 +35,19 @@ It should produce:
 - `recommended-reviewers.txt`
 
 ### Step 3 — minimal reviewer activation
+
 Only run the reviewers suggested by routing and actual risk.
 
 ### Step 4 — specialist reports
+
 Each specialist writes a Markdown report with YAML frontmatter using `templates/report-template.md`.
 
 ### Step 5 — synthesis
+
 `C-00` merges the evidence pack and specialist reports into one decision.
 
 All generated council artifacts land in the repo root and are gitignored by default:
+
 - `review-request.yaml`
 - `changed-files.txt`
 - `changed-files.md`
@@ -64,6 +72,7 @@ npm run council:pack
 ## Recommended default reviewer sets
 
 ### Web/UI change
+
 - `C-13`
 - `C-02`
 - `C-03`
@@ -71,6 +80,7 @@ npm run council:pack
 - `C-00`
 
 ### Mobile change
+
 - `C-13`
 - `C-02`
 - `C-04`
@@ -78,6 +88,7 @@ npm run council:pack
 - `C-00`
 
 ### Relay/backend change
+
 - `C-13`
 - `C-06`
 - `C-09`
@@ -85,6 +96,7 @@ npm run council:pack
 - `C-00`
 
 ### Protocol/auth/crypto change
+
 - `C-13`
 - `C-07`
 - `C-08` if `crates/core` is touched
@@ -93,6 +105,7 @@ npm run council:pack
 - `C-00`
 
 ### Repo/process/tooling change
+
 - `C-13`
 - `C-12`
 - `C-11` if CI or release is touched
@@ -103,6 +116,7 @@ npm run council:pack
 The council becomes expensive when every reviewer re-discovers the same context. Avoid that.
 
 Use this pattern:
+
 - one evidence pack
 - targeted snippets
 - the smallest correct reviewer set
@@ -126,6 +140,7 @@ If you want to bypass `npm`, the direct entrypoint is `bash llm_council/scripts/
 
 This kit is intentionally opinionated.
 It prioritizes:
+
 - product-fit review for the actual EmberChamber beta
 - security/privacy discipline
 - AI-coder maintainability

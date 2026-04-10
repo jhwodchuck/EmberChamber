@@ -35,10 +35,10 @@ cp apps/web/.env.example apps/web/.env.local
 
 Key variables:
 
-| Variable | Purpose |
-|----------|---------|
+| Variable                | Purpose                                           |
+| ----------------------- | ------------------------------------------------- |
 | `NEXT_PUBLIC_RELAY_URL` | Relay base URL (default: `http://localhost:8787`) |
-| `NEXT_PUBLIC_APP_ENV` | `development` or `production` |
+| `NEXT_PUBLIC_APP_ENV`   | `development` or `production`                     |
 
 ## Building for Production
 
@@ -72,9 +72,9 @@ apps/web/
 
 ## What Is Not Yet Complete
 
-| Feature | Status |
-|---------|--------|
-| Encrypted-group rollout | In progress — new groups are device-encrypted, while legacy compatibility history still exists |
-| Universal encrypted attachments | In progress — DM path encrypts; group path does not yet |
-| Passkey enrollment | Scaffolded in relay; UI not yet wired |
-| Trusted-device recovery | Partially implemented |
+| Feature                         | Status                                                                                         |
+| ------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Encrypted-group rollout         | In progress — new groups are device-encrypted, while legacy compatibility history still exists |
+| Universal encrypted attachments | In progress — DM path encrypts; group path does not yet                                        |
+| Passkey enrollment              | Scaffolded in relay; UI not yet wired                                                          |
+| Trusted-device recovery         | Partially implemented                                                                          |

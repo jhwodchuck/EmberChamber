@@ -113,7 +113,9 @@ export async function bootstrapLocalStore() {
   return db;
 }
 
-export async function loadPrivacyDefaults(db: SQLite.SQLiteDatabase): Promise<PrivacyDefaults> {
+export async function loadPrivacyDefaults(
+  db: SQLite.SQLiteDatabase,
+): Promise<PrivacyDefaults> {
   const rows = await db.getAllAsync<{ key: string; value: string }>(
     "SELECT key, value FROM app_preferences WHERE key IN (?, ?, ?, ?)",
     "notificationPreviewMode",
@@ -133,7 +135,10 @@ export async function loadPrivacyDefaults(db: SQLite.SQLiteDatabase): Promise<Pr
   };
 }
 
-export async function loadRelayStateValue(db: SQLite.SQLiteDatabase, key: string) {
+export async function loadRelayStateValue(
+  db: SQLite.SQLiteDatabase,
+  key: string,
+) {
   const row = await db.getFirstAsync<{ value: string }>(
     "SELECT value FROM relay_state WHERE key = ?",
     key,
@@ -141,7 +146,11 @@ export async function loadRelayStateValue(db: SQLite.SQLiteDatabase, key: string
   return row?.value ?? null;
 }
 
-export async function saveRelayStateValue(db: SQLite.SQLiteDatabase, key: string, value: string) {
+export async function saveRelayStateValue(
+  db: SQLite.SQLiteDatabase,
+  key: string,
+  value: string,
+) {
   await db.runAsync(
     `INSERT INTO relay_state (key, value) VALUES (?, ?)
      ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
@@ -198,7 +207,9 @@ export async function persistVaultMediaRecord(
 }
 
 export async function countVaultItems(db: SQLite.SQLiteDatabase) {
-  const row = await db.getFirstAsync<{ count: number }>("SELECT COUNT(*) AS count FROM vault_media");
+  const row = await db.getFirstAsync<{ count: number }>(
+    "SELECT COUNT(*) AS count FROM vault_media",
+  );
   return row?.count ?? 0;
 }
 
@@ -210,11 +221,17 @@ export async function loadContactLabel(
   db: SQLite.SQLiteDatabase,
   accountId: string,
 ): Promise<{ localLabel: string | null; privateNote: string | null }> {
-  const row = await db.getFirstAsync<{ local_label: string; private_note: string | null }>(
+  const row = await db.getFirstAsync<{
+    local_label: string;
+    private_note: string | null;
+  }>(
     "SELECT local_label, private_note FROM contact_labels WHERE account_id = ?",
     accountId,
   );
-  return { localLabel: row?.local_label ?? null, privateNote: row?.private_note ?? null };
+  return {
+    localLabel: row?.local_label ?? null,
+    privateNote: row?.private_note ?? null,
+  };
 }
 
 export async function saveContactLabel(
@@ -263,7 +280,10 @@ export async function saveCachedGroups(
   accountId: string,
   groups: GroupMembershipSummary[],
 ) {
-  await db.runAsync("DELETE FROM group_memberships_cache WHERE account_id = ?", accountId);
+  await db.runAsync(
+    "DELETE FROM group_memberships_cache WHERE account_id = ?",
+    accountId,
+  );
 
   if (!groups.length) {
     return;

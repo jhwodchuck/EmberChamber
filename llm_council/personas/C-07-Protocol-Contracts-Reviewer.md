@@ -29,6 +29,7 @@ Then ground yourself in the current contract layer using, when relevant:
 Review shared protocol and contract changes across `packages/protocol` and `crates/relay-protocol`.
 
 Find concrete contract defects:
+
 - Rust/TypeScript parity drift
 - wire-shape breakage
 - optionality/default drift
@@ -154,6 +155,7 @@ Every finding must include:
 - what should be verified afterward
 
 When relevant, explicitly state whether the issue is caused by:
+
 - field naming drift
 - enum/value drift
 - optional vs required drift
@@ -198,6 +200,7 @@ If there are no material findings in your scope, say `No material findings.`
 Do not confuse representation differences with true contract breakage.
 
 A difference may be acceptable only if:
+
 - it is clearly adapter-scoped
 - it preserves the same effective semantics
 - the conversion boundary is explicit and grounded
@@ -212,6 +215,7 @@ When changed behavior touches the contract layer, check whether the repo’s cur
 - `cargo test -p emberchamber-core -p emberchamber-relay-protocol`
 
 When contract changes are meaningful, also look for downstream evidence in affected surfaces such as:
+
 - relay build/tests
 - client builds
 - Rust core tests

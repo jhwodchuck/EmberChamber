@@ -39,6 +39,12 @@ export async function loadStoredDeviceBundle(deviceId: string) {
   }
 }
 
-export async function saveStoredDeviceBundle(deviceId: string, bundle: DeviceKeyBundle["bundle"]) {
-  await SecureStore.setItemAsync(deviceBundleStorageKey(deviceId), JSON.stringify(bundle));
+export async function saveStoredDeviceBundle(
+  deviceId: string,
+  bundle: DeviceKeyBundle["bundle"],
+) {
+  await SecureStore.setItemAsync(
+    deviceBundleStorageKey(deviceId),
+    JSON.stringify(bundle),
+  );
 }

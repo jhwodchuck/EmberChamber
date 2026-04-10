@@ -25,7 +25,8 @@ type InlinePatternMatch =
 const LINK_PATTERN = /\bhttps?:\/\/[^\s<>"']+[^\s<>"'.,!?;:)]/;
 const CODE_PATTERN = /`([^`\n]+)`/;
 const SPOILER_PATTERN = /\|\|([^|\n](?:.*?[^|\n])?)\|\|/;
-const MENTION_PATTERN = /(^|[^A-Za-z0-9_@-])(@[A-Za-z0-9_-]{3,64})(?![A-Za-z0-9_-])/;
+const MENTION_PATTERN =
+  /(^|[^A-Za-z0-9_@-])(@[A-Za-z0-9_-]{3,64})(?![A-Za-z0-9_-])/;
 const BOLD_PATTERN = /\*\*([^*\n](?:.*?[^*\n])?)\*\*/;
 const ITALIC_PATTERN = /_([^_\n](?:.*?[^_\n])?)_/;
 const STRIKETHROUGH_PATTERN = /~~([^~\n](?:.*?[^~\n])?)~~/;
@@ -133,7 +134,10 @@ function findNextInlinePattern(text: string): InlinePatternMatch | null {
   }
 
   const strikethroughMatch = STRIKETHROUGH_PATTERN.exec(text);
-  if (strikethroughMatch?.[0] !== undefined && strikethroughMatch[1] !== undefined) {
+  if (
+    strikethroughMatch?.[0] !== undefined &&
+    strikethroughMatch[1] !== undefined
+  ) {
     matches.push({
       kind: "strikethrough",
       index: strikethroughMatch.index,
@@ -267,7 +271,10 @@ export function parseFormattedMessage(text: string): FormattedBlockNode[] {
         break;
       }
 
-      if (paragraphLines.length > 0 && (currentLine.startsWith("```") || /^>\s?/.test(currentLine))) {
+      if (
+        paragraphLines.length > 0 &&
+        (currentLine.startsWith("```") || /^>\s?/.test(currentLine))
+      ) {
         break;
       }
 

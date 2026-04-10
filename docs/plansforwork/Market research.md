@@ -1,6 +1,7 @@
 # Market research
 
 ## Subject
+
 Source review of Telegram Android, Telegram X, and Telegram Desktop as of April 4, 2026, with emphasis on implementation ideas relevant to EmberChamber.
 
 ## Scope

@@ -36,7 +36,10 @@ export function Avatar({
         width={dimensions[size]}
         height={dimensions[size]}
         loading="lazy"
-        className={clsx(sizeClasses[size], "rounded-full object-cover flex-shrink-0")}
+        className={clsx(
+          sizeClasses[size],
+          "rounded-full object-cover flex-shrink-0",
+        )}
       />
     );
   }
@@ -45,7 +48,7 @@ export function Avatar({
     <div
       className={clsx(
         sizeClasses[size],
-        "rounded-full bg-brand-500/15 text-brand-500 flex items-center justify-center font-semibold flex-shrink-0"
+        "rounded-full bg-brand-500/15 text-brand-500 flex items-center justify-center font-semibold flex-shrink-0",
       )}
     >
       {initials}

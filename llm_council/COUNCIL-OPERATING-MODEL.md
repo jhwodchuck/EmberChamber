@@ -28,6 +28,7 @@
 ## When not to run the full council
 
 Do not run the full council for:
+
 - copy tweaks
 - single tiny bug fixes
 - minor docs changes
@@ -36,6 +37,7 @@ Do not run the full council for:
 ## When to force broader coverage
 
 Use broader coverage when the change touches:
+
 - auth
 - sessions
 - encryption or key handling

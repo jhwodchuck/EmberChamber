@@ -6,14 +6,14 @@ This repo is organized around the active beta runtime, not the legacy prototype 
 
 Default to these paths for new work:
 
-| Work type | Path |
-| --- | --- |
-| Relay auth, invites, mailbox, groups, attachments | `apps/relay` |
-| Web UI, onboarding, invite landing, browser messaging | `apps/web` |
-| Android and iPhone client | `apps/mobile` |
-| Desktop shell and packaging | `apps/desktop`, `apps/desktop/src-tauri` |
-| Shared secure-state logic | `crates/core` |
-| Relay contract changes | `crates/relay-protocol` and `packages/protocol` |
+| Work type                                             | Path                                            |
+| ----------------------------------------------------- | ----------------------------------------------- |
+| Relay auth, invites, mailbox, groups, attachments     | `apps/relay`                                    |
+| Web UI, onboarding, invite landing, browser messaging | `apps/web`                                      |
+| Android and iPhone client                             | `apps/mobile`                                   |
+| Desktop shell and packaging                           | `apps/desktop`, `apps/desktop/src-tauri`        |
+| Shared secure-state logic                             | `crates/core`                                   |
+| Relay contract changes                                | `crates/relay-protocol` and `packages/protocol` |
 
 Legacy paths like `apps/api`, `infra/docker-compose.yml`, and `services/*` are not the default place
 for new beta work.

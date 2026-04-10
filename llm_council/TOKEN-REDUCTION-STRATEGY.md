@@ -17,10 +17,13 @@ Gather facts once, route narrowly, synthesize once.
 ## The low-token pattern
 
 ### Intake
+
 Use `review-request.yaml`.
 
 ### Evidence
+
 Run `C-13` and generate:
+
 - changed file inventory
 - domain grouping
 - diff snippets
@@ -29,24 +32,30 @@ Run `C-13` and generate:
 - reviewer routing
 
 ### Specialist review
+
 Each persona gets:
+
 - its own prompt
 - shared rules
 - evidence pack
 - only relevant snippets
 
 ### Moderator synthesis
+
 Only `C-00` sees the full specialist set.
 
 ## Cheap-by-default review routing
 
 ### Tiny change
+
 1 specialist + optional moderator
 
 ### Normal change
+
 2 to 4 specialists + moderator
 
 ### High-risk change
+
 4 to 6 specialists + moderator
 
 ## Strong overlap controls
@@ -68,6 +77,7 @@ Only `C-00` sees the full specialist set.
 ## Practical prompt packing advice
 
 For a specialist agent, provide only:
+
 - the persona prompt
 - shared rules
 - evidence pack
@@ -75,6 +85,7 @@ For a specialist agent, provide only:
 - any specific questions to answer
 
 Do not provide:
+
 - the full repo tree
 - every previous report
 - unrelated screenshots

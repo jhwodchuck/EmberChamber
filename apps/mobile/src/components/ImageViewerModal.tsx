@@ -103,7 +103,10 @@ export function ImageViewerModal({
                 </Text>
               </Pressable>
             ) : null}
-            <Pressable onPress={onClose} style={[styles.secondaryButton, { marginTop: 12 }]}>
+            <Pressable
+              onPress={onClose}
+              style={[styles.secondaryButton, { marginTop: 12 }]}
+            >
               <Text style={styles.secondaryButtonLabel}>Close</Text>
             </Pressable>
           </View>

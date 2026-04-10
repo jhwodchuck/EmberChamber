@@ -42,7 +42,7 @@ router.get("/search", async (req: AuthRequest, res: Response, next) => {
              @@ plainto_tsquery('english', $2)
        ORDER BY u.username
        LIMIT 20`,
-      [req.userId, q]
+      [req.userId, q],
     );
 
     res.json({ data: users });
@@ -76,7 +76,7 @@ router.get("/:id", async (req: AuthRequest, res: Response, next) => {
        FROM users u
        LEFT JOIN user_privacy_settings ups ON ups.user_id = u.id
        WHERE u.id = $1 AND u.deleted_at IS NULL`,
-      [id]
+      [id],
     );
 
     if (!user || !user.profile_visible) {
@@ -130,7 +130,7 @@ router.patch("/me", async (req: AuthRequest, res: Response, next) => {
       `UPDATE users SET ${updates.join(", ")}
        WHERE id = $${paramIdx}
        RETURNING id, username, display_name, email, avatar_url, bio, updated_at`,
-      params
+      params,
     );
 
     res.json({ data: result[0] });
@@ -140,96 +140,88 @@ router.patch("/me", async (req: AuthRequest, res: Response, next) => {
 });
 
 // PATCH /api/users/me/privacy
-router.get(
-  "/me/privacy",
-  async (req: AuthRequest, res: Response, next) => {
-    try {
-      const privacy = await queryOne<{
-        show_last_seen: boolean;
-        show_read_receipts: boolean;
-        allow_dms_from: "everyone" | "contacts" | "nobody";
-        show_online_status: boolean;
-        profile_visible: boolean;
-      }>(
-        `SELECT show_last_seen, show_read_receipts, allow_dms_from,
+router.get("/me/privacy", async (req: AuthRequest, res: Response, next) => {
+  try {
+    const privacy = await queryOne<{
+      show_last_seen: boolean;
+      show_read_receipts: boolean;
+      allow_dms_from: "everyone" | "contacts" | "nobody";
+      show_online_status: boolean;
+      profile_visible: boolean;
+    }>(
+      `SELECT show_last_seen, show_read_receipts, allow_dms_from,
                 show_online_status, profile_visible
          FROM user_privacy_settings
          WHERE user_id = $1`,
-        [req.userId]
-      );
+      [req.userId],
+    );
 
-      res.json({
-        data: {
-          showLastSeen: privacy?.show_last_seen ?? true,
-          showReadReceipts: privacy?.show_read_receipts ?? true,
-          allowDmsFrom: privacy?.allow_dms_from ?? "everyone",
-          showOnlineStatus: privacy?.show_online_status ?? true,
-          profileVisible: privacy?.profile_visible ?? true,
-        },
-      });
-    } catch (err) {
-      next(err);
-    }
+    res.json({
+      data: {
+        showLastSeen: privacy?.show_last_seen ?? true,
+        showReadReceipts: privacy?.show_read_receipts ?? true,
+        allowDmsFrom: privacy?.allow_dms_from ?? "everyone",
+        showOnlineStatus: privacy?.show_online_status ?? true,
+        profileVisible: privacy?.profile_visible ?? true,
+      },
+    });
+  } catch (err) {
+    next(err);
   }
-);
+});
 
-router.patch(
-  "/me/privacy",
-  async (req: AuthRequest, res: Response, next) => {
-    try {
-      const body = UpdatePrivacySchema.parse(req.body);
+router.patch("/me/privacy", async (req: AuthRequest, res: Response, next) => {
+  try {
+    const body = UpdatePrivacySchema.parse(req.body);
 
-      const updates: string[] = [];
-      const params: unknown[] = [];
-      let paramIdx = 1;
+    const updates: string[] = [];
+    const params: unknown[] = [];
+    let paramIdx = 1;
 
-      if (body.showLastSeen !== undefined) {
-        updates.push(`show_last_seen = $${paramIdx++}`);
-        params.push(body.showLastSeen);
-      }
-      if (body.showReadReceipts !== undefined) {
-        updates.push(`show_read_receipts = $${paramIdx++}`);
-        params.push(body.showReadReceipts);
-      }
-      if (body.allowDmsFrom !== undefined) {
-        updates.push(`allow_dms_from = $${paramIdx++}`);
-        params.push(body.allowDmsFrom);
-      }
-      if (body.showOnlineStatus !== undefined) {
-        updates.push(`show_online_status = $${paramIdx++}`);
-        params.push(body.showOnlineStatus);
-      }
-      if (body.profileVisible !== undefined) {
-        updates.push(`profile_visible = $${paramIdx++}`);
-        params.push(body.profileVisible);
-      }
+    if (body.showLastSeen !== undefined) {
+      updates.push(`show_last_seen = $${paramIdx++}`);
+      params.push(body.showLastSeen);
+    }
+    if (body.showReadReceipts !== undefined) {
+      updates.push(`show_read_receipts = $${paramIdx++}`);
+      params.push(body.showReadReceipts);
+    }
+    if (body.allowDmsFrom !== undefined) {
+      updates.push(`allow_dms_from = $${paramIdx++}`);
+      params.push(body.allowDmsFrom);
+    }
+    if (body.showOnlineStatus !== undefined) {
+      updates.push(`show_online_status = $${paramIdx++}`);
+      params.push(body.showOnlineStatus);
+    }
+    if (body.profileVisible !== undefined) {
+      updates.push(`profile_visible = $${paramIdx++}`);
+      params.push(body.profileVisible);
+    }
 
-      if (updates.length === 0) throw createError("No fields to update", 400);
+    if (updates.length === 0) throw createError("No fields to update", 400);
 
-      updates.push(`updated_at = NOW()`);
-      params.push(req.userId);
+    updates.push(`updated_at = NOW()`);
+    params.push(req.userId);
 
-      await query(
-        `INSERT INTO user_privacy_settings (user_id)
+    await query(
+      `INSERT INTO user_privacy_settings (user_id)
          VALUES ($${paramIdx})
          ON CONFLICT (user_id) DO UPDATE SET ${updates.join(", ")}`,
-        params
-      );
+      params,
+    );
 
-      res.json({ data: { message: "Privacy settings updated" } });
-    } catch (err) {
-      next(err);
-    }
+    res.json({ data: { message: "Privacy settings updated" } });
+  } catch (err) {
+    next(err);
   }
-);
+});
 
 // GET /api/users/me/sessions
-router.get(
-  "/me/sessions",
-  async (req: AuthRequest, res: Response, next) => {
-    try {
-      const sessions = await query(
-        `SELECT s.id, s.ip_address, s.user_agent, s.created_at, s.last_active_at,
+router.get("/me/sessions", async (req: AuthRequest, res: Response, next) => {
+  try {
+    const sessions = await query(
+      `SELECT s.id, s.ip_address, s.user_agent, s.created_at, s.last_active_at,
                 d.device_name, d.device_type
          FROM sessions s
          LEFT JOIN devices d ON d.id = s.device_id
@@ -237,20 +229,19 @@ router.get(
            AND s.revoked_at IS NULL
            AND s.expires_at > NOW()
          ORDER BY s.last_active_at DESC`,
-        [req.userId]
-      );
+      [req.userId],
+    );
 
-      const enriched = sessions.map((s: Record<string, unknown>) => ({
-        ...s,
-        isCurrent: s.id === req.sessionId,
-      }));
+    const enriched = sessions.map((s: Record<string, unknown>) => ({
+      ...s,
+      isCurrent: s.id === req.sessionId,
+    }));
 
-      res.json({ data: enriched });
-    } catch (err) {
-      next(err);
-    }
+    res.json({ data: enriched });
+  } catch (err) {
+    next(err);
   }
-);
+});
 
 // DELETE /api/users/me/sessions/:sessionId
 router.delete(
@@ -261,21 +252,20 @@ router.delete(
 
       const session = await queryOne(
         "SELECT id FROM sessions WHERE id = $1 AND user_id = $2",
-        [sessionId, req.userId]
+        [sessionId, req.userId],
       );
 
       if (!session) throw createError("Session not found", 404);
 
-      await query(
-        "UPDATE sessions SET revoked_at = NOW() WHERE id = $1",
-        [sessionId]
-      );
+      await query("UPDATE sessions SET revoked_at = NOW() WHERE id = $1", [
+        sessionId,
+      ]);
 
       res.json({ data: { message: "Session revoked" } });
     } catch (err) {
       next(err);
     }
-  }
+  },
 );
 
 // POST /api/users/block
@@ -293,7 +283,7 @@ router.post("/block", async (req: AuthRequest, res: Response, next) => {
       `INSERT INTO blocks (blocker_id, blocked_id, reason)
        VALUES ($1, $2, $3)
        ON CONFLICT (blocker_id, blocked_id) DO NOTHING`,
-      [req.userId, targetId, reason ?? null]
+      [req.userId, targetId, reason ?? null],
     );
 
     res.json({ data: { message: "User blocked" } });
@@ -309,14 +299,14 @@ router.delete(
     try {
       await query(
         "DELETE FROM blocks WHERE blocker_id = $1 AND blocked_id = $2",
-        [req.userId, req.params.userId]
+        [req.userId, req.params.userId],
       );
 
       res.json({ data: { message: "User unblocked" } });
     } catch (err) {
       next(err);
     }
-  }
+  },
 );
 
 // POST /api/users/report
@@ -362,7 +352,7 @@ router.post("/report", async (req: AuthRequest, res: Response, next) => {
         body.reportedPostId ?? null,
         body.reason,
         body.details ?? null,
-      ]
+      ],
     );
 
     res.status(201).json({ data: { message: "Report submitted" } });

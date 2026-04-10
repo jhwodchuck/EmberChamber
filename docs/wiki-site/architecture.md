@@ -39,16 +39,16 @@ Clients own their history; the relay handles routing, identity bootstrap, and at
 
 The relay is the only hosted component. It runs on Cloudflare's edge using:
 
-| Binding | Purpose |
-|---------|---------|
-| **D1** | Metadata: accounts, devices, sessions, invites, group membership, group thread text (until migrated), reports |
-| **DeviceMailboxDO** | Per-device ciphertext queue: stores envelopes until ack, fans out to WebSockets, enforces backlog caps |
-| **GroupCoordinatorDO** | Per-group epoch tracking and membership state |
-| **RateLimitDO** | Keyed rate limiter for auth, invite, and send paths |
-| **R2** | Attachment blobs, accessed via signed short-lived tickets |
-| **EMAIL_QUEUE** | Dispatches magic-link emails via Resend |
-| **PUSH_QUEUE** | Dispatches Android FCM wake notifications |
-| **CLEANUP_QUEUE** | Drives mailbox envelope expiry and attachment metadata cleanup |
+| Binding                | Purpose                                                                                                       |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------- |
+| **D1**                 | Metadata: accounts, devices, sessions, invites, group membership, group thread text (until migrated), reports |
+| **DeviceMailboxDO**    | Per-device ciphertext queue: stores envelopes until ack, fans out to WebSockets, enforces backlog caps        |
+| **GroupCoordinatorDO** | Per-group epoch tracking and membership state                                                                 |
+| **RateLimitDO**        | Keyed rate limiter for auth, invite, and send paths                                                           |
+| **R2**                 | Attachment blobs, accessed via signed short-lived tickets                                                     |
+| **EMAIL_QUEUE**        | Dispatches magic-link emails via Resend                                                                       |
+| **PUSH_QUEUE**         | Dispatches Android FCM wake notifications                                                                     |
+| **CLEANUP_QUEUE**      | Drives mailbox envelope expiry and attachment metadata cleanup                                                |
 
 ### `apps/web` — Next.js
 
@@ -103,11 +103,11 @@ Clients request a signed upload ticket from the relay, upload the blob directly 
 
 ## D1 Schema Summary
 
-| Table group | Tables |
-|-------------|--------|
+| Table group      | Tables                                                                                                                                   |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | Bootstrap & auth | `beta_invites`, `accounts`, `account_emails`, `auth_challenges`, `devices`, `sessions`, `passkeys`, `device_links`, `device_push_tokens` |
-| Conversations | `conversations`, `conversation_members`, `conversation_invites`, `conversation_messages`, `blocks` |
-| Media & safety | `attachments`, `reports` |
+| Conversations    | `conversations`, `conversation_members`, `conversation_invites`, `conversation_messages`, `blocks`                                       |
+| Media & safety   | `attachments`, `reports`                                                                                                                 |
 
 ## What the Relay Does Not Store (target)
 

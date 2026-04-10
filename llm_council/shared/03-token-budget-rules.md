@@ -16,19 +16,25 @@ The council is designed to be cheap by default.
 ## Default budget tiers
 
 ### Tiny change
+
 Examples: text tweak, single small UI fix, simple doc update
+
 - reviewers: 1 specialist + optional moderator
 - evidence pack: optional micro pack
 - target specialist output: <= 500 words
 
 ### Normal feature or refactor
+
 Examples: multi-file feature, UI flow change, relay change without protocol break
+
 - reviewers: 2 to 4 specialists + moderator
 - evidence pack: required
 - target specialist output: <= 900 words
 
 ### High-risk change
+
 Examples: auth, crypto, protocol, storage, release automation
+
 - reviewers: 4 to 6 specialists + moderator
 - evidence pack: required
 - target specialist output: <= 1200 words
@@ -36,6 +42,7 @@ Examples: auth, crypto, protocol, storage, release automation
 ## Anti-bloat rules
 
 Do not:
+
 - restate the evidence pack
 - explain repo history at length
 - give tutorials unless requested

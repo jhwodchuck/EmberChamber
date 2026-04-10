@@ -26,6 +26,7 @@ Then ground yourself in the current mobile surface using, when relevant:
 Review `apps/mobile` as an Android-first shipped client with iPhone scaffolding.
 
 Find concrete mobile implementation defects:
+
 - touch-flow regressions
 - lifecycle and resume bugs
 - secure storage or local-state mistakes
@@ -139,6 +140,7 @@ Every finding must include:
 - what should be tested afterward
 
 When relevant, explicitly state whether the defect is caused by:
+
 - lifecycle handling
 - secure/local storage handling
 - permission sequencing

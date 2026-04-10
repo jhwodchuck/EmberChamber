@@ -9,12 +9,12 @@ entire EmberChamber app.
 
 ## What the video covers
 
-| Scene | Content |
-|-------|---------|
-| **TitleScene** | EmberChamber brand card with flame logo |
-| **DeviceBundleScene** | NaCl key-pair generation (`createStoredDeviceBundle` in `packages/protocol/src/e2ee.ts`) |
-| **E2EEMessageScene** | Box encryption → CipherEnvelope → relay mailbox → recipient decrypt |
-| **AttachmentScene** | Symmetric `nacl.secretbox` encryption for file attachments |
+| Scene                 | Content                                                                                                    |
+| --------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **TitleScene**        | EmberChamber brand card with flame logo                                                                    |
+| **DeviceBundleScene** | NaCl key-pair generation (`createStoredDeviceBundle` in `packages/protocol/src/e2ee.ts`)                   |
+| **E2EEMessageScene**  | Box encryption → CipherEnvelope → relay mailbox → recipient decrypt                                        |
+| **AttachmentScene**   | Symmetric `nacl.secretbox` encryption for file attachments                                                 |
 | **ArchitectureScene** | Full system map: Mobile/Desktop/Web → crates/core + packages/protocol → apps/relay → D1/R2/Durable Objects |
 
 ## Prerequisites
@@ -25,7 +25,7 @@ pip install manim
 
 Manim also requires **FFmpeg** and **LaTeX** (optional, for math scenes):
 
-- macOS:  `brew install ffmpeg`
+- macOS: `brew install ffmpeg`
 - Ubuntu: `sudo apt install ffmpeg`
 - Windows: install via [ffmpeg.org](https://ffmpeg.org/download.html)
 
@@ -60,12 +60,12 @@ manim -pql tools/manim/emberchamber_app_overview.py EmberChamberAppOverviewVideo
 
 ## Quality flags
 
-| Flag | Resolution | Use for |
-|------|-----------|---------|
-| `-ql` | 480p 15 fps | fast iteration |
-| `-qm` | 720p 30 fps | review |
-| `-qh` | 1080p 60 fps | final render |
-| `-qk` | 2160p 60 fps | 4K |
+| Flag  | Resolution   | Use for        |
+| ----- | ------------ | -------------- |
+| `-ql` | 480p 15 fps  | fast iteration |
+| `-qm` | 720p 30 fps  | review         |
+| `-qh` | 1080p 60 fps | final render   |
+| `-qk` | 2160p 60 fps | 4K             |
 
 ## File
 

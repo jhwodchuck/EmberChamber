@@ -4,51 +4,51 @@ This page is the single authoritative table for what is live, in-progress, or pl
 
 ## Key
 
-| Symbol | Meaning |
-| ------ | ------- |
-| ✅ | Live and stable on this surface |
-| ⚠️ | Partially live, incomplete, or requires operator configuration |
-| 🔜 | In progress — expected in current phase |
-| 📋 | Planned — not yet started |
-| ❌ | Not available on this surface |
+| Symbol | Meaning                                                        |
+| ------ | -------------------------------------------------------------- |
+| ✅     | Live and stable on this surface                                |
+| ⚠️     | Partially live, incomplete, or requires operator configuration |
+| 🔜     | In progress — expected in current phase                        |
+| 📋     | Planned — not yet started                                      |
+| ❌     | Not available on this surface                                  |
 
 ## Feature Matrix
 
-| Feature | Web | Android | Windows | Ubuntu |
-| ------- | --- | ------- | ------- | ------ |
-| Onboarding & invite registration | ✅ | ✅ | ✅ | ✅ |
-| Email magic-link auth | ✅ | ✅ | ✅ | ✅ |
-| 18+ age affirmation | ✅ | ✅ | ✅ | ✅ |
-| Pseudonymous profile setup | ✅ | ✅ | ✅ | ✅ |
-| E2EE direct messages | ✅ | ✅ | ✅ | ✅ |
-| Small private groups (≤ 12) | ✅ | ✅ | ✅ | ✅ |
-| Device-encrypted group history | ✅ | ✅ | ✅ | ✅ |
-| Legacy relay-hosted compatibility history | ⚠️ | ⚠️ | ⚠️ | ⚠️ |
-| Invite review and management | ✅ | ✅ | ✅ | ✅ |
-| Device-local search | ✅ | ✅ | ✅ | ✅ |
-| Session listing and revocation | ✅ | ✅ | ✅ | ✅ |
-| Account recovery (email bootstrap) | ✅ | ✅ | ✅ | ✅ |
-| Full trusted-device recovery | 🔜 | 🔜 | 🔜 | 🔜 |
-| Attachments (client-side encrypted) | ✅ | ⚠️ migration in progress | ⚠️ migration in progress | ⚠️ migration in progress |
-| Local SQLite history cache | ❌ | ✅ | ✅ | ✅ |
-| Push notifications | ❌ | ⚠️ code complete, needs relay secrets | ❌ | ❌ |
-| Disclosure-based report flow | ✅ | ✅ | ✅ | ✅ |
-| Passkey sign-in | 📋 | 📋 | 📋 | 📋 |
-| Encrypted backup / export / import | 📋 | 📋 | 📋 | 📋 |
-| Self-serve invite validation | 📋 | 📋 | ❌ | ❌ |
-| Magic-link self-serve resend | 📋 | 📋 | ❌ | ❌ |
-| Native desktop shell | ❌ | ❌ | ✅ | ✅ |
+| Feature                                   | Web | Android                               | Windows                  | Ubuntu                   |
+| ----------------------------------------- | --- | ------------------------------------- | ------------------------ | ------------------------ |
+| Onboarding & invite registration          | ✅  | ✅                                    | ✅                       | ✅                       |
+| Email magic-link auth                     | ✅  | ✅                                    | ✅                       | ✅                       |
+| 18+ age affirmation                       | ✅  | ✅                                    | ✅                       | ✅                       |
+| Pseudonymous profile setup                | ✅  | ✅                                    | ✅                       | ✅                       |
+| E2EE direct messages                      | ✅  | ✅                                    | ✅                       | ✅                       |
+| Small private groups (≤ 12)               | ✅  | ✅                                    | ✅                       | ✅                       |
+| Device-encrypted group history            | ✅  | ✅                                    | ✅                       | ✅                       |
+| Legacy relay-hosted compatibility history | ⚠️  | ⚠️                                    | ⚠️                       | ⚠️                       |
+| Invite review and management              | ✅  | ✅                                    | ✅                       | ✅                       |
+| Device-local search                       | ✅  | ✅                                    | ✅                       | ✅                       |
+| Session listing and revocation            | ✅  | ✅                                    | ✅                       | ✅                       |
+| Account recovery (email bootstrap)        | ✅  | ✅                                    | ✅                       | ✅                       |
+| Full trusted-device recovery              | 🔜  | 🔜                                    | 🔜                       | 🔜                       |
+| Attachments (client-side encrypted)       | ✅  | ⚠️ migration in progress              | ⚠️ migration in progress | ⚠️ migration in progress |
+| Local SQLite history cache                | ❌  | ✅                                    | ✅                       | ✅                       |
+| Push notifications                        | ❌  | ⚠️ code complete, needs relay secrets | ❌                       | ❌                       |
+| Disclosure-based report flow              | ✅  | ✅                                    | ✅                       | ✅                       |
+| Passkey sign-in                           | 📋  | 📋                                    | 📋                       | 📋                       |
+| Encrypted backup / export / import        | 📋  | 📋                                    | 📋                       | 📋                       |
+| Self-serve invite validation              | 📋  | 📋                                    | ❌                       | ❌                       |
+| Magic-link self-serve resend              | 📋  | 📋                                    | ❌                       | ❌                       |
+| Native desktop shell                      | ❌  | ❌                                    | ✅                       | ✅                       |
 
 ## Posted Builds
 
-| Surface | Status | Build artifact |
-| ------- | ------ | -------------- |
-| Web | Always current (deployed on merge) | Browser — no install |
-| Android | Primary beta client | `.apk` via GitHub Releases |
-| Windows | Beta client | `.exe` / `.msi` via GitHub Releases |
-| Ubuntu | Beta client | `.deb` / AppImage via GitHub Releases |
-| iPhone | Deferred | — |
-| macOS | Deferred | — |
+| Surface | Status                             | Build artifact                        |
+| ------- | ---------------------------------- | ------------------------------------- |
+| Web     | Always current (deployed on merge) | Browser — no install                  |
+| Android | Primary beta client                | `.apk` via GitHub Releases            |
+| Windows | Beta client                        | `.exe` / `.msi` via GitHub Releases   |
+| Ubuntu  | Beta client                        | `.deb` / AppImage via GitHub Releases |
+| iPhone  | Deferred                           | —                                     |
+| macOS   | Deferred                           | —                                     |
 
 Current release versions are listed on the [download page](https://emberchamber.com/download) and the [GitHub Releases](https://github.com/jhwodchuck/EmberChamber/releases) feed.
 

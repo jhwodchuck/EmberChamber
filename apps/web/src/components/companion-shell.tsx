@@ -1,13 +1,32 @@
 "use client";
 
 import type { CipherEnvelope } from "@emberchamber/protocol";
-import { Compass, LogOut, MessageSquare, PlusSquare, Search, Settings, ShieldCheck } from "lucide-react";
+import {
+  Compass,
+  LogOut,
+  MessageSquare,
+  PlusSquare,
+  Search,
+  Settings,
+  ShieldCheck,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { createContext, startTransition, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  startTransition,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { clsx } from "clsx";
 import { Avatar } from "@/components/avatar";
-import { conversationDefaultTitle, conversationTypeLabel } from "@/lib/conversation-labels";
+import {
+  conversationDefaultTitle,
+  conversationTypeLabel,
+} from "@/lib/conversation-labels";
 import {
   createRelayMailboxWebSocket,
   ensureRelayAccessToken,
@@ -63,7 +82,9 @@ type MailboxLiveEvent =
       envelope: CipherEnvelope;
     };
 
-const CompanionShellContext = createContext<CompanionShellContextValue | null>(null);
+const CompanionShellContext = createContext<CompanionShellContextValue | null>(
+  null,
+);
 
 const primaryLinks = [
   { href: "/app", label: "Overview", icon: Compass },
@@ -101,8 +122,12 @@ export function CompanionShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [hasSession, setHasSession] = useState<boolean | null>(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const [conversations, setConversations] = useState<CompanionShellContextValue["conversations"]>([]);
-  const [conversationsState, setConversationsState] = useState<LoadState>({ status: "idle" });
+  const [conversations, setConversations] = useState<
+    CompanionShellContextValue["conversations"]
+  >([]);
+  const [conversationsState, setConversationsState] = useState<LoadState>({
+    status: "idle",
+  });
   const [isConnected, setIsConnected] = useState(false);
   const [mailboxRevision, setMailboxRevision] = useState(0);
   const mailboxReconnectTimerRef = useRef<number | null>(null);
@@ -132,7 +157,9 @@ export function CompanionShell({ children }: { children: ReactNode }) {
       }
 
       const nextConversations = await relayConversationApi.list();
-      const previews = await getConversationPreviews(nextConversations.map((conversation) => conversation.id));
+      const previews = await getConversationPreviews(
+        nextConversations.map((conversation) => conversation.id),
+      );
 
       startTransition(() => {
         setConversations(
@@ -149,7 +176,10 @@ export function CompanionShell({ children }: { children: ReactNode }) {
                       ? "room"
                       : "group",
               name: conversation.title,
-              href: conversationHref({ id: conversation.id, kind: conversation.kind }),
+              href: conversationHref({
+                id: conversation.id,
+                kind: conversation.kind,
+              }),
               avatarUrl: null,
               updatedAt: conversation.lastMessageAt ?? conversation.updatedAt,
               unreadCount: 0,
@@ -166,7 +196,10 @@ export function CompanionShell({ children }: { children: ReactNode }) {
     } catch (error) {
       setConversationsState({
         status: "error",
-        message: error instanceof Error ? error.message : "Unable to load relay conversations.",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Unable to load relay conversations.",
       });
     }
   }
@@ -331,26 +364,42 @@ export function CompanionShell({ children }: { children: ReactNode }) {
             Confirm the email link before using the web app.
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-[var(--text-secondary)]">
-            The browser covers onboarding, messaging, invite review, search, and settings. Confirm
-            the email link to continue.
+            The browser covers onboarding, messaging, invite review, search, and
+            settings. Confirm the email link to continue.
           </p>
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
-            <Link href="/login" className="card transition-colors hover:border-brand-500">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">Request Magic Link</p>
+            <Link
+              href="/login"
+              className="card transition-colors hover:border-brand-500"
+            >
+              <p className="text-sm font-semibold text-[var(--text-primary)]">
+                Request Magic Link
+              </p>
               <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
                 Sign in from the private inbox that already has beta access.
               </p>
             </Link>
-            <Link href="/register" className="card transition-colors hover:border-brand-500">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">Join the Beta</p>
+            <Link
+              href="/register"
+              className="card transition-colors hover:border-brand-500"
+            >
+              <p className="text-sm font-semibold text-[var(--text-primary)]">
+                Join the Beta
+              </p>
               <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
                 Use invite-only onboarding for a new beta account.
               </p>
             </Link>
-            <Link href="/support" className="card transition-colors hover:border-brand-500">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">Get Support</p>
+            <Link
+              href="/support"
+              className="card transition-colors hover:border-brand-500"
+            >
+              <p className="text-sm font-semibold text-[var(--text-primary)]">
+                Get Support
+              </p>
               <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                Open the support guide if the inbox or redirect flow looks wrong.
+                Open the support guide if the inbox or redirect flow looks
+                wrong.
               </p>
             </Link>
           </div>
@@ -365,7 +414,9 @@ export function CompanionShell({ children }: { children: ReactNode }) {
         <header className="border-b border-[var(--border)] bg-[color:var(--bg-overlay)]/85 px-6 py-4 backdrop-blur-xl">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-600">Web Workspace</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-600">
+                Web Workspace
+              </p>
               <h1 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
                 EmberChamber web app
               </h1>
@@ -380,13 +431,19 @@ export function CompanionShell({ children }: { children: ReactNode }) {
                     : "border-amber-200 bg-amber-50 text-amber-700",
                 )}
                 aria-live="polite"
-                aria-label={isConnected ? "Relay link: live" : "Relay link: reconnecting"}
+                aria-label={
+                  isConnected ? "Relay link: live" : "Relay link: reconnecting"
+                }
               >
                 {isConnected ? "Live relay link" : "Reconnecting"}
               </div>
               <div className="hidden text-right sm:block">
-                <p className="text-sm font-medium text-[var(--text-primary)]">{contextValue.userName}</p>
-                <p className="text-xs text-[var(--text-secondary)]">Signed in relay session</p>
+                <p className="text-sm font-medium text-[var(--text-primary)]">
+                  {contextValue.userName}
+                </p>
+                <p className="text-xs text-[var(--text-secondary)]">
+                  Signed in relay session
+                </p>
               </div>
               <button
                 type="button"
@@ -420,7 +477,9 @@ export function CompanionShell({ children }: { children: ReactNode }) {
                 {primaryLinks.map((item) => {
                   const Icon = item.icon;
                   const isActive =
-                    pathname === item.href || (item.href !== "/app" && pathname.startsWith(`${item.href}/`));
+                    pathname === item.href ||
+                    (item.href !== "/app" &&
+                      pathname.startsWith(`${item.href}/`));
 
                   return (
                     <Link
@@ -480,21 +539,29 @@ export function CompanionShell({ children }: { children: ReactNode }) {
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">
                   Recent Conversations
                 </p>
-                <button type="button" onClick={() => void refreshShellData()} className="text-xs text-brand-600">
+                <button
+                  type="button"
+                  onClick={() => void refreshShellData()}
+                  className="text-xs text-brand-600"
+                >
                   Refresh
                 </button>
               </div>
 
               <div className="mt-4 space-y-2">
                 {conversationsState.status === "loading" ? (
-                  <p className="text-sm text-[var(--text-secondary)]">Syncing relay conversations…</p>
+                  <p className="text-sm text-[var(--text-secondary)]">
+                    Syncing relay conversations…
+                  </p>
                 ) : conversationsState.status === "error" ? (
                   <p className="text-sm text-[var(--text-secondary)]">
-                    {conversationsState.message ?? "Unable to load relay conversations."}
+                    {conversationsState.message ??
+                      "Unable to load relay conversations."}
                   </p>
                 ) : conversations.length === 0 ? (
                   <p className="text-sm text-[var(--text-secondary)]">
-                    No conversations yet. Start a DM, create a Group, or review an Invite.
+                    No conversations yet. Start a DM, create a Group, or review
+                    an Invite.
                   </p>
                 ) : (
                   conversations.slice(0, 6).map((conversation) => (
@@ -505,14 +572,16 @@ export function CompanionShell({ children }: { children: ReactNode }) {
                     >
                       <div className="flex items-center justify-between gap-3">
                         <p className="truncate text-sm font-medium text-[var(--text-primary)]">
-                          {conversation.name ?? conversationDefaultTitle(conversation.type)}
+                          {conversation.name ??
+                            conversationDefaultTitle(conversation.type)}
                         </p>
                         <span className="text-[11px] uppercase tracking-[0.14em] text-[var(--text-secondary)]">
                           {conversationTypeLabel(conversation.type)}
                         </span>
                       </div>
                       <p className="mt-1 truncate text-xs text-[var(--text-secondary)]">
-                        {conversation.lastMessage?.content ?? "No local message preview yet"}
+                        {conversation.lastMessage?.content ??
+                          "No local message preview yet"}
                       </p>
                     </Link>
                   ))

@@ -46,7 +46,8 @@ export function InvitesScreen({
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Join a group</Text>
         <Text style={styles.sectionBody}>
-          Invite-only access stays intact, but the act of joining should be quick and quiet.
+          Invite-only access stays intact, but the act of joining should be
+          quick and quiet.
         </Text>
 
         <TextInput
@@ -76,7 +77,9 @@ export function InvitesScreen({
             style={[
               styles.primaryButton,
               styles.buttonRowButton,
-              isAcceptingInvite || !inviteInput.trim() ? styles.primaryButtonDisabled : null,
+              isAcceptingInvite || !inviteInput.trim()
+                ? styles.primaryButtonDisabled
+                : null,
             ]}
             onPress={onAcceptInvite}
             disabled={isAcceptingInvite || !inviteInput.trim()}
@@ -87,18 +90,22 @@ export function InvitesScreen({
           </Pressable>
         </View>
 
-        {invitePreviewError ? <Text style={styles.errorText}>{invitePreviewError}</Text> : null}
+        {invitePreviewError ? (
+          <Text style={styles.errorText}>{invitePreviewError}</Text>
+        ) : null}
 
         {invitePreview ? (
           <View style={styles.infoCard}>
             <Text style={styles.infoTitle}>{invitePreview.group.title}</Text>
             <Text style={styles.infoBody}>
               Invited by {invitePreview.invite.inviterDisplayName}. Members{" "}
-              {invitePreview.group.memberCount}/{invitePreview.group.memberCap}. Status{" "}
-              {invitePreview.invite.status}.
+              {invitePreview.group.memberCount}/{invitePreview.group.memberCap}.
+              Status {invitePreview.invite.status}.
             </Text>
             {invitePreview.group.joinRuleText ? (
-              <Text style={styles.helper}>{invitePreview.group.joinRuleText}</Text>
+              <Text style={styles.helper}>
+                {invitePreview.group.joinRuleText}
+              </Text>
             ) : null}
           </View>
         ) : null}
@@ -107,7 +114,8 @@ export function InvitesScreen({
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Current chat list</Text>
         <Text style={styles.sectionBody}>
-          This phone currently sees {groupCount} {groupCount === 1 ? "circle" : "circles"}.
+          This phone currently sees {groupCount}{" "}
+          {groupCount === 1 ? "circle" : "circles"}.
         </Text>
         <Pressable style={styles.secondaryButton} onPress={onOpenChats}>
           <Text style={styles.secondaryButtonLabel}>Open chats</Text>

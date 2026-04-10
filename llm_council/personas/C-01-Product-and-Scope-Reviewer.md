@@ -70,6 +70,7 @@ For every relevant changed file, ask:
 4. Would a reader, tester, contributor, or future AI coder come away with the wrong product model?
 
 Focus especially on:
+
 - homepage and marketing copy
 - onboarding and download copy
 - README product framing

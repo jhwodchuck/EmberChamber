@@ -3,7 +3,11 @@ export type DeviceId = string;
 export type ConversationId = string;
 export type SessionId = string;
 export type GroupEpoch = number;
-export type ConversationKind = "direct_message" | "group" | "community" | "room";
+export type ConversationKind =
+  | "direct_message"
+  | "group"
+  | "community"
+  | "room";
 export type ContentClass = "image" | "video" | "audio" | "file";
 export type RetentionMode = "private_vault" | "ephemeral";
 export type ProtectionProfile = "sensitive_media" | "standard";

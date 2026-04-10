@@ -20,10 +20,7 @@ import type { ContextMenuAction } from "../components/MessageContextMenu";
 import { styles } from "../styles";
 import { StatusCard } from "../components/StatusCard";
 import type { DeviceLinkStatus } from "@emberchamber/protocol";
-import {
-  ChatListScreen,
-  type ChatListItem,
-} from "./ChatListScreen";
+import { ChatListScreen, type ChatListItem } from "./ChatListScreen";
 import { ConversationScreen } from "./ConversationScreen";
 import { InvitesScreen } from "./InvitesScreen";
 import { SettingsScreen } from "./SettingsScreen";
@@ -84,10 +81,15 @@ export type MainScreenProps = {
   onPickPhoto: () => void;
   onTakePhoto: () => void;
   onPickFile: () => void;
-  onPickLocation: (choice: import("../components/LocationPickerSheet").LocationChoice) => void;
+  onPickLocation: (
+    choice: import("../components/LocationPickerSheet").LocationChoice,
+  ) => void;
   onSendRawText: (text: string) => void;
   onSendMessage: () => void;
-  onUpdatePrivacy: <K extends keyof PrivacyDefaults>(key: K, value: PrivacyDefaults[K]) => void;
+  onUpdatePrivacy: <K extends keyof PrivacyDefaults>(
+    key: K,
+    value: PrivacyDefaults[K],
+  ) => void;
   onImageError: (messageId: string) => void;
   editingMessageId: string | null;
   onCancelEdit: () => void;
@@ -112,7 +114,10 @@ export type MainScreenProps = {
   initialShellState: PersistedMainShellState;
   onPersistShellState: (state: PersistedMainShellState) => void;
   restoredConversationAnchorId: string | null;
-  onPersistConversationAnchor: (conversationId: string, messageId: string | null) => void;
+  onPersistConversationAnchor: (
+    conversationId: string,
+    messageId: string | null,
+  ) => void;
 };
 
 export function MainScreen(props: MainScreenProps) {
@@ -202,8 +207,12 @@ export function MainScreen(props: MainScreenProps) {
 
   const { width } = useWindowDimensions();
   const isWideChatsLayout = width >= 980;
-  const [activeTab, setActiveTab] = useState<MainTab>(initialShellState.activeTab);
-  const [chatView, setChatView] = useState<MainChatView>(initialShellState.chatView);
+  const [activeTab, setActiveTab] = useState<MainTab>(
+    initialShellState.activeTab,
+  );
+  const [chatView, setChatView] = useState<MainChatView>(
+    initialShellState.chatView,
+  );
 
   // On narrow layouts the tab bar is a flex sibling of appBody. When Android's
   // resize mode shrinks the window for the keyboard, the tab bar's fixed height
@@ -214,7 +223,9 @@ export function MainScreen(props: MainScreenProps) {
     activeTab === "chats" &&
     chatView === "conversation" &&
     !!selectedGroup;
-  const [chatFilter, setChatFilter] = useState<ChatListFilter>(initialShellState.chatFilter);
+  const [chatFilter, setChatFilter] = useState<ChatListFilter>(
+    initialShellState.chatFilter,
+  );
   const [chatSearch, setChatSearch] = useState("");
 
   useEffect(() => {
@@ -247,14 +258,13 @@ export function MainScreen(props: MainScreenProps) {
       .map((group) => ({
         group,
         latestMessage: conversationPreviews[group.id] ?? null,
-        preference:
-          conversationPreferences[group.id] ?? {
-            conversationId: group.id,
-            isArchived: false,
-            isPinned: false,
-            isMuted: false,
-            lastReadAt: null,
-          },
+        preference: conversationPreferences[group.id] ?? {
+          conversationId: group.id,
+          isArchived: false,
+          isPinned: false,
+          isMuted: false,
+          lastReadAt: null,
+        },
         unreadCount: unreadCounts[group.id] ?? 0,
       }))
       .filter(({ group, preference, unreadCount }) => {
@@ -285,11 +295,20 @@ export function MainScreen(props: MainScreenProps) {
           return left.preference.isPinned ? -1 : 1;
         }
 
-        const leftTimestamp = left.latestMessage?.createdAt ?? left.group.updatedAt;
-        const rightTimestamp = right.latestMessage?.createdAt ?? right.group.updatedAt;
+        const leftTimestamp =
+          left.latestMessage?.createdAt ?? left.group.updatedAt;
+        const rightTimestamp =
+          right.latestMessage?.createdAt ?? right.group.updatedAt;
         return rightTimestamp.localeCompare(leftTimestamp);
       });
-  }, [chatFilter, chatSearch, conversationPreferences, conversationPreviews, groups, unreadCounts]);
+  }, [
+    chatFilter,
+    chatSearch,
+    conversationPreferences,
+    conversationPreviews,
+    groups,
+    unreadCounts,
+  ]);
 
   function openConversation(conversationId: string) {
     setSelectedConversationId(conversationId);
@@ -360,8 +379,8 @@ export function MainScreen(props: MainScreenProps) {
     <View style={styles.chatWorkspaceEmptyPane}>
       <Text style={styles.chatWorkspaceEmptyTitle}>Pick a circle</Text>
       <Text style={styles.chatWorkspaceEmptyBody}>
-        The list stays visible here on larger screens, so the conversation pane can hold your
-        place instead of replacing the inbox.
+        The list stays visible here on larger screens, so the conversation pane
+        can hold your place instead of replacing the inbox.
       </Text>
     </View>
   );
@@ -435,11 +454,13 @@ export function MainScreen(props: MainScreenProps) {
 
       {!isNarrowConversation ? (
         <View style={styles.appTabBar}>
-          {([
-            ["chats", "Chats"],
-            ["invites", "Invites"],
-            ["settings", "Settings"],
-          ] as const).map(([tab, label]) => (
+          {(
+            [
+              ["chats", "Chats"],
+              ["invites", "Invites"],
+              ["settings", "Settings"],
+            ] as const
+          ).map(([tab, label]) => (
             <Pressable
               key={tab}
               onPress={() => setActiveTab(tab)}

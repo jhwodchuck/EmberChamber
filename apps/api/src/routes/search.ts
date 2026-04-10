@@ -40,7 +40,7 @@ router.get("/", async (req: AuthRequest, res: Response, next) => {
          LIMIT $${params.conversationId ? 4 : 3}`,
         params.conversationId
           ? [req.userId, params.q, params.conversationId, params.limit]
-          : [req.userId, params.q, params.limit]
+          : [req.userId, params.q, params.limit],
       );
       results.messages = messages;
     }
@@ -57,7 +57,7 @@ router.get("/", async (req: AuthRequest, res: Response, next) => {
                @@ plainto_tsquery('english', $2)
          ORDER BY c.member_count DESC
          LIMIT $3`,
-        [req.userId, params.q, params.limit]
+        [req.userId, params.q, params.limit],
       );
       results.channels = channels;
     }
@@ -75,7 +75,7 @@ router.get("/", async (req: AuthRequest, res: Response, next) => {
                @@ plainto_tsquery('english', $2)
          ORDER BY u.username
          LIMIT $3`,
-        [req.userId, params.q, params.limit]
+        [req.userId, params.q, params.limit],
       );
       results.users = users;
     }

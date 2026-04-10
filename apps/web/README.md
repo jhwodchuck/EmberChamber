@@ -192,31 +192,31 @@ The CI workflow uploads screenshots as a GitHub Actions artifact:
 
 ### What is production-grade for beta
 
-| Area | Status | Notes |
-| --- | --- | --- |
-| HTTP security headers | ✅ Live | CSP, X-Frame-Options, Referrer-Policy, X-Content-Type-Options, Permissions-Policy, COOP all set in `next.config.js` |
-| Image remotePatterns | ✅ Hardened | Narrowed from wildcard `**` to relay origin + localhost only |
-| Auth continuation safety | ✅ Live | `normalizeAuthContinuationPath` rejects all non `/app/*` and `/invite/*` paths; prevents open redirects |
-| Relay session storage | ⚠️ Known risk | Access + refresh tokens stored in `localStorage`; mitigated by relay-side revocation; `httpOnly` cookie migration deferred |
-| Relay fetch timeout | ✅ Live | All relay requests time out at 30 s via `AbortController` |
-| Token refresh serialization | ✅ Live | Concurrent refresh calls are de-duplicated to a single in-flight promise |
-| Accessibility baseline | ✅ Improved | Skip link, semantic landmarks, ARIA roles on tabs, labelled search input, aria-live on relay status badge |
-| Content Security Policy | ✅ Live | `unsafe-inline` required for Next.js hydration; nonce-based strict CSP is deferred |
-| CI lint coverage | ✅ Live | `npm run lint` now runs in CI alongside type-check and build |
-| Deploy smoke tests | ✅ Live | Multi-route HTTP smoke test runs after every production deploy |
-| E2E coverage | ✅ Live | New-user bootstrap flow + invite continuation covered by Playwright |
+| Area                        | Status        | Notes                                                                                                                      |
+| --------------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| HTTP security headers       | ✅ Live       | CSP, X-Frame-Options, Referrer-Policy, X-Content-Type-Options, Permissions-Policy, COOP all set in `next.config.js`        |
+| Image remotePatterns        | ✅ Hardened   | Narrowed from wildcard `**` to relay origin + localhost only                                                               |
+| Auth continuation safety    | ✅ Live       | `normalizeAuthContinuationPath` rejects all non `/app/*` and `/invite/*` paths; prevents open redirects                    |
+| Relay session storage       | ⚠️ Known risk | Access + refresh tokens stored in `localStorage`; mitigated by relay-side revocation; `httpOnly` cookie migration deferred |
+| Relay fetch timeout         | ✅ Live       | All relay requests time out at 30 s via `AbortController`                                                                  |
+| Token refresh serialization | ✅ Live       | Concurrent refresh calls are de-duplicated to a single in-flight promise                                                   |
+| Accessibility baseline      | ✅ Improved   | Skip link, semantic landmarks, ARIA roles on tabs, labelled search input, aria-live on relay status badge                  |
+| Content Security Policy     | ✅ Live       | `unsafe-inline` required for Next.js hydration; nonce-based strict CSP is deferred                                         |
+| CI lint coverage            | ✅ Live       | `npm run lint` now runs in CI alongside type-check and build                                                               |
+| Deploy smoke tests          | ✅ Live       | Multi-route HTTP smoke test runs after every production deploy                                                             |
+| E2E coverage                | ✅ Live       | New-user bootstrap flow + invite continuation covered by Playwright                                                        |
 
 ### Known risks and intentional deferrals
 
-| Risk | Severity | Rationale for deferral |
-| --- | --- | --- |
-| `localStorage` session tokens | Medium | Moving to `httpOnly` cookies requires relay-side session cookie support; deferred until relay session contract is stable |
-| CSP nonce approach | Low-Medium | Full nonce-based CSP needs middleware and React context threading; deferred until Next.js 15 nonce support pattern is finalized for App Router |
-| Avatar `<img>` src from relay | Low | `Avatar` uses a raw `<img>` tag not Next.js Image; source values come from the relay API only, not user-controlled input; upgrade to `<Image>` deferred |
-| WebSocket reconnect backoff | Low | Fixed 1500 ms reconnect delay; exponential backoff deferred — acceptable for beta load levels |
-| HSTS header | Informational | HSTS is enforced by Vercel at the CDN layer, not in `next.config.js` `headers()`; no action needed |
-| Attachment encryption parity | Medium | Browser DM path encrypts before upload; native client paths still uneven; documented in architecture.md |
-| Passkey / recovery maturity | Medium | Relay endpoints exist (`/v1/passkeys`) but return 501; full user flow deferred |
+| Risk                          | Severity      | Rationale for deferral                                                                                                                                  |
+| ----------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `localStorage` session tokens | Medium        | Moving to `httpOnly` cookies requires relay-side session cookie support; deferred until relay session contract is stable                                |
+| CSP nonce approach            | Low-Medium    | Full nonce-based CSP needs middleware and React context threading; deferred until Next.js 15 nonce support pattern is finalized for App Router          |
+| Avatar `<img>` src from relay | Low           | `Avatar` uses a raw `<img>` tag not Next.js Image; source values come from the relay API only, not user-controlled input; upgrade to `<Image>` deferred |
+| WebSocket reconnect backoff   | Low           | Fixed 1500 ms reconnect delay; exponential backoff deferred — acceptable for beta load levels                                                           |
+| HSTS header                   | Informational | HSTS is enforced by Vercel at the CDN layer, not in `next.config.js` `headers()`; no action needed                                                      |
+| Attachment encryption parity  | Medium        | Browser DM path encrypts before upload; native client paths still uneven; documented in architecture.md                                                 |
+| Passkey / recovery maturity   | Medium        | Relay endpoints exist (`/v1/passkeys`) but return 501; full user flow deferred                                                                          |
 
 ## Documentation Links
 

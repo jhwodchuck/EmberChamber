@@ -7,8 +7,15 @@ const ATTACHMENT_CACHE_DIRECTORY = "managed-attachments";
 const EPHEMERAL_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const PRIVATE_VAULT_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-export type ManagedAttachment = NonNullable<NonNullable<GroupThreadMessage["attachment"]>>;
-export type AttachmentTransferState = "idle" | "downloading" | "decrypting" | "ready" | "failed";
+export type ManagedAttachment = NonNullable<
+  NonNullable<GroupThreadMessage["attachment"]>
+>;
+export type AttachmentTransferState =
+  | "idle"
+  | "downloading"
+  | "decrypting"
+  | "ready"
+  | "failed";
 
 export function getAttachmentActionLabel(attachment: ManagedAttachment) {
   if (attachment.contentClass === "audio") {
@@ -54,7 +61,9 @@ function getCacheTtlMsFromFile(file: ExpoFile) {
     : PRIVATE_VAULT_CACHE_TTL_MS;
 }
 
-export function describeAttachmentTransferState(status: AttachmentTransferState) {
+export function describeAttachmentTransferState(
+  status: AttachmentTransferState,
+) {
   if (status === "downloading") {
     return "Downloading attachment…";
   }
@@ -144,7 +153,9 @@ export async function resolveAttachmentUri(
     return localFile.contentUri || localFile.uri;
   }
 
-  await ExpoFile.downloadFileAsync(attachment.downloadUrl, localFile, { idempotent: true });
+  await ExpoFile.downloadFileAsync(attachment.downloadUrl, localFile, {
+    idempotent: true,
+  });
   onStatusChange?.("ready");
   return localFile.contentUri || localFile.uri;
 }

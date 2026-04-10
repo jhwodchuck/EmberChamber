@@ -19,7 +19,10 @@ const RegisterSchema = z.object({
     .string()
     .min(3)
     .max(64)
-    .regex(/^[a-zA-Z0-9_-]+$/, "Username can only contain letters, numbers, underscores, and hyphens"),
+    .regex(
+      /^[a-zA-Z0-9_-]+$/,
+      "Username can only contain letters, numbers, underscores, and hyphens",
+    ),
   displayName: z.string().min(1).max(128),
   email: z.string().email().optional(),
   password: z.string().min(8).max(128),
@@ -44,7 +47,7 @@ router.post("/register", async (req: Request, res: Response, next) => {
     // Check username availability
     const existingUser = await queryOne(
       "SELECT id FROM users WHERE username = $1",
-      [body.username.toLowerCase()]
+      [body.username.toLowerCase()],
     );
     if (existingUser) {
       throw createError("Username already taken", 409, "USERNAME_TAKEN");
@@ -53,7 +56,7 @@ router.post("/register", async (req: Request, res: Response, next) => {
     if (body.email) {
       const existingEmail = await queryOne(
         "SELECT id FROM users WHERE email = $1",
-        [body.email.toLowerCase()]
+        [body.email.toLowerCase()],
       );
       if (existingEmail) {
         throw createError("Email already registered", 409, "EMAIL_TAKEN");
@@ -78,21 +81,21 @@ router.post("/register", async (req: Request, res: Response, next) => {
           body.email?.toLowerCase() ?? null,
           passwordHash,
           body.displayName,
-        ]
+        ],
       );
       const user = userRows[0];
 
       // Create default privacy settings
       await client.query(
         "INSERT INTO user_privacy_settings (user_id) VALUES ($1)",
-        [user.id]
+        [user.id],
       );
 
       // Create device
       const { rows: deviceRows } = await client.query(
         `INSERT INTO devices (user_id, device_name, device_type)
          VALUES ($1, $2, $3) RETURNING id`,
-        [user.id, "Web Browser", "web"]
+        [user.id, "Web Browser", "web"],
       );
       const device = deviceRows[0];
 
@@ -112,7 +115,7 @@ router.post("/register", async (req: Request, res: Response, next) => {
           req.ip,
           req.headers["user-agent"] ?? null,
           expiresAt,
-        ]
+        ],
       );
 
       const accessToken = signAccessToken(user.id, sessionId);
@@ -155,7 +158,7 @@ router.post("/login", async (req: Request, res: Response, next) => {
     }>(
       `SELECT id, username, display_name, email, password_hash, is_active, is_suspended
        FROM users WHERE username = $1 AND deleted_at IS NULL`,
-      [body.username.toLowerCase()]
+      [body.username.toLowerCase()],
     );
 
     if (!user) {
@@ -184,7 +187,7 @@ router.post("/login", async (req: Request, res: Response, next) => {
       const { rows: deviceRows } = await client.query(
         `INSERT INTO devices (user_id, device_name, device_type)
          VALUES ($1, $2, $3) RETURNING id`,
-        [user.id, body.deviceName, body.deviceType]
+        [user.id, body.deviceName, body.deviceType],
       );
       const device = deviceRows[0];
 
@@ -203,13 +206,13 @@ router.post("/login", async (req: Request, res: Response, next) => {
           req.ip,
           req.headers["user-agent"] ?? null,
           expiresAt,
-        ]
+        ],
       );
 
       // Update last seen
       await client.query(
         "UPDATE users SET last_seen_at = NOW() WHERE id = $1",
-        [user.id]
+        [user.id],
       );
 
       return {
@@ -252,7 +255,7 @@ router.post("/refresh", async (req: Request, res: Response, next) => {
     const session = await queryOne<{ id: string; user_id: string }>(
       `SELECT id, user_id FROM sessions
        WHERE id = $1 AND revoked_at IS NULL AND expires_at > NOW()`,
-      [payload.sessionId]
+      [payload.sessionId],
     );
 
     if (!session) {
@@ -260,10 +263,9 @@ router.post("/refresh", async (req: Request, res: Response, next) => {
     }
 
     // Update session last active
-    await query(
-      "UPDATE sessions SET last_active_at = NOW() WHERE id = $1",
-      [session.id]
-    );
+    await query("UPDATE sessions SET last_active_at = NOW() WHERE id = $1", [
+      session.id,
+    ]);
 
     const accessToken = signAccessToken(session.user_id, session.id);
     res.json({ data: { accessToken } });
@@ -273,55 +275,62 @@ router.post("/refresh", async (req: Request, res: Response, next) => {
 });
 
 // POST /api/auth/logout
-router.post("/logout", authenticate, async (req: AuthRequest, res: Response, next) => {
-  try {
-    await query(
-      "UPDATE sessions SET revoked_at = NOW() WHERE id = $1",
-      [req.sessionId]
-    );
-    res.json({ data: { message: "Logged out successfully" } });
-  } catch (err) {
-    next(err);
-  }
-});
+router.post(
+  "/logout",
+  authenticate,
+  async (req: AuthRequest, res: Response, next) => {
+    try {
+      await query("UPDATE sessions SET revoked_at = NOW() WHERE id = $1", [
+        req.sessionId,
+      ]);
+      res.json({ data: { message: "Logged out successfully" } });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 // GET /api/auth/me
-router.get("/me", authenticate, async (req: AuthRequest, res: Response, next) => {
-  try {
-    const user = await queryOne<{
-      id: string;
-      username: string;
-      display_name: string;
-      email: string;
-      avatar_url: string;
-      bio: string;
-      created_at: string;
-      last_seen_at: string;
-    }>(
-      `SELECT id, username, display_name, email, avatar_url, bio, created_at, last_seen_at
+router.get(
+  "/me",
+  authenticate,
+  async (req: AuthRequest, res: Response, next) => {
+    try {
+      const user = await queryOne<{
+        id: string;
+        username: string;
+        display_name: string;
+        email: string;
+        avatar_url: string;
+        bio: string;
+        created_at: string;
+        last_seen_at: string;
+      }>(
+        `SELECT id, username, display_name, email, avatar_url, bio, created_at, last_seen_at
        FROM users WHERE id = $1 AND deleted_at IS NULL`,
-      [req.userId]
-    );
+        [req.userId],
+      );
 
-    if (!user) {
-      throw createError("User not found", 404);
+      if (!user) {
+        throw createError("User not found", 404);
+      }
+
+      res.json({
+        data: {
+          id: user.id,
+          username: user.username,
+          displayName: user.display_name,
+          email: user.email,
+          avatarUrl: user.avatar_url,
+          bio: user.bio,
+          createdAt: user.created_at,
+          lastSeenAt: user.last_seen_at,
+        },
+      });
+    } catch (err) {
+      next(err);
     }
-
-    res.json({
-      data: {
-        id: user.id,
-        username: user.username,
-        displayName: user.display_name,
-        email: user.email,
-        avatarUrl: user.avatar_url,
-        bio: user.bio,
-        createdAt: user.created_at,
-        lastSeenAt: user.last_seen_at,
-      },
-    });
-  } catch (err) {
-    next(err);
-  }
-});
+  },
+);
 
 export default router;

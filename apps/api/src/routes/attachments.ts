@@ -1,6 +1,10 @@
 import { Router, Response, Request, NextFunction } from "express";
 import multer from "multer";
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { v4 as uuidv4 } from "uuid";
 import path from "path";
@@ -11,7 +15,8 @@ import { createError } from "../middleware/errorHandler";
 const router = Router();
 router.use(authenticate);
 
-const MAX_FILE_SIZE = parseInt(process.env.MAX_FILE_SIZE_MB ?? "50") * 1024 * 1024;
+const MAX_FILE_SIZE =
+  parseInt(process.env.MAX_FILE_SIZE_MB ?? "50") * 1024 * 1024;
 
 const ALLOWED_MIME_TYPES = new Set([
   "image/jpeg",
@@ -63,7 +68,9 @@ router.post(
     upload.single("file")(req, res, (err) => {
       if (err instanceof multer.MulterError) {
         if (err.code === "LIMIT_FILE_SIZE") {
-          res.status(413).json({ error: `File too large. Max ${MAX_FILE_SIZE / 1024 / 1024}MB` });
+          res.status(413).json({
+            error: `File too large. Max ${MAX_FILE_SIZE / 1024 / 1024}MB`,
+          });
           return;
         }
         res.status(400).json({ error: err.message });
@@ -99,7 +106,7 @@ router.post(
             "uploader-id": req.userId!,
             "original-name": req.file.originalname,
           },
-        })
+        }),
       );
 
       const result = await query(
@@ -112,7 +119,7 @@ router.post(
           req.file.size,
           req.file.mimetype,
           storageKey,
-        ]
+        ],
       );
 
       const attachment = result[0];
@@ -121,7 +128,7 @@ router.post(
       const signedUrl = await getSignedUrl(
         s3,
         new GetObjectCommand({ Bucket: BUCKET, Key: storageKey }),
-        { expiresIn: 3600 }
+        { expiresIn: 3600 },
       );
 
       res.status(201).json({
@@ -133,7 +140,7 @@ router.post(
     } catch (err) {
       next(err);
     }
-  }
+  },
 );
 
 // GET /api/attachments/:id/url - get a fresh signed URL
@@ -149,7 +156,7 @@ router.get("/:id/url", async (req: AuthRequest, res: Response, next) => {
       mime_type: string;
     }>(
       "SELECT id, uploader_id, storage_key, file_name, mime_type FROM attachments WHERE id = $1",
-      [id]
+      [id],
     );
 
     if (!attachment.length) throw createError("Attachment not found", 404);
@@ -160,10 +167,16 @@ router.get("/:id/url", async (req: AuthRequest, res: Response, next) => {
     const signedUrl = await getSignedUrl(
       s3,
       new GetObjectCommand({ Bucket: BUCKET, Key: att.storage_key }),
-      { expiresIn: 3600 }
+      { expiresIn: 3600 },
     );
 
-    res.json({ data: { url: signedUrl, fileName: att.file_name, mimeType: att.mime_type } });
+    res.json({
+      data: {
+        url: signedUrl,
+        fileName: att.file_name,
+        mimeType: att.mime_type,
+      },
+    });
   } catch (err) {
     next(err);
   }

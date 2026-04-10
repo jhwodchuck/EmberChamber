@@ -3,7 +3,12 @@ import { Text, View } from "react-native";
 import type { FormMessage } from "../types";
 import { styles } from "../styles";
 
-export function StatusCard({ tone, title, body, children }: FormMessage & { children?: ReactNode }) {
+export function StatusCard({
+  tone,
+  title,
+  body,
+  children,
+}: FormMessage & { children?: ReactNode }) {
   return (
     <View
       style={[

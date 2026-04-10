@@ -146,9 +146,9 @@ npx wrangler d1 execute emberchamber-relay-prod-db --env production --remote \
 
 Android push is wired end-to-end in both the mobile client and the relay. The two production secrets that must be set before push delivers reliably are:
 
-| Secret                                | Purpose                                                                                                  |
-| ------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `EMBERCHAMBER_FCM_SERVICE_ACCOUNT_JSON` | Raw JSON service account key downloaded from Firebase Console for the `com.emberchamber.mobile` project. |
+| Secret                                  | Purpose                                                                                                         |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `EMBERCHAMBER_FCM_SERVICE_ACCOUNT_JSON` | Raw JSON service account key downloaded from Firebase Console for the `com.emberchamber.mobile` project.        |
 | `EMBERCHAMBER_PUSH_TOKEN_SECRET`        | A strong random secret used to encrypt push tokens stored in D1. Use a value distinct from the dev placeholder. |
 
 To set them on the production worker:

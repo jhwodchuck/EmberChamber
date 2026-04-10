@@ -1,9 +1,19 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { parseFormattedMessage, type FormattedBlockNode, type FormattedInlineNode } from "@emberchamber/shared";
+import {
+  parseFormattedMessage,
+  type FormattedBlockNode,
+  type FormattedInlineNode,
+} from "@emberchamber/shared";
 
-function SpoilerInline({ nodes, keyPrefix }: { nodes: FormattedInlineNode[]; keyPrefix: string }) {
+function SpoilerInline({
+  nodes,
+  keyPrefix,
+}: {
+  nodes: FormattedInlineNode[];
+  keyPrefix: string;
+}) {
   const [isRevealed, setIsRevealed] = useState(false);
 
   if (!isRevealed) {
@@ -25,7 +35,10 @@ function SpoilerInline({ nodes, keyPrefix }: { nodes: FormattedInlineNode[]; key
   );
 }
 
-function renderInline(nodes: FormattedInlineNode[], keyPrefix: string): ReactNode[] {
+function renderInline(
+  nodes: FormattedInlineNode[],
+  keyPrefix: string,
+): ReactNode[] {
   return nodes.map((node, index) => {
     const key = `${keyPrefix}-${index}`;
 
@@ -60,11 +73,19 @@ function renderInline(nodes: FormattedInlineNode[], keyPrefix: string): ReactNod
           </span>
         );
       case "spoiler":
-        return <SpoilerInline key={key} nodes={node.children} keyPrefix={key} />;
+        return (
+          <SpoilerInline key={key} nodes={node.children} keyPrefix={key} />
+        );
       case "bold":
-        return <strong key={key}>{renderInline(node.children, `${key}-bold`)}</strong>;
+        return (
+          <strong key={key}>
+            {renderInline(node.children, `${key}-bold`)}
+          </strong>
+        );
       case "italic":
-        return <em key={key}>{renderInline(node.children, `${key}-italic`)}</em>;
+        return (
+          <em key={key}>{renderInline(node.children, `${key}-italic`)}</em>
+        );
       case "strikethrough":
         return <s key={key}>{renderInline(node.children, `${key}-strike`)}</s>;
     }
@@ -75,7 +96,10 @@ function renderBlock(block: FormattedBlockNode, key: string) {
   switch (block.type) {
     case "paragraph":
       return (
-        <p key={key} className="whitespace-pre-wrap text-sm leading-6 text-[var(--text-primary)]">
+        <p
+          key={key}
+          className="whitespace-pre-wrap text-sm leading-6 text-[var(--text-primary)]"
+        >
           {renderInline(block.children, `${key}-inline`)}
         </p>
       );
@@ -85,7 +109,9 @@ function renderBlock(block: FormattedBlockNode, key: string) {
           key={key}
           className="border-l-2 border-brand-500/45 bg-[var(--bg-primary)] px-3 py-2 text-sm text-[var(--text-secondary)]"
         >
-          <p className="whitespace-pre-wrap leading-6">{renderInline(block.children, `${key}-quote`)}</p>
+          <p className="whitespace-pre-wrap leading-6">
+            {renderInline(block.children, `${key}-quote`)}
+          </p>
         </blockquote>
       );
     case "codeBlock":
@@ -100,11 +126,21 @@ function renderBlock(block: FormattedBlockNode, key: string) {
   }
 }
 
-export function FormattedMessage({ text, className = "mt-2 space-y-2" }: { text: string; className?: string }) {
+export function FormattedMessage({
+  text,
+  className = "mt-2 space-y-2",
+}: {
+  text: string;
+  className?: string;
+}) {
   const blocks = parseFormattedMessage(text);
   if (blocks.length === 0) {
     return null;
   }
 
-  return <div className={className}>{blocks.map((block, index) => renderBlock(block, `block-${index}`))}</div>;
+  return (
+    <div className={className}>
+      {blocks.map((block, index) => renderBlock(block, `block-${index}`))}
+    </div>
+  );
 }

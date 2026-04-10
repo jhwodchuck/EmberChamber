@@ -56,10 +56,7 @@ function getStartPaths(): StartPath[] {
       body: "Start with the trust model, current scope, and where your data actually lives.",
       accent: "from-brand-500/20 via-brand-500/5 to-transparent",
       tempo: "Best when you are evaluating",
-      highlights: [
-        "Trust model first",
-        "Download status stays visible",
-      ],
+      highlights: ["Trust model first", "Download status stays visible"],
       primary: {
         href: "/trust-and-safety",
         label: "How It Works",
@@ -158,10 +155,7 @@ function getStartPaths(): StartPath[] {
       body: "See what is posted for Android, Windows, and Ubuntu when you want an installed client.",
       accent: "from-sky-300/16 via-sky-200/4 to-transparent",
       tempo: "Best when you want an installed client",
-      highlights: [
-        "Android build status",
-        "Windows and Ubuntu releases",
-      ],
+      highlights: ["Android build status", "Windows and Ubuntu releases"],
       primary: {
         href: "/download",
         label: "View Launch Targets",
@@ -200,7 +194,9 @@ export function StartHereSummary() {
             href={path.primary.href}
             className="group relative block overflow-hidden rounded-[1.45rem] border border-white/8 bg-white/[0.03] px-4 py-4 transition-[border-color,background-color,transform] hover:-translate-y-0.5 hover:border-brand-500/25 hover:bg-white/[0.05]"
           >
-            <div className={`absolute inset-x-0 top-0 h-16 bg-gradient-to-r ${path.accent} opacity-80`} />
+            <div
+              className={`absolute inset-x-0 top-0 h-16 bg-gradient-to-r ${path.accent} opacity-80`}
+            />
             <div className="relative">
               <div className="flex items-start gap-3">
                 <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-2.5 text-brand-400">
@@ -211,10 +207,16 @@ export function StartHereSummary() {
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-400">
                       {path.eyebrow}
                     </p>
-                    <span className="metric-pill px-2.5 py-0.5 text-[10px]">{path.tempo}</span>
+                    <span className="metric-pill px-2.5 py-0.5 text-[10px]">
+                      {path.tempo}
+                    </span>
                   </div>
-                  <p className="mt-2 text-base font-semibold text-[var(--text-primary)]">{path.primary.label}</p>
-                  <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">{path.body}</p>
+                  <p className="mt-2 text-base font-semibold text-[var(--text-primary)]">
+                    {path.primary.label}
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
+                    {path.body}
+                  </p>
                 </div>
                 <ArrowRight
                   aria-hidden="true"
@@ -248,16 +250,22 @@ export function StartHereGuide() {
           title="Entry is coordinated in small beta waves right now"
           className="border-white/10 bg-white/[0.04]"
         >
-          Registration links are not being opened broadly on this deployment yet. You can still
-          review the trust model, check the available builds, and email support with your invite
-          code so the right path can be coordinated.
+          Registration links are not being opened broadly on this deployment
+          yet. You can still review the trust model, check the available builds,
+          and email support with your invite code so the right path can be
+          coordinated.
         </StatusCallout>
       ) : null}
 
       <div className="grid gap-5 xl:grid-cols-2">
         {startPaths.map((path) => (
-          <article key={`${path.eyebrow}-${path.title}`} className="card relative h-full overflow-hidden p-6">
-            <div className={`absolute inset-x-0 top-0 h-24 bg-gradient-to-r ${path.accent} opacity-90`} />
+          <article
+            key={`${path.eyebrow}-${path.title}`}
+            className="card relative h-full overflow-hidden p-6"
+          >
+            <div
+              className={`absolute inset-x-0 top-0 h-24 bg-gradient-to-r ${path.accent} opacity-90`}
+            />
             <div className="relative flex h-full flex-col">
               <div className="flex items-start justify-between gap-4">
                 <div className="rounded-[1.2rem] border border-white/10 bg-white/[0.05] p-3 text-brand-400">
@@ -271,7 +279,9 @@ export function StartHereGuide() {
               <h2 className="mt-4 text-balance text-2xl font-semibold text-[var(--text-primary)]">
                 {path.title}
               </h2>
-              <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">{path.body}</p>
+              <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">
+                {path.body}
+              </p>
 
               <div className="mt-5 flex flex-wrap gap-2">
                 <span className="metric-pill">{path.tempo}</span>
@@ -308,12 +318,19 @@ export function StartHereGuide() {
 
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             {startSteps.map((step) => (
-              <div key={step.number} className="rounded-[1.5rem] border border-white/8 bg-white/[0.035] p-5">
+              <div
+                key={step.number}
+                className="rounded-[1.5rem] border border-white/8 bg-white/[0.035] p-5"
+              >
                 <div className="flex h-11 w-11 items-center justify-center rounded-full border border-brand-500/25 bg-brand-500/10 text-sm font-semibold text-brand-300">
                   {step.number}
                 </div>
-                <h3 className="mt-4 text-base font-semibold text-[var(--text-primary)]">{step.title}</h3>
-                <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{step.body}</p>
+                <h3 className="mt-4 text-base font-semibold text-[var(--text-primary)]">
+                  {step.title}
+                </h3>
+                <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+                  {step.body}
+                </p>
               </div>
             ))}
           </div>

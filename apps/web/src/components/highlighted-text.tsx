@@ -26,7 +26,7 @@ export function HighlightedText({
           </mark>
         ) : (
           <span key={`${part}-${index}`}>{part}</span>
-        )
+        ),
       )}
     </>
   );

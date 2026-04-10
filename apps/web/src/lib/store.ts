@@ -1,6 +1,11 @@
 import { create } from "zustand";
 import type { AuthSession } from "@emberchamber/protocol";
-import { clearRelaySession, readRelaySession, relayAccountApi, storeRelaySession } from "@/lib/relay";
+import {
+  clearRelaySession,
+  readRelaySession,
+  relayAccountApi,
+  storeRelaySession,
+} from "@/lib/relay";
 
 interface User {
   id: string;

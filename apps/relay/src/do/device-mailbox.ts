@@ -52,7 +52,10 @@ export class DeviceMailboxDO extends DurableObject {
   }
 
   private async loadState(): Promise<DeviceMailboxState> {
-    return (await this.ctx.storage.get<DeviceMailboxState>(STATE_KEY)) ?? defaultState();
+    return (
+      (await this.ctx.storage.get<DeviceMailboxState>(STATE_KEY)) ??
+      defaultState()
+    );
   }
 
   private async saveState(state: DeviceMailboxState) {
@@ -81,11 +84,15 @@ export class DeviceMailboxDO extends DurableObject {
   private async scheduleNextAlarm(state: DeviceMailboxState) {
     const expirations = await Promise.all(
       state.queue.map(async (envelopeId) => {
-        const envelope = await this.ctx.storage.get<CipherEnvelope>(`${ENVELOPE_KEY_PREFIX}${envelopeId}`);
+        const envelope = await this.ctx.storage.get<CipherEnvelope>(
+          `${ENVELOPE_KEY_PREFIX}${envelopeId}`,
+        );
         return envelope ? Date.parse(envelope.expiresAt) : null;
       }),
     );
-    const next = expirations.filter((value): value is number => value !== null).sort((a, b) => a - b)[0];
+    const next = expirations
+      .filter((value): value is number => value !== null)
+      .sort((a, b) => a - b)[0];
 
     if (next) {
       await this.ctx.storage.setAlarm(next);
@@ -147,12 +154,18 @@ export class DeviceMailboxDO extends DurableObject {
     }
 
     if (request.method === "POST" && url.pathname === "/enqueue") {
-      const { envelope } = (await request.json()) as { envelope: CipherEnvelope };
+      const { envelope } = (await request.json()) as {
+        envelope: CipherEnvelope;
+      };
       const state = await this.loadState();
       await this.pruneExpired(state);
 
       if (state.queue.includes(envelope.envelopeId)) {
-        return json({ queued: true, envelopeId: envelope.envelopeId, duplicate: true });
+        return json({
+          queued: true,
+          envelopeId: envelope.envelopeId,
+          duplicate: true,
+        });
       }
 
       if (state.queue.length >= MAX_MAILBOX_BACKLOG) {
@@ -170,7 +183,10 @@ export class DeviceMailboxDO extends DurableObject {
 
       state.queue.push(envelope.envelopeId);
       state.stats.enqueued += 1;
-      await this.ctx.storage.put(`${ENVELOPE_KEY_PREFIX}${envelope.envelopeId}`, envelope);
+      await this.ctx.storage.put(
+        `${ENVELOPE_KEY_PREFIX}${envelope.envelopeId}`,
+        envelope,
+      );
       await this.saveState(state);
       await this.scheduleNextAlarm(state);
       this.broadcast({
@@ -183,13 +199,21 @@ export class DeviceMailboxDO extends DurableObject {
 
     if (request.method === "GET" && url.pathname === "/sync") {
       const after = url.searchParams.get("after");
-      const limit = Math.max(1, Math.min(100, Number(url.searchParams.get("limit") ?? "50")));
+      const limit = Math.max(
+        1,
+        Math.min(100, Number(url.searchParams.get("limit") ?? "50")),
+      );
       const state = await this.loadState();
       await this.pruneExpired(state);
       const startIndex = after ? state.queue.indexOf(after) + 1 : 0;
-      const selectedIds = state.queue.slice(Math.max(0, startIndex), Math.max(0, startIndex) + limit);
+      const selectedIds = state.queue.slice(
+        Math.max(0, startIndex),
+        Math.max(0, startIndex) + limit,
+      );
       const envelopes = await Promise.all(
-        selectedIds.map((id) => this.ctx.storage.get<CipherEnvelope>(`${ENVELOPE_KEY_PREFIX}${id}`))
+        selectedIds.map((id) =>
+          this.ctx.storage.get<CipherEnvelope>(`${ENVELOPE_KEY_PREFIX}${id}`),
+        ),
       );
 
       return json({
@@ -200,15 +224,23 @@ export class DeviceMailboxDO extends DurableObject {
     }
 
     if (request.method === "POST" && url.pathname === "/ack") {
-      const { envelopeIds } = (await request.json()) as { envelopeIds: string[] };
+      const { envelopeIds } = (await request.json()) as {
+        envelopeIds: string[];
+      };
       const state = await this.loadState();
       await this.pruneExpired(state);
       const existingIds = new Set(state.queue);
-      const acknowledgedIds = envelopeIds.filter((envelopeId) => existingIds.has(envelopeId));
-      state.queue = state.queue.filter((envelopeId) => !envelopeIds.includes(envelopeId));
+      const acknowledgedIds = envelopeIds.filter((envelopeId) =>
+        existingIds.has(envelopeId),
+      );
+      state.queue = state.queue.filter(
+        (envelopeId) => !envelopeIds.includes(envelopeId),
+      );
       state.stats.acknowledged += acknowledgedIds.length;
       await Promise.all(
-        acknowledgedIds.map((envelopeId) => this.ctx.storage.delete(`${ENVELOPE_KEY_PREFIX}${envelopeId}`)),
+        acknowledgedIds.map((envelopeId) =>
+          this.ctx.storage.delete(`${ENVELOPE_KEY_PREFIX}${envelopeId}`),
+        ),
       );
       await this.saveState(state);
       await this.scheduleNextAlarm(state);
