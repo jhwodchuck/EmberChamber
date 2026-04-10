@@ -316,7 +316,7 @@ jobs:
             "aab:$AAB_PATH"
             "track:$PLAY_TRACK"
             "release_status:$PLAY_RELEASE_STATUS"
-            "release_name:$VERSION_NAME"
+            "version_name:$VERSION_NAME"
             "in_app_update_priority:$PLAY_UPDATE_PRIORITY"
             "validate_only:$PLAY_VALIDATE_ONLY"
             "metadata_path:apps/mobile/fastlane/metadata/android"
