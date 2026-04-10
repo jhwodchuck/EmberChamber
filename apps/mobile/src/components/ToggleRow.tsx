@@ -19,7 +19,9 @@ export function ToggleRow({
         <Text style={styles.toggleDescription}>{description}</Text>
       </View>
       <View style={[styles.toggleTrack, value ? styles.toggleTrackOn : null]}>
-        <View style={[styles.toggleThumb, value ? styles.toggleThumbOn : null]} />
+        <View
+          style={[styles.toggleThumb, value ? styles.toggleThumbOn : null]}
+        />
       </View>
     </Pressable>
   );

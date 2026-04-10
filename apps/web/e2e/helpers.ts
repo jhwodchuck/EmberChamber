@@ -21,13 +21,23 @@ type ConversationInviteDescriptor = {
   inviteUrl: string;
 };
 
-export const webBaseUrl = process.env.CI_WEB_BASE_URL ?? "http://127.0.0.1:3000";
-export const relayBaseUrl = process.env.CI_RELAY_BASE_URL ?? "http://127.0.0.1:8787";
-export const inviteToken = process.env.CI_AUTH_INVITE_TOKEN ?? "dev-beta-invite";
+export const webBaseUrl =
+  process.env.CI_WEB_BASE_URL ?? "http://127.0.0.1:3000";
+export const relayBaseUrl =
+  process.env.CI_RELAY_BASE_URL ?? "http://127.0.0.1:8787";
+export const inviteToken =
+  process.env.CI_AUTH_INVITE_TOKEN ?? "dev-beta-invite";
 
-export async function saveCheckpoint(page: Page, screenshotDir: string, name: string) {
+export async function saveCheckpoint(
+  page: Page,
+  screenshotDir: string,
+  name: string,
+) {
   mkdirSync(screenshotDir, { recursive: true });
-  await page.screenshot({ path: `${screenshotDir}/${name}.png`, fullPage: true });
+  await page.screenshot({
+    path: `${screenshotDir}/${name}.png`,
+    fullPage: true,
+  });
 }
 
 export async function bootstrapAccount(
@@ -42,15 +52,20 @@ export async function bootstrapAccount(
   });
 
   if (!startBody.debugCompletionToken) {
-    throw new Error("Expected debugCompletionToken for CI flow. Ensure relay email provider is set to log.");
+    throw new Error(
+      "Expected debugCompletionToken for CI flow. Ensure relay email provider is set to log.",
+    );
   }
 
-  const completeResponse = await request.post(`${relayBaseUrl}/v1/auth/complete`, {
-    data: {
-      completionToken: startBody.debugCompletionToken,
-      deviceLabel,
+  const completeResponse = await request.post(
+    `${relayBaseUrl}/v1/auth/complete`,
+    {
+      data: {
+        completionToken: startBody.debugCompletionToken,
+        deviceLabel,
+      },
     },
-  });
+  );
 
   expect(completeResponse.ok()).toBeTruthy();
   return (await completeResponse.json()) as AuthSession;
@@ -87,7 +102,9 @@ export async function requestMagicLinkFromUi(
   },
 ): Promise<AuthStartResponse> {
   const authStartResponsePromise = page.waitForResponse(
-    (response) => response.url().includes("/v1/auth/start") && response.request().method() === "POST",
+    (response) =>
+      response.url().includes("/v1/auth/start") &&
+      response.request().method() === "POST",
   );
 
   await page.getByLabel("Private email").fill(input.email);
@@ -98,13 +115,17 @@ export async function requestMagicLinkFromUi(
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByLabel("Device label").fill(input.deviceLabel);
   await page
-    .getByRole("button", { name: input.mode === "join" ? "Start beta onboarding" : "Send email link" })
+    .getByRole("button", {
+      name: input.mode === "join" ? "Start beta onboarding" : "Send email link",
+    })
     .click();
 
   const authStartResponse = await authStartResponsePromise;
   const authStartBody = (await authStartResponse.json()) as AuthStartResponse;
   if (!authStartBody.debugCompletionToken) {
-    throw new Error("auth/start did not return debugCompletionToken. CI requires relay email provider=log.");
+    throw new Error(
+      "auth/start did not return debugCompletionToken. CI requires relay email provider=log.",
+    );
   }
 
   await expect(page.getByText("Inbox check required")).toBeVisible();
@@ -126,14 +147,18 @@ export async function createGroupInvite(
     },
   });
   expect(createGroupResponse.ok()).toBeTruthy();
-  const conversation = (await createGroupResponse.json()) as ConversationDescriptor;
+  const conversation =
+    (await createGroupResponse.json()) as ConversationDescriptor;
 
-  const createInviteResponse = await request.post(`${relayBaseUrl}/v1/conversations/${conversation.id}/invites`, {
-    headers: {
-      authorization: `Bearer ${session.accessToken}`,
+  const createInviteResponse = await request.post(
+    `${relayBaseUrl}/v1/conversations/${conversation.id}/invites`,
+    {
+      headers: {
+        authorization: `Bearer ${session.accessToken}`,
+      },
+      data: {},
     },
-    data: {},
-  });
+  );
   expect(createInviteResponse.ok()).toBeTruthy();
   return (await createInviteResponse.json()) as ConversationInviteDescriptor;
 }

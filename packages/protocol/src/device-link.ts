@@ -71,14 +71,31 @@ export interface DeviceLinkCompleteRequest {
   qrMode: DeviceLinkQrMode;
 }
 
-const localRelayHosts = new Set(["127.0.0.1", "localhost", "10.0.2.2", "tauri.localhost"]);
+const localRelayHosts = new Set([
+  "127.0.0.1",
+  "localhost",
+  "10.0.2.2",
+  "tauri.localhost",
+]);
 
 function textToBase64Url(value: string): string {
   if (typeof btoa === "function") {
-    return btoa(value).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+    return btoa(value)
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/g, "");
   }
 
-  const nodeBuffer = (globalThis as { Buffer?: { from(input: string, encoding?: string): { toString(encoding: string): string } } }).Buffer;
+  const nodeBuffer = (
+    globalThis as {
+      Buffer?: {
+        from(
+          input: string,
+          encoding?: string,
+        ): { toString(encoding: string): string };
+      };
+    }
+  ).Buffer;
   if (!nodeBuffer) {
     throw new Error("Base64 encoding is unavailable in this runtime.");
   }
@@ -89,11 +106,23 @@ function textToBase64Url(value: string): string {
 function textFromBase64Url(value: string): string {
   if (typeof atob === "function") {
     const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
-    const padding = normalized.length % 4 === 0 ? "" : "=".repeat(4 - (normalized.length % 4));
+    const padding =
+      normalized.length % 4 === 0
+        ? ""
+        : "=".repeat(4 - (normalized.length % 4));
     return atob(normalized + padding);
   }
 
-  const nodeBuffer = (globalThis as { Buffer?: { from(input: string, encoding?: string): { toString(encoding: string): string } } }).Buffer;
+  const nodeBuffer = (
+    globalThis as {
+      Buffer?: {
+        from(
+          input: string,
+          encoding?: string,
+        ): { toString(encoding: string): string };
+      };
+    }
+  ).Buffer;
   if (!nodeBuffer) {
     throw new Error("Base64 decoding is unavailable in this runtime.");
   }
@@ -139,13 +168,17 @@ export function createDeviceLinkToken() {
 
   if (cryptoObject?.getRandomValues) {
     const bytes = cryptoObject.getRandomValues(new Uint8Array(24));
-    return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
+    return Array.from(bytes, (value) =>
+      value.toString(16).padStart(2, "0"),
+    ).join("");
   }
 
   throw new Error("Secure token generation is unavailable in this runtime.");
 }
 
-export function encodeDeviceLinkQrPayload(input: Omit<DeviceLinkQrPayload, "version">) {
+export function encodeDeviceLinkQrPayload(
+  input: Omit<DeviceLinkQrPayload, "version">,
+) {
   const payload: DeviceLinkQrPayload = {
     version: 1,
     relayOrigin: normalizeRelayOrigin(input.relayOrigin),
@@ -166,14 +199,17 @@ export function parseDeviceLinkQrPayload(value: string): DeviceLinkQrPayload {
   const encoded = trimmed.startsWith(DEVICE_LINK_QR_PREFIX)
     ? trimmed.slice(DEVICE_LINK_QR_PREFIX.length)
     : trimmed;
-  const parsed = JSON.parse(textFromBase64Url(encoded)) as Partial<DeviceLinkQrPayload>;
+  const parsed = JSON.parse(
+    textFromBase64Url(encoded),
+  ) as Partial<DeviceLinkQrPayload>;
 
   if (parsed.version !== 1) {
     throw new Error("Unsupported device-link QR version.");
   }
 
   if (
-    (parsed.qrMode !== "source_display" && parsed.qrMode !== "target_display") ||
+    (parsed.qrMode !== "source_display" &&
+      parsed.qrMode !== "target_display") ||
     typeof parsed.linkToken !== "string" ||
     parsed.linkToken.length < 16 ||
     typeof parsed.relayOrigin !== "string"
@@ -186,7 +222,8 @@ export function parseDeviceLinkQrPayload(value: string): DeviceLinkQrPayload {
     relayOrigin: normalizeRelayOrigin(parsed.relayOrigin),
     qrMode: parsed.qrMode,
     linkToken: parsed.linkToken,
-    ...(typeof parsed.requesterLabel === "string" && parsed.requesterLabel.trim()
+    ...(typeof parsed.requesterLabel === "string" &&
+    parsed.requesterLabel.trim()
       ? { requesterLabel: parsed.requesterLabel.trim() }
       : {}),
   };

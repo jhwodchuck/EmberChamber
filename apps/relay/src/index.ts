@@ -41,7 +41,14 @@ import {
 } from "./lib/crypto";
 import { dbAll, dbFirst, dbRun } from "./lib/d1";
 import { sendFcmNotification } from "./lib/fcm";
-import { errorResponse, HttpError, json, preflightResponse, readJson, withCors } from "./lib/http";
+import {
+  errorResponse,
+  HttpError,
+  json,
+  preflightResponse,
+  readJson,
+  withCors,
+} from "./lib/http";
 import { signAccessToken, verifyAccessToken } from "./lib/tokens";
 
 export interface Env {
@@ -152,7 +159,9 @@ const communityRoomSchema = z.object({
   title: z.string().min(1).max(80),
   joinRuleText: z.string().min(1).max(500).optional(),
   sensitiveMediaDefault: z.boolean().default(false),
-  roomAccessPolicy: z.enum(["all_members", "restricted"]).default("all_members"),
+  roomAccessPolicy: z
+    .enum(["all_members", "restricted"])
+    .default("all_members"),
   memberAccountIds: z.array(z.string().uuid()).max(149).default([]),
 });
 
@@ -166,7 +175,7 @@ const messageBatchSchema = z.object({
         ciphertext: z.string().min(16),
         clientMessageId: z.string().min(8),
         attachmentIds: z.array(z.string()).default([]),
-      })
+      }),
     )
     .min(1)
     .max(200),
@@ -180,18 +189,37 @@ const attachmentTicketSchema = z
   .object({
     fileName: z.string().min(1).max(160),
     mimeType: z.string().min(1).max(120),
-    byteLength: z.number().int().positive().max(20 * 1024 * 1024).optional(),
+    byteLength: z
+      .number()
+      .int()
+      .positive()
+      .max(20 * 1024 * 1024)
+      .optional(),
     sha256B64: z.string().optional(),
     encryptionMode: z.enum(["none", "device_encrypted"]).default("none"),
-    ciphertextByteLength: z.number().int().positive().max(20 * 1024 * 1024).optional(),
+    ciphertextByteLength: z
+      .number()
+      .int()
+      .positive()
+      .max(20 * 1024 * 1024)
+      .optional(),
     ciphertextSha256B64: z.string().optional(),
-    plaintextByteLength: z.number().int().positive().max(20 * 1024 * 1024).optional(),
+    plaintextByteLength: z
+      .number()
+      .int()
+      .positive()
+      .max(20 * 1024 * 1024)
+      .optional(),
     plaintextSha256B64: z.string().optional(),
     conversationId: z.string().uuid().optional(),
     conversationEpoch: z.number().int().min(1).optional(),
     contentClass: z.enum(["image", "video", "audio", "file"]).default("image"),
-    retentionMode: z.enum(["private_vault", "ephemeral"]).default("private_vault"),
-    protectionProfile: z.enum(["sensitive_media", "standard"]).default("standard"),
+    retentionMode: z
+      .enum(["private_vault", "ephemeral"])
+      .default("private_vault"),
+    protectionProfile: z
+      .enum(["sensitive_media", "standard"])
+      .default("standard"),
     previewBlurHash: z.string().max(120).optional(),
     fileKeyB64: z.string().max(4096).optional(),
     fileIvB64: z.string().max(4096).optional(),
@@ -206,7 +234,10 @@ const attachmentTicketSchema = z
       });
     }
 
-    if (value.encryptionMode === "device_encrypted" && !value.plaintextByteLength) {
+    if (
+      value.encryptionMode === "device_encrypted" &&
+      !value.plaintextByteLength
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "Encrypted attachments need plaintextByteLength.",
@@ -264,7 +295,12 @@ const deviceLinkCompleteSchema = z.object({
 
 const conversationInviteSchema = z.object({
   maxUses: z.number().int().min(1).max(100).optional(),
-  expiresInHours: z.number().int().min(1).max(24 * 14).optional(),
+  expiresInHours: z
+    .number()
+    .int()
+    .min(1)
+    .max(24 * 14)
+    .optional(),
   note: z.string().min(1).max(240).optional(),
   scope: z.enum(["conversation", "room"]).default("conversation"),
   roomId: z.string().uuid().optional(),
@@ -283,7 +319,9 @@ const profileSchema = z.object({
 });
 
 const privacySettingsSchema = z.object({
-  notificationPreviewMode: z.enum(["discreet", "expanded", "none"]).default("discreet"),
+  notificationPreviewMode: z
+    .enum(["discreet", "expanded", "none"])
+    .default("discreet"),
   autoDownloadSensitiveMedia: z.boolean().default(false),
   allowSensitiveExport: z.boolean().default(false),
   secureAppSwitcher: z.boolean().default(true),
@@ -330,7 +368,12 @@ type LoadedConversation = {
 
 type RelayConversationKind = ConversationKind;
 
-async function enforceRateLimit(env: Env, key: string, limit: number, windowMs: number): Promise<void> {
+async function enforceRateLimit(
+  env: Env,
+  key: string,
+  limit: number,
+  windowMs: number,
+): Promise<void> {
   const id = env.RATE_LIMITER.idFromName(key);
   const stub = env.RATE_LIMITER.get(id);
   const response = await stub.fetch("https://do/check", {
@@ -361,7 +404,10 @@ async function requireAccessTokenSession(
   env: Env,
   clientMetadata?: ClientMetadata | null,
 ): Promise<AuthContext> {
-  const payload = await verifyAccessToken(token, env.EMBERCHAMBER_ACCESS_TOKEN_SECRET);
+  const payload = await verifyAccessToken(
+    token,
+    env.EMBERCHAMBER_ACCESS_TOKEN_SECRET,
+  );
   if (!payload) {
     throw new HttpError(401, "Invalid access token", "INVALID_ACCESS_TOKEN");
   }
@@ -378,7 +424,7 @@ async function requireAccessTokenSession(
     payload.sessionId,
     payload.sub,
     payload.deviceId,
-    new Date().toISOString()
+    new Date().toISOString(),
   );
 
   if (!session) {
@@ -398,14 +444,30 @@ async function requireAccessTokenSession(
 
 function parseClientMetadata(request: Request): ClientMetadata {
   return {
-    clientPlatform: readOptionalHeader(request, clientHeaderNames.clientPlatform, 24),
-    clientVersion: readOptionalHeader(request, clientHeaderNames.clientVersion, 32),
+    clientPlatform: readOptionalHeader(
+      request,
+      clientHeaderNames.clientPlatform,
+      24,
+    ),
+    clientVersion: readOptionalHeader(
+      request,
+      clientHeaderNames.clientVersion,
+      32,
+    ),
     clientBuild: readOptionalHeader(request, clientHeaderNames.clientBuild, 24),
-    deviceModel: readOptionalHeader(request, clientHeaderNames.deviceModel, 120),
+    deviceModel: readOptionalHeader(
+      request,
+      clientHeaderNames.deviceModel,
+      120,
+    ),
   };
 }
 
-function readOptionalHeader(request: Request, headerName: string, maxLength: number) {
+function readOptionalHeader(
+  request: Request,
+  headerName: string,
+  maxLength: number,
+) {
   const raw = request.headers.get(headerName)?.trim();
   if (!raw) {
     return null;
@@ -414,7 +476,11 @@ function readOptionalHeader(request: Request, headerName: string, maxLength: num
   return raw.slice(0, maxLength);
 }
 
-async function touchSession(env: Env, sessionId: string, clientMetadata: ClientMetadata) {
+async function touchSession(
+  env: Env,
+  sessionId: string,
+  clientMetadata: ClientMetadata,
+) {
   const now = new Date().toISOString();
   await dbRun(
     env.DB,
@@ -430,15 +496,18 @@ async function touchSession(env: Env, sessionId: string, clientMetadata: ClientM
     clientMetadata.clientPlatform,
     clientMetadata.clientVersion,
     clientMetadata.clientBuild,
-    clientMetadata.deviceModel
+    clientMetadata.deviceModel,
   );
 }
 
-async function isExistingAccount(env: Env, emailBlindIndex: string): Promise<boolean> {
+async function isExistingAccount(
+  env: Env,
+  emailBlindIndex: string,
+): Promise<boolean> {
   const row = await dbFirst<{ account_id: string }>(
     env.DB,
     "SELECT account_id FROM account_emails WHERE email_blind_index = ?1",
-    emailBlindIndex
+    emailBlindIndex,
   );
   return Boolean(row);
 }
@@ -447,7 +516,9 @@ async function hashInviteToken(token: string): Promise<string> {
   return sha256Hex(`invite:${token}`);
 }
 
-function normalizeConversationRole(role: string | null | undefined): "owner" | "admin" | "member" {
+function normalizeConversationRole(
+  role: string | null | undefined,
+): "owner" | "admin" | "member" {
   return role === "owner" || role === "admin" ? role : "member";
 }
 
@@ -468,13 +539,17 @@ function defaultConversationTitle(kind: RelayConversationKind): string {
   }
 }
 
-function conversationHistoryModeForKind(kind: RelayConversationKind): "device_encrypted" | "relay_hosted" {
-  return kind === "direct_message" || kind === "group" ? "device_encrypted" : "relay_hosted";
+function conversationHistoryModeForKind(
+  kind: RelayConversationKind,
+): "device_encrypted" | "relay_hosted" {
+  return kind === "direct_message" || kind === "group"
+    ? "device_encrypted"
+    : "relay_hosted";
 }
 
 function coerceConversationHistoryMode(
   mode: string | null | undefined,
-  kind: RelayConversationKind
+  kind: RelayConversationKind,
 ): "device_encrypted" | "relay_hosted" {
   if (mode === "device_encrypted" || mode === "relay_hosted") {
     return mode;
@@ -484,13 +559,15 @@ function coerceConversationHistoryMode(
 }
 
 function coerceRoomAccessPolicy(
-  policy: string | null | undefined
+  policy: string | null | undefined,
 ): RoomAccessPolicy {
   return policy === "restricted" ? "restricted" : "all_members";
 }
 
 function sqlPlaceholders(start: number, count: number): string {
-  return Array.from({ length: count }, (_, index) => `?${start + index}`).join(", ");
+  return Array.from({ length: count }, (_, index) => `?${start + index}`).join(
+    ", ",
+  );
 }
 
 function conversationCapabilities(input: {
@@ -499,15 +576,19 @@ function conversationCapabilities(input: {
   myRole: string;
   allowMemberInvites?: boolean;
 }) {
-  const historyMode = input.historyMode ?? conversationHistoryModeForKind(input.kind);
+  const historyMode =
+    input.historyMode ?? conversationHistoryModeForKind(input.kind);
   const organizer = isOrganizerRole(input.myRole);
-  const canManageMembers = ["group", "community"].includes(input.kind) && organizer;
-  const canManagePolicies = ["group", "community"].includes(input.kind) && organizer;
+  const canManageMembers =
+    ["group", "community"].includes(input.kind) && organizer;
+  const canManagePolicies =
+    ["group", "community"].includes(input.kind) && organizer;
   const canManageRooms = input.kind === "community" && organizer;
   const canGrantRoomAccess = input.kind === "community" && organizer;
   const canCreateInvites =
     (input.kind === "group" && organizer) ||
-    (input.kind === "community" && (organizer || Boolean(input.allowMemberInvites)));
+    (input.kind === "community" &&
+      (organizer || Boolean(input.allowMemberInvites)));
 
   return {
     relayHostedMessages: historyMode === "relay_hosted",
@@ -524,7 +605,7 @@ function conversationCapabilities(input: {
 async function updateConversationActivity(
   env: Env,
   conversationId: string,
-  input: { at: string; kind: string }
+  input: { at: string; kind: string },
 ) {
   await dbRun(
     env.DB,
@@ -535,7 +616,7 @@ async function updateConversationActivity(
       WHERE id = ?3`,
     input.at,
     input.kind,
-    conversationId
+    conversationId,
   );
 }
 
@@ -549,7 +630,11 @@ async function scheduleCleanup(env: Env, source: string) {
 
 function requirePushTokenSecret(env: Env): string {
   if (!env.EMBERCHAMBER_PUSH_TOKEN_SECRET) {
-    throw new HttpError(503, "Push registration is not configured on this relay.", "PUSH_NOT_CONFIGURED");
+    throw new HttpError(
+      503,
+      "Push registration is not configured on this relay.",
+      "PUSH_NOT_CONFIGURED",
+    );
   }
 
   return env.EMBERCHAMBER_PUSH_TOKEN_SECRET;
@@ -557,7 +642,7 @@ function requirePushTokenSecret(env: Env): string {
 
 async function queuePushWake(
   env: Env,
-  message: Omit<PushWakeMessage, "type" | "sentAt"> & { sentAt?: string }
+  message: Omit<PushWakeMessage, "type" | "sentAt"> & { sentAt?: string },
 ) {
   await env.PUSH_QUEUE.send({
     type: "push_wake",
@@ -568,7 +653,7 @@ async function queuePushWake(
 
 function buildPushWakeNotification(
   previewMode: string | null | undefined,
-  message: PushWakeMessage
+  message: PushWakeMessage,
 ): { title: string; body: string } {
   if (previewMode === "expanded") {
     if (message.reason === "relay_hosted_message") {
@@ -599,7 +684,10 @@ function buildPushWakeNotification(
   };
 }
 
-async function deliverPushWake(env: Env, message: PushWakeMessage): Promise<void> {
+async function deliverPushWake(
+  env: Env,
+  message: PushWakeMessage,
+): Promise<void> {
   if (!env.EMBERCHAMBER_FCM_SERVICE_ACCOUNT_JSON) {
     return;
   }
@@ -634,33 +722,46 @@ async function deliverPushWake(env: Env, message: PushWakeMessage): Promise<void
     WHERE dpt.device_id = ?1
       AND dpt.invalidated_at IS NULL
       AND d.revoked_at IS NULL`,
-    message.targetDeviceId
+    message.targetDeviceId,
   );
 
-  if (!registration || registration.platform !== "android" || registration.provider !== "fcm") {
+  if (
+    !registration ||
+    registration.platform !== "android" ||
+    registration.provider !== "fcm"
+  ) {
     return;
   }
 
   const now = new Date().toISOString();
-  const token = await decryptString(env.EMBERCHAMBER_PUSH_TOKEN_SECRET, registration.token_ciphertext);
-  const alert = buildPushWakeNotification(registration.notification_preview_mode, message);
-  const result = await sendFcmNotification(env.EMBERCHAMBER_FCM_SERVICE_ACCOUNT_JSON, {
-    token,
-    title: alert.title,
-    body: alert.body,
-    collapseKey: message.conversationId ?? `device-${message.targetDeviceId}`,
-    ttlSeconds: 120,
-    restrictedPackageName: registration.app_id ?? "com.emberchamber.mobile",
-    data: {
-      reason: message.reason,
-      conversationId: message.conversationId ?? "",
-      conversationTitle: message.conversationTitle ?? "",
-      senderDisplayName: message.senderDisplayName ?? "",
-      historyMode: message.historyMode ?? "",
-      messageKind: message.messageKind ?? "",
-      sentAt: message.sentAt,
+  const token = await decryptString(
+    env.EMBERCHAMBER_PUSH_TOKEN_SECRET,
+    registration.token_ciphertext,
+  );
+  const alert = buildPushWakeNotification(
+    registration.notification_preview_mode,
+    message,
+  );
+  const result = await sendFcmNotification(
+    env.EMBERCHAMBER_FCM_SERVICE_ACCOUNT_JSON,
+    {
+      token,
+      title: alert.title,
+      body: alert.body,
+      collapseKey: message.conversationId ?? `device-${message.targetDeviceId}`,
+      ttlSeconds: 120,
+      restrictedPackageName: registration.app_id ?? "com.emberchamber.mobile",
+      data: {
+        reason: message.reason,
+        conversationId: message.conversationId ?? "",
+        conversationTitle: message.conversationTitle ?? "",
+        senderDisplayName: message.senderDisplayName ?? "",
+        historyMode: message.historyMode ?? "",
+        messageKind: message.messageKind ?? "",
+        sentAt: message.sentAt,
+      },
     },
-  });
+  );
 
   if (result.ok) {
     await dbRun(
@@ -671,7 +772,7 @@ async function deliverPushWake(env: Env, message: PushWakeMessage): Promise<void
               last_push_error = NULL
         WHERE device_id = ?2`,
       now,
-      message.targetDeviceId
+      message.targetDeviceId,
     );
     return;
   }
@@ -686,7 +787,7 @@ async function deliverPushWake(env: Env, message: PushWakeMessage): Promise<void
         WHERE device_id = ?3`,
       now,
       `invalid_token:${result.status}`,
-      message.targetDeviceId
+      message.targetDeviceId,
     );
     return;
   }
@@ -699,7 +800,7 @@ async function deliverPushWake(env: Env, message: PushWakeMessage): Promise<void
       WHERE device_id = ?3`,
     now,
     `send_failed:${result.status}`,
-    message.targetDeviceId
+    message.targetDeviceId,
   );
 
   throw new Error(`FCM delivery failed (${result.status}): ${result.bodyText}`);
@@ -708,7 +809,7 @@ async function deliverPushWake(env: Env, message: PushWakeMessage): Promise<void
 async function loadAccessibleConversations(
   env: Env,
   accountId: string,
-  conversationId?: string
+  conversationId?: string,
 ): Promise<LoadedConversation[]> {
   const params: unknown[] = [accountId];
   const conversationFilter =
@@ -781,7 +882,7 @@ async function loadAccessibleConversations(
     WHERE cm.account_id = ?1
       AND cm.removed_at IS NULL${conversationFilter}
     ORDER BY COALESCE(c.last_message_at, c.updated_at, c.created_at) DESC`,
-    ...params
+    ...params,
   );
 
   if (rows.length === 0) {
@@ -808,10 +909,13 @@ async function loadAccessibleConversations(
      FROM conversation_members cm
      JOIN accounts a ON a.id = cm.account_id
     WHERE cm.conversation_id IN (${sqlPlaceholders(1, conversationIds.length)})`,
-    ...conversationIds
+    ...conversationIds,
   );
 
-  const membersByConversation = new Map<string, ConversationDetail["members"]>();
+  const membersByConversation = new Map<
+    string,
+    ConversationDetail["members"]
+  >();
   for (const member of memberRows) {
     const list = membersByConversation.get(member.conversation_id) ?? [];
     list.push({
@@ -887,7 +991,7 @@ async function loadAccessibleConversations(
         AND cm.removed_at IS NULL
       ORDER BY COALESCE(c.last_message_at, c.updated_at, c.created_at) DESC`,
       requestedConversation.id,
-      accountId
+      accountId,
     );
 
     if (roomRows.length > 0) {
@@ -901,7 +1005,7 @@ async function loadAccessibleConversations(
            FROM conversation_members
           WHERE conversation_id IN (${sqlPlaceholders(1, roomIds.length)})
             AND removed_at IS NULL`,
-        ...roomIds
+        ...roomIds,
       );
       const roomMemberAccountIds = new Map<string, string[]>();
       for (const member of roomMemberRows) {
@@ -914,7 +1018,10 @@ async function loadAccessibleConversations(
         requestedConversation.id,
         roomRows.map((row) => {
           const memberAccountIds = roomMemberAccountIds.get(row.id) ?? [];
-          const historyMode = coerceConversationHistoryMode(row.history_mode, row.kind);
+          const historyMode = coerceConversationHistoryMode(
+            row.history_mode,
+            row.kind,
+          );
           return {
             id: row.id,
             kind: row.kind,
@@ -925,10 +1032,19 @@ async function loadAccessibleConversations(
             memberAccountIds,
             memberCount: row.member_count,
             memberCap: row.member_cap ?? undefined,
-            sensitiveMediaDefault: row.sensitive_media_default === null ? undefined : Boolean(row.sensitive_media_default),
+            sensitiveMediaDefault:
+              row.sensitive_media_default === null
+                ? undefined
+                : Boolean(row.sensitive_media_default),
             joinRuleText: row.join_rule_text,
-            allowMemberInvites: row.allow_member_invites === null ? undefined : Boolean(row.allow_member_invites),
-            inviteFreezeEnabled: row.invite_freeze_enabled === null ? undefined : Boolean(row.invite_freeze_enabled),
+            allowMemberInvites:
+              row.allow_member_invites === null
+                ? undefined
+                : Boolean(row.allow_member_invites),
+            inviteFreezeEnabled:
+              row.invite_freeze_enabled === null
+                ? undefined
+                : Boolean(row.invite_freeze_enabled),
             roomAccessPolicy: coerceRoomAccessPolicy(row.room_access_policy),
             createdAt: row.created_at,
             updatedAt: row.updated_at ?? row.created_at,
@@ -941,18 +1057,24 @@ async function loadAccessibleConversations(
               allowMemberInvites: Boolean(row.allow_member_invites ?? 0),
             }),
           } satisfies ConversationSummary;
-        })
+        }),
       );
     }
   }
 
   return rows.map((row) => {
-    const members = (membersByConversation.get(row.id) ?? []).filter((member) => !member.removedAt);
-    const historyMode = coerceConversationHistoryMode(row.history_mode, row.kind);
+    const members = (membersByConversation.get(row.id) ?? []).filter(
+      (member) => !member.removedAt,
+    );
+    const historyMode = coerceConversationHistoryMode(
+      row.history_mode,
+      row.kind,
+    );
     const memberAccountIds = members.map((member) => member.accountId);
-    const dmPeer = row.kind === "direct_message"
-      ? members.find((member) => member.accountId !== accountId)
-      : null;
+    const dmPeer =
+      row.kind === "direct_message"
+        ? members.find((member) => member.accountId !== accountId)
+        : null;
 
     return {
       myRole: normalizeConversationRole(row.my_role),
@@ -963,8 +1085,8 @@ async function loadAccessibleConversations(
         kind: row.kind,
         title:
           row.kind === "direct_message"
-            ? dmPeer?.displayName ?? row.title ?? "Direct message"
-            : row.title ?? defaultConversationTitle(row.kind),
+            ? (dmPeer?.displayName ?? row.title ?? "Direct message")
+            : (row.title ?? defaultConversationTitle(row.kind)),
         epoch: row.epoch,
         historyMode,
         parentConversationId: row.parent_conversation_id,
@@ -972,11 +1094,23 @@ async function loadAccessibleConversations(
         memberCount: row.member_count,
         roomCount: row.kind === "community" ? row.room_count : undefined,
         memberCap: row.member_cap ?? undefined,
-        sensitiveMediaDefault: row.sensitive_media_default === null ? undefined : Boolean(row.sensitive_media_default),
+        sensitiveMediaDefault:
+          row.sensitive_media_default === null
+            ? undefined
+            : Boolean(row.sensitive_media_default),
         joinRuleText: row.join_rule_text,
-        allowMemberInvites: row.allow_member_invites === null ? undefined : Boolean(row.allow_member_invites),
-        inviteFreezeEnabled: row.invite_freeze_enabled === null ? undefined : Boolean(row.invite_freeze_enabled),
-        roomAccessPolicy: row.kind === "room" ? coerceRoomAccessPolicy(row.room_access_policy) : undefined,
+        allowMemberInvites:
+          row.allow_member_invites === null
+            ? undefined
+            : Boolean(row.allow_member_invites),
+        inviteFreezeEnabled:
+          row.invite_freeze_enabled === null
+            ? undefined
+            : Boolean(row.invite_freeze_enabled),
+        roomAccessPolicy:
+          row.kind === "room"
+            ? coerceRoomAccessPolicy(row.room_access_policy)
+            : undefined,
         createdAt: row.created_at,
         updatedAt: row.updated_at ?? row.created_at,
         lastMessageAt: row.last_message_at,
@@ -1005,7 +1139,10 @@ async function sha256B64(buffer: ArrayBuffer): Promise<string> {
   return btoa(binary);
 }
 
-async function deliverMagicLinkEmail(env: Env, msg: MagicLinkMessage): Promise<void> {
+async function deliverMagicLinkEmail(
+  env: Env,
+  msg: MagicLinkMessage,
+): Promise<void> {
   if (env.EMBERCHAMBER_EMAIL_PROVIDER === "log") {
     console.log(
       JSON.stringify({
@@ -1013,13 +1150,15 @@ async function deliverMagicLinkEmail(env: Env, msg: MagicLinkMessage): Promise<v
         to: msg.to,
         completionUrl: msg.completionUrl,
         expiresAt: msg.expiresAt,
-      })
+      }),
     );
     return;
   }
 
   if (!env.RESEND_API_KEY) {
-    console.error("magic_link_email_skipped", { reason: "RESEND_API_KEY not configured" });
+    console.error("magic_link_email_skipped", {
+      reason: "RESEND_API_KEY not configured",
+    });
     return;
   }
 
@@ -1060,7 +1199,9 @@ async function deliverMagicLinkEmail(env: Env, msg: MagicLinkMessage): Promise<v
 
 async function runRelayCleanup(env: Env) {
   const nowIso = new Date().toISOString();
-  const staleConsumedCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const staleConsumedCutoff = new Date(
+    Date.now() - 24 * 60 * 60 * 1000,
+  ).toISOString();
 
   await dbRun(
     env.DB,
@@ -1068,7 +1209,7 @@ async function runRelayCleanup(env: Env) {
       WHERE expires_at <= ?1
          OR (consumed_at IS NOT NULL AND consumed_at <= ?2)`,
     nowIso,
-    staleConsumedCutoff
+    staleConsumedCutoff,
   );
 
   await dbRun(
@@ -1077,10 +1218,14 @@ async function runRelayCleanup(env: Env) {
       WHERE expires_at <= ?1
          OR (approved_at IS NOT NULL AND approved_at <= ?2)`,
     nowIso,
-    staleConsumedCutoff
+    staleConsumedCutoff,
   );
 
-  await dbRun(env.DB, "DELETE FROM mailbox_dedup WHERE expires_at <= ?1", nowIso);
+  await dbRun(
+    env.DB,
+    "DELETE FROM mailbox_dedup WHERE expires_at <= ?1",
+    nowIso,
+  );
 
   const expiredAttachments = await dbAll<{
     id: string;
@@ -1091,7 +1236,7 @@ async function runRelayCleanup(env: Env) {
        FROM attachments
       WHERE deleted_at IS NULL
         AND expires_at <= ?1`,
-    nowIso
+    nowIso,
   );
 
   for (const attachment of expiredAttachments) {
@@ -1100,18 +1245,29 @@ async function runRelayCleanup(env: Env) {
       env.DB,
       "UPDATE attachments SET deleted_at = ?1 WHERE id = ?2 AND deleted_at IS NULL",
       nowIso,
-      attachment.id
+      attachment.id,
     );
   }
 }
 
-async function requireBetaInvite(env: Env, inviteToken: string | undefined): Promise<string> {
-  if (inviteToken && env.EMBERCHAMBER_DEV_INVITE_TOKEN && inviteToken === env.EMBERCHAMBER_DEV_INVITE_TOKEN) {
+async function requireBetaInvite(
+  env: Env,
+  inviteToken: string | undefined,
+): Promise<string> {
+  if (
+    inviteToken &&
+    env.EMBERCHAMBER_DEV_INVITE_TOKEN &&
+    inviteToken === env.EMBERCHAMBER_DEV_INVITE_TOKEN
+  ) {
     return await hashInviteToken(inviteToken);
   }
 
   if (!inviteToken) {
-    throw new HttpError(403, "Invite token required for beta access", "INVITE_REQUIRED");
+    throw new HttpError(
+      403,
+      "Invite token required for beta access",
+      "INVITE_REQUIRED",
+    );
   }
 
   const tokenHash = await hashInviteToken(inviteToken);
@@ -1126,7 +1282,7 @@ async function requireBetaInvite(env: Env, inviteToken: string | undefined): Pro
     `SELECT token_hash, revoked_at, expires_at, max_uses, use_count
        FROM beta_invites
       WHERE token_hash = ?1`,
-    tokenHash
+    tokenHash,
   );
 
   if (!invite) {
@@ -1151,7 +1307,7 @@ async function requireBetaInvite(env: Env, inviteToken: string | undefined): Pro
 async function validateBootstrapConversationInvite(
   env: Env,
   conversationId: string,
-  inviteToken: string
+  inviteToken: string,
 ): Promise<{ conversationId: string; tokenHash: string; title: string }> {
   const tokenHash = await hashInviteToken(inviteToken);
   const invite = await dbFirst<{
@@ -1193,7 +1349,7 @@ async function validateBootstrapConversationInvite(
       AND ci.token_hash = ?2
       AND c.kind IN ('group', 'community')`,
     conversationId,
-    tokenHash
+    tokenHash,
   );
 
   if (!invite) {
@@ -1212,11 +1368,16 @@ async function validateBootstrapConversationInvite(
     throw new HttpError(403, `Invite is ${status}`, "INVITE_UNAVAILABLE");
   }
 
-  if (invite.member_count >= (invite.member_cap ?? (invite.root_kind === "community" ? 150 : 12))) {
+  if (
+    invite.member_count >=
+    (invite.member_cap ?? (invite.root_kind === "community" ? 150 : 12))
+  ) {
     throw new HttpError(
       409,
-      invite.root_kind === "community" ? "Community is already at capacity" : "Group is already at capacity",
-      "GROUP_CAP_EXCEEDED"
+      invite.root_kind === "community"
+        ? "Community is already at capacity"
+        : "Group is already at capacity",
+      "GROUP_CAP_EXCEEDED",
     );
   }
 
@@ -1225,15 +1386,15 @@ async function validateBootstrapConversationInvite(
     tokenHash,
     title:
       invite.scope === "room"
-        ? invite.target_room_title ?? "Untitled room"
-        : invite.root_title ?? defaultConversationTitle(invite.root_kind),
+        ? (invite.target_room_title ?? "Untitled room")
+        : (invite.root_title ?? defaultConversationTitle(invite.root_kind)),
   };
 }
 
 async function resolveBootstrapAccess(
   env: Env,
   input: z.infer<typeof authStartSchema>,
-  accountExists: boolean
+  accountExists: boolean,
 ): Promise<{
   betaInviteHash: string | null;
   pendingGroupConversationId: string | null;
@@ -1257,10 +1418,18 @@ async function resolveBootstrapAccess(
 
   if (input.groupId || input.groupInviteToken) {
     if (!input.groupId || !input.groupInviteToken) {
-      throw new HttpError(400, "Invite bootstrap needs both conversation id and token", "INVALID_INVITE_REFERENCE");
+      throw new HttpError(
+        400,
+        "Invite bootstrap needs both conversation id and token",
+        "INVALID_INVITE_REFERENCE",
+      );
     }
 
-    const invite = await validateBootstrapConversationInvite(env, input.groupId, input.groupInviteToken);
+    const invite = await validateBootstrapConversationInvite(
+      env,
+      input.groupId,
+      input.groupInviteToken,
+    );
     return {
       betaInviteHash: null,
       pendingGroupConversationId: invite.conversationId,
@@ -1268,14 +1437,18 @@ async function resolveBootstrapAccess(
     };
   }
 
-  throw new HttpError(403, "Invite token required for beta access", "INVITE_REQUIRED");
+  throw new HttpError(
+    403,
+    "Invite token required for beta access",
+    "INVITE_REQUIRED",
+  );
 }
 
 async function acceptConversationInviteByTokenHash(
   env: Env,
   accountId: string,
   conversationId: string,
-  tokenHash: string
+  tokenHash: string,
 ): Promise<ConversationInviteAcceptance> {
   const invite = await dbFirst<{
     invite_id: string;
@@ -1320,7 +1493,7 @@ async function acceptConversationInviteByTokenHash(
       AND ci.token_hash = ?2
       AND c.kind IN ('group', 'community')`,
     conversationId,
-    tokenHash
+    tokenHash,
   );
 
   if (!invite) {
@@ -1345,27 +1518,41 @@ async function acceptConversationInviteByTokenHash(
        FROM conversation_members
       WHERE conversation_id = ?1 AND account_id = ?2 AND removed_at IS NULL`,
     conversationId,
-    accountId
+    accountId,
   );
 
   let useRecorded = false;
   const joinedAt = new Date().toISOString();
   if (!existingRootMember) {
-    if ((invite.member_count ?? 0) >= (invite.member_cap ?? (invite.root_kind === "community" ? 150 : 12))) {
+    if (
+      (invite.member_count ?? 0) >=
+      (invite.member_cap ?? (invite.root_kind === "community" ? 150 : 12))
+    ) {
       throw new HttpError(
         409,
-        invite.root_kind === "community" ? "Community is already at capacity" : "Group is already at capacity",
-        "GROUP_CAP_EXCEEDED"
+        invite.root_kind === "community"
+          ? "Community is already at capacity"
+          : "Group is already at capacity",
+        "GROUP_CAP_EXCEEDED",
       );
     }
 
-    await upsertConversationMember(env, conversationId, accountId, "member", joinedAt);
+    await upsertConversationMember(
+      env,
+      conversationId,
+      accountId,
+      "member",
+      joinedAt,
+    );
     useRecorded = true;
     await appendConversationMessage(env, {
       conversationId,
       senderAccountId: accountId,
       kind: "system_notice",
-      text: invite.root_kind === "community" ? "Joined the community" : "Joined the group",
+      text:
+        invite.root_kind === "community"
+          ? "Joined the community"
+          : "Joined the group",
       createdAt: joinedAt,
     });
   }
@@ -1374,7 +1561,12 @@ async function acceptConversationInviteByTokenHash(
   let title = invite.root_title ?? defaultConversationTitle(invite.root_kind);
 
   if (invite.root_kind === "community") {
-    await syncCommunityMemberIntoAllMemberRooms(env, conversationId, accountId, joinedAt);
+    await syncCommunityMemberIntoAllMemberRooms(
+      env,
+      conversationId,
+      accountId,
+      joinedAt,
+    );
 
     if (invite.scope === "room" && invite.target_room_conversation_id) {
       const existingRoomMember = await dbFirst<{ account_id: string }>(
@@ -1385,7 +1577,7 @@ async function acceptConversationInviteByTokenHash(
             AND account_id = ?2
             AND removed_at IS NULL`,
         invite.target_room_conversation_id,
-        accountId
+        accountId,
       );
 
       if (!existingRoomMember) {
@@ -1393,8 +1585,10 @@ async function acceptConversationInviteByTokenHash(
           env,
           invite.target_room_conversation_id,
           accountId,
-          existingRootMember ? normalizeConversationRole(existingRootMember.role) : "member",
-          joinedAt
+          existingRootMember
+            ? normalizeConversationRole(existingRootMember.role)
+            : "member",
+          joinedAt,
         );
         useRecorded = true;
         await appendConversationMessage(env, {
@@ -1415,7 +1609,7 @@ async function acceptConversationInviteByTokenHash(
     await dbRun(
       env.DB,
       "UPDATE conversation_invites SET use_count = use_count + 1 WHERE id = ?1",
-      invite.invite_id
+      invite.invite_id,
     );
   }
 
@@ -1438,7 +1632,9 @@ async function createSession(
   const sessionId = crypto.randomUUID();
   const refreshToken = `${crypto.randomUUID()}-${crypto.randomUUID()}`;
   const refreshTokenHash = await sha256Hex(`refresh:${refreshToken}`);
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const expiresAt = new Date(
+    Date.now() + 30 * 24 * 60 * 60 * 1000,
+  ).toISOString();
 
   await dbRun(
     env.DB,
@@ -1465,12 +1661,12 @@ async function createSession(
     clientMetadata?.clientPlatform ?? null,
     clientMetadata?.clientVersion ?? null,
     clientMetadata?.clientBuild ?? null,
-    clientMetadata?.deviceModel ?? null
+    clientMetadata?.deviceModel ?? null,
   );
 
   const accessToken = await signAccessToken(
     { sub: accountId, deviceId, sessionId },
-    env.EMBERCHAMBER_ACCESS_TOKEN_SECRET
+    env.EMBERCHAMBER_ACCESS_TOKEN_SECRET,
   );
 
   return {
@@ -1527,7 +1723,7 @@ async function findDeviceLinkByToken(env: Env, linkToken: string) {
        completed_session_id
      FROM device_links
     WHERE link_token_hash = ?1`,
-    await hashDeviceLinkToken(linkToken)
+    await hashDeviceLinkToken(linkToken),
   );
 }
 
@@ -1540,7 +1736,9 @@ function getDeviceLinkState(row: DeviceLinkRow): DeviceLinkStatus["state"] {
     return "consumed";
   }
   if (!row.claimed_at) {
-    return row.qr_mode === "target_display" ? "waiting_for_source" : "pending_claim";
+    return row.qr_mode === "target_display"
+      ? "waiting_for_source"
+      : "pending_claim";
   }
   if (!row.approved_at) {
     return "pending_approval";
@@ -1568,20 +1766,48 @@ function buildDeviceLinkStatus(env: Env, row: DeviceLinkRow): DeviceLinkStatus {
   };
 }
 
-async function parseAttachmentToken(env: Env, token: string, attachmentId: string, action: "upload" | "download") {
+async function parseAttachmentToken(
+  env: Env,
+  token: string,
+  attachmentId: string,
+  action: "upload" | "download",
+) {
   const [payload, signature] = token.split(".");
   if (!payload || !signature) {
-    throw new HttpError(401, "Invalid attachment token", "INVALID_ATTACHMENT_TOKEN");
+    throw new HttpError(
+      401,
+      "Invalid attachment token",
+      "INVALID_ATTACHMENT_TOKEN",
+    );
   }
 
-  const expected = await signValue(env.EMBERCHAMBER_ATTACHMENT_TOKEN_SECRET, payload);
+  const expected = await signValue(
+    env.EMBERCHAMBER_ATTACHMENT_TOKEN_SECRET,
+    payload,
+  );
   if (expected !== signature) {
-    throw new HttpError(401, "Invalid attachment token", "INVALID_ATTACHMENT_TOKEN");
+    throw new HttpError(
+      401,
+      "Invalid attachment token",
+      "INVALID_ATTACHMENT_TOKEN",
+    );
   }
 
-  const data = JSON.parse(atob(payload)) as { attachmentId: string; action: "upload" | "download"; exp: number };
-  if (data.attachmentId !== attachmentId || data.action !== action || data.exp <= Date.now()) {
-    throw new HttpError(401, "Expired attachment token", "ATTACHMENT_TOKEN_EXPIRED");
+  const data = JSON.parse(atob(payload)) as {
+    attachmentId: string;
+    action: "upload" | "download";
+    exp: number;
+  };
+  if (
+    data.attachmentId !== attachmentId ||
+    data.action !== action ||
+    data.exp <= Date.now()
+  ) {
+    throw new HttpError(
+      401,
+      "Expired attachment token",
+      "ATTACHMENT_TOKEN_EXPIRED",
+    );
   }
 }
 
@@ -1589,10 +1815,15 @@ async function signAttachmentToken(
   env: Env,
   attachmentId: string,
   action: "upload" | "download",
-  expiresAtMs: number
+  expiresAtMs: number,
 ): Promise<string> {
-  const payload = btoa(JSON.stringify({ attachmentId, action, exp: expiresAtMs }));
-  const signature = await signValue(env.EMBERCHAMBER_ATTACHMENT_TOKEN_SECRET, payload);
+  const payload = btoa(
+    JSON.stringify({ attachmentId, action, exp: expiresAtMs }),
+  );
+  const signature = await signValue(
+    env.EMBERCHAMBER_ATTACHMENT_TOKEN_SECRET,
+    payload,
+  );
   return `${payload}.${signature}`;
 }
 
@@ -1606,7 +1837,7 @@ async function appendConversationMessage(
     attachmentId?: string | null;
     clientMessageId?: string | null;
     createdAt?: string;
-  }
+  },
 ) {
   const messageId = crypto.randomUUID();
   const createdAt = input.createdAt ?? new Date().toISOString();
@@ -1631,7 +1862,7 @@ async function appendConversationMessage(
     input.text ?? null,
     input.attachmentId ?? null,
     input.clientMessageId ?? null,
-    createdAt
+    createdAt,
   );
 
   await updateConversationActivity(env, input.conversationId, {
@@ -1650,7 +1881,7 @@ async function upsertConversationMember(
   conversationId: string,
   accountId: string,
   role: "owner" | "admin" | "member",
-  joinedAt: string
+  joinedAt: string,
 ) {
   await dbRun(
     env.DB,
@@ -1663,13 +1894,13 @@ async function upsertConversationMember(
     conversationId,
     accountId,
     role,
-    joinedAt
+    joinedAt,
   );
 }
 
 async function listActiveConversationMembers(
   env: Env,
-  conversationId: string
+  conversationId: string,
 ): Promise<Array<{ accountId: string; role: "owner" | "admin" | "member" }>> {
   const rows = await dbAll<{ account_id: string; role: string }>(
     env.DB,
@@ -1677,7 +1908,7 @@ async function listActiveConversationMembers(
        FROM conversation_members
       WHERE conversation_id = ?1
         AND removed_at IS NULL`,
-    conversationId
+    conversationId,
   );
 
   return rows.map((row) => ({
@@ -1686,7 +1917,10 @@ async function listActiveConversationMembers(
   }));
 }
 
-async function syncRelayHostedConversationSockets(env: Env, conversationId: string): Promise<void> {
+async function syncRelayHostedConversationSockets(
+  env: Env,
+  conversationId: string,
+): Promise<void> {
   const conversation = await dbFirst<{
     id: string;
     kind: RelayConversationKind;
@@ -1702,7 +1936,10 @@ async function syncRelayHostedConversationSockets(env: Env, conversationId: stri
     return;
   }
 
-  const historyMode = coerceConversationHistoryMode(conversation.history_mode, conversation.kind);
+  const historyMode = coerceConversationHistoryMode(
+    conversation.history_mode,
+    conversation.kind,
+  );
   if (historyMode !== "relay_hosted") {
     return;
   }
@@ -1729,7 +1966,7 @@ async function syncCommunityMemberIntoAllMemberRooms(
   env: Env,
   communityId: string,
   accountId: string,
-  joinedAt: string
+  joinedAt: string,
 ) {
   const communityMembership = await dbFirst<{ role: string }>(
     env.DB,
@@ -1739,11 +1976,15 @@ async function syncCommunityMemberIntoAllMemberRooms(
         AND account_id = ?2
         AND removed_at IS NULL`,
     communityId,
-    accountId
+    accountId,
   );
 
   if (!communityMembership) {
-    throw new HttpError(404, "Community membership not found", "COMMUNITY_MEMBER_NOT_FOUND");
+    throw new HttpError(
+      404,
+      "Community membership not found",
+      "COMMUNITY_MEMBER_NOT_FOUND",
+    );
   }
 
   const inheritedRole = normalizeConversationRole(communityMembership.role);
@@ -1754,11 +1995,17 @@ async function syncCommunityMemberIntoAllMemberRooms(
       WHERE parent_conversation_id = ?1
         AND kind = 'room'
         AND room_access_policy = 'all_members'`,
-    communityId
+    communityId,
   );
 
   for (const room of roomRows) {
-    await upsertConversationMember(env, room.id, accountId, inheritedRole, joinedAt);
+    await upsertConversationMember(
+      env,
+      room.id,
+      accountId,
+      inheritedRole,
+      joinedAt,
+    );
   }
 }
 
@@ -1767,7 +2014,7 @@ async function ensureRestrictedRoomMembership(
   communityId: string,
   roomId: string,
   accountId: string,
-  joinedAt: string
+  joinedAt: string,
 ) {
   const room = await dbFirst<{ id: string; room_access_policy: string | null }>(
     env.DB,
@@ -1777,7 +2024,7 @@ async function ensureRestrictedRoomMembership(
         AND parent_conversation_id = ?2
         AND kind = 'room'`,
     roomId,
-    communityId
+    communityId,
   );
 
   if (!room) {
@@ -1792,15 +2039,23 @@ async function ensureRestrictedRoomMembership(
         AND account_id = ?2
         AND removed_at IS NULL`,
     communityId,
-    accountId
+    accountId,
   );
 
   if (!communityMembership) {
-    throw new HttpError(403, "Account is not a community member", "COMMUNITY_MEMBERSHIP_REQUIRED");
+    throw new HttpError(
+      403,
+      "Account is not a community member",
+      "COMMUNITY_MEMBERSHIP_REQUIRED",
+    );
   }
 
   if (coerceRoomAccessPolicy(room.room_access_policy) !== "restricted") {
-    throw new HttpError(409, "All-member rooms inherit access from the community", "ROOM_ACCESS_INHERITED");
+    throw new HttpError(
+      409,
+      "All-member rooms inherit access from the community",
+      "ROOM_ACCESS_INHERITED",
+    );
   }
 
   await upsertConversationMember(
@@ -1808,7 +2063,7 @@ async function ensureRestrictedRoomMembership(
     roomId,
     accountId,
     normalizeConversationRole(communityMembership.role),
-    joinedAt
+    joinedAt,
   );
 }
 
@@ -1816,7 +2071,7 @@ async function removeMemberFromCommunityRooms(
   env: Env,
   communityId: string,
   accountId: string,
-  removedAt: string
+  removedAt: string,
 ): Promise<string[]> {
   const roomRows = await dbAll<{ id: string }>(
     env.DB,
@@ -1824,7 +2079,7 @@ async function removeMemberFromCommunityRooms(
        FROM conversations
       WHERE parent_conversation_id = ?1
         AND kind = 'room'`,
-    communityId
+    communityId,
   );
 
   await dbRun(
@@ -1841,7 +2096,7 @@ async function removeMemberFromCommunityRooms(
         AND removed_at IS NULL`,
     removedAt,
     accountId,
-    communityId
+    communityId,
   );
 
   return roomRows.map((row) => row.id);
@@ -1858,7 +2113,7 @@ async function createCommunityRoom(
     roomAccessPolicy: RoomAccessPolicy;
     memberAccountIds?: string[];
     createdAt: string;
-  }
+  },
 ) {
   const roomId = crypto.randomUUID();
   await dbRun(
@@ -1886,7 +2141,7 @@ async function createCommunityRoom(
     input.communityId,
     input.roomAccessPolicy,
     input.sensitiveMediaDefault ? 1 : 0,
-    input.joinRuleText ?? null
+    input.joinRuleText ?? null,
   );
 
   const communityMembers = await dbAll<{ account_id: string; role: string }>(
@@ -1895,10 +2150,12 @@ async function createCommunityRoom(
        FROM conversation_members
       WHERE conversation_id = ?1
         AND removed_at IS NULL`,
-    input.communityId
+    input.communityId,
   );
 
-  const organizerMemberships = communityMembers.filter((member) => isOrganizerRole(member.role));
+  const organizerMemberships = communityMembers.filter((member) =>
+    isOrganizerRole(member.role),
+  );
   const memberIds =
     input.roomAccessPolicy === "all_members"
       ? communityMembers.map((member) => ({
@@ -1906,19 +2163,28 @@ async function createCommunityRoom(
           role: normalizeConversationRole(member.role),
         }))
       : Array.from(
-          new Map(
-            [
-              ...organizerMemberships.map((member) => [
-                member.account_id,
-                normalizeConversationRole(member.role),
-              ] as const),
-              ...(input.memberAccountIds ?? []).map((accountId) => [accountId, "member"] as const),
-            ]
-          ).entries()
+          new Map([
+            ...organizerMemberships.map(
+              (member) =>
+                [
+                  member.account_id,
+                  normalizeConversationRole(member.role),
+                ] as const,
+            ),
+            ...(input.memberAccountIds ?? []).map(
+              (accountId) => [accountId, "member"] as const,
+            ),
+          ]).entries(),
         ).map(([accountId, role]) => ({ accountId, role }));
 
   for (const member of memberIds) {
-    await upsertConversationMember(env, roomId, member.accountId, member.role, input.createdAt);
+    await upsertConversationMember(
+      env,
+      roomId,
+      member.accountId,
+      member.role,
+      input.createdAt,
+    );
   }
 
   await appendConversationMessage(env, {
@@ -1934,7 +2200,7 @@ async function createCommunityRoom(
 
 async function enqueueEnvelope(
   env: Env,
-  envelope: CipherEnvelope
+  envelope: CipherEnvelope,
 ): Promise<{ queued: boolean; code?: string }> {
   const id = env.DEVICE_MAILBOX.idFromName(envelope.recipientDeviceId);
   const stub = env.DEVICE_MAILBOX.get(id);
@@ -1955,7 +2221,9 @@ function accountUsername(accountId: string): string {
 }
 
 function publicWebUrl(env: Env): string {
-  return (env.EMBERCHAMBER_WEB_PUBLIC_URL ?? env.EMBERCHAMBER_RELAY_PUBLIC_URL).replace(/\/$/, "");
+  return (
+    env.EMBERCHAMBER_WEB_PUBLIC_URL ?? env.EMBERCHAMBER_RELAY_PUBLIC_URL
+  ).replace(/\/$/, "");
 }
 
 function attachmentMetadataSecret(env: Env): string {
@@ -1980,7 +2248,7 @@ type RelayHostedAttachmentRow = {
 async function buildRelayHostedAttachment(
   env: Env,
   row: RelayHostedAttachmentRow,
-  expiresAtMs: number
+  expiresAtMs: number,
 ): Promise<GroupThreadMessage["attachment"]> {
   if (
     !row.attachment_id ||
@@ -1994,15 +2262,22 @@ async function buildRelayHostedAttachment(
     return null;
   }
 
-  const fileKeyB64 =
-    row.attachment_key_box ? await decryptString(attachmentMetadataSecret(env), row.attachment_key_box) : null;
-  const fileIvB64 =
-    row.attachment_iv_box ? await decryptString(attachmentMetadataSecret(env), row.attachment_iv_box) : null;
+  const fileKeyB64 = row.attachment_key_box
+    ? await decryptString(attachmentMetadataSecret(env), row.attachment_key_box)
+    : null;
+  const fileIvB64 = row.attachment_iv_box
+    ? await decryptString(attachmentMetadataSecret(env), row.attachment_iv_box)
+    : null;
 
   return {
     id: row.attachment_id,
     downloadUrl: `${env.EMBERCHAMBER_RELAY_PUBLIC_URL}/v1/attachments/download/${row.attachment_id}?token=${encodeURIComponent(
-      await signAttachmentToken(env, row.attachment_id, "download", expiresAtMs)
+      await signAttachmentToken(
+        env,
+        row.attachment_id,
+        "download",
+        expiresAtMs,
+      ),
     )}`,
     fileName: row.file_name,
     mimeType: row.mime_type,
@@ -2021,19 +2296,21 @@ async function loadRelayHostedConversationMessages(
   env: Env,
   conversationId: string,
   limit: number,
-  requestingAccountId?: string
+  requestingAccountId?: string,
 ): Promise<GroupThreadMessage[]> {
-  const rows = await dbAll<{
-    id: string;
-    conversation_id: string;
-    sender_account_id: string;
-    sender_display_name: string;
-    kind: "text" | "media" | "system_notice";
-    body_text: string | null;
-    created_at: string;
-    edited_at: string | null;
-    read_by_count: number;
-  } & RelayHostedAttachmentRow>(
+  const rows = await dbAll<
+    {
+      id: string;
+      conversation_id: string;
+      sender_account_id: string;
+      sender_display_name: string;
+      kind: "text" | "media" | "system_notice";
+      body_text: string | null;
+      created_at: string;
+      edited_at: string | null;
+      read_by_count: number;
+    } & RelayHostedAttachmentRow
+  >(
     env.DB,
     `SELECT
        m.id,
@@ -2071,7 +2348,7 @@ async function loadRelayHostedConversationMessages(
     ORDER BY m.created_at DESC
     LIMIT ?2`,
     conversationId,
-    limit
+    limit,
   );
 
   const expiresAtMs = Date.now() + 30 * 60 * 1000;
@@ -2107,37 +2384,35 @@ async function createRelayHostedConversationMessage(
     text?: string | null;
     attachmentId?: string | null;
     clientMessageId?: string | null;
-  }
+  },
 ): Promise<GroupThreadMessage> {
   const sender = await dbFirst<{ display_name: string }>(
     env.DB,
     "SELECT display_name FROM accounts WHERE id = ?1",
-    input.senderAccountId
+    input.senderAccountId,
   );
   const conversation = await dbFirst<{ title: string | null }>(
     env.DB,
     "SELECT title FROM conversations WHERE id = ?1",
-    input.conversationId
+    input.conversationId,
   );
 
-  let attachment:
-    | {
-        id: string;
-        file_name: string;
-        mime_type: string;
-        byte_length: number;
-        plaintext_byte_length: number | null;
-        content_class: "image" | "video" | "audio" | "file";
-        retention_mode: "private_vault" | "ephemeral";
-        protection_profile: "sensitive_media" | "standard";
-        preview_blur_hash: string | null;
-        encryption_mode: "none" | "device_encrypted";
-        attachment_key_box: string | null;
-        attachment_iv_box: string | null;
-        account_id: string;
-        conversation_id: string | null;
-      }
-    | null = null;
+  let attachment: {
+    id: string;
+    file_name: string;
+    mime_type: string;
+    byte_length: number;
+    plaintext_byte_length: number | null;
+    content_class: "image" | "video" | "audio" | "file";
+    retention_mode: "private_vault" | "ephemeral";
+    protection_profile: "sensitive_media" | "standard";
+    preview_blur_hash: string | null;
+    encryption_mode: "none" | "device_encrypted";
+    attachment_key_box: string | null;
+    attachment_iv_box: string | null;
+    account_id: string;
+    conversation_id: string | null;
+  } | null = null;
 
   if (input.attachmentId) {
     attachment = await dbFirst<{
@@ -2174,7 +2449,7 @@ async function createRelayHostedConversationMessage(
          conversation_id
        FROM attachments
       WHERE id = ?1`,
-      input.attachmentId
+      input.attachmentId,
     );
 
     if (
@@ -2182,7 +2457,11 @@ async function createRelayHostedConversationMessage(
       attachment.account_id !== input.senderAccountId ||
       attachment.conversation_id !== input.conversationId
     ) {
-      throw new HttpError(403, "Attachment is not available for this conversation message", "FORBIDDEN");
+      throw new HttpError(
+        403,
+        "Attachment is not available for this conversation message",
+        "FORBIDDEN",
+      );
     }
   }
 
@@ -2201,7 +2480,9 @@ async function createRelayHostedConversationMessage(
     conversationId: input.conversationId,
     historyMode: "relay_hosted" as const,
     senderAccountId: input.senderAccountId,
-    senderDisplayName: sender?.display_name ?? conversationTitleForAccount(input.senderAccountId),
+    senderDisplayName:
+      sender?.display_name ??
+      conversationTitleForAccount(input.senderAccountId),
     kind: attachment ? ("media" as const) : ("text" as const),
     text: input.text ?? null,
     attachment: attachment
@@ -2221,7 +2502,7 @@ async function createRelayHostedConversationMessage(
             attachment_key_box: attachment.attachment_key_box,
             attachment_iv_box: attachment.attachment_iv_box,
           },
-          expiresAtMs
+          expiresAtMs,
         )
       : null,
     createdAt: created.createdAt,
@@ -2229,10 +2510,12 @@ async function createRelayHostedConversationMessage(
 
   const doId = env.GROUP_COORDINATOR.idFromName(input.conversationId);
   const stub = env.GROUP_COORDINATOR.get(doId);
-  await stub.fetch("http://do/broadcast", {
-    method: "POST",
-    body: JSON.stringify(payload)
-  }).catch(() => {}); // Fire and forget errors on broadcast
+  await stub
+    .fetch("http://do/broadcast", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    })
+    .catch(() => {}); // Fire and forget errors on broadcast
 
   const recipientDevices = await dbAll<{ id: string }>(
     env.DB,
@@ -2244,7 +2527,7 @@ async function createRelayHostedConversationMessage(
         AND d.revoked_at IS NULL
         AND (?2 IS NULL OR d.id != ?2)`,
     input.conversationId,
-    input.senderDeviceId ?? null
+    input.senderDeviceId ?? null,
   );
 
   await Promise.all(
@@ -2264,8 +2547,8 @@ async function createRelayHostedConversationMessage(
           conversationId: input.conversationId,
           error: error instanceof Error ? error.message : String(error),
         });
-      })
-    )
+      }),
+    ),
   );
 
   return payload;
@@ -2290,7 +2573,11 @@ function inviteStatusForRow(input: {
     return "expired";
   }
 
-  if (input.maxUses !== null && input.maxUses !== undefined && (input.useCount ?? 0) >= input.maxUses) {
+  if (
+    input.maxUses !== null &&
+    input.maxUses !== undefined &&
+    (input.useCount ?? 0) >= input.maxUses
+  ) {
     return "exhausted";
   }
 
@@ -2317,7 +2604,7 @@ export default {
           status: response.status,
           durationMs: Date.now() - startedAt,
           code,
-        })
+        }),
       );
     };
 
@@ -2336,7 +2623,7 @@ export default {
             headers,
           }),
           request,
-          env.EMBERCHAMBER_ALLOWED_ORIGINS
+          env.EMBERCHAMBER_ALLOWED_ORIGINS,
         );
         logResponse(nextResponse, code);
         return nextResponse;
@@ -2347,9 +2634,10 @@ export default {
           json({
             status: "ok",
             relay: "cloudflare-workers",
-            localAutoconnectMarker: env.EMBERCHAMBER_LOCAL_AUTOCONNECT_MARKER ?? null,
+            localAutoconnectMarker:
+              env.EMBERCHAMBER_LOCAL_AUTOCONNECT_MARKER ?? null,
             timestamp: new Date().toISOString(),
-          })
+          }),
         );
       }
 
@@ -2361,7 +2649,10 @@ export default {
           await env.DB.exec("SELECT 1");
           dbReady = true;
         } catch (error) {
-          dbError = error instanceof Error ? error.message : "D1 readiness check failed";
+          dbError =
+            error instanceof Error
+              ? error.message
+              : "D1 readiness check failed";
         }
 
         const checks = {
@@ -2374,19 +2665,26 @@ export default {
           pushQueue: Boolean(env.PUSH_QUEUE),
           cleanupQueue: Boolean(env.CLEANUP_QUEUE),
           accessTokenSecret: Boolean(env.EMBERCHAMBER_ACCESS_TOKEN_SECRET),
-          attachmentTokenSecret: Boolean(env.EMBERCHAMBER_ATTACHMENT_TOKEN_SECRET),
-          emailEncryptionSecret: Boolean(env.EMBERCHAMBER_EMAIL_ENCRYPTION_SECRET),
+          attachmentTokenSecret: Boolean(
+            env.EMBERCHAMBER_ATTACHMENT_TOKEN_SECRET,
+          ),
+          emailEncryptionSecret: Boolean(
+            env.EMBERCHAMBER_EMAIL_ENCRYPTION_SECRET,
+          ),
           emailIndexSecret: Boolean(env.EMBERCHAMBER_EMAIL_INDEX_SECRET),
         };
 
         // Optional feature secrets — absent means graceful degradation, not a hard failure.
         const features = {
           pushTokenSecret: Boolean(env.EMBERCHAMBER_PUSH_TOKEN_SECRET),
-          fcmServiceAccountJson: Boolean(env.EMBERCHAMBER_FCM_SERVICE_ACCOUNT_JSON),
+          fcmServiceAccountJson: Boolean(
+            env.EMBERCHAMBER_FCM_SERVICE_ACCOUNT_JSON,
+          ),
         };
 
         const ready = Object.values(checks).every(Boolean);
-        const pushConfigured = features.pushTokenSecret && features.fcmServiceAccountJson;
+        const pushConfigured =
+          features.pushTokenSecret && features.fcmServiceAccountJson;
 
         return respond(
           json(
@@ -2400,22 +2698,29 @@ export default {
               pushConfigured,
               ...(dbError ? { dbError } : {}),
             },
-            { status: ready ? 200 : 503 }
-          )
+            { status: ready ? 200 : 503 },
+          ),
         );
       }
 
       if (request.method === "GET" && pathname === "/auth/complete") {
         const token = url.searchParams.get("token");
         if (!token) {
-          throw new HttpError(400, "Missing completion token", "MISSING_COMPLETION_TOKEN");
+          throw new HttpError(
+            400,
+            "Missing completion token",
+            "MISSING_COMPLETION_TOKEN",
+          );
         }
 
         const redirectUrl = `${publicWebUrl(env)}/auth/complete?token=${encodeURIComponent(token)}`;
         return Response.redirect(redirectUrl, 302);
       }
 
-      if (request.method === "POST" && pathname === "/v1/admin/review-session") {
+      if (
+        request.method === "POST" &&
+        pathname === "/v1/admin/review-session"
+      ) {
         try {
           const adminSecret = env.EMBERCHAMBER_ADMIN_SECRET;
           if (!adminSecret) {
@@ -2428,13 +2733,23 @@ export default {
           }
 
           const reviewEmail = "play-store-reviewer@emberchamber.internal";
-          const emailBlindIndex = await blindIndex(env.EMBERCHAMBER_EMAIL_INDEX_SECRET, reviewEmail);
-          const emailCiphertext = await encryptString(env.EMBERCHAMBER_EMAIL_ENCRYPTION_SECRET, reviewEmail);
+          const emailBlindIndex = await blindIndex(
+            env.EMBERCHAMBER_EMAIL_INDEX_SECRET,
+            reviewEmail,
+          );
+          const emailCiphertext = await encryptString(
+            env.EMBERCHAMBER_EMAIL_ENCRYPTION_SECRET,
+            reviewEmail,
+          );
 
           const challengeId = crypto.randomUUID();
           const completionToken = `${challengeId}.${crypto.randomUUID()}`;
-          const completionTokenHash = await sha256Hex(`completion:${completionToken}`);
-          const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
+          const completionTokenHash = await sha256Hex(
+            `completion:${completionToken}`,
+          );
+          const expiresAt = new Date(
+            Date.now() + 90 * 24 * 60 * 60 * 1000,
+          ).toISOString();
 
           await dbRun(
             env.DB,
@@ -2451,12 +2766,14 @@ export default {
             "Play Store Reviewer",
             null,
             null,
-            1
+            1,
           );
 
           const completionUrl = `${publicWebUrl(env)}/auth/complete?token=${encodeURIComponent(completionToken)}`;
 
-          console.log(`review_session_created challenge=${challengeId} expires=${expiresAt}`);
+          console.log(
+            `review_session_created challenge=${challengeId} expires=${expiresAt}`,
+          );
 
           return respond(
             json({
@@ -2464,15 +2781,22 @@ export default {
               completionUrl,
               expiresAt,
               note: "Provide this URL to the Google Play reviewer. It is single-use and expires in 90 days.",
-            })
+            }),
           );
         } catch (adminError) {
           console.error("review_session_error", adminError);
           return respond(
-            json({
-              error: adminError instanceof Error ? adminError.message : "Unknown error",
-              stack: adminError instanceof Error ? adminError.stack : undefined,
-            }, { status: 500 })
+            json(
+              {
+                error:
+                  adminError instanceof Error
+                    ? adminError.message
+                    : "Unknown error",
+                stack:
+                  adminError instanceof Error ? adminError.stack : undefined,
+              },
+              { status: 500 },
+            ),
           );
         }
       }
@@ -2480,20 +2804,37 @@ export default {
       if (request.method === "POST" && pathname === "/v1/auth/start") {
         const body = authStartSchema.parse(await readJson(request));
         const email = normalizeEmail(body.email);
-        const emailBlindIndex = await blindIndex(env.EMBERCHAMBER_EMAIL_INDEX_SECRET, email);
+        const emailBlindIndex = await blindIndex(
+          env.EMBERCHAMBER_EMAIL_INDEX_SECRET,
+          email,
+        );
         const ip = request.headers.get("cf-connecting-ip") ?? "local";
 
         await enforceRateLimit(env, `auth:start:${ip}`, 10, 15 * 60 * 1000);
-        await enforceRateLimit(env, `auth:start:email:${emailBlindIndex}`, 5, 15 * 60 * 1000);
+        await enforceRateLimit(
+          env,
+          `auth:start:email:${emailBlindIndex}`,
+          5,
+          15 * 60 * 1000,
+        );
 
         const accountExists = await isExistingAccount(env, emailBlindIndex);
-        const bootstrapAccess = await resolveBootstrapAccess(env, body, accountExists);
+        const bootstrapAccess = await resolveBootstrapAccess(
+          env,
+          body,
+          accountExists,
+        );
 
         const challengeId = crypto.randomUUID();
         const completionToken = `${challengeId}.${crypto.randomUUID()}`;
-        const completionTokenHash = await sha256Hex(`completion:${completionToken}`);
+        const completionTokenHash = await sha256Hex(
+          `completion:${completionToken}`,
+        );
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-        const emailCiphertext = await encryptString(env.EMBERCHAMBER_EMAIL_ENCRYPTION_SECRET, email);
+        const emailCiphertext = await encryptString(
+          env.EMBERCHAMBER_EMAIL_ENCRYPTION_SECRET,
+          email,
+        );
 
         await dbRun(
           env.DB,
@@ -2510,7 +2851,7 @@ export default {
           body.deviceLabel,
           bootstrapAccess.pendingGroupConversationId,
           bootstrapAccess.pendingGroupInviteTokenHash,
-          1
+          1,
         );
 
         await env.EMAIL_QUEUE.send({
@@ -2526,7 +2867,9 @@ export default {
           id: challengeId,
           expiresAt,
           inviteRequired: !accountExists,
-          ...(env.EMBERCHAMBER_EMAIL_PROVIDER === "log" ? { debugCompletionToken: completionToken } : {}),
+          ...(env.EMBERCHAMBER_EMAIL_PROVIDER === "log"
+            ? { debugCompletionToken: completionToken }
+            : {}),
         };
 
         return respond(json(response, { status: 202 }));
@@ -2535,7 +2878,9 @@ export default {
       if (request.method === "POST" && pathname === "/v1/auth/complete") {
         const body = authCompleteSchema.parse(await readJson(request));
         const clientMetadata = parseClientMetadata(request);
-        const completionTokenHash = await sha256Hex(`completion:${body.completionToken}`);
+        const completionTokenHash = await sha256Hex(
+          `completion:${body.completionToken}`,
+        );
         const challenge = await dbFirst<{
           id: string;
           email_ciphertext: string;
@@ -2552,21 +2897,33 @@ export default {
           `SELECT id, email_ciphertext, email_blind_index, invite_token_hash, pending_group_conversation_id, pending_group_invite_token_hash, expires_at, consumed_at, requested_device_label, age_confirmed_18
              FROM auth_challenges
             WHERE completion_token_hash = ?1`,
-          completionTokenHash
+          completionTokenHash,
         );
 
-        if (!challenge || challenge.consumed_at || challenge.expires_at <= new Date().toISOString()) {
-          throw new HttpError(410, "Magic link expired or already used", "MAGIC_LINK_INVALID");
+        if (
+          !challenge ||
+          challenge.consumed_at ||
+          challenge.expires_at <= new Date().toISOString()
+        ) {
+          throw new HttpError(
+            410,
+            "Magic link expired or already used",
+            "MAGIC_LINK_INVALID",
+          );
         }
 
         if (!challenge.age_confirmed_18) {
-          throw new HttpError(403, "Adults-only affirmation is required", "AGE_CONFIRMATION_REQUIRED");
+          throw new HttpError(
+            403,
+            "Adults-only affirmation is required",
+            "AGE_CONFIRMATION_REQUIRED",
+          );
         }
 
         let account = await dbFirst<{ account_id: string }>(
           env.DB,
           "SELECT account_id FROM account_emails WHERE email_blind_index = ?1",
-          challenge.email_blind_index
+          challenge.email_blind_index,
         );
 
         const now = new Date().toISOString();
@@ -2578,7 +2935,7 @@ export default {
             accountId,
             conversationTitleForAccount(accountId),
             now,
-            now
+            now,
           );
           await dbRun(
             env.DB,
@@ -2586,14 +2943,14 @@ export default {
             accountId,
             challenge.email_ciphertext,
             challenge.email_blind_index,
-            now
+            now,
           );
 
           if (challenge.invite_token_hash) {
             await dbRun(
               env.DB,
               "UPDATE beta_invites SET use_count = use_count + 1 WHERE token_hash = ?1",
-              challenge.invite_token_hash
+              challenge.invite_token_hash,
             );
           }
 
@@ -2607,46 +2964,60 @@ export default {
                   updated_at = ?1
             WHERE id = ?2`,
           now,
-          account.account_id
+          account.account_id,
         );
 
         const bootstrapConversation =
-          challenge.pending_group_conversation_id && challenge.pending_group_invite_token_hash
+          challenge.pending_group_conversation_id &&
+          challenge.pending_group_invite_token_hash
             ? await acceptConversationInviteByTokenHash(
                 env,
                 account.account_id,
                 challenge.pending_group_conversation_id,
-                challenge.pending_group_invite_token_hash
+                challenge.pending_group_invite_token_hash,
               )
             : null;
 
         const deviceId = crypto.randomUUID();
-        const deviceLabel = body.deviceLabel ?? challenge.requested_device_label ?? "Primary device";
+        const deviceLabel =
+          body.deviceLabel ??
+          challenge.requested_device_label ??
+          "Primary device";
         await dbRun(
           env.DB,
           "INSERT INTO devices (id, account_id, device_label, created_at) VALUES (?1, ?2, ?3, ?4)",
           deviceId,
           account.account_id,
           deviceLabel,
-          now
+          now,
         );
         await dbRun(
           env.DB,
           "UPDATE auth_challenges SET consumed_at = ?1 WHERE id = ?2",
           now,
-          challenge.id
+          challenge.id,
         );
 
         return respond(
           json(
-            await createSession(env, account.account_id, deviceId, bootstrapConversation, clientMetadata)
-          )
+            await createSession(
+              env,
+              account.account_id,
+              deviceId,
+              bootstrapConversation,
+              clientMetadata,
+            ),
+          ),
         );
       }
 
       if (request.method === "POST" && pathname === "/v1/auth/refresh") {
-        const body = z.object({ refreshToken: z.string().min(16) }).parse(await readJson(request));
-        const refreshTokenHash = await sha256Hex(`refresh:${body.refreshToken}`);
+        const body = z
+          .object({ refreshToken: z.string().min(16) })
+          .parse(await readJson(request));
+        const refreshTokenHash = await sha256Hex(
+          `refresh:${body.refreshToken}`,
+        );
         const session = await dbFirst<{
           id: string;
           account_id: string;
@@ -2658,11 +3029,19 @@ export default {
           `SELECT id, account_id, device_id, expires_at, revoked_at
              FROM sessions
             WHERE refresh_token_hash = ?1`,
-          refreshTokenHash
+          refreshTokenHash,
         );
 
-        if (!session || session.revoked_at || session.expires_at <= new Date().toISOString()) {
-          throw new HttpError(401, "Invalid refresh token", "INVALID_REFRESH_TOKEN");
+        if (
+          !session ||
+          session.revoked_at ||
+          session.expires_at <= new Date().toISOString()
+        ) {
+          throw new HttpError(
+            401,
+            "Invalid refresh token",
+            "INVALID_REFRESH_TOKEN",
+          );
         }
 
         const accessToken = await signAccessToken(
@@ -2671,15 +3050,15 @@ export default {
             deviceId: session.device_id,
             sessionId: session.id,
           },
-          env.EMBERCHAMBER_ACCESS_TOKEN_SECRET
+          env.EMBERCHAMBER_ACCESS_TOKEN_SECRET,
         );
 
         return respond(
           json({
-          accessToken,
-          sessionId: session.id,
-          deviceId: session.device_id,
-          })
+            accessToken,
+            sessionId: session.id,
+            deviceId: session.device_id,
+          }),
         );
       }
 
@@ -2699,8 +3078,8 @@ export default {
               message:
                 "Passkey enrollment is scaffolded in the protocol, but not yet wired in this beta relay.",
             },
-            { status: 501 }
-          )
+            { status: 501 },
+          ),
         );
       }
 
@@ -2717,7 +3096,7 @@ export default {
              FROM accounts a
              JOIN account_emails ae ON ae.account_id = a.id
             WHERE a.id = ?1`,
-          auth.accountId
+          auth.accountId,
         );
 
         if (!account) {
@@ -2727,7 +3106,12 @@ export default {
         let avatarUrl: string | undefined;
         if (account.avatar_attachment_id) {
           const expiresAtMs = Date.now() + 60 * 60 * 1000; // 1 hour for avatar
-          const token = await signAttachmentToken(env, account.avatar_attachment_id, "download", expiresAtMs);
+          const token = await signAttachmentToken(
+            env,
+            account.avatar_attachment_id,
+            "download",
+            expiresAtMs,
+          );
           avatarUrl = `${env.EMBERCHAMBER_RELAY_PUBLIC_URL}/v1/attachments/download/${account.avatar_attachment_id}?token=${encodeURIComponent(token)}`;
         }
 
@@ -2735,7 +3119,10 @@ export default {
           id: auth.accountId,
           username: accountUsername(auth.accountId),
           displayName: account.display_name,
-          email: await decryptString(env.EMBERCHAMBER_EMAIL_ENCRYPTION_SECRET, account.email_ciphertext),
+          email: await decryptString(
+            env.EMBERCHAMBER_EMAIL_ENCRYPTION_SECRET,
+            account.email_ciphertext,
+          ),
           bio: account.bio ?? undefined,
           avatarUrl,
         };
@@ -2746,10 +3133,14 @@ export default {
       if (request.method === "PATCH" && pathname === "/v1/me") {
         const auth = await requireAuth(request, env);
         const body = profileSchema.parse(await readJson(request));
-        const existing = await dbFirst<{ display_name: string; bio: string | null; avatar_attachment_id: string | null }>(
+        const existing = await dbFirst<{
+          display_name: string;
+          bio: string | null;
+          avatar_attachment_id: string | null;
+        }>(
           env.DB,
           "SELECT display_name, bio, avatar_attachment_id FROM accounts WHERE id = ?1",
-          auth.accountId
+          auth.accountId,
         );
 
         if (!existing) {
@@ -2760,7 +3151,9 @@ export default {
         const bio = body.bio ?? existing.bio;
         // null explicitly clears the avatar; undefined means no change
         const avatarAttachmentId =
-          body.avatarAttachmentId !== undefined ? body.avatarAttachmentId : existing.avatar_attachment_id;
+          body.avatarAttachmentId !== undefined
+            ? body.avatarAttachmentId
+            : existing.avatar_attachment_id;
         await dbRun(
           env.DB,
           "UPDATE accounts SET display_name = ?1, bio = ?2, avatar_attachment_id = ?3, updated_at = ?4 WHERE id = ?5",
@@ -2768,7 +3161,7 @@ export default {
           bio ?? null,
           avatarAttachmentId,
           new Date().toISOString(),
-          auth.accountId
+          auth.accountId,
         );
 
         return respond(json({ updated: true, displayName, bio: bio ?? null }));
@@ -2786,7 +3179,7 @@ export default {
           `SELECT notification_preview_mode, auto_download_sensitive_media, allow_sensitive_export, secure_app_switcher
              FROM accounts
             WHERE id = ?1`,
-          auth.accountId
+          auth.accountId,
         );
 
         if (!settings) {
@@ -2795,11 +3188,14 @@ export default {
 
         return respond(
           json({
-            notificationPreviewMode: settings.notification_preview_mode ?? "discreet",
-            autoDownloadSensitiveMedia: Boolean(settings.auto_download_sensitive_media ?? 0),
+            notificationPreviewMode:
+              settings.notification_preview_mode ?? "discreet",
+            autoDownloadSensitiveMedia: Boolean(
+              settings.auto_download_sensitive_media ?? 0,
+            ),
             allowSensitiveExport: Boolean(settings.allow_sensitive_export ?? 0),
             secureAppSwitcher: Boolean(settings.secure_app_switcher ?? 1),
-          })
+          }),
         );
       }
 
@@ -2820,7 +3216,7 @@ export default {
           body.allowSensitiveExport ? 1 : 0,
           body.secureAppSwitcher ? 1 : 0,
           new Date().toISOString(),
-          auth.accountId
+          auth.accountId,
         );
 
         return respond(json(body));
@@ -2855,7 +3251,7 @@ export default {
               AND s.expires_at > ?2
             ORDER BY s.last_seen_at DESC`,
           auth.accountId,
-          new Date().toISOString()
+          new Date().toISOString(),
         );
 
         const sessions: SessionDescriptor[] = rows.map((row) => ({
@@ -2873,7 +3269,9 @@ export default {
         return respond(json(sessions));
       }
 
-      const sessionDeleteMatch = pathname.match(/^\/v1\/sessions\/([0-9a-f-]{36})$/i);
+      const sessionDeleteMatch = pathname.match(
+        /^\/v1\/sessions\/([0-9a-f-]{36})$/i,
+      );
       if (request.method === "DELETE" && sessionDeleteMatch) {
         const auth = await requireAuth(request, env);
         const sessionId = sessionDeleteMatch[1];
@@ -2884,7 +3282,7 @@ export default {
             WHERE id = ?2 AND account_id = ?3`,
           new Date().toISOString(),
           sessionId,
-          auth.accountId
+          auth.accountId,
         );
 
         return respond(json({ revoked: true, sessionId }));
@@ -2909,7 +3307,7 @@ export default {
           JSON.stringify(body.oneTimePrekeysB64),
           new Date().toISOString(),
           auth.deviceId,
-          auth.accountId
+          auth.accountId,
         );
 
         return respond(json({ registered: true, deviceId: auth.deviceId }));
@@ -2922,18 +3320,25 @@ export default {
           (body.platform === "android" && body.provider !== "fcm") ||
           (body.platform === "ios" && body.provider !== "apns")
         ) {
-          throw new HttpError(400, "Push provider does not match the target platform", "INVALID_PUSH_PROVIDER");
+          throw new HttpError(
+            400,
+            "Push provider does not match the target platform",
+            "INVALID_PUSH_PROVIDER",
+          );
         }
         const pushSecret = requirePushTokenSecret(env);
         const now = new Date().toISOString();
-        const tokenBlindIndex = await blindIndex(pushSecret, `push:${body.provider}:${body.platform}:${body.token}`);
+        const tokenBlindIndex = await blindIndex(
+          pushSecret,
+          `push:${body.provider}:${body.platform}:${body.token}`,
+        );
         const tokenCiphertext = await encryptString(pushSecret, body.token);
 
         await dbRun(
           env.DB,
           "DELETE FROM device_push_tokens WHERE device_id = ?1 OR token_blind_index = ?2",
           auth.deviceId,
-          tokenBlindIndex
+          tokenBlindIndex,
         );
         await dbRun(
           env.DB,
@@ -2960,7 +3365,7 @@ export default {
           body.appId ?? null,
           tokenCiphertext,
           tokenBlindIndex,
-          now
+          now,
         );
 
         return respond(
@@ -2969,17 +3374,20 @@ export default {
             deviceId: auth.deviceId,
             provider: body.provider,
             platform: body.platform,
-          })
+          }),
         );
       }
 
-      if (request.method === "DELETE" && pathname === "/v1/devices/push-token") {
+      if (
+        request.method === "DELETE" &&
+        pathname === "/v1/devices/push-token"
+      ) {
         const auth = await requireAuth(request, env);
         await dbRun(
           env.DB,
           "DELETE FROM device_push_tokens WHERE device_id = ?1 AND account_id = ?2",
           auth.deviceId,
-          auth.accountId
+          auth.accountId,
         );
 
         return respond(json({ cleared: true, deviceId: auth.deviceId }));
@@ -3010,7 +3418,7 @@ export default {
           tokenHash,
           "source_display",
           now,
-          expiresAt
+          expiresAt,
         );
         await scheduleCleanup(env, "device_link_start");
 
@@ -3034,7 +3442,7 @@ export default {
             ...buildDeviceLinkStatus(env, createdRow),
             linkId,
             qrPayload,
-          } satisfies DeviceLinkStartResponse)
+          } satisfies DeviceLinkStartResponse),
         );
       }
 
@@ -3043,10 +3451,18 @@ export default {
         const body = deviceLinkScanSchema.parse(await readJson(request));
         const parsed = parseDeviceLinkQrPayload(body.qrPayload);
         if (parsed.qrMode !== "target_display") {
-          throw new HttpError(400, "That QR is meant for a new device, not a signed-in device.", "DEVICE_LINK_QR_MODE_INVALID");
+          throw new HttpError(
+            400,
+            "That QR is meant for a new device, not a signed-in device.",
+            "DEVICE_LINK_QR_MODE_INVALID",
+          );
         }
         if (!relayOriginsMatch(relayPublicOrigin(env), parsed.relayOrigin)) {
-          throw new HttpError(400, "That QR belongs to a different relay environment.", "DEVICE_LINK_RELAY_MISMATCH");
+          throw new HttpError(
+            400,
+            "That QR belongs to a different relay environment.",
+            "DEVICE_LINK_RELAY_MISMATCH",
+          );
         }
 
         const requesterLabel = parsed.requesterLabel?.trim() || "New device";
@@ -3054,12 +3470,23 @@ export default {
         const existing = await findDeviceLinkByToken(env, parsed.linkToken);
         if (existing) {
           if (existing.account_id !== auth.accountId) {
-            throw new HttpError(403, "This QR is already attached to a different account.", "FORBIDDEN");
+            throw new HttpError(
+              403,
+              "This QR is already attached to a different account.",
+              "FORBIDDEN",
+            );
           }
           if (existing.qr_mode !== "target_display") {
-            throw new HttpError(409, "This device-link QR is for the opposite flow.", "DEVICE_LINK_QR_MODE_INVALID");
+            throw new HttpError(
+              409,
+              "This device-link QR is for the opposite flow.",
+              "DEVICE_LINK_QR_MODE_INVALID",
+            );
           }
-          if (!existing.claimed_at || existing.requester_label !== requesterLabel) {
+          if (
+            !existing.claimed_at ||
+            existing.requester_label !== requesterLabel
+          ) {
             await dbRun(
               env.DB,
               `UPDATE device_links
@@ -3068,7 +3495,7 @@ export default {
                 WHERE id = ?3`,
               requesterLabel,
               now,
-              existing.id
+              existing.id,
             );
           }
 
@@ -3078,8 +3505,8 @@ export default {
                 ...existing,
                 requester_label: requesterLabel,
                 claimed_at: existing.claimed_at ?? now,
-              })
-            )
+              }),
+            ),
           );
         }
 
@@ -3104,7 +3531,7 @@ export default {
           await hashDeviceLinkToken(parsed.linkToken),
           "target_display",
           now,
-          expiresAt
+          expiresAt,
         );
         await scheduleCleanup(env, "device_link_scan");
 
@@ -3123,8 +3550,8 @@ export default {
               consumed_at: null,
               completed_device_id: null,
               completed_session_id: null,
-            })
-          )
+            }),
+          ),
         );
       }
 
@@ -3132,23 +3559,43 @@ export default {
         const body = deviceLinkClaimSchema.parse(await readJson(request));
         const parsed = parseDeviceLinkQrPayload(body.qrPayload);
         if (parsed.qrMode !== "source_display") {
-          throw new HttpError(400, "That QR is meant to be scanned by a signed-in device.", "DEVICE_LINK_QR_MODE_INVALID");
+          throw new HttpError(
+            400,
+            "That QR is meant to be scanned by a signed-in device.",
+            "DEVICE_LINK_QR_MODE_INVALID",
+          );
         }
         if (!relayOriginsMatch(relayPublicOrigin(env), parsed.relayOrigin)) {
-          throw new HttpError(400, "That QR belongs to a different relay environment.", "DEVICE_LINK_RELAY_MISMATCH");
+          throw new HttpError(
+            400,
+            "That QR belongs to a different relay environment.",
+            "DEVICE_LINK_RELAY_MISMATCH",
+          );
         }
 
         const row = await findDeviceLinkByToken(env, parsed.linkToken);
         if (!row) {
-          throw new HttpError(404, "Device-link request not found", "DEVICE_LINK_NOT_FOUND");
+          throw new HttpError(
+            404,
+            "Device-link request not found",
+            "DEVICE_LINK_NOT_FOUND",
+          );
         }
         if (row.qr_mode !== "source_display") {
-          throw new HttpError(409, "This device-link QR is for the opposite flow.", "DEVICE_LINK_QR_MODE_INVALID");
+          throw new HttpError(
+            409,
+            "This device-link QR is for the opposite flow.",
+            "DEVICE_LINK_QR_MODE_INVALID",
+          );
         }
 
         const now = new Date().toISOString();
         const status = buildDeviceLinkStatus(env, row);
-        if (status.state === "approved" || status.state === "consumed" || status.state === "expired") {
+        if (
+          status.state === "approved" ||
+          status.state === "consumed" ||
+          status.state === "expired"
+        ) {
           return respond(json(status));
         }
 
@@ -3157,7 +3604,7 @@ export default {
           throw new HttpError(
             409,
             "This device-link request was already claimed by another device.",
-            "DEVICE_LINK_ALREADY_CLAIMED"
+            "DEVICE_LINK_ALREADY_CLAIMED",
           );
         }
 
@@ -3169,7 +3616,7 @@ export default {
             WHERE id = ?3`,
           normalizedDeviceLabel,
           now,
-          row.id
+          row.id,
         );
 
         return respond(
@@ -3178,8 +3625,8 @@ export default {
               ...row,
               requester_label: normalizedDeviceLabel,
               claimed_at: row.claimed_at ?? now,
-            })
-          )
+            }),
+          ),
         );
       }
 
@@ -3190,16 +3637,27 @@ export default {
         });
         const row = await findDeviceLinkByToken(env, query.token);
         if (!row) {
-          throw new HttpError(404, "Device-link request not found", "DEVICE_LINK_NOT_FOUND");
+          throw new HttpError(
+            404,
+            "Device-link request not found",
+            "DEVICE_LINK_NOT_FOUND",
+          );
         }
         if (row.qr_mode !== query.qrMode) {
-          throw new HttpError(409, "This device-link QR is for the opposite flow.", "DEVICE_LINK_QR_MODE_INVALID");
+          throw new HttpError(
+            409,
+            "This device-link QR is for the opposite flow.",
+            "DEVICE_LINK_QR_MODE_INVALID",
+          );
         }
 
         return respond(json(buildDeviceLinkStatus(env, row)));
       }
 
-      if (request.method === "POST" && pathname === "/v1/devices/link/confirm") {
+      if (
+        request.method === "POST" &&
+        pathname === "/v1/devices/link/confirm"
+      ) {
         const auth = await requireAuth(request, env);
         const body = deviceLinkConfirmSchema.parse(await readJson(request));
         const row = await dbFirst<DeviceLinkRow>(
@@ -3221,20 +3679,27 @@ export default {
           WHERE id = ?1
             AND account_id = ?2`,
           body.linkId,
-          auth.accountId
+          auth.accountId,
         );
         if (!row) {
-          throw new HttpError(404, "Device-link request not found", "DEVICE_LINK_NOT_FOUND");
+          throw new HttpError(
+            404,
+            "Device-link request not found",
+            "DEVICE_LINK_NOT_FOUND",
+          );
         }
 
         const currentStatus = buildDeviceLinkStatus(env, row);
-        if (currentStatus.state !== "pending_approval" && currentStatus.state !== "approved") {
+        if (
+          currentStatus.state !== "pending_approval" &&
+          currentStatus.state !== "approved"
+        ) {
           return respond(
             json({
               ...currentStatus,
               linkId: row.id,
               confirmed: true,
-            } satisfies DeviceLinkConfirmResponse)
+            } satisfies DeviceLinkConfirmResponse),
           );
         }
 
@@ -3248,7 +3713,7 @@ export default {
             approvedAt,
             auth.deviceId,
             body.linkId,
-            auth.accountId
+            auth.accountId,
           );
         }
 
@@ -3261,30 +3726,53 @@ export default {
             }),
             linkId: row.id,
             confirmed: true,
-          } satisfies DeviceLinkConfirmResponse)
+          } satisfies DeviceLinkConfirmResponse),
         );
       }
 
-      if (request.method === "POST" && pathname === "/v1/devices/link/complete") {
+      if (
+        request.method === "POST" &&
+        pathname === "/v1/devices/link/complete"
+      ) {
         const body = deviceLinkCompleteSchema.parse(await readJson(request));
         const clientMetadata = parseClientMetadata(request);
         const row = await findDeviceLinkByToken(env, body.linkToken);
         if (!row) {
-          throw new HttpError(404, "Device-link request not found", "DEVICE_LINK_NOT_FOUND");
+          throw new HttpError(
+            404,
+            "Device-link request not found",
+            "DEVICE_LINK_NOT_FOUND",
+          );
         }
         if (row.qr_mode !== body.qrMode) {
-          throw new HttpError(409, "This device-link QR is for the opposite flow.", "DEVICE_LINK_QR_MODE_INVALID");
+          throw new HttpError(
+            409,
+            "This device-link QR is for the opposite flow.",
+            "DEVICE_LINK_QR_MODE_INVALID",
+          );
         }
 
         const status = buildDeviceLinkStatus(env, row);
         if (status.state === "expired") {
-          throw new HttpError(410, "This device-link request expired. Start a fresh QR.", "DEVICE_LINK_EXPIRED");
+          throw new HttpError(
+            410,
+            "This device-link request expired. Start a fresh QR.",
+            "DEVICE_LINK_EXPIRED",
+          );
         }
         if (status.state === "consumed") {
-          throw new HttpError(409, "This device-link request was already used.", "DEVICE_LINK_CONSUMED");
+          throw new HttpError(
+            409,
+            "This device-link request was already used.",
+            "DEVICE_LINK_CONSUMED",
+          );
         }
         if (status.state !== "approved") {
-          throw new HttpError(409, "This device-link request is not approved yet.", "DEVICE_LINK_NOT_APPROVED");
+          throw new HttpError(
+            409,
+            "This device-link request is not approved yet.",
+            "DEVICE_LINK_NOT_APPROVED",
+          );
         }
 
         const now = new Date().toISOString();
@@ -3297,10 +3785,16 @@ export default {
           row.account_id,
           row.requester_label,
           row.approved_by_device_id,
-          now
+          now,
         );
 
-        const session = await createSession(env, row.account_id, deviceId, null, clientMetadata);
+        const session = await createSession(
+          env,
+          row.account_id,
+          deviceId,
+          null,
+          clientMetadata,
+        );
         await dbRun(
           env.DB,
           `UPDATE device_links
@@ -3311,20 +3805,31 @@ export default {
           now,
           deviceId,
           session.sessionId,
-          row.id
+          row.id,
         );
 
         return respond(json(session));
       }
 
-      if (request.method === "POST" && pathname === "/v1/contacts/card/resolve") {
+      if (
+        request.method === "POST" &&
+        pathname === "/v1/contacts/card/resolve"
+      ) {
         await requireAuth(request, env);
         const body = contactCardSchema.parse(await readJson(request));
         const decoded = JSON.parse(atob(body.cardToken)) as ContactCard;
-        const account = await dbFirst<{ id: string }>(env.DB, "SELECT id FROM accounts WHERE id = ?1", decoded.accountId);
+        const account = await dbFirst<{ id: string }>(
+          env.DB,
+          "SELECT id FROM accounts WHERE id = ?1",
+          decoded.accountId,
+        );
 
         if (!account) {
-          throw new HttpError(404, "Contact card not found", "CONTACT_NOT_FOUND");
+          throw new HttpError(
+            404,
+            "Contact card not found",
+            "CONTACT_NOT_FOUND",
+          );
         }
 
         return respond(json(decoded));
@@ -3335,23 +3840,27 @@ export default {
         const account = await dbFirst<{ display_name: string }>(
           env.DB,
           "SELECT display_name FROM accounts WHERE id = ?1",
-          auth.accountId
+          auth.accountId,
         );
 
         const card: ContactCard = {
           accountId: auth.accountId,
-          label: account?.display_name ?? conversationTitleForAccount(auth.accountId),
+          label:
+            account?.display_name ??
+            conversationTitleForAccount(auth.accountId),
         };
 
         return respond(
           json({
             ...card,
             cardToken: btoa(JSON.stringify(card)),
-          })
+          }),
         );
       }
 
-      const accountDeviceBundlesMatch = pathname.match(/^\/v1\/accounts\/([0-9a-f-]{36})\/device-bundles$/i);
+      const accountDeviceBundlesMatch = pathname.match(
+        /^\/v1\/accounts\/([0-9a-f-]{36})\/device-bundles$/i,
+      );
       if (request.method === "GET" && accountDeviceBundlesMatch) {
         const auth = await requireAuth(request, env);
         const targetAccountId = accountDeviceBundlesMatch[1];
@@ -3369,11 +3878,15 @@ export default {
                 AND me.removed_at IS NULL
               LIMIT 1`,
             auth.accountId,
-            targetAccountId
+            targetAccountId,
           );
 
           if (!sharedConversation) {
-            throw new HttpError(403, "No shared conversation with this account", "FORBIDDEN");
+            throw new HttpError(
+              403,
+              "No shared conversation with this account",
+              "FORBIDDEN",
+            );
           }
         }
 
@@ -3402,7 +3915,7 @@ export default {
             AND signed_prekey IS NOT NULL
             AND signed_prekey_signature IS NOT NULL
           ORDER BY created_at ASC`,
-          targetAccountId
+          targetAccountId,
         );
 
         const bundles: DeviceKeyBundle[] = rows.map((row) => ({
@@ -3434,14 +3947,22 @@ export default {
             WHERE (account_id = ?1 AND blocked_account_id = ?2)
                OR (account_id = ?2 AND blocked_account_id = ?1)`,
           auth.accountId,
-          body.peerAccountId
+          body.peerAccountId,
         );
 
         if (blocked) {
-          throw new HttpError(403, "Cannot open DM with this account", "BLOCKED");
+          throw new HttpError(
+            403,
+            "Cannot open DM with this account",
+            "BLOCKED",
+          );
         }
 
-        const existing = await dbFirst<{ conversation_id: string; epoch: number; created_at: string }>(
+        const existing = await dbFirst<{
+          conversation_id: string;
+          epoch: number;
+          created_at: string;
+        }>(
           env.DB,
           `SELECT c.id AS conversation_id, c.epoch, c.created_at
              FROM conversations c
@@ -3450,7 +3971,7 @@ export default {
             WHERE c.kind = 'direct_message'
             LIMIT 1`,
           auth.accountId,
-          body.peerAccountId
+          body.peerAccountId,
         );
 
         if (existing) {
@@ -3480,7 +4001,7 @@ export default {
            ) VALUES (?1, 'direct_message', 1, ?2, ?3, ?3, 'device_encrypted')`,
           conversationId,
           auth.accountId,
-          createdAt
+          createdAt,
         );
         await dbRun(
           env.DB,
@@ -3489,7 +4010,7 @@ export default {
           conversationId,
           auth.accountId,
           body.peerAccountId,
-          createdAt
+          createdAt,
         );
 
         return respond(
@@ -3500,23 +4021,38 @@ export default {
             historyMode: "device_encrypted",
             memberAccountIds: [auth.accountId, body.peerAccountId],
             createdAt,
-          } satisfies ConversationDescriptor)
+          } satisfies ConversationDescriptor),
         );
       }
 
       if (request.method === "GET" && pathname === "/v1/conversations") {
         const auth = await requireAuth(request, env);
-        const conversations = await loadAccessibleConversations(env, auth.accountId);
-        return respond(json(conversations.map((conversation) => conversation.summary)));
+        const conversations = await loadAccessibleConversations(
+          env,
+          auth.accountId,
+        );
+        return respond(
+          json(conversations.map((conversation) => conversation.summary)),
+        );
       }
 
-      const conversationDetailMatch = pathname.match(/^\/v1\/conversations\/([0-9a-f-]{36})$/i);
+      const conversationDetailMatch = pathname.match(
+        /^\/v1\/conversations\/([0-9a-f-]{36})$/i,
+      );
       if (request.method === "GET" && conversationDetailMatch) {
         const auth = await requireAuth(request, env);
-        const [conversation] = await loadAccessibleConversations(env, auth.accountId, conversationDetailMatch[1]);
+        const [conversation] = await loadAccessibleConversations(
+          env,
+          auth.accountId,
+          conversationDetailMatch[1],
+        );
 
         if (!conversation) {
-          throw new HttpError(404, "Conversation not found", "CONVERSATION_NOT_FOUND");
+          throw new HttpError(
+            404,
+            "Conversation not found",
+            "CONVERSATION_NOT_FOUND",
+          );
         }
 
         return respond(
@@ -3524,14 +4060,15 @@ export default {
             ...conversation.summary,
             members: conversation.members,
             ...(conversation.rooms ? { rooms: conversation.rooms } : {}),
-          } satisfies ConversationDetail)
+          } satisfies ConversationDetail),
         );
       }
 
       if (request.method === "GET" && pathname === "/v1/search") {
         const auth = await requireAuth(request, env);
         const query = (url.searchParams.get("q") ?? "").trim();
-        const scopedCommunityId = (url.searchParams.get("communityId") ?? "").trim() || null;
+        const scopedCommunityId =
+          (url.searchParams.get("communityId") ?? "").trim() || null;
         if (query.length < 2) {
           return respond(
             json({
@@ -3539,21 +4076,30 @@ export default {
               scopedCommunityId: scopedCommunityId ?? undefined,
               conversations: [],
               accounts: [],
-            } satisfies ConversationSearchResult)
+            } satisfies ConversationSearchResult),
           );
         }
 
         const normalizedQuery = query.toLowerCase();
-        const conversations = await loadAccessibleConversations(env, auth.accountId);
+        const conversations = await loadAccessibleConversations(
+          env,
+          auth.accountId,
+        );
         const scopedConversationIds =
           scopedCommunityId === null
             ? null
             : (() => {
                 const joinedCommunity = conversations.find(
-                  (entry) => entry.summary.id === scopedCommunityId && entry.summary.kind === "community"
+                  (entry) =>
+                    entry.summary.id === scopedCommunityId &&
+                    entry.summary.kind === "community",
                 );
                 if (!joinedCommunity) {
-                  throw new HttpError(404, "Scoped community not found", "COMMUNITY_NOT_FOUND");
+                  throw new HttpError(
+                    404,
+                    "Scoped community not found",
+                    "COMMUNITY_NOT_FOUND",
+                  );
                 }
 
                 return new Set(
@@ -3561,15 +4107,18 @@ export default {
                     .filter(
                       (entry) =>
                         entry.summary.id === scopedCommunityId ||
-                        entry.summary.parentConversationId === scopedCommunityId
+                        entry.summary.parentConversationId ===
+                          scopedCommunityId,
                     )
-                    .map((entry) => entry.summary.id)
+                    .map((entry) => entry.summary.id),
                 );
               })();
 
         const matchingConversations = conversations
           .map((entry) => entry.summary)
-          .filter((entry) => (scopedConversationIds ? scopedConversationIds.has(entry.id) : true))
+          .filter((entry) =>
+            scopedConversationIds ? scopedConversationIds.has(entry.id) : true,
+          )
           .filter((entry) => {
             const title = (entry.title ?? "").toLowerCase();
             return title.includes(normalizedQuery);
@@ -3586,7 +4135,10 @@ export default {
         >();
 
         for (const conversation of conversations) {
-          if (scopedConversationIds && !scopedConversationIds.has(conversation.summary.id)) {
+          if (
+            scopedConversationIds &&
+            !scopedConversationIds.has(conversation.summary.id)
+          ) {
             continue;
           }
 
@@ -3618,9 +4170,9 @@ export default {
             scopedCommunityId: scopedCommunityId ?? undefined,
             conversations: matchingConversations,
             accounts: Array.from(accountsById.values()).sort((left, right) =>
-              left.displayName.localeCompare(right.displayName)
+              left.displayName.localeCompare(right.displayName),
             ),
-          } satisfies ConversationSearchResult)
+          } satisfies ConversationSearchResult),
         );
       }
 
@@ -3628,12 +4180,18 @@ export default {
         const auth = await requireAuth(request, env);
         const body = communitySchema.parse(await readJson(request));
         if (body.memberAccountIds.length + 1 > body.memberCap) {
-          throw new HttpError(400, "Initial member list exceeds the community cap", "GROUP_CAP_EXCEEDED");
+          throw new HttpError(
+            400,
+            "Initial member list exceeds the community cap",
+            "GROUP_CAP_EXCEEDED",
+          );
         }
 
         const communityId = crypto.randomUUID();
         const createdAt = new Date().toISOString();
-        const memberAccountIds = Array.from(new Set([auth.accountId, ...body.memberAccountIds]));
+        const memberAccountIds = Array.from(
+          new Set([auth.accountId, ...body.memberAccountIds]),
+        );
 
         await dbRun(
           env.DB,
@@ -3658,7 +4216,7 @@ export default {
           body.memberCap,
           body.sensitiveMediaDefault ? 1 : 0,
           body.joinRuleText ?? null,
-          body.allowMemberInvites ? 1 : 0
+          body.allowMemberInvites ? 1 : 0,
         );
 
         for (const [index, memberAccountId] of memberAccountIds.entries()) {
@@ -3667,7 +4225,7 @@ export default {
             communityId,
             memberAccountId,
             index === 0 ? "owner" : "member",
-            createdAt
+            createdAt,
           );
         }
 
@@ -3700,11 +4258,13 @@ export default {
             allowMemberInvites: body.allowMemberInvites,
             inviteFreezeEnabled: false,
             createdAt,
-          } satisfies ConversationDescriptor)
+          } satisfies ConversationDescriptor),
         );
       }
 
-      const communityPolicyMatch = pathname.match(/^\/v1\/communities\/([0-9a-f-]{36})\/policies$/i);
+      const communityPolicyMatch = pathname.match(
+        /^\/v1\/communities\/([0-9a-f-]{36})\/policies$/i,
+      );
       if (request.method === "PATCH" && communityPolicyMatch) {
         const auth = await requireAuth(request, env);
         const communityId = communityPolicyMatch[1];
@@ -3717,21 +4277,29 @@ export default {
               AND account_id = ?2
               AND removed_at IS NULL`,
           communityId,
-          auth.accountId
+          auth.accountId,
         );
 
         const community = await dbFirst<{ id: string }>(
           env.DB,
           "SELECT id FROM conversations WHERE id = ?1 AND kind = 'community'",
-          communityId
+          communityId,
         );
 
         if (!membership || !community) {
-          throw new HttpError(404, "Community not found", "COMMUNITY_NOT_FOUND");
+          throw new HttpError(
+            404,
+            "Community not found",
+            "COMMUNITY_NOT_FOUND",
+          );
         }
 
         if (!isOrganizerRole(membership.role)) {
-          throw new HttpError(403, "Only organizers can update community policies", "FORBIDDEN");
+          throw new HttpError(
+            403,
+            "Only organizers can update community policies",
+            "FORBIDDEN",
+          );
         }
 
         await dbRun(
@@ -3741,15 +4309,31 @@ export default {
                   invite_freeze_enabled = COALESCE(?2, invite_freeze_enabled),
                   updated_at = ?3
             WHERE id = ?4`,
-          body.allowMemberInvites === undefined ? null : body.allowMemberInvites ? 1 : 0,
-          body.inviteFreezeEnabled === undefined ? null : body.inviteFreezeEnabled ? 1 : 0,
+          body.allowMemberInvites === undefined
+            ? null
+            : body.allowMemberInvites
+              ? 1
+              : 0,
+          body.inviteFreezeEnabled === undefined
+            ? null
+            : body.inviteFreezeEnabled
+              ? 1
+              : 0,
           new Date().toISOString(),
-          communityId
+          communityId,
         );
 
-        const [updated] = await loadAccessibleConversations(env, auth.accountId, communityId);
+        const [updated] = await loadAccessibleConversations(
+          env,
+          auth.accountId,
+          communityId,
+        );
         if (!updated) {
-          throw new HttpError(404, "Community not found", "COMMUNITY_NOT_FOUND");
+          throw new HttpError(
+            404,
+            "Community not found",
+            "COMMUNITY_NOT_FOUND",
+          );
         }
 
         return respond(
@@ -3757,11 +4341,13 @@ export default {
             ...updated.summary,
             members: updated.members,
             ...(updated.rooms ? { rooms: updated.rooms } : {}),
-          } satisfies ConversationDetail)
+          } satisfies ConversationDetail),
         );
       }
 
-      const communityRoomCreateMatch = pathname.match(/^\/v1\/communities\/([0-9a-f-]{36})\/rooms$/i);
+      const communityRoomCreateMatch = pathname.match(
+        /^\/v1\/communities\/([0-9a-f-]{36})\/rooms$/i,
+      );
       if (request.method === "POST" && communityRoomCreateMatch) {
         const auth = await requireAuth(request, env);
         const communityId = communityRoomCreateMatch[1];
@@ -3774,28 +4360,47 @@ export default {
               AND account_id = ?2
               AND removed_at IS NULL`,
           communityId,
-          auth.accountId
+          auth.accountId,
         );
 
         if (!membership || !isOrganizerRole(membership.role)) {
-          throw new HttpError(403, "Only organizers can create rooms", "FORBIDDEN");
+          throw new HttpError(
+            403,
+            "Only organizers can create rooms",
+            "FORBIDDEN",
+          );
         }
 
         const community = await dbFirst<{ id: string }>(
           env.DB,
           "SELECT id FROM conversations WHERE id = ?1 AND kind = 'community'",
-          communityId
+          communityId,
         );
 
         if (!community) {
-          throw new HttpError(404, "Community not found", "COMMUNITY_NOT_FOUND");
+          throw new HttpError(
+            404,
+            "Community not found",
+            "COMMUNITY_NOT_FOUND",
+          );
         }
 
-        const communityMembers = await listActiveConversationMembers(env, communityId);
-        const communityMemberIds = new Set(communityMembers.map((member) => member.accountId));
-        const invalidMembers = body.memberAccountIds.filter((accountId) => !communityMemberIds.has(accountId));
+        const communityMembers = await listActiveConversationMembers(
+          env,
+          communityId,
+        );
+        const communityMemberIds = new Set(
+          communityMembers.map((member) => member.accountId),
+        );
+        const invalidMembers = body.memberAccountIds.filter(
+          (accountId) => !communityMemberIds.has(accountId),
+        );
         if (invalidMembers.length > 0) {
-          throw new HttpError(400, "Restricted room members must already belong to the community", "FORBIDDEN");
+          throw new HttpError(
+            400,
+            "Restricted room members must already belong to the community",
+            "FORBIDDEN",
+          );
         }
 
         const createdAt = new Date().toISOString();
@@ -3806,22 +4411,31 @@ export default {
           joinRuleText: body.joinRuleText ?? null,
           sensitiveMediaDefault: body.sensitiveMediaDefault,
           roomAccessPolicy: body.roomAccessPolicy,
-          memberAccountIds: body.roomAccessPolicy === "restricted" ? body.memberAccountIds : [],
+          memberAccountIds:
+            body.roomAccessPolicy === "restricted" ? body.memberAccountIds : [],
           createdAt,
         });
 
         await syncRelayHostedConversationSockets(env, roomId);
 
-        const [room] = await loadAccessibleConversations(env, auth.accountId, roomId);
+        const [room] = await loadAccessibleConversations(
+          env,
+          auth.accountId,
+          roomId,
+        );
         if (!room) {
           throw new HttpError(404, "Room not found", "ROOM_NOT_FOUND");
         }
 
-        return respond(json(room.summary satisfies ConversationSummary), "ROOM_CREATED");
+        return respond(
+          json(room.summary satisfies ConversationSummary),
+          "ROOM_CREATED",
+        );
       }
 
-      const communityRoomMemberAddMatch =
-        pathname.match(/^\/v1\/communities\/([0-9a-f-]{36})\/rooms\/([0-9a-f-]{36})\/members\/([0-9a-f-]{36})\/add$/i);
+      const communityRoomMemberAddMatch = pathname.match(
+        /^\/v1\/communities\/([0-9a-f-]{36})\/rooms\/([0-9a-f-]{36})\/members\/([0-9a-f-]{36})\/add$/i,
+      );
       if (request.method === "POST" && communityRoomMemberAddMatch) {
         const auth = await requireAuth(request, env);
         const communityId = communityRoomMemberAddMatch[1];
@@ -3835,20 +4449,33 @@ export default {
               AND account_id = ?2
               AND removed_at IS NULL`,
           communityId,
-          auth.accountId
+          auth.accountId,
         );
 
         if (!membership || !isOrganizerRole(membership.role)) {
-          throw new HttpError(403, "Only organizers can grant room access", "FORBIDDEN");
+          throw new HttpError(
+            403,
+            "Only organizers can grant room access",
+            "FORBIDDEN",
+          );
         }
 
-        await ensureRestrictedRoomMembership(env, communityId, roomId, targetAccountId, new Date().toISOString());
+        await ensureRestrictedRoomMembership(
+          env,
+          communityId,
+          roomId,
+          targetAccountId,
+          new Date().toISOString(),
+        );
         await syncRelayHostedConversationSockets(env, roomId);
-        return respond(json({ added: true, communityId, roomId, targetAccountId }));
+        return respond(
+          json({ added: true, communityId, roomId, targetAccountId }),
+        );
       }
 
-      const communityRoomMemberRemoveMatch =
-        pathname.match(/^\/v1\/communities\/([0-9a-f-]{36})\/rooms\/([0-9a-f-]{36})\/members\/([0-9a-f-]{36})\/remove$/i);
+      const communityRoomMemberRemoveMatch = pathname.match(
+        /^\/v1\/communities\/([0-9a-f-]{36})\/rooms\/([0-9a-f-]{36})\/members\/([0-9a-f-]{36})\/remove$/i,
+      );
       if (request.method === "POST" && communityRoomMemberRemoveMatch) {
         const auth = await requireAuth(request, env);
         const communityId = communityRoomMemberRemoveMatch[1];
@@ -3862,11 +4489,15 @@ export default {
               AND account_id = ?2
               AND removed_at IS NULL`,
           communityId,
-          auth.accountId
+          auth.accountId,
         );
 
         if (!membership || !isOrganizerRole(membership.role)) {
-          throw new HttpError(403, "Only organizers can revoke room access", "FORBIDDEN");
+          throw new HttpError(
+            403,
+            "Only organizers can revoke room access",
+            "FORBIDDEN",
+          );
         }
 
         const room = await dbFirst<{ room_access_policy: string | null }>(
@@ -3877,7 +4508,7 @@ export default {
               AND parent_conversation_id = ?2
               AND kind = 'room'`,
           roomId,
-          communityId
+          communityId,
         );
 
         if (!room) {
@@ -3885,7 +4516,11 @@ export default {
         }
 
         if (coerceRoomAccessPolicy(room.room_access_policy) !== "restricted") {
-          throw new HttpError(409, "All-member rooms inherit access from the community", "ROOM_ACCESS_INHERITED");
+          throw new HttpError(
+            409,
+            "All-member rooms inherit access from the community",
+            "ROOM_ACCESS_INHERITED",
+          );
         }
 
         const targetCommunityMembership = await dbFirst<{ role: string }>(
@@ -3896,11 +4531,18 @@ export default {
               AND account_id = ?2
               AND removed_at IS NULL`,
           communityId,
-          targetAccountId
+          targetAccountId,
         );
 
-        if (targetCommunityMembership && isOrganizerRole(targetCommunityMembership.role)) {
-          throw new HttpError(409, "Organizers keep access to restricted rooms", "ROOM_ACCESS_REQUIRED");
+        if (
+          targetCommunityMembership &&
+          isOrganizerRole(targetCommunityMembership.role)
+        ) {
+          throw new HttpError(
+            409,
+            "Organizers keep access to restricted rooms",
+            "ROOM_ACCESS_REQUIRED",
+          );
         }
 
         await dbRun(
@@ -3912,23 +4554,30 @@ export default {
               AND removed_at IS NULL`,
           new Date().toISOString(),
           roomId,
-          targetAccountId
+          targetAccountId,
         );
 
         await syncRelayHostedConversationSockets(env, roomId);
 
-        return respond(json({ removed: true, communityId, roomId, targetAccountId }));
+        return respond(
+          json({ removed: true, communityId, roomId, targetAccountId }),
+        );
       }
 
-      const communityMemberRemoveMatch =
-        pathname.match(/^\/v1\/communities\/([0-9a-f-]{36})\/members\/([0-9a-f-]{36})\/remove$/i);
+      const communityMemberRemoveMatch = pathname.match(
+        /^\/v1\/communities\/([0-9a-f-]{36})\/members\/([0-9a-f-]{36})\/remove$/i,
+      );
       if (request.method === "POST" && communityMemberRemoveMatch) {
         const auth = await requireAuth(request, env);
         const communityId = communityMemberRemoveMatch[1];
         const targetAccountId = communityMemberRemoveMatch[2];
 
         if (targetAccountId === auth.accountId) {
-          throw new HttpError(400, "Use a separate ownership transfer flow before removing yourself", "SELF_REMOVE_BLOCKED");
+          throw new HttpError(
+            400,
+            "Use a separate ownership transfer flow before removing yourself",
+            "SELF_REMOVE_BLOCKED",
+          );
         }
 
         const membership = await dbFirst<{ role: string }>(
@@ -3939,11 +4588,15 @@ export default {
               AND account_id = ?2
               AND removed_at IS NULL`,
           communityId,
-          auth.accountId
+          auth.accountId,
         );
 
         if (!membership || !isOrganizerRole(membership.role)) {
-          throw new HttpError(403, "Only organizers can remove community members", "FORBIDDEN");
+          throw new HttpError(
+            403,
+            "Only organizers can remove community members",
+            "FORBIDDEN",
+          );
         }
 
         const targetMembership = await dbFirst<{ role: string }>(
@@ -3954,15 +4607,23 @@ export default {
               AND account_id = ?2
               AND removed_at IS NULL`,
           communityId,
-          targetAccountId
+          targetAccountId,
         );
 
         if (!targetMembership) {
-          throw new HttpError(404, "Community member not found", "COMMUNITY_MEMBER_NOT_FOUND");
+          throw new HttpError(
+            404,
+            "Community member not found",
+            "COMMUNITY_MEMBER_NOT_FOUND",
+          );
         }
 
         if (targetMembership.role === "owner") {
-          throw new HttpError(409, "Transfer ownership before removing the owner", "OWNER_REMOVE_BLOCKED");
+          throw new HttpError(
+            409,
+            "Transfer ownership before removing the owner",
+            "OWNER_REMOVE_BLOCKED",
+          );
         }
 
         const removedAt = new Date().toISOString();
@@ -3975,19 +4636,28 @@ export default {
               AND removed_at IS NULL`,
           removedAt,
           communityId,
-          targetAccountId
+          targetAccountId,
         );
-        const affectedRoomIds = await removeMemberFromCommunityRooms(env, communityId, targetAccountId, removedAt);
+        const affectedRoomIds = await removeMemberFromCommunityRooms(
+          env,
+          communityId,
+          targetAccountId,
+          removedAt,
+        );
         await dbRun(
           env.DB,
           `UPDATE conversations
               SET updated_at = ?1
             WHERE id = ?2`,
           removedAt,
-          communityId
+          communityId,
         );
         await syncRelayHostedConversationSockets(env, communityId);
-        await Promise.all(affectedRoomIds.map((roomId) => syncRelayHostedConversationSockets(env, roomId)));
+        await Promise.all(
+          affectedRoomIds.map((roomId) =>
+            syncRelayHostedConversationSockets(env, roomId),
+          ),
+        );
 
         return respond(json({ removed: true, communityId, targetAccountId }));
       }
@@ -3996,11 +4666,17 @@ export default {
         const auth = await requireAuth(request, env);
         const body = groupSchema.parse(await readJson(request));
         if (body.memberAccountIds.length + 1 > body.memberCap) {
-          throw new HttpError(400, "Initial member list exceeds the group cap", "GROUP_CAP_EXCEEDED");
+          throw new HttpError(
+            400,
+            "Initial member list exceeds the group cap",
+            "GROUP_CAP_EXCEEDED",
+          );
         }
         const conversationId = crypto.randomUUID();
         const createdAt = new Date().toISOString();
-        const memberAccountIds = Array.from(new Set([auth.accountId, ...body.memberAccountIds]));
+        const memberAccountIds = Array.from(
+          new Set([auth.accountId, ...body.memberAccountIds]),
+        );
 
         await dbRun(
           env.DB,
@@ -4014,7 +4690,7 @@ export default {
           body.memberCap,
           body.sensitiveMediaDefault ? 1 : 0,
           body.joinRuleText ?? null,
-          0
+          0,
         );
 
         for (const [index, memberAccountId] of memberAccountIds.entries()) {
@@ -4024,7 +4700,7 @@ export default {
             conversationId,
             memberAccountId,
             index === 0 ? "owner" : "member",
-            createdAt
+            createdAt,
           );
         }
 
@@ -4052,7 +4728,7 @@ export default {
             joinRuleText: body.joinRuleText ?? null,
             allowMemberInvites: false,
             createdAt,
-          } satisfies ConversationDescriptor)
+          } satisfies ConversationDescriptor),
         );
       }
 
@@ -4100,7 +4776,7 @@ export default {
             AND cm.account_id = ?1
             AND cm.removed_at IS NULL
           ORDER BY c.updated_at DESC`,
-          auth.accountId
+          auth.accountId,
         );
 
         const groups: GroupMembershipSummary[] = rows.map((row) => {
@@ -4113,10 +4789,15 @@ export default {
             id: row.id,
             title: row.title ?? "Untitled group",
             epoch: row.epoch,
-            historyMode: coerceConversationHistoryMode(row.history_mode, "group"),
+            historyMode: coerceConversationHistoryMode(
+              row.history_mode,
+              "group",
+            ),
             memberCount: row.member_count,
             memberCap: row.member_cap ?? 12,
-            myRole: ["owner", "admin"].includes(row.role) ? (row.role as "owner" | "admin") : "member",
+            myRole: ["owner", "admin"].includes(row.role)
+              ? (row.role as "owner" | "admin")
+              : "member",
             sensitiveMediaDefault: Boolean(row.sensitive_media_default ?? 0),
             joinRuleText: row.join_rule_text,
             allowMemberInvites,
@@ -4131,7 +4812,9 @@ export default {
         return respond(json(groups));
       }
 
-      const conversationMessagesMatch = pathname.match(/^\/v1\/conversations\/([0-9a-f-]{36})\/messages$/i);
+      const conversationMessagesMatch = pathname.match(
+        /^\/v1\/conversations\/([0-9a-f-]{36})\/messages$/i,
+      );
       if (request.method === "GET" && conversationMessagesMatch) {
         const auth = await requireAuth(request, env);
         const conversationId = conversationMessagesMatch[1];
@@ -4141,7 +4824,7 @@ export default {
              FROM conversation_members
             WHERE conversation_id = ?1 AND account_id = ?2 AND removed_at IS NULL`,
           conversationId,
-          auth.accountId
+          auth.accountId,
         );
 
         const conversation = await dbFirst<{
@@ -4151,23 +4834,43 @@ export default {
         }>(
           env.DB,
           "SELECT id, kind, history_mode FROM conversations WHERE id = ?1",
-          conversationId
+          conversationId,
         );
 
         if (!membership || !conversation || conversation.kind === "community") {
-          throw new HttpError(404, "Conversation not found", "CONVERSATION_NOT_FOUND");
-        }
-
-        if ((conversation.history_mode ?? conversationHistoryModeForKind(conversation.kind)) !== "relay_hosted") {
           throw new HttpError(
-            409,
-            "Relay-hosted history is not available for encrypted conversations.",
-            "HISTORY_MODE_UNSUPPORTED"
+            404,
+            "Conversation not found",
+            "CONVERSATION_NOT_FOUND",
           );
         }
 
-        const limit = Math.max(1, Math.min(100, Number(url.searchParams.get("limit") ?? "50")));
-        return respond(json(await loadRelayHostedConversationMessages(env, conversationId, limit, auth.accountId)));
+        if (
+          (conversation.history_mode ??
+            conversationHistoryModeForKind(conversation.kind)) !==
+          "relay_hosted"
+        ) {
+          throw new HttpError(
+            409,
+            "Relay-hosted history is not available for encrypted conversations.",
+            "HISTORY_MODE_UNSUPPORTED",
+          );
+        }
+
+        const limit = Math.max(
+          1,
+          Math.min(100, Number(url.searchParams.get("limit") ?? "50")),
+        );
+        return respond(
+          json(
+            await loadRelayHostedConversationMessages(
+              env,
+              conversationId,
+              limit,
+              auth.accountId,
+            ),
+          ),
+        );
       }
 
       if (request.method === "POST" && conversationMessagesMatch) {
@@ -4177,7 +4880,11 @@ export default {
         const normalizedText = body.text?.trim() || "";
 
         if (!normalizedText && !body.attachmentId) {
-          throw new HttpError(400, "Message needs text or an attachment", "MESSAGE_EMPTY");
+          throw new HttpError(
+            400,
+            "Message needs text or an attachment",
+            "MESSAGE_EMPTY",
+          );
         }
 
         const membership = await dbFirst<{ account_id: string }>(
@@ -4186,7 +4893,7 @@ export default {
              FROM conversation_members
             WHERE conversation_id = ?1 AND account_id = ?2 AND removed_at IS NULL`,
           conversationId,
-          auth.accountId
+          auth.accountId,
         );
         const conversation = await dbFirst<{
           id: string;
@@ -4195,18 +4902,26 @@ export default {
         }>(
           env.DB,
           "SELECT id, kind, history_mode FROM conversations WHERE id = ?1",
-          conversationId
+          conversationId,
         );
 
         if (!membership || !conversation || conversation.kind === "community") {
-          throw new HttpError(404, "Conversation not found", "CONVERSATION_NOT_FOUND");
+          throw new HttpError(
+            404,
+            "Conversation not found",
+            "CONVERSATION_NOT_FOUND",
+          );
         }
 
-        if ((conversation.history_mode ?? conversationHistoryModeForKind(conversation.kind)) !== "relay_hosted") {
+        if (
+          (conversation.history_mode ??
+            conversationHistoryModeForKind(conversation.kind)) !==
+          "relay_hosted"
+        ) {
           throw new HttpError(
             409,
             "Relay-hosted history is not available for encrypted conversations.",
-            "HISTORY_MODE_UNSUPPORTED"
+            "HISTORY_MODE_UNSUPPORTED",
           );
         }
 
@@ -4220,20 +4935,34 @@ export default {
               attachmentId: body.attachmentId ?? null,
               clientMessageId: body.clientMessageId ?? null,
             }),
-            { status: 201 }
-          )
+            { status: 201 },
+          ),
         );
       }
 
-      const conversationWsMatch = pathname.match(/^\/v1\/conversations\/([0-9a-f-]{36})\/ws$/i);
-      if (request.method === "GET" && conversationWsMatch && request.headers.get("Upgrade") === "websocket") {
+      const conversationWsMatch = pathname.match(
+        /^\/v1\/conversations\/([0-9a-f-]{36})\/ws$/i,
+      );
+      if (
+        request.method === "GET" &&
+        conversationWsMatch &&
+        request.headers.get("Upgrade") === "websocket"
+      ) {
         const conversationId = conversationWsMatch[1];
         const token = url.searchParams.get("token");
         if (!token) {
-          throw new HttpError(401, "Missing websocket auth token", "INVALID_TOKEN");
+          throw new HttpError(
+            401,
+            "Missing websocket auth token",
+            "INVALID_TOKEN",
+          );
         }
 
-        const auth = await requireAccessTokenSession(token, env, parseClientMetadata(request));
+        const auth = await requireAccessTokenSession(
+          token,
+          env,
+          parseClientMetadata(request),
+        );
 
         const membership = await dbFirst<{ account_id: string }>(
           env.DB,
@@ -4241,7 +4970,7 @@ export default {
              FROM conversation_members
             WHERE conversation_id = ?1 AND account_id = ?2 AND removed_at IS NULL`,
           conversationId,
-          auth.accountId
+          auth.accountId,
         );
         const conversation = await dbFirst<{
           id: string;
@@ -4256,9 +4985,16 @@ export default {
           !membership ||
           !conversation ||
           conversation.kind === "community" ||
-          coerceConversationHistoryMode(conversation.history_mode, conversation.kind) !== "relay_hosted"
+          coerceConversationHistoryMode(
+            conversation.history_mode,
+            conversation.kind,
+          ) !== "relay_hosted"
         ) {
-          throw new HttpError(403, "Not a member of this conversation", "FORBIDDEN");
+          throw new HttpError(
+            403,
+            "Not a member of this conversation",
+            "FORBIDDEN",
+          );
         }
 
         const doId = env.GROUP_COORDINATOR.idFromName(conversationId);
@@ -4272,7 +5008,9 @@ export default {
         return stub.fetch(new Request(upstream, { headers }));
       }
 
-      const groupMessagesMatch = pathname.match(/^\/v1\/groups\/([0-9a-f-]{36})\/messages$/i);
+      const groupMessagesMatch = pathname.match(
+        /^\/v1\/groups\/([0-9a-f-]{36})\/messages$/i,
+      );
       if (request.method === "GET" && groupMessagesMatch) {
         const auth = await requireAuth(request, env);
         const conversationId = groupMessagesMatch[1];
@@ -4282,29 +5020,47 @@ export default {
              FROM conversation_members
             WHERE conversation_id = ?1 AND account_id = ?2 AND removed_at IS NULL`,
           conversationId,
-          auth.accountId
+          auth.accountId,
         );
 
-        const conversation = await dbFirst<{ id: string; history_mode: string | null }>(
+        const conversation = await dbFirst<{
+          id: string;
+          history_mode: string | null;
+        }>(
           env.DB,
           "SELECT id, history_mode FROM conversations WHERE id = ?1 AND kind = 'group'",
-          conversationId
+          conversationId,
         );
 
         if (!membership || !conversation) {
           throw new HttpError(404, "Group not found", "GROUP_NOT_FOUND");
         }
 
-        if (coerceConversationHistoryMode(conversation.history_mode, "group") !== "relay_hosted") {
+        if (
+          coerceConversationHistoryMode(conversation.history_mode, "group") !==
+          "relay_hosted"
+        ) {
           throw new HttpError(
             409,
             "Relay-hosted group history is not available for encrypted groups.",
-            "HISTORY_MODE_UNSUPPORTED"
+            "HISTORY_MODE_UNSUPPORTED",
           );
         }
 
-        const limit = Math.max(1, Math.min(100, Number(url.searchParams.get("limit") ?? "50")));
-        return respond(json(await loadRelayHostedConversationMessages(env, conversationId, limit, auth.accountId)));
+        const limit = Math.max(
+          1,
+          Math.min(100, Number(url.searchParams.get("limit") ?? "50")),
+        );
+        return respond(
+          json(
+            await loadRelayHostedConversationMessages(
+              env,
+              conversationId,
+              limit,
+              auth.accountId,
+            ),
+          ),
+        );
       }
 
       if (request.method === "POST" && groupMessagesMatch) {
@@ -4314,7 +5070,11 @@ export default {
         const normalizedText = body.text?.trim() || "";
 
         if (!normalizedText && !body.attachmentId) {
-          throw new HttpError(400, "Message needs text or an attachment", "MESSAGE_EMPTY");
+          throw new HttpError(
+            400,
+            "Message needs text or an attachment",
+            "MESSAGE_EMPTY",
+          );
         }
 
         const membership = await dbFirst<{ account_id: string }>(
@@ -4323,23 +5083,29 @@ export default {
              FROM conversation_members
             WHERE conversation_id = ?1 AND account_id = ?2 AND removed_at IS NULL`,
           conversationId,
-          auth.accountId
+          auth.accountId,
         );
-        const conversation = await dbFirst<{ id: string; history_mode: string | null }>(
+        const conversation = await dbFirst<{
+          id: string;
+          history_mode: string | null;
+        }>(
           env.DB,
           "SELECT id, history_mode FROM conversations WHERE id = ?1 AND kind = 'group'",
-          conversationId
+          conversationId,
         );
 
         if (!membership || !conversation) {
           throw new HttpError(404, "Group not found", "GROUP_NOT_FOUND");
         }
 
-        if (coerceConversationHistoryMode(conversation.history_mode, "group") !== "relay_hosted") {
+        if (
+          coerceConversationHistoryMode(conversation.history_mode, "group") !==
+          "relay_hosted"
+        ) {
           throw new HttpError(
             409,
             "Relay-hosted group history is not available for encrypted groups.",
-            "HISTORY_MODE_UNSUPPORTED"
+            "HISTORY_MODE_UNSUPPORTED",
           );
         }
 
@@ -4353,33 +5119,41 @@ export default {
               attachmentId: body.attachmentId ?? null,
               clientMessageId: body.clientMessageId ?? null,
             }),
-            { status: 201 }
-          )
+            { status: 201 },
+          ),
         );
       }
 
       // PATCH /v1/groups/{id} – update group title or sensitive-media default
-      const groupPatchMatch = pathname.match(/^\/v1\/groups\/([0-9a-f-]{36})$/i);
+      const groupPatchMatch = pathname.match(
+        /^\/v1\/groups\/([0-9a-f-]{36})$/i,
+      );
       if (request.method === "PATCH" && groupPatchMatch) {
         const auth = await requireAuth(request, env);
         const conversationId = groupPatchMatch[1];
-        const body = z.object({
-          title: z.string().min(1).max(80).optional(),
-          sensitiveMediaDefault: z.boolean().optional(),
-        }).parse(await readJson(request));
+        const body = z
+          .object({
+            title: z.string().min(1).max(80).optional(),
+            sensitiveMediaDefault: z.boolean().optional(),
+          })
+          .parse(await readJson(request));
 
         const membership = await dbFirst<{ role: string }>(
           env.DB,
           `SELECT role FROM conversation_members WHERE conversation_id = ?1 AND account_id = ?2 AND removed_at IS NULL`,
           conversationId,
-          auth.accountId
+          auth.accountId,
         );
 
         if (!membership) {
           throw new HttpError(404, "Group not found", "GROUP_NOT_FOUND");
         }
         if (!["owner", "admin"].includes(membership.role)) {
-          throw new HttpError(403, "Only owners or admins can update group settings", "FORBIDDEN");
+          throw new HttpError(
+            403,
+            "Only owners or admins can update group settings",
+            "FORBIDDEN",
+          );
         }
 
         const fields: string[] = [];
@@ -4404,20 +5178,29 @@ export default {
       }
 
       // POST /v1/groups/{id}/messages/ack – mark messages as read up to a cursor
-      const groupMessagesAckMatch = pathname.match(/^\/v1\/groups\/([0-9a-f-]{36})\/messages\/ack$/i);
+      const groupMessagesAckMatch = pathname.match(
+        /^\/v1\/groups\/([0-9a-f-]{36})\/messages\/ack$/i,
+      );
       if (request.method === "POST" && groupMessagesAckMatch) {
         const auth = await requireAuth(request, env);
         const conversationId = groupMessagesAckMatch[1];
-        const body = z.object({ lastReadMessageCreatedAt: z.string() }).parse(await readJson(request));
+        const body = z
+          .object({ lastReadMessageCreatedAt: z.string() })
+          .parse(await readJson(request));
 
         // Must be a member
         const membership = await dbFirst<{ role: string }>(
           env.DB,
           `SELECT role FROM conversation_members WHERE conversation_id = ?1 AND account_id = ?2 AND removed_at IS NULL`,
           conversationId,
-          auth.accountId
+          auth.accountId,
         );
-        if (!membership) throw new HttpError(404, "Conversation not found", "CONVERSATION_NOT_FOUND");
+        if (!membership)
+          throw new HttpError(
+            404,
+            "Conversation not found",
+            "CONVERSATION_NOT_FOUND",
+          );
 
         const now = new Date().toISOString();
         await dbRun(
@@ -4431,31 +5214,42 @@ export default {
           conversationId,
           auth.accountId,
           body.lastReadMessageCreatedAt,
-          now
+          now,
         );
 
         return respond(json({ acked: true }));
       }
 
       // PATCH /v1/groups/{id}/messages/{messageId} – edit own relay-hosted message
-      const groupMessageEditMatch = pathname.match(/^\/v1\/groups\/([0-9a-f-]{36})\/messages\/([0-9a-f-]{36})$/i);
+      const groupMessageEditMatch = pathname.match(
+        /^\/v1\/groups\/([0-9a-f-]{36})\/messages\/([0-9a-f-]{36})$/i,
+      );
       if (request.method === "PATCH" && groupMessageEditMatch) {
         const auth = await requireAuth(request, env);
         const conversationId = groupMessageEditMatch[1];
         const messageId = groupMessageEditMatch[2];
-        const body = z.object({ text: z.string().max(2000) }).parse(await readJson(request));
+        const body = z
+          .object({ text: z.string().max(2000) })
+          .parse(await readJson(request));
 
-        const msg = await dbFirst<{ sender_account_id: string; conversation_id: string }>(
+        const msg = await dbFirst<{
+          sender_account_id: string;
+          conversation_id: string;
+        }>(
           env.DB,
           `SELECT sender_account_id, conversation_id FROM conversation_messages WHERE id = ?1 AND deleted_at IS NULL`,
-          messageId
+          messageId,
         );
 
         if (!msg || msg.conversation_id !== conversationId) {
           throw new HttpError(404, "Message not found", "MESSAGE_NOT_FOUND");
         }
         if (msg.sender_account_id !== auth.accountId) {
-          throw new HttpError(403, "You can only edit your own messages", "FORBIDDEN");
+          throw new HttpError(
+            403,
+            "You can only edit your own messages",
+            "FORBIDDEN",
+          );
         }
 
         const editedAt = new Date().toISOString();
@@ -4464,19 +5258,26 @@ export default {
           "UPDATE conversation_messages SET body_text = ?1, edited_at = ?2 WHERE id = ?3",
           body.text,
           editedAt,
-          messageId
+          messageId,
         );
 
-        return respond(json({ updated: true, messageId, text: body.text, editedAt }));
+        return respond(
+          json({ updated: true, messageId, text: body.text, editedAt }),
+        );
       }
 
       // GET /v1/groups/{id}/members – list group members (visible to all group members)
-      const groupMembersMatch = pathname.match(/^\/v1\/groups\/([0-9a-f-]{36})\/members$/i);
+      const groupMembersMatch = pathname.match(
+        /^\/v1\/groups\/([0-9a-f-]{36})\/members$/i,
+      );
       if (request.method === "GET" && groupMembersMatch) {
         const auth = await requireAuth(request, env);
         const conversationId = groupMembersMatch[1];
 
-        const membership = await dbFirst<{ role: string; history_mode: string | null }>(
+        const membership = await dbFirst<{
+          role: string;
+          history_mode: string | null;
+        }>(
           env.DB,
           `SELECT cm.role, c.history_mode
              FROM conversation_members cm
@@ -4486,14 +5287,16 @@ export default {
               AND cm.removed_at IS NULL
               AND c.kind = 'group'`,
           conversationId,
-          auth.accountId
+          auth.accountId,
         );
 
         if (!membership) {
           throw new HttpError(404, "Group not found", "GROUP_NOT_FOUND");
         }
 
-        const isRelayHosted = coerceConversationHistoryMode(membership.history_mode, "group") === "relay_hosted";
+        const isRelayHosted =
+          coerceConversationHistoryMode(membership.history_mode, "group") ===
+          "relay_hosted";
 
         const rows = await dbAll<{
           account_id: string;
@@ -4510,20 +5313,23 @@ export default {
             ORDER BY
               CASE cm.role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 ELSE 2 END,
               cm.joined_at ASC`,
-          conversationId
+          conversationId,
         );
 
         // For relay-hosted groups, also fetch message counts per member in one query
         const messageCounts = new Map<string, number>();
         if (isRelayHosted) {
-          const countRows = await dbAll<{ sender_account_id: string; cnt: number }>(
+          const countRows = await dbAll<{
+            sender_account_id: string;
+            cnt: number;
+          }>(
             env.DB,
             `SELECT sender_account_id, COUNT(*) AS cnt
                FROM conversation_messages
               WHERE conversation_id = ?1
                 AND deleted_at IS NULL
               GROUP BY sender_account_id`,
-            conversationId
+            conversationId,
           );
           for (const cr of countRows) {
             messageCounts.set(cr.sender_account_id, cr.cnt);
@@ -4541,7 +5347,9 @@ export default {
         return respond(json(members));
       }
 
-      const conversationInviteMatch = pathname.match(/^\/v1\/conversations\/([0-9a-f-]{36})\/invites$/i);
+      const conversationInviteMatch = pathname.match(
+        /^\/v1\/conversations\/([0-9a-f-]{36})\/invites$/i,
+      );
       if (request.method === "GET" && conversationInviteMatch) {
         const auth = await requireAuth(request, env);
         const conversationId = conversationInviteMatch[1];
@@ -4553,7 +5361,7 @@ export default {
               AND account_id = ?2
               AND removed_at IS NULL`,
           conversationId,
-          auth.accountId
+          auth.accountId,
         );
         const conversation = await dbFirst<{
           kind: "group" | "community";
@@ -4561,15 +5369,23 @@ export default {
         }>(
           env.DB,
           "SELECT kind, invite_freeze_enabled FROM conversations WHERE id = ?1 AND kind IN ('group', 'community')",
-          conversationId
+          conversationId,
         );
 
         if (!membership || !conversation) {
-          throw new HttpError(404, "Conversation not found", "CONVERSATION_NOT_FOUND");
+          throw new HttpError(
+            404,
+            "Conversation not found",
+            "CONVERSATION_NOT_FOUND",
+          );
         }
 
         if (!isOrganizerRole(membership.role)) {
-          throw new HttpError(403, "Only organizers can view invites", "FORBIDDEN");
+          throw new HttpError(
+            403,
+            "Only organizers can view invites",
+            "FORBIDDEN",
+          );
         }
 
         const rows = await dbAll<{
@@ -4607,7 +5423,7 @@ export default {
            LEFT JOIN conversations room ON room.id = ci.target_room_conversation_id
           WHERE ci.conversation_id = ?1
           ORDER BY ci.created_at DESC`,
-          conversationId
+          conversationId,
         );
 
         const invites: ConversationInviteDescriptor[] = rows.map((row) => ({
@@ -4649,7 +5465,7 @@ export default {
               AND account_id = ?2
               AND removed_at IS NULL`,
           conversationId,
-          auth.accountId
+          auth.accountId,
         );
 
         const conversation = await dbFirst<{
@@ -4662,28 +5478,49 @@ export default {
              FROM conversations
             WHERE id = ?1
               AND kind IN ('group', 'community')`,
-          conversationId
+          conversationId,
         );
 
         if (!membership || !conversation) {
-          throw new HttpError(404, "Conversation not found", "CONVERSATION_NOT_FOUND");
+          throw new HttpError(
+            404,
+            "Conversation not found",
+            "CONVERSATION_NOT_FOUND",
+          );
         }
 
         if (conversation.invite_freeze_enabled) {
-          throw new HttpError(409, "Invites are temporarily frozen", "INVITES_FROZEN");
+          throw new HttpError(
+            409,
+            "Invites are temporarily frozen",
+            "INVITES_FROZEN",
+          );
         }
 
         const organizer = isOrganizerRole(membership.role);
-        const memberInvitesEnabled = Boolean(conversation.allow_member_invites ?? 0);
-        if (!organizer && !(conversation.kind === "community" && memberInvitesEnabled)) {
-          throw new HttpError(403, "Only organizers can mint invites right now", "FORBIDDEN");
+        const memberInvitesEnabled = Boolean(
+          conversation.allow_member_invites ?? 0,
+        );
+        if (
+          !organizer &&
+          !(conversation.kind === "community" && memberInvitesEnabled)
+        ) {
+          throw new HttpError(
+            403,
+            "Only organizers can mint invites right now",
+            "FORBIDDEN",
+          );
         }
 
         let targetRoomConversationId: string | null = null;
         let targetRoomTitle: string | null = null;
         if (body.scope === "room") {
           if (conversation.kind !== "community" || !body.roomId) {
-            throw new HttpError(400, "Room-scoped invites need a community and room id", "INVALID_INVITE_SCOPE");
+            throw new HttpError(
+              400,
+              "Room-scoped invites need a community and room id",
+              "INVALID_INVITE_SCOPE",
+            );
           }
 
           const room = await dbFirst<{ id: string; title: string | null }>(
@@ -4694,7 +5531,7 @@ export default {
                 AND parent_conversation_id = ?2
                 AND kind = 'room'`,
             body.roomId,
-            conversationId
+            conversationId,
           );
 
           if (!room) {
@@ -4710,11 +5547,15 @@ export default {
                   AND account_id = ?2
                   AND removed_at IS NULL`,
               room.id,
-              auth.accountId
+              auth.accountId,
             );
 
             if (!roomMembership) {
-              throw new HttpError(403, "Room-scoped invites require room membership", "FORBIDDEN");
+              throw new HttpError(
+                403,
+                "Room-scoped invites require room membership",
+                "FORBIDDEN",
+              );
             }
           }
 
@@ -4727,7 +5568,9 @@ export default {
         const tokenHash = await hashInviteToken(inviteToken);
         const createdAt = new Date().toISOString();
         const expiresAt = body.expiresInHours
-          ? new Date(Date.now() + body.expiresInHours * 60 * 60 * 1000).toISOString()
+          ? new Date(
+              Date.now() + body.expiresInHours * 60 * 60 * 1000,
+            ).toISOString()
           : null;
 
         await dbRun(
@@ -4754,14 +5597,14 @@ export default {
           createdAt,
           body.note ?? null,
           body.scope,
-          targetRoomConversationId
+          targetRoomConversationId,
         );
         await scheduleCleanup(env, "conversation_invite_create");
 
         const inviter = await dbFirst<{ display_name: string }>(
           env.DB,
           "SELECT display_name FROM accounts WHERE id = ?1",
-          auth.accountId
+          auth.accountId,
         );
 
         return respond(
@@ -4779,14 +5622,17 @@ export default {
             maxUses: body.maxUses ?? null,
             useCount: 0,
             note: body.note ?? null,
-            inviterDisplayName: inviter?.display_name ?? conversationTitleForAccount(auth.accountId),
+            inviterDisplayName:
+              inviter?.display_name ??
+              conversationTitleForAccount(auth.accountId),
             status: "active",
-          } satisfies ConversationInviteDescriptor)
+          } satisfies ConversationInviteDescriptor),
         );
       }
 
-      const conversationInvitePreviewMatch =
-        pathname.match(/^\/v1\/conversations\/([0-9a-f-]{36})\/invites\/([^/]+)\/preview$/i);
+      const conversationInvitePreviewMatch = pathname.match(
+        /^\/v1\/conversations\/([0-9a-f-]{36})\/invites\/([^/]+)\/preview$/i,
+      );
       if (request.method === "GET" && conversationInvitePreviewMatch) {
         const conversationId = conversationInvitePreviewMatch[1];
         const inviteToken = conversationInvitePreviewMatch[2];
@@ -4852,7 +5698,7 @@ export default {
             AND ci.token_hash = ?2
             AND c.kind IN ('group', 'community')`,
           conversationId,
-          tokenHash
+          tokenHash,
         );
 
         if (!row) {
@@ -4886,36 +5732,59 @@ export default {
               kind: row.kind,
               title: row.title ?? defaultConversationTitle(row.kind),
               memberCount: row.member_count,
-              memberCap: row.member_cap ?? (row.kind === "community" ? 150 : 12),
+              memberCap:
+                row.member_cap ?? (row.kind === "community" ? 150 : 12),
               joinRuleText: row.join_rule_text,
-              sensitiveMediaDefault: row.sensitive_media_default === null ? undefined : Boolean(row.sensitive_media_default),
-              allowMemberInvites: row.allow_member_invites === null ? undefined : Boolean(row.allow_member_invites),
-              inviteFreezeEnabled: row.invite_freeze_enabled === null ? undefined : Boolean(row.invite_freeze_enabled),
+              sensitiveMediaDefault:
+                row.sensitive_media_default === null
+                  ? undefined
+                  : Boolean(row.sensitive_media_default),
+              allowMemberInvites:
+                row.allow_member_invites === null
+                  ? undefined
+                  : Boolean(row.allow_member_invites),
+              inviteFreezeEnabled:
+                row.invite_freeze_enabled === null
+                  ? undefined
+                  : Boolean(row.invite_freeze_enabled),
             },
             room: row.target_room_conversation_id
               ? {
                   id: row.target_room_conversation_id,
                   title: row.target_room_title ?? "Untitled room",
                   memberCount: row.room_member_count ?? 0,
-                  roomAccessPolicy: coerceRoomAccessPolicy(row.room_access_policy),
+                  roomAccessPolicy: coerceRoomAccessPolicy(
+                    row.room_access_policy,
+                  ),
                 }
               : null,
-          } satisfies ConversationInvitePreview)
+          } satisfies ConversationInvitePreview),
         );
       }
 
-      const conversationInviteAcceptMatch =
-        pathname.match(/^\/v1\/conversations\/([0-9a-f-]{36})\/invites\/([^/]+)\/accept$/i);
+      const conversationInviteAcceptMatch = pathname.match(
+        /^\/v1\/conversations\/([0-9a-f-]{36})\/invites\/([^/]+)\/accept$/i,
+      );
       if (request.method === "POST" && conversationInviteAcceptMatch) {
         const auth = await requireAuth(request, env);
         const conversationId = conversationInviteAcceptMatch[1];
         const inviteToken = conversationInviteAcceptMatch[2];
         const tokenHash = await hashInviteToken(inviteToken);
-        return respond(json(await acceptConversationInviteByTokenHash(env, auth.accountId, conversationId, tokenHash)));
+        return respond(
+          json(
+            await acceptConversationInviteByTokenHash(
+              env,
+              auth.accountId,
+              conversationId,
+              tokenHash,
+            ),
+          ),
+        );
       }
 
-      const conversationInviteDeleteMatch =
-        pathname.match(/^\/v1\/conversations\/([0-9a-f-]{36})\/invites\/([0-9a-f-]{36})$/i);
+      const conversationInviteDeleteMatch = pathname.match(
+        /^\/v1\/conversations\/([0-9a-f-]{36})\/invites\/([0-9a-f-]{36})$/i,
+      );
       if (request.method === "DELETE" && conversationInviteDeleteMatch) {
         const auth = await requireAuth(request, env);
         const conversationId = conversationInviteDeleteMatch[1];
@@ -4928,21 +5797,28 @@ export default {
               AND account_id = ?2
               AND removed_at IS NULL`,
           conversationId,
-          auth.accountId
+          auth.accountId,
         );
         const invite = await dbFirst<{ created_by: string }>(
           env.DB,
           "SELECT created_by FROM conversation_invites WHERE id = ?1 AND conversation_id = ?2",
           inviteId,
-          conversationId
+          conversationId,
         );
 
         if (!membership || !invite) {
           throw new HttpError(404, "Invite not found", "INVITE_NOT_FOUND");
         }
 
-        if (!isOrganizerRole(membership.role) && invite.created_by !== auth.accountId) {
-          throw new HttpError(403, "Only organizers or the invite creator can revoke invites", "FORBIDDEN");
+        if (
+          !isOrganizerRole(membership.role) &&
+          invite.created_by !== auth.accountId
+        ) {
+          throw new HttpError(
+            403,
+            "Only organizers or the invite creator can revoke invites",
+            "FORBIDDEN",
+          );
         }
 
         await dbRun(
@@ -4952,13 +5828,15 @@ export default {
             WHERE id = ?2 AND conversation_id = ?3`,
           new Date().toISOString(),
           inviteId,
-          conversationId
+          conversationId,
         );
 
         return respond(json({ revoked: true, inviteId }));
       }
 
-      const groupInviteMatch = pathname.match(/^\/v1\/groups\/([0-9a-f-]{36})\/invites$/i);
+      const groupInviteMatch = pathname.match(
+        /^\/v1\/groups\/([0-9a-f-]{36})\/invites$/i,
+      );
       if (request.method === "GET" && groupInviteMatch) {
         const auth = await requireAuth(request, env);
         const conversationId = groupInviteMatch[1];
@@ -4968,7 +5846,7 @@ export default {
              FROM conversation_members
             WHERE conversation_id = ?1 AND account_id = ?2 AND removed_at IS NULL`,
           conversationId,
-          auth.accountId
+          auth.accountId,
         );
 
         const conversation = await dbFirst<{
@@ -4976,7 +5854,7 @@ export default {
         }>(
           env.DB,
           "SELECT invite_freeze_enabled FROM conversations WHERE id = ?1 AND kind = 'group'",
-          conversationId
+          conversationId,
         );
 
         if (!membership || !conversation) {
@@ -4986,7 +5864,11 @@ export default {
         const canViewInvites = ["owner", "admin"].includes(membership.role);
 
         if (!canViewInvites) {
-          throw new HttpError(403, "Only owners or admins can view invites", "FORBIDDEN");
+          throw new HttpError(
+            403,
+            "Only owners or admins can view invites",
+            "FORBIDDEN",
+          );
         }
 
         const rows = await dbAll<{
@@ -5017,7 +5899,7 @@ export default {
            JOIN accounts inviter ON inviter.id = ci.created_by
           WHERE ci.conversation_id = ?1
           ORDER BY ci.created_at DESC`,
-          conversationId
+          conversationId,
         );
 
         const invites: GroupInviteRecord[] = rows.map((row) => ({
@@ -5052,7 +5934,7 @@ export default {
              FROM conversation_members
             WHERE conversation_id = ?1 AND account_id = ?2 AND removed_at IS NULL`,
           conversationId,
-          auth.accountId
+          auth.accountId,
         );
 
         const conversation = await dbFirst<{
@@ -5060,7 +5942,7 @@ export default {
         }>(
           env.DB,
           "SELECT invite_freeze_enabled FROM conversations WHERE id = ?1 AND kind = 'group'",
-          conversationId
+          conversationId,
         );
 
         if (!membership || !conversation) {
@@ -5068,20 +5950,30 @@ export default {
         }
 
         if (conversation.invite_freeze_enabled) {
-          throw new HttpError(409, "Group invites are temporarily frozen", "INVITES_FROZEN");
+          throw new HttpError(
+            409,
+            "Group invites are temporarily frozen",
+            "INVITES_FROZEN",
+          );
         }
 
         const canMintInvite = ["owner", "admin"].includes(membership.role);
 
         if (!canMintInvite) {
-          throw new HttpError(403, "Only owners or admins can mint invites", "FORBIDDEN");
+          throw new HttpError(
+            403,
+            "Only owners or admins can mint invites",
+            "FORBIDDEN",
+          );
         }
 
         const inviteId = crypto.randomUUID();
         const inviteToken = crypto.randomUUID().replace(/-/g, "");
         const tokenHash = await hashInviteToken(inviteToken);
         const expiresAt = body.expiresInHours
-          ? new Date(Date.now() + body.expiresInHours * 60 * 60 * 1000).toISOString()
+          ? new Date(
+              Date.now() + body.expiresInHours * 60 * 60 * 1000,
+            ).toISOString()
           : null;
 
         await dbRun(
@@ -5095,14 +5987,14 @@ export default {
           body.maxUses ?? null,
           expiresAt,
           new Date().toISOString(),
-          body.note ?? null
+          body.note ?? null,
         );
         await scheduleCleanup(env, "group_invite_create");
 
         const inviter = await dbFirst<{ display_name: string }>(
           env.DB,
           "SELECT display_name FROM accounts WHERE id = ?1",
-          auth.accountId
+          auth.accountId,
         );
 
         return respond(
@@ -5111,18 +6003,22 @@ export default {
             conversationId,
             inviteToken,
             inviteUrl: `${publicWebUrl(env)}/invite/${conversationId}/${inviteToken}`,
-            inviterDisplayName: inviter?.display_name ?? conversationTitleForAccount(auth.accountId),
+            inviterDisplayName:
+              inviter?.display_name ??
+              conversationTitleForAccount(auth.accountId),
             note: body.note ?? null,
             useCount: 0,
             status: "active",
             createdAt: new Date().toISOString(),
             expiresAt,
             maxUses: body.maxUses ?? null,
-          } satisfies GroupInviteDescriptor)
+          } satisfies GroupInviteDescriptor),
         );
       }
 
-      const groupInvitePreviewMatch = pathname.match(/^\/v1\/groups\/([0-9a-f-]{36})\/invites\/([^/]+)\/preview$/i);
+      const groupInvitePreviewMatch = pathname.match(
+        /^\/v1\/groups\/([0-9a-f-]{36})\/invites\/([^/]+)\/preview$/i,
+      );
       if (request.method === "GET" && groupInvitePreviewMatch) {
         const conversationId = groupInvitePreviewMatch[1];
         const inviteToken = groupInvitePreviewMatch[2];
@@ -5166,7 +6062,7 @@ export default {
            JOIN accounts inviter ON inviter.id = ci.created_by
           WHERE ci.conversation_id = ?1 AND ci.token_hash = ?2`,
           conversationId,
-          tokenHash
+          tokenHash,
         );
 
         if (!row) {
@@ -5200,27 +6096,36 @@ export default {
               joinRuleText: row.join_rule_text,
               sensitiveMediaDefault: Boolean(row.sensitive_media_default ?? 0),
             },
-          } satisfies GroupInvitePreview)
+          } satisfies GroupInvitePreview),
         );
       }
 
-      const groupInviteAcceptMatch = pathname.match(/^\/v1\/groups\/([0-9a-f-]{36})\/invites\/([^/]+)\/accept$/i);
+      const groupInviteAcceptMatch = pathname.match(
+        /^\/v1\/groups\/([0-9a-f-]{36})\/invites\/([^/]+)\/accept$/i,
+      );
       if (request.method === "POST" && groupInviteAcceptMatch) {
         const auth = await requireAuth(request, env);
         const conversationId = groupInviteAcceptMatch[1];
         const inviteToken = groupInviteAcceptMatch[2];
         const tokenHash = await hashInviteToken(inviteToken);
-        const accepted = await acceptConversationInviteByTokenHash(env, auth.accountId, conversationId, tokenHash);
+        const accepted = await acceptConversationInviteByTokenHash(
+          env,
+          auth.accountId,
+          conversationId,
+          tokenHash,
+        );
         return respond(
           json({
             conversationId: accepted.conversationId,
             title: accepted.title,
             epoch: accepted.epoch,
-          })
+          }),
         );
       }
 
-      const groupInviteDeleteMatch = pathname.match(/^\/v1\/groups\/([0-9a-f-]{36})\/invites\/([0-9a-f-]{36})$/i);
+      const groupInviteDeleteMatch = pathname.match(
+        /^\/v1\/groups\/([0-9a-f-]{36})\/invites\/([0-9a-f-]{36})$/i,
+      );
       if (request.method === "DELETE" && groupInviteDeleteMatch) {
         const auth = await requireAuth(request, env);
         const conversationId = groupInviteDeleteMatch[1];
@@ -5231,11 +6136,15 @@ export default {
              FROM conversation_members
             WHERE conversation_id = ?1 AND account_id = ?2 AND removed_at IS NULL`,
           conversationId,
-          auth.accountId
+          auth.accountId,
         );
 
         if (!membership || !["owner", "admin"].includes(membership.role)) {
-          throw new HttpError(403, "Only owners or admins can revoke invites", "FORBIDDEN");
+          throw new HttpError(
+            403,
+            "Only owners or admins can revoke invites",
+            "FORBIDDEN",
+          );
         }
 
         await dbRun(
@@ -5245,19 +6154,25 @@ export default {
             WHERE id = ?2 AND conversation_id = ?3`,
           new Date().toISOString(),
           inviteId,
-          conversationId
+          conversationId,
         );
 
         return respond(json({ revoked: true, inviteId }));
       }
 
-      const groupMemberRemoveMatch = pathname.match(/^\/v1\/groups\/([0-9a-f-]{36})\/members\/([0-9a-f-]{36})\/remove$/i);
+      const groupMemberRemoveMatch = pathname.match(
+        /^\/v1\/groups\/([0-9a-f-]{36})\/members\/([0-9a-f-]{36})\/remove$/i,
+      );
       if (request.method === "POST" && groupMemberRemoveMatch) {
         const auth = await requireAuth(request, env);
         const conversationId = groupMemberRemoveMatch[1];
         const targetAccountId = groupMemberRemoveMatch[2];
         if (targetAccountId === auth.accountId) {
-          throw new HttpError(400, "Use a separate ownership transfer flow before removing yourself", "SELF_REMOVE_BLOCKED");
+          throw new HttpError(
+            400,
+            "Use a separate ownership transfer flow before removing yourself",
+            "SELF_REMOVE_BLOCKED",
+          );
         }
 
         const membership = await dbFirst<{ role: string }>(
@@ -5266,17 +6181,21 @@ export default {
              FROM conversation_members
             WHERE conversation_id = ?1 AND account_id = ?2 AND removed_at IS NULL`,
           conversationId,
-          auth.accountId
+          auth.accountId,
         );
 
         if (!membership || !["owner", "admin"].includes(membership.role)) {
-          throw new HttpError(403, "Only owners or admins can remove members", "FORBIDDEN");
+          throw new HttpError(
+            403,
+            "Only owners or admins can remove members",
+            "FORBIDDEN",
+          );
         }
 
         const conversation = await dbFirst<{ epoch: number }>(
           env.DB,
           "SELECT epoch FROM conversations WHERE id = ?1 AND kind = 'group'",
-          conversationId
+          conversationId,
         );
 
         if (!conversation) {
@@ -5292,7 +6211,7 @@ export default {
             WHERE conversation_id = ?2 AND account_id = ?3 AND removed_at IS NULL`,
           removedAt,
           conversationId,
-          targetAccountId
+          targetAccountId,
         );
         await dbRun(
           env.DB,
@@ -5301,25 +6220,39 @@ export default {
             WHERE id = ?3`,
           nextEpoch,
           removedAt,
-          conversationId
+          conversationId,
         );
 
         await syncRelayHostedConversationSockets(env, conversationId);
 
-        return respond(json({ removed: true, conversationId, targetAccountId, epoch: nextEpoch }));
+        return respond(
+          json({
+            removed: true,
+            conversationId,
+            targetAccountId,
+            epoch: nextEpoch,
+          }),
+        );
       }
 
       if (request.method === "POST" && pathname === "/v1/messages/batch") {
         const auth = await requireAuth(request, env);
         const body = messageBatchSchema.parse(await readJson(request));
-        const conversation = await dbFirst<{ kind: "direct_message" | "group"; epoch: number }>(
+        const conversation = await dbFirst<{
+          kind: "direct_message" | "group";
+          epoch: number;
+        }>(
           env.DB,
           "SELECT kind, epoch FROM conversations WHERE id = ?1",
-          body.conversationId
+          body.conversationId,
         );
 
         if (!conversation) {
-          throw new HttpError(404, "Conversation not found", "CONVERSATION_NOT_FOUND");
+          throw new HttpError(
+            404,
+            "Conversation not found",
+            "CONVERSATION_NOT_FOUND",
+          );
         }
 
         const membership = await dbFirst<{ account_id: string }>(
@@ -5328,11 +6261,15 @@ export default {
              FROM conversation_members
             WHERE conversation_id = ?1 AND account_id = ?2 AND removed_at IS NULL`,
           body.conversationId,
-          auth.accountId
+          auth.accountId,
         );
 
         if (!membership) {
-          throw new HttpError(403, "Not a member of this conversation", "FORBIDDEN");
+          throw new HttpError(
+            403,
+            "Not a member of this conversation",
+            "FORBIDDEN",
+          );
         }
 
         if (conversation.epoch !== body.epoch) {
@@ -5341,13 +6278,13 @@ export default {
 
         const devices = await dbAll<{ id: string; account_id: string }>(
           env.DB,
-          "SELECT id, account_id FROM devices WHERE revoked_at IS NULL"
+          "SELECT id, account_id FROM devices WHERE revoked_at IS NULL",
         );
         const deviceMap = new Map(devices.map((device) => [device.id, device]));
         const memberRows = await dbAll<{ account_id: string }>(
           env.DB,
           "SELECT account_id FROM conversation_members WHERE conversation_id = ?1 AND removed_at IS NULL",
-          body.conversationId
+          body.conversationId,
         );
         const memberSet = new Set(memberRows.map((row) => row.account_id));
 
@@ -5369,7 +6306,7 @@ export default {
                FROM blocks
               WHERE account_id = ?1 AND blocked_account_id = ?2`,
             recipient.account_id,
-            auth.accountId
+            auth.accountId,
           );
           if (blocked) {
             blockedRecipients.push(item.recipientDeviceId);
@@ -5389,7 +6326,7 @@ export default {
             auth.deviceId,
             item.recipientDeviceId,
             item.clientMessageId,
-            new Date().toISOString()
+            new Date().toISOString(),
           );
 
           if (existingEnvelope) {
@@ -5409,7 +6346,9 @@ export default {
             attachmentIds: item.attachmentIds,
             clientMessageId: item.clientMessageId,
             createdAt: new Date().toISOString(),
-            expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+            expiresAt: new Date(
+              Date.now() + 14 * 24 * 60 * 60 * 1000,
+            ).toISOString(),
           };
 
           const enqueueResult = await enqueueEnvelope(env, envelope);
@@ -5436,7 +6375,7 @@ export default {
             item.clientMessageId,
             envelope.envelopeId,
             envelope.createdAt,
-            envelope.expiresAt
+            envelope.expiresAt,
           );
           accepted.push(envelope.envelopeId);
           acceptedPushRecipients.add(item.recipientDeviceId);
@@ -5446,7 +6385,7 @@ export default {
           const sender = await dbFirst<{ display_name: string }>(
             env.DB,
             "SELECT display_name FROM accounts WHERE id = ?1",
-            auth.accountId
+            auth.accountId,
           );
           await updateConversationActivity(env, body.conversationId, {
             at: new Date().toISOString(),
@@ -5459,7 +6398,9 @@ export default {
                 targetDeviceId: deviceId,
                 reason: "mailbox",
                 conversationId: body.conversationId,
-                senderDisplayName: sender?.display_name ?? conversationTitleForAccount(auth.accountId),
+                senderDisplayName:
+                  sender?.display_name ??
+                  conversationTitleForAccount(auth.accountId),
                 historyMode: "device_encrypted",
                 messageKind: "mailbox",
               }).catch((error) => {
@@ -5468,8 +6409,8 @@ export default {
                   conversationId: body.conversationId,
                   error: error instanceof Error ? error.message : String(error),
                 });
-              })
-            )
+              }),
+            ),
           );
         }
 
@@ -5481,8 +6422,8 @@ export default {
               blockedRecipients,
               rejectedRecipients,
             },
-            { status: 202 }
-          )
+            { status: 202 },
+          ),
         );
       }
 
@@ -5494,18 +6435,30 @@ export default {
         const limit = url.searchParams.get("limit") ?? "50";
         return respond(
           await stub.fetch(
-            `https://do/sync?after=${encodeURIComponent(after ?? "")}&limit=${encodeURIComponent(limit)}`
-          )
+            `https://do/sync?after=${encodeURIComponent(after ?? "")}&limit=${encodeURIComponent(limit)}`,
+          ),
         );
       }
 
-      if (request.method === "GET" && pathname === "/v1/mailbox/ws" && request.headers.get("Upgrade") === "websocket") {
+      if (
+        request.method === "GET" &&
+        pathname === "/v1/mailbox/ws" &&
+        request.headers.get("Upgrade") === "websocket"
+      ) {
         const token = url.searchParams.get("token");
         if (!token) {
-          throw new HttpError(401, "Missing websocket auth token", "INVALID_TOKEN");
+          throw new HttpError(
+            401,
+            "Missing websocket auth token",
+            "INVALID_TOKEN",
+          );
         }
 
-        const auth = await requireAccessTokenSession(token, env, parseClientMetadata(request));
+        const auth = await requireAccessTokenSession(
+          token,
+          env,
+          parseClientMetadata(request),
+        );
 
         const device = await dbFirst<{ id: string }>(
           env.DB,
@@ -5513,10 +6466,14 @@ export default {
              FROM devices
             WHERE id = ?1 AND account_id = ?2`,
           auth.deviceId,
-          auth.accountId
+          auth.accountId,
         );
         if (!device) {
-          throw new HttpError(403, "Device is not available for this account", "FORBIDDEN");
+          throw new HttpError(
+            403,
+            "Device is not available for this account",
+            "FORBIDDEN",
+          );
         }
 
         const id = env.DEVICE_MAILBOX.idFromName(auth.deviceId);
@@ -5533,7 +6490,7 @@ export default {
           await stub.fetch("https://do/ack", {
             method: "POST",
             body: JSON.stringify(body),
-          })
+          }),
         );
       }
 
@@ -5544,7 +6501,9 @@ export default {
         const r2Key = `${auth.accountId}/${attachmentId}/${body.fileName}`;
         const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
         const createdAt = new Date().toISOString();
-        const attachmentRetentionExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+        const attachmentRetentionExpiresAt = new Date(
+          Date.now() + 30 * 24 * 60 * 60 * 1000,
+        ).toISOString();
         const storedByteLength = body.ciphertextByteLength ?? body.byteLength;
         const storedSha256 = body.ciphertextSha256B64 ?? body.sha256B64;
         const plaintextByteLength = body.plaintextByteLength ?? body.byteLength;
@@ -5553,18 +6512,26 @@ export default {
         let attachmentIvBox: string | null = null;
 
         if (!storedByteLength) {
-          throw new HttpError(400, "Attachment byte length is required", "ATTACHMENT_LENGTH_REQUIRED");
+          throw new HttpError(
+            400,
+            "Attachment byte length is required",
+            "ATTACHMENT_LENGTH_REQUIRED",
+          );
         }
 
         if (body.conversationId) {
-          const conversation = await dbFirst<{ epoch: number; kind: RelayConversationKind; history_mode: string | null }>(
+          const conversation = await dbFirst<{
+            epoch: number;
+            kind: RelayConversationKind;
+            history_mode: string | null;
+          }>(
             env.DB,
             `SELECT epoch
                     , kind
                     , history_mode
                FROM conversations
               WHERE id = ?1`,
-            body.conversationId
+            body.conversationId,
           );
           const membership = await dbFirst<{ account_id: string }>(
             env.DB,
@@ -5572,30 +6539,53 @@ export default {
                FROM conversation_members
               WHERE conversation_id = ?1 AND account_id = ?2 AND removed_at IS NULL`,
             body.conversationId,
-            auth.accountId
+            auth.accountId,
           );
 
           if (!conversation || !membership) {
-            throw new HttpError(403, "Not allowed to attach media to this conversation", "FORBIDDEN");
+            throw new HttpError(
+              403,
+              "Not allowed to attach media to this conversation",
+              "FORBIDDEN",
+            );
           }
 
-          if (body.conversationEpoch && conversation.epoch !== body.conversationEpoch) {
-            throw new HttpError(409, "Conversation epoch changed", "STALE_EPOCH");
+          if (
+            body.conversationEpoch &&
+            conversation.epoch !== body.conversationEpoch
+          ) {
+            throw new HttpError(
+              409,
+              "Conversation epoch changed",
+              "STALE_EPOCH",
+            );
           }
 
-          const historyMode = coerceConversationHistoryMode(conversation.history_mode, conversation.kind);
-          if (historyMode === "relay_hosted" && body.encryptionMode === "device_encrypted") {
+          const historyMode = coerceConversationHistoryMode(
+            conversation.history_mode,
+            conversation.kind,
+          );
+          if (
+            historyMode === "relay_hosted" &&
+            body.encryptionMode === "device_encrypted"
+          ) {
             if (!body.fileKeyB64 || !body.fileIvB64) {
               throw new HttpError(
                 400,
                 "Relay-hosted encrypted attachments need file key material.",
-                "ATTACHMENT_KEY_MATERIAL_REQUIRED"
+                "ATTACHMENT_KEY_MATERIAL_REQUIRED",
               );
             }
 
             const metadataSecret = attachmentMetadataSecret(env);
-            attachmentKeyBox = await encryptString(metadataSecret, body.fileKeyB64);
-            attachmentIvBox = await encryptString(metadataSecret, body.fileIvB64);
+            attachmentKeyBox = await encryptString(
+              metadataSecret,
+              body.fileKeyB64,
+            );
+            attachmentIvBox = await encryptString(
+              metadataSecret,
+              body.fileIvB64,
+            );
           }
         }
 
@@ -5650,12 +6640,22 @@ export default {
           attachmentKeyBox,
           attachmentIvBox,
           body.conversationId ?? null,
-          body.conversationEpoch ?? null
+          body.conversationEpoch ?? null,
         );
         await scheduleCleanup(env, "attachment_ticket");
 
-        const uploadToken = await signAttachmentToken(env, attachmentId, "upload", expiresAt.getTime());
-        const downloadToken = await signAttachmentToken(env, attachmentId, "download", expiresAt.getTime());
+        const uploadToken = await signAttachmentToken(
+          env,
+          attachmentId,
+          "upload",
+          expiresAt.getTime(),
+        );
+        const downloadToken = await signAttachmentToken(
+          env,
+          attachmentId,
+          "download",
+          expiresAt.getTime(),
+        );
 
         const response: AttachmentTicket = {
           attachmentId,
@@ -5672,7 +6672,9 @@ export default {
         return respond(json(response, { status: 201 }));
       }
 
-      const attachmentAccessMatch = pathname.match(/^\/v1\/attachments\/([0-9a-f-]{36})\/access$/i);
+      const attachmentAccessMatch = pathname.match(
+        /^\/v1\/attachments\/([0-9a-f-]{36})\/access$/i,
+      );
       if (request.method === "GET" && attachmentAccessMatch) {
         const auth = await requireAuth(request, env);
         const attachmentId = attachmentAccessMatch[1];
@@ -5687,15 +6689,26 @@ export default {
           `SELECT id, conversation_id, account_id, deleted_at, expires_at
              FROM attachments
             WHERE id = ?1`,
-          attachmentId
+          attachmentId,
         );
 
         if (!attachment) {
-          throw new HttpError(404, "Attachment not found", "ATTACHMENT_NOT_FOUND");
+          throw new HttpError(
+            404,
+            "Attachment not found",
+            "ATTACHMENT_NOT_FOUND",
+          );
         }
 
-        if (attachment.deleted_at || attachment.expires_at <= new Date().toISOString()) {
-          throw new HttpError(410, "Attachment is no longer available", "ATTACHMENT_EXPIRED");
+        if (
+          attachment.deleted_at ||
+          attachment.expires_at <= new Date().toISOString()
+        ) {
+          throw new HttpError(
+            410,
+            "Attachment is no longer available",
+            "ATTACHMENT_EXPIRED",
+          );
         }
 
         if (attachment.conversation_id) {
@@ -5707,14 +6720,22 @@ export default {
                 AND account_id = ?2
                 AND removed_at IS NULL`,
             attachment.conversation_id,
-            auth.accountId
+            auth.accountId,
           );
 
           if (!membership) {
-            throw new HttpError(403, "Attachment is not available to this account", "FORBIDDEN");
+            throw new HttpError(
+              403,
+              "Attachment is not available to this account",
+              "FORBIDDEN",
+            );
           }
         } else if (attachment.account_id !== auth.accountId) {
-          throw new HttpError(403, "Attachment is not available to this account", "FORBIDDEN");
+          throw new HttpError(
+            403,
+            "Attachment is not available to this account",
+            "FORBIDDEN",
+          );
         }
 
         const expiresAtMs = Date.now() + 30 * 60 * 1000;
@@ -5722,19 +6743,30 @@ export default {
           json({
             attachmentId,
             downloadUrl: `${env.EMBERCHAMBER_RELAY_PUBLIC_URL}/v1/attachments/download/${attachmentId}?token=${encodeURIComponent(
-              await signAttachmentToken(env, attachmentId, "download", expiresAtMs)
+              await signAttachmentToken(
+                env,
+                attachmentId,
+                "download",
+                expiresAtMs,
+              ),
             )}`,
             expiresAt: new Date(expiresAtMs).toISOString(),
-          })
+          }),
         );
       }
 
-      const attachmentUploadMatch = pathname.match(/^\/v1\/attachments\/upload\/([0-9a-f-]{36})$/i);
+      const attachmentUploadMatch = pathname.match(
+        /^\/v1\/attachments\/upload\/([0-9a-f-]{36})$/i,
+      );
       if (request.method === "PUT" && attachmentUploadMatch) {
         const attachmentId = attachmentUploadMatch[1];
         const token = url.searchParams.get("token");
         if (!token) {
-          throw new HttpError(401, "Missing attachment token", "INVALID_ATTACHMENT_TOKEN");
+          throw new HttpError(
+            401,
+            "Missing attachment token",
+            "INVALID_ATTACHMENT_TOKEN",
+          );
         }
         await parseAttachmentToken(env, token, attachmentId, "upload");
 
@@ -5762,20 +6794,35 @@ export default {
              expires_at
            FROM attachments
           WHERE id = ?1`,
-          attachmentId
+          attachmentId,
         );
 
         if (!attachment) {
-          throw new HttpError(404, "Attachment ticket not found", "ATTACHMENT_NOT_FOUND");
+          throw new HttpError(
+            404,
+            "Attachment ticket not found",
+            "ATTACHMENT_NOT_FOUND",
+          );
         }
 
-        if (attachment.deleted_at || attachment.expires_at <= new Date().toISOString()) {
-          throw new HttpError(410, "Attachment ticket expired", "ATTACHMENT_EXPIRED");
+        if (
+          attachment.deleted_at ||
+          attachment.expires_at <= new Date().toISOString()
+        ) {
+          throw new HttpError(
+            410,
+            "Attachment ticket expired",
+            "ATTACHMENT_EXPIRED",
+          );
         }
 
         const bodyBytes = await request.arrayBuffer();
         if (bodyBytes.byteLength !== attachment.byte_length) {
-          throw new HttpError(400, "Attachment byte length mismatch", "ATTACHMENT_LENGTH_MISMATCH");
+          throw new HttpError(
+            400,
+            "Attachment byte length mismatch",
+            "ATTACHMENT_LENGTH_MISMATCH",
+          );
         }
 
         const expectedHash =
@@ -5785,7 +6832,11 @@ export default {
         if (expectedHash) {
           const actualHash = await sha256B64(bodyBytes);
           if (actualHash !== expectedHash) {
-            throw new HttpError(400, "Attachment checksum mismatch", "ATTACHMENT_CHECKSUM_MISMATCH");
+            throw new HttpError(
+              400,
+              "Attachment checksum mismatch",
+              "ATTACHMENT_CHECKSUM_MISMATCH",
+            );
           }
         }
 
@@ -5799,45 +6850,73 @@ export default {
                   uploaded_at = COALESCE(uploaded_at, ?1)
             WHERE id = ?2`,
           new Date().toISOString(),
-          attachmentId
+          attachmentId,
         );
 
         return respond(json({ uploaded: true }));
       }
 
-      const attachmentDownloadMatch = pathname.match(/^\/v1\/attachments\/download\/([0-9a-f-]{36})$/i);
+      const attachmentDownloadMatch = pathname.match(
+        /^\/v1\/attachments\/download\/([0-9a-f-]{36})$/i,
+      );
       if (request.method === "GET" && attachmentDownloadMatch) {
         const attachmentId = attachmentDownloadMatch[1];
         const token = url.searchParams.get("token");
         if (!token) {
-          throw new HttpError(401, "Missing attachment token", "INVALID_ATTACHMENT_TOKEN");
+          throw new HttpError(
+            401,
+            "Missing attachment token",
+            "INVALID_ATTACHMENT_TOKEN",
+          );
         }
         await parseAttachmentToken(env, token, attachmentId, "download");
 
-        const attachment = await dbFirst<{ r2_key: string; mime_type: string; deleted_at: string | null; expires_at: string; upload_completed_at: string | null }>(
+        const attachment = await dbFirst<{
+          r2_key: string;
+          mime_type: string;
+          deleted_at: string | null;
+          expires_at: string;
+          upload_completed_at: string | null;
+        }>(
           env.DB,
           "SELECT r2_key, mime_type, deleted_at, expires_at, upload_completed_at FROM attachments WHERE id = ?1",
-          attachmentId
+          attachmentId,
         );
 
         if (!attachment) {
-          throw new HttpError(404, "Attachment not found", "ATTACHMENT_NOT_FOUND");
+          throw new HttpError(
+            404,
+            "Attachment not found",
+            "ATTACHMENT_NOT_FOUND",
+          );
         }
 
-        if (attachment.deleted_at || attachment.expires_at <= new Date().toISOString() || !attachment.upload_completed_at) {
-          throw new HttpError(410, "Attachment is no longer available", "ATTACHMENT_EXPIRED");
+        if (
+          attachment.deleted_at ||
+          attachment.expires_at <= new Date().toISOString() ||
+          !attachment.upload_completed_at
+        ) {
+          throw new HttpError(
+            410,
+            "Attachment is no longer available",
+            "ATTACHMENT_EXPIRED",
+          );
         }
 
         const object = await env.ATTACHMENTS.get(attachment.r2_key);
         if (!object) {
-          throw new HttpError(404, "Encrypted attachment blob not found", "ATTACHMENT_BLOB_MISSING");
+          throw new HttpError(
+            404,
+            "Encrypted attachment blob not found",
+            "ATTACHMENT_BLOB_MISSING",
+          );
         }
 
         await dbRun(
           env.DB,
           "UPDATE attachments SET last_accessed_at = ?1 WHERE id = ?2",
           new Date().toISOString(),
-          attachmentId
+          attachmentId,
         );
 
         return respond(
@@ -5846,7 +6925,7 @@ export default {
               "content-type": attachment.mime_type,
               etag: object.httpEtag ?? "",
             },
-          })
+          }),
         );
       }
 
@@ -5876,7 +6955,7 @@ export default {
           body.reason,
           JSON.stringify(body.disclosedPayload),
           JSON.stringify(body.evidenceMessageIds ?? []),
-          new Date().toISOString()
+          new Date().toISOString(),
         );
         await scheduleCleanup(env, "report_create");
 
@@ -5901,7 +6980,7 @@ export default {
           headers,
         }),
         request,
-        env.EMBERCHAMBER_ALLOWED_ORIGINS
+        env.EMBERCHAMBER_ALLOWED_ORIGINS,
       );
       logResponse(nextResponse, code);
       return nextResponse;

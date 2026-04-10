@@ -51,7 +51,7 @@ router.get("/", async (req: AuthRequest, res: Response, next) => {
          AND c.archived_at IS NULL
        ORDER BY c.updated_at DESC
        LIMIT 100`,
-      [req.userId]
+      [req.userId],
     );
 
     // Enrich with last message and unread count
@@ -68,7 +68,7 @@ router.get("/", async (req: AuthRequest, res: Response, next) => {
            FROM messages
            WHERE conversation_id = $1 AND deleted_at IS NULL
            ORDER BY created_at DESC LIMIT 1`,
-          [conv.id]
+          [conv.id],
         );
 
         const unread = await queryOne<{ count: string }>(
@@ -81,7 +81,7 @@ router.get("/", async (req: AuthRequest, res: Response, next) => {
                 WHERE conversation_id = $1 AND user_id = $2),
                '1970-01-01'::timestamptz
              )`,
-          [conv.id, req.userId]
+          [conv.id, req.userId],
         );
 
         // For DMs, get the other user's info
@@ -98,7 +98,7 @@ router.get("/", async (req: AuthRequest, res: Response, next) => {
              INNER JOIN conversation_members cm ON cm.user_id = u.id
              WHERE cm.conversation_id = $1 AND u.id != $2
              LIMIT 1`,
-            [conv.id, req.userId]
+            [conv.id, req.userId],
           );
         }
 
@@ -115,7 +115,7 @@ router.get("/", async (req: AuthRequest, res: Response, next) => {
           unreadCount: parseInt(unread?.count ?? "0"),
           dmUser: dmUser ?? undefined,
         };
-      })
+      }),
     );
 
     res.json({ data: enriched });
@@ -146,7 +146,7 @@ router.post("/dm", async (req: AuthRequest, res: Response, next) => {
     // Check if blocked
     const blocked = await queryOne(
       `SELECT id FROM blocks WHERE (blocker_id = $1 AND blocked_id = $2) OR (blocker_id = $2 AND blocked_id = $1)`,
-      [req.userId, targetUserId]
+      [req.userId, targetUserId],
     );
     if (blocked) {
       throw createError("Cannot start conversation", 403, "BLOCKED");
@@ -158,7 +158,7 @@ router.post("/dm", async (req: AuthRequest, res: Response, next) => {
        INNER JOIN conversation_members cm1 ON cm1.conversation_id = c.id AND cm1.user_id = $1
        INNER JOIN conversation_members cm2 ON cm2.conversation_id = c.id AND cm2.user_id = $2
        WHERE c.type = 'dm' AND cm1.left_at IS NULL AND cm2.left_at IS NULL`,
-      [req.userId, targetUserId]
+      [req.userId, targetUserId],
     );
 
     if (existing) {
@@ -172,7 +172,7 @@ router.post("/dm", async (req: AuthRequest, res: Response, next) => {
       `SELECT allow_dms_from
        FROM user_privacy_settings
        WHERE user_id = $1`,
-      [targetUserId]
+      [targetUserId],
     );
 
     const dmPolicy = targetPrivacy?.allow_dms_from ?? "everyone";
@@ -180,7 +180,7 @@ router.post("/dm", async (req: AuthRequest, res: Response, next) => {
       throw createError(
         "This user is not accepting new direct messages",
         403,
-        "DM_NOT_ALLOWED"
+        "DM_NOT_ALLOWED",
       );
     }
 
@@ -191,14 +191,14 @@ router.post("/dm", async (req: AuthRequest, res: Response, next) => {
          WHERE (user_id = $1 AND contact_id = $2)
             OR (user_id = $2 AND contact_id = $1)
          LIMIT 1`,
-        [req.userId, targetUserId]
+        [req.userId, targetUserId],
       );
 
       if (!existingContact) {
         throw createError(
           "This user only accepts direct messages from contacts",
           403,
-          "DM_CONTACTS_ONLY"
+          "DM_CONTACTS_ONLY",
         );
       }
     }
@@ -208,14 +208,14 @@ router.post("/dm", async (req: AuthRequest, res: Response, next) => {
       const { rows } = await client.query(
         `INSERT INTO conversations (type, is_encrypted, created_by)
          VALUES ('dm', FALSE, $1) RETURNING id`,
-        [req.userId]
+        [req.userId],
       );
       const conv = rows[0];
 
       await client.query(
         `INSERT INTO conversation_members (conversation_id, user_id, role)
          VALUES ($1, $2, 'member'), ($1, $3, 'member')`,
-        [conv.id, req.userId, targetUserId]
+        [conv.id, req.userId, targetUserId],
       );
 
       return conv;
@@ -236,7 +236,7 @@ router.post("/group", async (req: AuthRequest, res: Response, next) => {
       const { rows } = await client.query(
         `INSERT INTO conversations (type, name, description, is_encrypted, created_by)
          VALUES ('group', $1, $2, $3, $4) RETURNING id, name, type, created_at`,
-        [body.name, body.description ?? null, body.isEncrypted, req.userId]
+        [body.name, body.description ?? null, body.isEncrypted, req.userId],
       );
       const conv = rows[0];
 
@@ -244,7 +244,7 @@ router.post("/group", async (req: AuthRequest, res: Response, next) => {
       await client.query(
         `INSERT INTO conversation_members (conversation_id, user_id, role)
          VALUES ($1, $2, 'owner')`,
-        [conv.id, req.userId]
+        [conv.id, req.userId],
       );
 
       // Add other members
@@ -254,7 +254,7 @@ router.post("/group", async (req: AuthRequest, res: Response, next) => {
             await client.query(
               `INSERT INTO conversation_members (conversation_id, user_id, role)
                VALUES ($1, $2, 'member') ON CONFLICT DO NOTHING`,
-              [conv.id, memberId]
+              [conv.id, memberId],
             );
           }
         }
@@ -278,7 +278,7 @@ router.get("/:id", async (req: AuthRequest, res: Response, next) => {
     const member = await queryOne(
       `SELECT id FROM conversation_members
        WHERE conversation_id = $1 AND user_id = $2 AND left_at IS NULL`,
-      [id, req.userId]
+      [id, req.userId],
     );
     if (!member) {
       throw createError("Conversation not found", 404);
@@ -296,7 +296,7 @@ router.get("/:id", async (req: AuthRequest, res: Response, next) => {
     }>(
       `SELECT id, type, name, description, avatar_url, is_encrypted, created_at, updated_at
        FROM conversations WHERE id = $1`,
-      [id]
+      [id],
     );
 
     const members = await query<{
@@ -312,7 +312,7 @@ router.get("/:id", async (req: AuthRequest, res: Response, next) => {
        FROM conversation_members cm
        INNER JOIN users u ON u.id = cm.user_id
        WHERE cm.conversation_id = $1 AND cm.left_at IS NULL`,
-      [id]
+      [id],
     );
 
     res.json({ data: { ...conv, members } });
@@ -330,7 +330,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next) => {
     const member = await queryOne<{ role: string }>(
       `SELECT role FROM conversation_members
        WHERE conversation_id = $1 AND user_id = $2 AND left_at IS NULL`,
-      [id, req.userId]
+      [id, req.userId],
     );
 
     if (!member) throw createError("Conversation not found", 404);
@@ -360,7 +360,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next) => {
 
     await query(
       `UPDATE conversations SET ${updates.join(", ")} WHERE id = $${paramIdx}`,
-      params
+      params,
     );
 
     res.json({ data: { message: "Updated" } });
@@ -380,7 +380,7 @@ router.get("/:id/messages", async (req: AuthRequest, res: Response, next) => {
     const member = await queryOne(
       `SELECT id FROM conversation_members
        WHERE conversation_id = $1 AND user_id = $2 AND left_at IS NULL`,
-      [id, req.userId]
+      [id, req.userId],
     );
     if (!member) {
       throw createError("Conversation not found", 404);
@@ -413,14 +413,14 @@ router.get("/:id/messages", async (req: AuthRequest, res: Response, next) => {
          ${before ? "AND m.created_at < $3" : ""}
        ORDER BY m.created_at DESC
        LIMIT $2`,
-      before ? [id, limit, before] : [id, limit]
+      before ? [id, limit, before] : [id, limit],
     );
 
     // Update read status
     await query(
       `UPDATE conversation_members SET last_read_at = NOW()
        WHERE conversation_id = $1 AND user_id = $2`,
-      [id, req.userId]
+      [id, req.userId],
     );
 
     res.json({ data: messages.reverse() });
@@ -443,16 +443,13 @@ router.post("/:id/messages", async (req: AuthRequest, res: Response, next) => {
     const member = await queryOne<{ role: string; muted_until: string }>(
       `SELECT role, muted_until FROM conversation_members
        WHERE conversation_id = $1 AND user_id = $2 AND left_at IS NULL`,
-      [id, req.userId]
+      [id, req.userId],
     );
     if (!member) {
       throw createError("Conversation not found", 404);
     }
 
-    if (
-      member.muted_until &&
-      new Date(member.muted_until) > new Date()
-    ) {
+    if (member.muted_until && new Date(member.muted_until) > new Date()) {
       throw createError("You are muted in this conversation", 403, "MUTED");
     }
 
@@ -471,20 +468,20 @@ router.post("/:id/messages", async (req: AuthRequest, res: Response, next) => {
           body.encryptedContent ?? null,
           body.attachmentId ?? null,
           body.replyToId ?? null,
-        ]
+        ],
       );
 
       // Update conversation updated_at
       await client.query(
         "UPDATE conversations SET updated_at = NOW() WHERE id = $1",
-        [id]
+        [id],
       );
 
       const sender = await client.query(
         `SELECT username, display_name, avatar_url
          FROM users
          WHERE id = $1`,
-        [req.userId]
+        [req.userId],
       );
 
       return {
@@ -502,7 +499,7 @@ router.post("/:id/messages", async (req: AuthRequest, res: Response, next) => {
         type: "message.new",
         payload: message,
         timestamp: new Date().toISOString(),
-      })
+      }),
     );
 
     res.status(201).json({ data: message });
@@ -524,7 +521,7 @@ router.patch(
       const msg = await queryOne<{ sender_id: string }>(
         `SELECT sender_id FROM messages
          WHERE id = $1 AND conversation_id = $2 AND deleted_at IS NULL`,
-        [msgId, id]
+        [msgId, id],
       );
 
       if (!msg) throw createError("Message not found", 404);
@@ -534,7 +531,7 @@ router.patch(
 
       await query(
         "UPDATE messages SET content = $1, edited_at = NOW() WHERE id = $2",
-        [content, msgId]
+        [content, msgId],
       );
 
       await redis.publish(
@@ -543,14 +540,14 @@ router.patch(
           type: "message.edited",
           payload: { id: msgId, content, editedAt: new Date().toISOString() },
           timestamp: new Date().toISOString(),
-        })
+        }),
       );
 
       res.json({ data: { message: "Updated" } });
     } catch (err) {
       next(err);
     }
-  }
+  },
 );
 
 // DELETE /api/conversations/:id/messages/:msgId
@@ -563,7 +560,7 @@ router.delete(
       const msg = await queryOne<{ sender_id: string }>(
         `SELECT sender_id FROM messages
          WHERE id = $1 AND conversation_id = $2 AND deleted_at IS NULL`,
-        [msgId, id]
+        [msgId, id],
       );
 
       if (!msg) throw createError("Message not found", 404);
@@ -572,7 +569,7 @@ router.delete(
       const member = await queryOne<{ role: string }>(
         `SELECT role FROM conversation_members
          WHERE conversation_id = $1 AND user_id = $2 AND left_at IS NULL`,
-        [id, req.userId]
+        [id, req.userId],
       );
 
       const canDelete =
@@ -581,10 +578,9 @@ router.delete(
 
       if (!canDelete) throw createError("Cannot delete this message", 403);
 
-      await query(
-        "UPDATE messages SET deleted_at = NOW() WHERE id = $1",
-        [msgId]
-      );
+      await query("UPDATE messages SET deleted_at = NOW() WHERE id = $1", [
+        msgId,
+      ]);
 
       await redis.publish(
         `conv:${id}`,
@@ -592,14 +588,14 @@ router.delete(
           type: "message.deleted",
           payload: { id: msgId },
           timestamp: new Date().toISOString(),
-        })
+        }),
       );
 
       res.json({ data: { message: "Deleted" } });
     } catch (err) {
       next(err);
     }
-  }
+  },
 );
 
 // POST /api/conversations/:id/leave
@@ -610,7 +606,7 @@ router.post("/:id/leave", async (req: AuthRequest, res: Response, next) => {
     const member = await queryOne<{ role: string }>(
       `SELECT role FROM conversation_members
        WHERE conversation_id = $1 AND user_id = $2 AND left_at IS NULL`,
-      [id, req.userId]
+      [id, req.userId],
     );
 
     if (!member) throw createError("Not a member", 404);
@@ -618,7 +614,7 @@ router.post("/:id/leave", async (req: AuthRequest, res: Response, next) => {
     await query(
       `UPDATE conversation_members SET left_at = NOW()
        WHERE conversation_id = $1 AND user_id = $2`,
-      [id, req.userId]
+      [id, req.userId],
     );
 
     res.json({ data: { message: "Left conversation" } });
@@ -637,7 +633,7 @@ router.post("/:id/typing", async (req: AuthRequest, res: Response, next) => {
     const member = await queryOne(
       `SELECT id FROM conversation_members
        WHERE conversation_id = $1 AND user_id = $2 AND left_at IS NULL`,
-      [id, req.userId]
+      [id, req.userId],
     );
     if (!member) {
       throw createError("Conversation not found", 404);
@@ -658,7 +654,7 @@ router.post("/:id/typing", async (req: AuthRequest, res: Response, next) => {
         type: "user.typing",
         payload: { conversationId: id, userId: req.userId, isTyping },
         timestamp: new Date().toISOString(),
-      })
+      }),
     );
 
     res.json({ data: { ok: true } });

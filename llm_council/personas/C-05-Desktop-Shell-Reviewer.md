@@ -29,6 +29,7 @@ Then ground yourself in the current desktop surface using, when relevant:
 Review `apps/desktop` and `apps/desktop/src-tauri` as a shipped desktop product shell.
 
 Find concrete desktop implementation defects:
+
 - Tauri shell/runtime breakage
 - command-boundary mistakes
 - desktop bootstrap and relay override regressions
@@ -138,6 +139,7 @@ Every finding must include:
 - what should be tested afterward
 
 When relevant, explicitly state whether the defect is caused by:
+
 - Tauri shell wiring
 - invoke/command boundary misuse
 - keyring integration

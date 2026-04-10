@@ -11,11 +11,11 @@ export type AttachMenuAction =
   | "checklist";
 
 const GRID_ITEMS: { id: AttachMenuAction; icon: string; label: string }[] = [
-  { id: "gallery",   icon: "🖼️",  label: "Media" },
-  { id: "file",      icon: "📄",  label: "File" },
-  { id: "location",  icon: "📍",  label: "Location" },
-  { id: "poll",      icon: "📊",  label: "Poll" },
-  { id: "checklist", icon: "☑️",  label: "Checklist" },
+  { id: "gallery", icon: "🖼️", label: "Media" },
+  { id: "file", icon: "📄", label: "File" },
+  { id: "location", icon: "📍", label: "Location" },
+  { id: "poll", icon: "📊", label: "Poll" },
+  { id: "checklist", icon: "☑️", label: "Checklist" },
 ];
 
 type Props = {
@@ -49,19 +49,26 @@ export function AttachMenuSheet({ visible, onClose, onSelect }: Props) {
           <View style={styles.contextMenuDrag} />
 
           {/* Camera live preview tile */}
-          <Pressable style={styles.attachCameraPreview} onPress={handleCameraPress}>
+          <Pressable
+            style={styles.attachCameraPreview}
+            onPress={handleCameraPress}
+          >
             {visible && permission?.granted ? (
               <CameraView style={StyleSheet.absoluteFillObject} facing="back" />
             ) : (
               <View style={styles.attachCameraPlaceholder}>
                 <Text style={styles.attachCameraPlaceholderIcon}>📷</Text>
                 <Text style={styles.attachCameraPlaceholderLabel}>
-                  {permission?.granted === false ? "Tap to enable camera" : "Camera"}
+                  {permission?.granted === false
+                    ? "Tap to enable camera"
+                    : "Camera"}
                 </Text>
               </View>
             )}
             <View style={styles.attachCameraHintBadge}>
-              <Text style={styles.attachCameraHintText}>Tap to shoot or record</Text>
+              <Text style={styles.attachCameraHintText}>
+                Tap to shoot or record
+              </Text>
             </View>
           </Pressable>
 

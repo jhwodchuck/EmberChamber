@@ -34,9 +34,9 @@ token_budget_tier: normal
 
 # Priority-ranked findings
 
-| Rank | Severity | Source persona | Title | Required before merge? |
-| --- | --- | --- | --- | --- |
-| 1 | high | C-09 | <title> | yes |
+| Rank | Severity | Source persona | Title   | Required before merge? |
+| ---- | -------- | -------------- | ------- | ---------------------- |
+| 1    | high     | C-09           | <title> | yes                    |
 
 # Conflicts resolved
 

@@ -4,14 +4,14 @@
 
 ## Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Runtime | Cloudflare Workers |
-| Metadata | Cloudflare D1 (SQLite edge database) |
-| Blob storage | Cloudflare R2 |
-| Stateful objects | Cloudflare Durable Objects |
-| Message queues | Cloudflare Queues |
-| Email delivery | Resend API (via EMAIL_QUEUE) |
+| Layer            | Technology                           |
+| ---------------- | ------------------------------------ |
+| Runtime          | Cloudflare Workers                   |
+| Metadata         | Cloudflare D1 (SQLite edge database) |
+| Blob storage     | Cloudflare R2                        |
+| Stateful objects | Cloudflare Durable Objects           |
+| Message queues   | Cloudflare Queues                    |
+| Email delivery   | Resend API (via EMAIL_QUEUE)         |
 
 ## Running Locally
 
@@ -45,11 +45,11 @@ The relay reads environment variables from `apps/relay/.dev.vars` for local deve
 
 Key variables:
 
-| Variable | Purpose |
-|----------|---------|
+| Variable         | Purpose                              |
+| ---------------- | ------------------------------------ |
 | `RESEND_API_KEY` | Magic-link email delivery via Resend |
-| `JWT_SECRET` | Signs and verifies session tokens |
-| `ENCRYPTION_KEY` | Encrypts email-at-rest in D1 |
+| `JWT_SECRET`     | Signs and verifies session tokens    |
+| `ENCRYPTION_KEY` | Encrypts email-at-rest in D1         |
 
 Production secrets are managed via Wrangler:
 
@@ -90,25 +90,25 @@ Keyed per IP or account. Applies rate limits to auth start, invite redemption, a
 
 ## Key API Endpoints
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| `POST` | `/v1/auth/start` | Begin magic-link auth challenge |
-| `POST` | `/v1/auth/complete` | Exchange magic-link for session tokens |
-| `GET` | `/v1/sessions` | List active sessions for the authenticated account |
-| `DELETE` | `/v1/sessions/:id` | Revoke a session |
-| `POST` | `/v1/invites/preview` | Preview a beta or group invite |
-| `POST` | `/v1/invites/accept` | Accept an invite during onboarding |
-| `GET` | `/v1/contacts/card` | Fetch a contact's device bundle (public keys) |
-| `POST` | `/v1/messages/batch` | Send ciphertext envelopes to device mailboxes |
-| `GET` | `/v1/mailbox/sync` | Pull pending envelopes for the current device |
-| `POST` | `/v1/mailbox/ack` | Acknowledge and delete delivered envelopes |
-| `GET` | `/v1/mailbox/ws` | WebSocket for live mailbox fan-out |
-| `POST` | `/v1/groups` | Create a new group |
-| `GET` | `/v1/groups/:id/members` | List group members |
-| `POST` | `/v1/groups/:id/invites` | Mint a group invite (owner/admin) |
-| `POST` | `/v1/attachments/upload-ticket` | Get a signed R2 upload ticket |
-| `POST` | `/v1/attachments/download-ticket` | Get a signed R2 download ticket |
-| `POST` | `/v1/reports` | Submit a disclosure-based report |
+| Method   | Path                              | Purpose                                            |
+| -------- | --------------------------------- | -------------------------------------------------- |
+| `POST`   | `/v1/auth/start`                  | Begin magic-link auth challenge                    |
+| `POST`   | `/v1/auth/complete`               | Exchange magic-link for session tokens             |
+| `GET`    | `/v1/sessions`                    | List active sessions for the authenticated account |
+| `DELETE` | `/v1/sessions/:id`                | Revoke a session                                   |
+| `POST`   | `/v1/invites/preview`             | Preview a beta or group invite                     |
+| `POST`   | `/v1/invites/accept`              | Accept an invite during onboarding                 |
+| `GET`    | `/v1/contacts/card`               | Fetch a contact's device bundle (public keys)      |
+| `POST`   | `/v1/messages/batch`              | Send ciphertext envelopes to device mailboxes      |
+| `GET`    | `/v1/mailbox/sync`                | Pull pending envelopes for the current device      |
+| `POST`   | `/v1/mailbox/ack`                 | Acknowledge and delete delivered envelopes         |
+| `GET`    | `/v1/mailbox/ws`                  | WebSocket for live mailbox fan-out                 |
+| `POST`   | `/v1/groups`                      | Create a new group                                 |
+| `GET`    | `/v1/groups/:id/members`          | List group members                                 |
+| `POST`   | `/v1/groups/:id/invites`          | Mint a group invite (owner/admin)                  |
+| `POST`   | `/v1/attachments/upload-ticket`   | Get a signed R2 upload ticket                      |
+| `POST`   | `/v1/attachments/download-ticket` | Get a signed R2 download ticket                    |
+| `POST`   | `/v1/reports`                     | Submit a disclosure-based report                   |
 
 ## Tests
 

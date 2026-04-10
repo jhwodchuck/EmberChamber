@@ -32,17 +32,20 @@ const privacyToggleFields = [
   {
     key: "autoDownloadSensitiveMedia",
     label: "Auto-download sensitive media",
-    description: "Leave this off unless you want private media cached automatically on this device.",
+    description:
+      "Leave this off unless you want private media cached automatically on this device.",
   },
   {
     key: "allowSensitiveExport",
     label: "Allow sensitive export",
-    description: "Keep this off to discourage saving intimate media outside the app vault.",
+    description:
+      "Keep this off to discourage saving intimate media outside the app vault.",
   },
   {
     key: "secureAppSwitcher",
     label: "Secure app switcher",
-    description: "Request secure-window behavior on supported devices to reduce snapshot leakage.",
+    description:
+      "Request secure-window behavior on supported devices to reduce snapshot leakage.",
   },
 ] as const;
 
@@ -57,16 +60,26 @@ export default function SettingsPage() {
     allowSensitiveExport: false,
     secureAppSwitcher: true,
   });
-  const [sessionsStatus, setSessionsStatus] = useState<{ state: LoadStatus; message?: string }>({
+  const [sessionsStatus, setSessionsStatus] = useState<{
+    state: LoadStatus;
+    message?: string;
+  }>({
     state: "idle",
   });
-  const [privacyStatus, setPrivacyStatus] = useState<{ state: LoadStatus; message?: string }>({
+  const [privacyStatus, setPrivacyStatus] = useState<{
+    state: LoadStatus;
+    message?: string;
+  }>({
     state: "idle",
   });
-  const [revokedSessionNotice, setRevokedSessionNotice] = useState<{ deviceLabel: string } | null>(null);
+  const [revokedSessionNotice, setRevokedSessionNotice] = useState<{
+    deviceLabel: string;
+  } | null>(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSavingPrivacy, setIsSavingPrivacy] = useState(false);
-  const [revokingSessionId, setRevokingSessionId] = useState<string | null>(null);
+  const [revokingSessionId, setRevokingSessionId] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     if (user) {
@@ -123,11 +136,16 @@ export default function SettingsPage() {
     setIsSavingProfile(true);
 
     try {
-      await relayAccountApi.updateProfile({ displayName: profile.displayName, bio: profile.bio });
+      await relayAccountApi.updateProfile({
+        displayName: profile.displayName,
+        bio: profile.bio,
+      });
       updateUser({ displayName: profile.displayName, bio: profile.bio });
       toast.success("Profile updated");
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to save profile");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to save profile",
+      );
     } finally {
       setIsSavingProfile(false);
     }
@@ -147,7 +165,9 @@ export default function SettingsPage() {
       await relayAccountApi.updatePrivacy(privacy);
       toast.success("Privacy settings updated");
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to save privacy settings");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to save privacy settings",
+      );
     } finally {
       setIsSavingPrivacy(false);
     }
@@ -172,17 +192,22 @@ export default function SettingsPage() {
       setRevokedSessionNotice({ deviceLabel: targetLabel });
       toast.success("Session access removed");
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to revoke session");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to revoke session",
+      );
     } finally {
       setRevokingSessionId(null);
     }
   }
 
-  const privacyControlsDisabled = privacyStatus.state !== "ready" || isSavingPrivacy;
+  const privacyControlsDisabled =
+    privacyStatus.state !== "ready" || isSavingPrivacy;
 
   return (
     <div className="mx-auto flex h-full max-w-2xl flex-col p-6">
-      <h2 className="mb-6 text-xl font-bold text-[var(--text-primary)]">Settings</h2>
+      <h2 className="mb-6 text-xl font-bold text-[var(--text-primary)]">
+        Settings
+      </h2>
 
       <div
         role="tablist"
@@ -223,8 +248,12 @@ export default function SettingsPage() {
               {(user?.displayName ?? user?.username ?? "?")[0].toUpperCase()}
             </div>
             <div>
-              <p className="font-medium text-[var(--text-primary)]">{user?.displayName || "Unnamed user"}</p>
-              <p className="text-sm text-[var(--text-secondary)]">@{user?.username}</p>
+              <p className="font-medium text-[var(--text-primary)]">
+                {user?.displayName || "Unnamed user"}
+              </p>
+              <p className="text-sm text-[var(--text-secondary)]">
+                @{user?.username}
+              </p>
             </div>
           </div>
 
@@ -241,7 +270,10 @@ export default function SettingsPage() {
               type="text"
               value={profile.displayName}
               onChange={(event) =>
-                setProfile((current) => ({ ...current, displayName: event.target.value }))
+                setProfile((current) => ({
+                  ...current,
+                  displayName: event.target.value,
+                }))
               }
               className="input"
               maxLength={128}
@@ -261,7 +293,10 @@ export default function SettingsPage() {
               name="bio"
               value={profile.bio}
               onChange={(event) =>
-                setProfile((current) => ({ ...current, bio: event.target.value }))
+                setProfile((current) => ({
+                  ...current,
+                  bio: event.target.value,
+                }))
               }
               className="input resize-none"
               rows={3}
@@ -277,13 +312,24 @@ export default function SettingsPage() {
             >
               Email
             </label>
-            <input id="settings-email" type="email" value={user?.email ?? ""} className="input opacity-60" disabled />
+            <input
+              id="settings-email"
+              type="email"
+              value={user?.email ?? ""}
+              className="input opacity-60"
+              disabled
+            />
             <p className="mt-1 text-xs text-[var(--text-secondary)]">
-              Email stays tied to bootstrap and recovery. Changes are not available in beta.
+              Email stays tied to bootstrap and recovery. Changes are not
+              available in beta.
             </p>
           </div>
 
-          <button type="submit" className="btn-primary" disabled={isSavingProfile}>
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={isSavingProfile}
+          >
             {isSavingProfile ? "Saving Profile…" : "Save Profile"}
           </button>
         </form>
@@ -298,16 +344,20 @@ export default function SettingsPage() {
           className="space-y-4"
         >
           <div className="card border-brand-500/20 bg-brand-500/5">
-            <p className="mb-1 text-sm font-medium text-[var(--text-primary)]">Sensitive-media defaults</p>
+            <p className="mb-1 text-sm font-medium text-[var(--text-primary)]">
+              Sensitive-media defaults
+            </p>
             <p className="text-sm text-[var(--text-secondary)]">
-              The beta assumes intimate media should stay discreet by default. These controls bias
-              toward in-app viewing, private vault storage, and less visible device behavior.
+              The beta assumes intimate media should stay discreet by default.
+              These controls bias toward in-app viewing, private vault storage,
+              and less visible device behavior.
             </p>
           </div>
 
           {privacyStatus.state === "loading" ? (
             <StatusCallout tone="info" title="Loading current privacy settings">
-              The relay is refreshing your current defaults before you make changes.
+              The relay is refreshing your current defaults before you make
+              changes.
             </StatusCallout>
           ) : null}
 
@@ -316,7 +366,11 @@ export default function SettingsPage() {
               tone="error"
               title="Privacy settings did not load"
               action={
-                <button type="button" onClick={() => void loadPrivacy()} className="btn-ghost">
+                <button
+                  type="button"
+                  onClick={() => void loadPrivacy()}
+                  className="btn-ghost"
+                >
                   Retry
                 </button>
               }
@@ -338,7 +392,10 @@ export default function SettingsPage() {
               onChange={(event) =>
                 setPrivacy((current) => ({
                   ...current,
-                  notificationPreviewMode: event.target.value as "discreet" | "expanded" | "none",
+                  notificationPreviewMode: event.target.value as
+                    | "discreet"
+                    | "expanded"
+                    | "none",
                 }))
               }
               className="input"
@@ -358,12 +415,21 @@ export default function SettingsPage() {
             const descriptionId = `privacy-${key}-description`;
 
             return (
-              <div key={key} className="flex items-center justify-between gap-4 py-2">
+              <div
+                key={key}
+                className="flex items-center justify-between gap-4 py-2"
+              >
                 <div className="min-w-0">
-                  <p id={labelId} className="text-sm font-medium text-[var(--text-primary)]">
+                  <p
+                    id={labelId}
+                    className="text-sm font-medium text-[var(--text-primary)]"
+                  >
                     {label}
                   </p>
-                  <p id={descriptionId} className="text-xs text-[var(--text-secondary)]">
+                  <p
+                    id={descriptionId}
+                    className="text-xs text-[var(--text-secondary)]"
+                  >
                     {description}
                   </p>
                 </div>
@@ -395,7 +461,11 @@ export default function SettingsPage() {
             );
           })}
 
-          <button type="submit" className="btn-primary" disabled={privacyControlsDisabled}>
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={privacyControlsDisabled}
+          >
             {isSavingPrivacy ? "Saving Privacy…" : "Save Privacy Settings"}
           </button>
         </form>
@@ -410,9 +480,14 @@ export default function SettingsPage() {
         >
           <div className="flex items-start justify-between gap-3">
             <p className="text-sm text-[var(--text-secondary)]">
-              These are the devices that still have a valid relay session for your account.
+              These are the devices that still have a valid relay session for
+              your account.
             </p>
-            <button type="button" onClick={() => void loadSessions()} className="btn-ghost shrink-0">
+            <button
+              type="button"
+              onClick={() => void loadSessions()}
+              className="btn-ghost shrink-0"
+            >
               Refresh
             </button>
           </div>
@@ -421,8 +496,9 @@ export default function SettingsPage() {
 
           {revokedSessionNotice ? (
             <StatusCallout tone="success" title="Session revoked">
-              {revokedSessionNotice.deviceLabel} lost this sign-in. That device must request a new
-              magic link before it can get back into the account.
+              {revokedSessionNotice.deviceLabel} lost this sign-in. That device
+              must request a new magic link before it can get back into the
+              account.
             </StatusCallout>
           ) : null}
 
@@ -437,7 +513,11 @@ export default function SettingsPage() {
               tone="error"
               title="Sessions did not load"
               action={
-                <button type="button" onClick={() => void loadSessions()} className="btn-ghost">
+                <button
+                  type="button"
+                  onClick={() => void loadSessions()}
+                  className="btn-ghost"
+                >
                   Retry
                 </button>
               }
@@ -447,12 +527,17 @@ export default function SettingsPage() {
           ) : null}
 
           {sessionsStatus.state === "ready" && sessions.length === 0 ? (
-            <p className="py-8 text-center text-[var(--text-secondary)]">No active sessions found.</p>
+            <p className="py-8 text-center text-[var(--text-secondary)]">
+              No active sessions found.
+            </p>
           ) : null}
 
           {sessionsStatus.state === "ready"
             ? sessions.map((session) => (
-                <div key={session.id} className="card flex items-center justify-between gap-4">
+                <div
+                  key={session.id}
+                  className="card flex items-center justify-between gap-4"
+                >
                   <div>
                     <div className="mb-0.5 flex items-center gap-2">
                       <span className="text-sm font-medium text-[var(--text-primary)]">
@@ -465,7 +550,8 @@ export default function SettingsPage() {
                       ) : null}
                     </div>
                     <p className="text-xs text-[var(--text-secondary)]">
-                      Created {formatUtcDate(session.createdAt)} UTC · Last seen {formatUtcDate(session.lastSeenAt)} UTC
+                      Created {formatUtcDate(session.createdAt)} UTC · Last seen{" "}
+                      {formatUtcDate(session.lastSeenAt)} UTC
                     </p>
                   </div>
 
@@ -477,7 +563,9 @@ export default function SettingsPage() {
                       disabled={revokingSessionId === session.id}
                       aria-label={`Revoke session for ${session.deviceLabel}`}
                     >
-                      {revokingSessionId === session.id ? "Revoking…" : "Revoke"}
+                      {revokingSessionId === session.id
+                        ? "Revoking…"
+                        : "Revoke"}
                     </button>
                   ) : null}
                 </div>
@@ -498,14 +586,18 @@ export default function SettingsPage() {
           </StatusCallout>
 
           <div>
-            <p className="mb-3 text-sm font-medium text-[var(--text-primary)]">Theme</p>
+            <p className="mb-3 text-sm font-medium text-[var(--text-primary)]">
+              Theme
+            </p>
             <div className="flex gap-3">
               {(["light", "dark", "system"] as const).map((themeOption) => (
                 <button
                   key={themeOption}
                   type="button"
                   onClick={() => {
-                    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+                    const prefersDark = window.matchMedia(
+                      "(prefers-color-scheme: dark)",
+                    ).matches;
                     const resolvedTheme =
                       themeOption === "system"
                         ? prefersDark
@@ -513,7 +605,10 @@ export default function SettingsPage() {
                           : "light"
                         : themeOption;
 
-                    document.documentElement.classList.toggle("dark", resolvedTheme === "dark");
+                    document.documentElement.classList.toggle(
+                      "dark",
+                      resolvedTheme === "dark",
+                    );
                     localStorage.setItem("theme", themeOption);
                   }}
                   className="card flex-1 cursor-pointer py-3 text-center capitalize transition-colors hover:border-brand-500"

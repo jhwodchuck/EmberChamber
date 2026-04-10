@@ -4,11 +4,11 @@
 
 ## Supported Platforms
 
-| Platform | Artifact | Status |
-|----------|---------|--------|
-| Windows | `.exe`, `.msi` | Active first-beta surface |
-| Ubuntu / Debian | `.deb`, `.AppImage` | Active first-beta surface |
-| macOS | `.app`, `.dmg` | Builds are wired; signed distribution is deferred |
+| Platform        | Artifact            | Status                                            |
+| --------------- | ------------------- | ------------------------------------------------- |
+| Windows         | `.exe`, `.msi`      | Active first-beta surface                         |
+| Ubuntu / Debian | `.deb`, `.AppImage` | Active first-beta surface                         |
+| macOS           | `.app`, `.dmg`      | Builds are wired; signed distribution is deferred |
 
 ## Current Capabilities
 
@@ -73,11 +73,11 @@ npm run build:desktop
 
 Triggered by version tags. Each platform uses a separate workflow:
 
-| Platform | Workflow |
-|----------|---------|
-| Ubuntu / Debian | `.github/workflows/release-linux.yml` |
-| Windows | `.github/workflows/release-windows.yml` |
-| macOS | `.github/workflows/release-macos.yml` |
+| Platform        | Workflow                                |
+| --------------- | --------------------------------------- |
+| Ubuntu / Debian | `.github/workflows/release-linux.yml`   |
+| Windows         | `.github/workflows/release-windows.yml` |
+| macOS           | `.github/workflows/release-macos.yml`   |
 
 Artifacts are attached to a GitHub Release.
 

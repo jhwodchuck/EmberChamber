@@ -38,7 +38,11 @@ export function CopyButton({
 
   return (
     <button type="button" onClick={handleCopy} className="btn-ghost">
-      {copied ? <Check className="h-4 w-4" aria-hidden="true" /> : <Copy className="h-4 w-4" aria-hidden="true" />}
+      {copied ? (
+        <Check className="h-4 w-4" aria-hidden="true" />
+      ) : (
+        <Copy className="h-4 w-4" aria-hidden="true" />
+      )}
       {copied ? copiedLabel : label}
     </button>
   );

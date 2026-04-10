@@ -41,7 +41,8 @@ export default function NewCommunityPage() {
       toast.success("Community created");
       router.push(`/app/community/${community.id}`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to create community";
+      const message =
+        error instanceof Error ? error.message : "Failed to create community";
       setFormError(message);
       toast.error(message);
     } finally {
@@ -58,8 +59,9 @@ export default function NewCommunityPage() {
         Create an invite-gated community with rooms
       </h2>
       <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
-        Use communities when a trusted circle is bigger than one small group and needs room-level
-        boundaries without turning into a public discovery surface.
+        Use communities when a trusted circle is bigger than one small group and
+        needs room-level boundaries without turning into a public discovery
+        surface.
       </p>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-5">
@@ -77,7 +79,12 @@ export default function NewCommunityPage() {
             <input
               type="text"
               value={form.title}
-              onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  title: event.target.value,
+                }))
+              }
               className="input"
               maxLength={80}
               required
@@ -93,7 +100,10 @@ export default function NewCommunityPage() {
             <textarea
               value={form.joinRuleText}
               onChange={(event) =>
-                setForm((current) => ({ ...current, joinRuleText: event.target.value }))
+                setForm((current) => ({
+                  ...current,
+                  joinRuleText: event.target.value,
+                }))
               }
               className="input resize-none"
               rows={4}
@@ -113,7 +123,10 @@ export default function NewCommunityPage() {
               <select
                 value={String(form.memberCap)}
                 onChange={(event) =>
-                  setForm((current) => ({ ...current, memberCap: Number(event.target.value) }))
+                  setForm((current) => ({
+                    ...current,
+                    memberCap: Number(event.target.value),
+                  }))
                 }
                 className="input"
               >
@@ -133,7 +146,10 @@ export default function NewCommunityPage() {
                 type="text"
                 value={form.defaultRoomTitle}
                 onChange={(event) =>
-                  setForm((current) => ({ ...current, defaultRoomTitle: event.target.value }))
+                  setForm((current) => ({
+                    ...current,
+                    defaultRoomTitle: event.target.value,
+                  }))
                 }
                 className="input"
                 maxLength={80}
@@ -147,7 +163,10 @@ export default function NewCommunityPage() {
               type="checkbox"
               checked={form.allowMemberInvites}
               onChange={(event) =>
-                setForm((current) => ({ ...current, allowMemberInvites: event.target.checked }))
+                setForm((current) => ({
+                  ...current,
+                  allowMemberInvites: event.target.checked,
+                }))
               }
               className="mt-1 h-4 w-4 rounded border-[var(--border)] text-brand-600"
             />
@@ -156,8 +175,9 @@ export default function NewCommunityPage() {
                 Enable member invites
               </span>
               <span className="mt-1 block text-sm leading-6 text-[var(--text-secondary)]">
-                Closed beta phase 2 can allow trusted members to share invites when organizers want
-                that. You can freeze invites later without deleting the community.
+                Closed beta phase 2 can allow trusted members to share invites
+                when organizers want that. You can freeze invites later without
+                deleting the community.
               </span>
             </span>
           </label>
@@ -167,7 +187,10 @@ export default function NewCommunityPage() {
               type="checkbox"
               checked={form.sensitiveMediaDefault}
               onChange={(event) =>
-                setForm((current) => ({ ...current, sensitiveMediaDefault: event.target.checked }))
+                setForm((current) => ({
+                  ...current,
+                  sensitiveMediaDefault: event.target.checked,
+                }))
               }
               className="mt-1 h-4 w-4 rounded border-[var(--border)] text-brand-600"
             />
@@ -176,8 +199,8 @@ export default function NewCommunityPage() {
                 Enable stronger media defaults
               </span>
               <span className="mt-1 block text-sm leading-6 text-[var(--text-secondary)]">
-                New rooms and attachments stay on the standard profile unless organizers explicitly
-                raise the privacy posture.
+                New rooms and attachments stay on the standard profile unless
+                organizers explicitly raise the privacy posture.
               </span>
             </span>
           </label>
@@ -187,7 +210,11 @@ export default function NewCommunityPage() {
           <button type="submit" className="btn-primary" disabled={isCreating}>
             {isCreating ? "Creating Community…" : "Create Community"}
           </button>
-          <button type="button" onClick={() => router.push("/app")} className="btn-ghost">
+          <button
+            type="button"
+            onClick={() => router.push("/app")}
+            className="btn-ghost"
+          >
             Cancel
           </button>
         </div>

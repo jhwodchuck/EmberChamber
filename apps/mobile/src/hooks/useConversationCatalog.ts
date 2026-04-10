@@ -115,7 +115,10 @@ export function useConversationCatalog({
     let cancelled = false;
 
     void (async () => {
-      const preferences = await loadConversationPreferences(db, session.accountId);
+      const preferences = await loadConversationPreferences(
+        db,
+        session.accountId,
+      );
       if (!cancelled) {
         setConversationPreferences(preferences);
       }
@@ -138,7 +141,10 @@ export function useConversationCatalog({
       const entries = await Promise.all(
         groups.map(
           async (group) =>
-            [group.id, await loadLatestCachedGroupMessage(db, group.id)] as const,
+            [
+              group.id,
+              await loadLatestCachedGroupMessage(db, group.id),
+            ] as const,
         ),
       );
 
@@ -203,7 +209,14 @@ export function useConversationCatalog({
     return () => {
       cancelled = true;
     };
-  }, [cacheRevision, conversationPreviews, db, getConversationPreference, groups, session]);
+  }, [
+    cacheRevision,
+    conversationPreviews,
+    db,
+    getConversationPreference,
+    groups,
+    session,
+  ]);
 
   return {
     conversationPreferences,

@@ -1,11 +1,26 @@
 import { useState, type ReactNode } from "react";
-import { ActivityIndicator, Clipboard, Image, Linking, Pressable, Text, View } from "react-native";
-import { parseFormattedMessage, type FormattedBlockNode, type FormattedInlineNode } from "@emberchamber/shared";
+import {
+  ActivityIndicator,
+  Clipboard,
+  Image,
+  Linking,
+  Pressable,
+  Text,
+  View,
+} from "react-native";
+import {
+  parseFormattedMessage,
+  type FormattedBlockNode,
+  type FormattedInlineNode,
+} from "@emberchamber/shared";
 import type { GroupThreadMessage } from "../types";
 import { formatBytes, parseSharedLocation } from "../lib/utils";
 import { styles, theme } from "../styles";
 import { ImageViewerModal } from "./ImageViewerModal";
-import { MessageContextMenu, type ContextMenuAction } from "./MessageContextMenu";
+import {
+  MessageContextMenu,
+  type ContextMenuAction,
+} from "./MessageContextMenu";
 import { useAttachmentManager } from "../hooks/useAttachmentManager";
 
 type InlineRenderOptions = {
@@ -14,13 +29,21 @@ type InlineRenderOptions = {
   onRevealSpoiler: (spoilerId: string) => void;
 };
 
-function renderInlineNode(node: FormattedInlineNode, key: string, options: InlineRenderOptions): ReactNode {
+function renderInlineNode(
+  node: FormattedInlineNode,
+  key: string,
+  options: InlineRenderOptions,
+): ReactNode {
   switch (node.type) {
     case "text":
       return node.text;
     case "link":
       return (
-        <Text key={key} style={styles.inlineLink} onPress={() => options.onOpenUrl(node.url)}>
+        <Text
+          key={key}
+          style={styles.inlineLink}
+          onPress={() => options.onOpenUrl(node.url)}
+        >
           {node.text}
         </Text>
       );
@@ -39,7 +62,12 @@ function renderInlineNode(node: FormattedInlineNode, key: string, options: Inlin
     case "spoiler":
       if (!options.isSpoilerRevealed(key)) {
         return (
-          <Text key={key} style={styles.inlineSpoiler} suppressHighlighting onPress={() => options.onRevealSpoiler(key)}>
+          <Text
+            key={key}
+            style={styles.inlineSpoiler}
+            suppressHighlighting
+            onPress={() => options.onRevealSpoiler(key)}
+          >
             Spoiler
           </Text>
         );
@@ -71,8 +99,14 @@ function renderInlineNode(node: FormattedInlineNode, key: string, options: Inlin
   }
 }
 
-function renderInlineNodes(nodes: FormattedInlineNode[], keyPrefix: string, options: InlineRenderOptions): ReactNode[] {
-  return nodes.map((node, index) => renderInlineNode(node, `${keyPrefix}-${index}`, options));
+function renderInlineNodes(
+  nodes: FormattedInlineNode[],
+  keyPrefix: string,
+  options: InlineRenderOptions,
+): ReactNode[] {
+  return nodes.map((node, index) =>
+    renderInlineNode(node, `${keyPrefix}-${index}`, options),
+  );
 }
 
 function renderFormattedBlocks(
@@ -121,7 +155,9 @@ export function MessageBubble({
 }) {
   const [menuVisible, setMenuVisible] = useState(false);
   const [viewerVisible, setViewerVisible] = useState(false);
-  const [revealedSpoilers, setRevealedSpoilers] = useState<Record<string, true>>({});
+  const [revealedSpoilers, setRevealedSpoilers] = useState<
+    Record<string, true>
+  >({});
 
   async function handleOpenUrl(url: string) {
     try {
@@ -158,17 +194,24 @@ export function MessageBubble({
     return (
       <View style={styles.systemMessageCard}>
         <View style={styles.formattedMessage}>
-          {renderFormattedBlocks(parseFormattedMessage(message.text ?? "System notice"), "system", inlineRenderOptions)}
+          {renderFormattedBlocks(
+            parseFormattedMessage(message.text ?? "System notice"),
+            "system",
+            inlineRenderOptions,
+          )}
         </View>
       </View>
     );
   }
 
   const hasText = Boolean(message.text?.trim());
-  const formattedBlocks = hasText ? parseFormattedMessage(message.text ?? "") : [];
+  const formattedBlocks = hasText
+    ? parseFormattedMessage(message.text ?? "")
+    : [];
   const attachment = message.attachment;
   const isImage = attachment?.contentClass === "image";
-  const sharedLocation = hasText && !attachment ? parseSharedLocation(message.text!) : null;
+  const sharedLocation =
+    hasText && !attachment ? parseSharedLocation(message.text!) : null;
   const attachmentManager = useAttachmentManager(attachment ?? null);
 
   async function handleOpenAttachment() {
@@ -194,7 +237,12 @@ export function MessageBubble({
         delayLongPress={300}
         style={[styles.messageRow, isOwnMessage ? styles.messageRowOwn : null]}
       >
-        <View style={[styles.messageBubble, isOwnMessage ? styles.messageBubbleOwn : null]}>
+        <View
+          style={[
+            styles.messageBubble,
+            isOwnMessage ? styles.messageBubbleOwn : null,
+          ]}
+        >
           <Text style={styles.messageMeta}>
             {isOwnMessage ? "You" : message.senderDisplayName}
             {" · "}
@@ -211,7 +259,10 @@ export function MessageBubble({
           </Text>
 
           {sharedLocation ? (
-            <Pressable style={styles.locationCard} onPress={() => void handleOpenLocation()}>
+            <Pressable
+              style={styles.locationCard}
+              onPress={() => void handleOpenLocation()}
+            >
               <View style={styles.locationMapFrame}>
                 <Image
                   source={{ uri: sharedLocation.tileUrl }}
@@ -230,16 +281,24 @@ export function MessageBubble({
               </View>
               <View style={styles.locationCardBody}>
                 <Text style={styles.locationTitle}>{sharedLocation.title}</Text>
-                <Text style={styles.locationDetail}>{sharedLocation.detailLabel}</Text>
+                <Text style={styles.locationDetail}>
+                  {sharedLocation.detailLabel}
+                </Text>
                 <View style={styles.locationActionRow}>
                   <Text style={styles.locationActionLabel}>Open map</Text>
-                  <Text style={styles.locationAttribution}>Map data © OpenStreetMap</Text>
+                  <Text style={styles.locationAttribution}>
+                    Map data © OpenStreetMap
+                  </Text>
                 </View>
               </View>
             </Pressable>
           ) : hasText ? (
             <View style={styles.formattedMessage}>
-              {renderFormattedBlocks(formattedBlocks, message.id, inlineRenderOptions)}
+              {renderFormattedBlocks(
+                formattedBlocks,
+                message.id,
+                inlineRenderOptions,
+              )}
             </View>
           ) : null}
 
@@ -266,7 +325,9 @@ export function MessageBubble({
                   },
                 ]}
               >
-                <Text style={styles.attachmentMeta}>Tap to decrypt and view</Text>
+                <Text style={styles.attachmentMeta}>
+                  Tap to decrypt and view
+                </Text>
               </View>
             </Pressable>
           ) : null}
@@ -277,13 +338,18 @@ export function MessageBubble({
                 style={[
                   styles.secondaryButton,
                   styles.attachmentActionButton,
-                  attachmentManager.isBusy ? styles.primaryButtonDisabled : null,
+                  attachmentManager.isBusy
+                    ? styles.primaryButtonDisabled
+                    : null,
                 ]}
                 onPress={() => void handleOpenAttachment()}
                 disabled={attachmentManager.isBusy}
               >
                 {attachmentManager.isBusy ? (
-                  <ActivityIndicator size="small" color={theme.colors.textSoft} />
+                  <ActivityIndicator
+                    size="small"
+                    color={theme.colors.textSoft}
+                  />
                 ) : (
                   <Text style={styles.secondaryButtonLabel}>
                     {attachmentManager.actionLabel}
@@ -292,7 +358,9 @@ export function MessageBubble({
               </Pressable>
               {attachmentManager.error ? (
                 <>
-                  <Text style={styles.errorText}>{attachmentManager.error}</Text>
+                  <Text style={styles.errorText}>
+                    {attachmentManager.error}
+                  </Text>
                   {attachmentManager.canRetry ? (
                     <Pressable
                       style={styles.attachmentRetryButton}
@@ -307,8 +375,11 @@ export function MessageBubble({
                     </Pressable>
                   ) : null}
                 </>
-              ) : attachmentManager.statusLabel && attachmentManager.status !== "ready" ? (
-                <Text style={styles.helper}>{attachmentManager.statusLabel}</Text>
+              ) : attachmentManager.statusLabel &&
+                attachmentManager.status !== "ready" ? (
+                <Text style={styles.helper}>
+                  {attachmentManager.statusLabel}
+                </Text>
               ) : null}
             </View>
           ) : null}

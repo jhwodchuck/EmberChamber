@@ -18,7 +18,9 @@ export default function ErrorPage({ statusCode }: ErrorPageProps) {
       >
         <div className="space-y-5">
           <div className="rounded-[1.35rem] border border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-3 text-sm text-[var(--text-secondary)]">
-            <span className="font-medium text-[var(--text-primary)]">Support code:</span>{" "}
+            <span className="font-medium text-[var(--text-primary)]">
+              Support code:
+            </span>{" "}
             HTTP {statusCode ?? 500}
           </div>
 

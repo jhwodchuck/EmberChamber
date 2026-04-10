@@ -116,14 +116,20 @@ async function registerOpaqueBundle(session: RelaySession) {
       identityKeyB64: `${session.deviceId}-identity-key-material`,
       signedPrekeyB64: `${session.deviceId}-signed-prekey-material`,
       signedPrekeySignatureB64: `${session.deviceId}-signed-prekey-signature`,
-      oneTimePrekeysB64: [`${session.deviceId}-otp-1`, `${session.deviceId}-otp-2`],
+      oneTimePrekeysB64: [
+        `${session.deviceId}-otp-1`,
+        `${session.deviceId}-otp-2`,
+      ],
     }),
   });
 
   expect(response.status).toBe(200);
 }
 
-async function registerPushToken(session: RelaySession, token = `fcm-${session.deviceId}-registration-token`) {
+async function registerPushToken(
+  session: RelaySession,
+  token = `fcm-${session.deviceId}-registration-token`,
+) {
   const response = await relayFetch("/v1/devices/push-token", {
     method: "POST",
     headers: authHeaders(session),
@@ -217,12 +223,16 @@ async function expectWebSocketRejected(url: string) {
       } catch {
         // Ignore close failures while timing out.
       }
-      finish(() => reject(new Error(`Timed out waiting for websocket rejection ${url}`)));
+      finish(() =>
+        reject(new Error(`Timed out waiting for websocket rejection ${url}`)),
+      );
     }, 5_000);
 
     socket.onopen = () => {
       socket.close();
-      finish(() => reject(new Error(`Websocket unexpectedly opened for ${url}`)));
+      finish(() =>
+        reject(new Error(`Websocket unexpectedly opened for ${url}`)),
+      );
     };
     socket.onerror = () => {
       finish(resolve);
@@ -234,17 +244,22 @@ async function expectWebSocketRejected(url: string) {
 }
 
 async function createRelayHostedGroup(session: RelaySession, title: string) {
-  const group = await relayJson<{ id: string; historyMode: string }>("/v1/groups", {
-    method: "POST",
-    headers: authHeaders(session),
-    body: JSON.stringify({
-      title,
-      memberAccountIds: [],
-      memberCap: 6,
-      sensitiveMediaDefault: false,
-    }),
-  });
-  executeLocalSql(`UPDATE conversations SET history_mode = 'relay_hosted' WHERE id = '${group.id}'`);
+  const group = await relayJson<{ id: string; historyMode: string }>(
+    "/v1/groups",
+    {
+      method: "POST",
+      headers: authHeaders(session),
+      body: JSON.stringify({
+        title,
+        memberAccountIds: [],
+        memberCap: 6,
+        sensitiveMediaDefault: false,
+      }),
+    },
+  );
+  executeLocalSql(
+    `UPDATE conversations SET history_mode = 'relay_hosted' WHERE id = '${group.id}'`,
+  );
   return group.id;
 }
 
@@ -296,14 +311,20 @@ describe("relay routes", () => {
     expect(health.status).toBe(200);
     expect(ready.status).toBe(200);
 
-    const readyBody = (await ready.json()) as { status: string; checks: Record<string, boolean> };
+    const readyBody = (await ready.json()) as {
+      status: string;
+      checks: Record<string, boolean>;
+    };
     expect(readyBody.status).toBe("ok");
     expect(readyBody.checks.db).toBe(true);
     expect(readyBody.checks.cleanupQueue).toBe(true);
   });
 
   it("lists active sessions with client metadata", async () => {
-    const alice = await bootstrapAccount("session-meta@example.com", "Alice Pixel");
+    const alice = await bootstrapAccount(
+      "session-meta@example.com",
+      "Alice Pixel",
+    );
 
     const sessions = await relayJson<
       Array<{
@@ -337,13 +358,20 @@ describe("relay routes", () => {
     await updateDisplayName(alice, "Alice");
     await updateDisplayName(bob, "Bob");
 
-    const dm = await relayJson<{ id: string; historyMode: string }>("/v1/dm/open", {
-      method: "POST",
-      headers: authHeaders(alice),
-      body: JSON.stringify({ peerAccountId: bob.accountId }),
-    });
+    const dm = await relayJson<{ id: string; historyMode: string }>(
+      "/v1/dm/open",
+      {
+        method: "POST",
+        headers: authHeaders(alice),
+        body: JSON.stringify({ peerAccountId: bob.accountId }),
+      },
+    );
 
-    const group = await relayJson<{ id: string; title?: string; historyMode: string }>("/v1/groups", {
+    const group = await relayJson<{
+      id: string;
+      title?: string;
+      historyMode: string;
+    }>("/v1/groups", {
       method: "POST",
       headers: authHeaders(alice),
       body: JSON.stringify({
@@ -360,8 +388,12 @@ describe("relay routes", () => {
       headers: { authorization: `Bearer ${alice.accessToken}` },
     });
 
-    expect(conversations.find((entry) => entry.id === dm.id)?.historyMode).toBe("device_encrypted");
-    expect(conversations.find((entry) => entry.id === group.id)?.historyMode).toBe("device_encrypted");
+    expect(conversations.find((entry) => entry.id === dm.id)?.historyMode).toBe(
+      "device_encrypted",
+    );
+    expect(
+      conversations.find((entry) => entry.id === group.id)?.historyMode,
+    ).toBe("device_encrypted");
 
     const search = await relayJson<{
       conversations: Array<{ id: string }>;
@@ -375,7 +407,9 @@ describe("relay routes", () => {
       headers: { authorization: `Bearer ${alice.accessToken}` },
     });
 
-    expect(search.conversations.some((entry) => entry.id === group.id)).toBe(true);
+    expect(search.conversations.some((entry) => entry.id === group.id)).toBe(
+      true,
+    );
     expect(accountSearch.accounts.length).toBeGreaterThan(0);
   });
 
@@ -415,31 +449,43 @@ describe("relay routes", () => {
 
     expect(ticket.encryptionMode).toBe("device_encrypted");
 
-    const upload = await relayFetch(new URL(ticket.uploadUrl).pathname + new URL(ticket.uploadUrl).search, {
-      method: "PUT",
-      body: ciphertext,
-    });
-    expect(upload.status).toBe(200);
-
-    const access = await relayJson<{ attachmentId: string; downloadUrl: string }>(
-      `/v1/attachments/${ticket.attachmentId}/access`,
+    const upload = await relayFetch(
+      new URL(ticket.uploadUrl).pathname + new URL(ticket.uploadUrl).search,
       {
-        headers: { authorization: `Bearer ${peer.accessToken}` },
+        method: "PUT",
+        body: ciphertext,
       },
     );
+    expect(upload.status).toBe(200);
+
+    const access = await relayJson<{
+      attachmentId: string;
+      downloadUrl: string;
+    }>(`/v1/attachments/${ticket.attachmentId}/access`, {
+      headers: { authorization: `Bearer ${peer.accessToken}` },
+    });
 
     expect(access.attachmentId).toBe(ticket.attachmentId);
-    expect(access.downloadUrl).toContain(`/v1/attachments/download/${ticket.attachmentId}`);
+    expect(access.downloadUrl).toContain(
+      `/v1/attachments/download/${ticket.attachmentId}`,
+    );
   });
 
   it("routes encrypted group attachment delivery through mailbox fanout", async () => {
-    const owner = await bootstrapAccount("group-owner@example.com", "Group owner");
+    const owner = await bootstrapAccount(
+      "group-owner@example.com",
+      "Group owner",
+    );
     const peer = await bootstrapAccount("group-peer@example.com", "Group peer");
     await updateDisplayName(peer, "Group peer");
     await registerOpaqueBundle(owner);
     await registerOpaqueBundle(peer);
 
-    const group = await relayJson<{ id: string; epoch: number; historyMode: string }>("/v1/groups", {
+    const group = await relayJson<{
+      id: string;
+      epoch: number;
+      historyMode: string;
+    }>("/v1/groups", {
       method: "POST",
       headers: authHeaders(owner),
       body: JSON.stringify({
@@ -477,15 +523,21 @@ describe("relay routes", () => {
 
     expect(ticket.encryptionMode).toBe("device_encrypted");
 
-    const upload = await relayFetch(new URL(ticket.uploadUrl).pathname + new URL(ticket.uploadUrl).search, {
-      method: "PUT",
-      body: ciphertext,
-    });
+    const upload = await relayFetch(
+      new URL(ticket.uploadUrl).pathname + new URL(ticket.uploadUrl).search,
+      {
+        method: "PUT",
+        body: ciphertext,
+      },
+    );
     expect(upload.status).toBe(200);
 
-    const unsupportedHistoryResponse = await relayFetch(`/v1/groups/${group.id}/messages?limit=20`, {
-      headers: { authorization: `Bearer ${peer.accessToken}` },
-    });
+    const unsupportedHistoryResponse = await relayFetch(
+      `/v1/groups/${group.id}/messages?limit=20`,
+      {
+        headers: { authorization: `Bearer ${peer.accessToken}` },
+      },
+    );
     expect(unsupportedHistoryResponse.status).toBe(409);
 
     const peerBundles = await relayJson<Array<{ deviceId: string }>>(
@@ -495,43 +547,60 @@ describe("relay routes", () => {
       },
     );
 
-    const sendResult = await relayJson<{ acceptedEnvelopeIds: string[] }>("/v1/messages/batch", {
-      method: "POST",
-      headers: authHeaders(owner),
-      body: JSON.stringify({
-        conversationId: group.id,
-        epoch: group.epoch,
-        envelopes: [
-          {
-            recipientDeviceId: peerBundles[0].deviceId,
-            ciphertext: Buffer.from(JSON.stringify({ kind: "ember_conversation_v1" })).toString("base64"),
-            clientMessageId: "group-attachment-message-1",
-            attachmentIds: [ticket.attachmentId],
-          },
-        ],
-      }),
-    });
+    const sendResult = await relayJson<{ acceptedEnvelopeIds: string[] }>(
+      "/v1/messages/batch",
+      {
+        method: "POST",
+        headers: authHeaders(owner),
+        body: JSON.stringify({
+          conversationId: group.id,
+          epoch: group.epoch,
+          envelopes: [
+            {
+              recipientDeviceId: peerBundles[0].deviceId,
+              ciphertext: Buffer.from(
+                JSON.stringify({ kind: "ember_conversation_v1" }),
+              ).toString("base64"),
+              clientMessageId: "group-attachment-message-1",
+              attachmentIds: [ticket.attachmentId],
+            },
+          ],
+        }),
+      },
+    );
     expect(sendResult.acceptedEnvelopeIds).toHaveLength(1);
 
-    const mailboxSync = await relayJson<{ envelopes: Array<{ attachmentIds: string[] }> }>("/v1/mailbox/sync", {
+    const mailboxSync = await relayJson<{
+      envelopes: Array<{ attachmentIds: string[] }>;
+    }>("/v1/mailbox/sync", {
       headers: { authorization: `Bearer ${peer.accessToken}` },
     });
     expect(mailboxSync.envelopes).toHaveLength(1);
-    expect(mailboxSync.envelopes[0]?.attachmentIds).toEqual([ticket.attachmentId]);
+    expect(mailboxSync.envelopes[0]?.attachmentIds).toEqual([
+      ticket.attachmentId,
+    ]);
 
-    const access = await relayJson<{ attachmentId: string; downloadUrl: string }>(
-      `/v1/attachments/${ticket.attachmentId}/access`,
-      {
-        headers: { authorization: `Bearer ${peer.accessToken}` },
-      },
-    );
+    const access = await relayJson<{
+      attachmentId: string;
+      downloadUrl: string;
+    }>(`/v1/attachments/${ticket.attachmentId}/access`, {
+      headers: { authorization: `Bearer ${peer.accessToken}` },
+    });
     expect(access.attachmentId).toBe(ticket.attachmentId);
-    expect(access.downloadUrl).toContain(`/v1/attachments/download/${ticket.attachmentId}`);
+    expect(access.downloadUrl).toContain(
+      `/v1/attachments/download/${ticket.attachmentId}`,
+    );
   });
 
   it("deduplicates mailbox sends by clientMessageId and returns a single envelope", async () => {
-    const alice = await bootstrapAccount("mailbox-alice@example.com", "Mailbox Alice");
-    const bob = await bootstrapAccount("mailbox-bob@example.com", "Mailbox Bob");
+    const alice = await bootstrapAccount(
+      "mailbox-alice@example.com",
+      "Mailbox Alice",
+    );
+    const bob = await bootstrapAccount(
+      "mailbox-bob@example.com",
+      "Mailbox Bob",
+    );
 
     await registerOpaqueBundle(alice);
     await registerOpaqueBundle(bob);
@@ -579,7 +648,9 @@ describe("relay routes", () => {
     });
 
     expect(firstSend.acceptedEnvelopeIds).toHaveLength(1);
-    expect(secondSend.duplicateEnvelopeIds).toEqual(firstSend.acceptedEnvelopeIds);
+    expect(secondSend.duplicateEnvelopeIds).toEqual(
+      firstSend.acceptedEnvelopeIds,
+    );
 
     const sync = await relayJson<{
       envelopes: Array<{ envelopeId: string }>;
@@ -592,50 +663,65 @@ describe("relay routes", () => {
   });
 
   it("completes device-link handoff from both QR directions", async () => {
-    const owner = await bootstrapAccount("device-link-owner@example.com", "Owner desktop");
+    const owner = await bootstrapAccount(
+      "device-link-owner@example.com",
+      "Owner desktop",
+    );
 
-    const start = await relayJson<DeviceLinkStartResponse>("/v1/devices/link/start", {
-      method: "POST",
-      headers: authHeaders(owner),
-      body: JSON.stringify({ deviceLabel: "Owner desktop" }),
-    });
+    const start = await relayJson<DeviceLinkStartResponse>(
+      "/v1/devices/link/start",
+      {
+        method: "POST",
+        headers: authHeaders(owner),
+        body: JSON.stringify({ deviceLabel: "Owner desktop" }),
+      },
+    );
 
     expect(start.state).toBe("pending_claim");
     const sourceQr = parseDeviceLinkQrPayload(start.qrPayload);
     expect(sourceQr.qrMode).toBe("source_display");
 
-    const claimed = await relayJson<DeviceLinkStatus>("/v1/devices/link/claim", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        qrPayload: start.qrPayload,
-        deviceLabel: "Android phone",
-      }),
-    });
+    const claimed = await relayJson<DeviceLinkStatus>(
+      "/v1/devices/link/claim",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          qrPayload: start.qrPayload,
+          deviceLabel: "Android phone",
+        }),
+      },
+    );
     expect(claimed.state).toBe("pending_approval");
     expect(claimed.requesterLabel).toBe("Android phone");
 
-    const confirmed = await relayJson<DeviceLinkConfirmResponse>("/v1/devices/link/confirm", {
-      method: "POST",
-      headers: authHeaders(owner),
-      body: JSON.stringify({ linkId: start.linkId }),
-    });
+    const confirmed = await relayJson<DeviceLinkConfirmResponse>(
+      "/v1/devices/link/confirm",
+      {
+        method: "POST",
+        headers: authHeaders(owner),
+        body: JSON.stringify({ linkId: start.linkId }),
+      },
+    );
     expect(confirmed.confirmed).toBe(true);
     expect(confirmed.state).toBe("approved");
 
-    const completed = await relayJson<RelaySession>("/v1/devices/link/complete", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        linkToken: sourceQr.linkToken,
-        qrMode: sourceQr.qrMode,
-      }),
-    });
+    const completed = await relayJson<RelaySession>(
+      "/v1/devices/link/complete",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          linkToken: sourceQr.linkToken,
+          qrMode: sourceQr.qrMode,
+        }),
+      },
+    );
     expect(completed.accountId).toBe(owner.accountId);
     expect(completed.deviceId).not.toBe(owner.deviceId);
 
     const consumedStatus = await relayJson<DeviceLinkStatus>(
-      `/v1/devices/link/status?token=${encodeURIComponent(sourceQr.linkToken)}&qrMode=${encodeURIComponent(sourceQr.qrMode)}`
+      `/v1/devices/link/status?token=${encodeURIComponent(sourceQr.linkToken)}&qrMode=${encodeURIComponent(sourceQr.qrMode)}`,
     );
     expect(consumedStatus.state).toBe("consumed");
     expect(consumedStatus.completedSessionId).toBe(completed.sessionId);
@@ -649,10 +735,12 @@ describe("relay routes", () => {
     });
 
     const missingStatus = await relayFetch(
-      `/v1/devices/link/status?token=${encodeURIComponent(targetLinkToken)}&qrMode=target_display`
+      `/v1/devices/link/status?token=${encodeURIComponent(targetLinkToken)}&qrMode=target_display`,
     );
     expect(missingStatus.status).toBe(404);
-    expect(await missingStatus.json()).toMatchObject({ code: "DEVICE_LINK_NOT_FOUND" });
+    expect(await missingStatus.json()).toMatchObject({
+      code: "DEVICE_LINK_NOT_FOUND",
+    });
 
     const scanned = await relayJson<DeviceLinkStatus>("/v1/devices/link/scan", {
       method: "POST",
@@ -663,27 +751,36 @@ describe("relay routes", () => {
     expect(scanned.requesterLabel).toBe("Tablet browser");
     expect(scanned.qrMode).toBe("target_display");
 
-    const targetConfirmed = await relayJson<DeviceLinkConfirmResponse>("/v1/devices/link/confirm", {
-      method: "POST",
-      headers: authHeaders(owner),
-      body: JSON.stringify({ linkId: scanned.linkId }),
-    });
+    const targetConfirmed = await relayJson<DeviceLinkConfirmResponse>(
+      "/v1/devices/link/confirm",
+      {
+        method: "POST",
+        headers: authHeaders(owner),
+        body: JSON.stringify({ linkId: scanned.linkId }),
+      },
+    );
     expect(targetConfirmed.state).toBe("approved");
 
-    const targetCompleted = await relayJson<RelaySession>("/v1/devices/link/complete", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        linkToken: targetLinkToken,
-        qrMode: "target_display",
-      }),
-    });
+    const targetCompleted = await relayJson<RelaySession>(
+      "/v1/devices/link/complete",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          linkToken: targetLinkToken,
+          qrMode: "target_display",
+        }),
+      },
+    );
     expect(targetCompleted.accountId).toBe(owner.accountId);
     expect(targetCompleted.deviceId).not.toBe(owner.deviceId);
   });
 
   it("registers and clears a native push token for the current device", async () => {
-    const alice = await bootstrapAccount("push-alice@example.com", "Push Alice");
+    const alice = await bootstrapAccount(
+      "push-alice@example.com",
+      "Push Alice",
+    );
 
     const registered = await registerPushToken(alice);
     expect(registered.registered).toBe(true);
@@ -704,16 +801,23 @@ describe("relay routes", () => {
   });
 
   it("rejects websocket upgrades for revoked sessions", async () => {
-    const alice = await bootstrapAccount("revoked-ws@example.com", "Revoked websocket device");
+    const alice = await bootstrapAccount(
+      "revoked-ws@example.com",
+      "Revoked websocket device",
+    );
     const groupId = await createRelayHostedGroup(alice, "Revoked WS group");
 
     const mailboxSocket = await openWebSocket(
-      relayWebSocketUrl(`/v1/mailbox/ws?token=${encodeURIComponent(alice.accessToken)}`),
+      relayWebSocketUrl(
+        `/v1/mailbox/ws?token=${encodeURIComponent(alice.accessToken)}`,
+      ),
     );
     mailboxSocket.close();
 
     const conversationSocket = await openWebSocket(
-      relayWebSocketUrl(`/v1/conversations/${groupId}/ws?token=${encodeURIComponent(alice.accessToken)}`),
+      relayWebSocketUrl(
+        `/v1/conversations/${groupId}/ws?token=${encodeURIComponent(alice.accessToken)}`,
+      ),
     );
     conversationSocket.close();
 
@@ -724,16 +828,23 @@ describe("relay routes", () => {
     expect(revokeResponse.status).toBe(200);
 
     await expectWebSocketRejected(
-      relayWebSocketUrl(`/v1/mailbox/ws?token=${encodeURIComponent(alice.accessToken)}`),
+      relayWebSocketUrl(
+        `/v1/mailbox/ws?token=${encodeURIComponent(alice.accessToken)}`,
+      ),
     );
 
     await expectWebSocketRejected(
-      relayWebSocketUrl(`/v1/conversations/${groupId}/ws?token=${encodeURIComponent(alice.accessToken)}`),
+      relayWebSocketUrl(
+        `/v1/conversations/${groupId}/ws?token=${encodeURIComponent(alice.accessToken)}`,
+      ),
     );
   });
 
   it("updates group settings with dynamic PATCH combinations", async () => {
-    const owner = await bootstrapAccount("group-patch-owner@example.com", "Group patch owner");
+    const owner = await bootstrapAccount(
+      "group-patch-owner@example.com",
+      "Group patch owner",
+    );
     const group = await relayJson<{ id: string }>("/v1/groups", {
       method: "POST",
       headers: authHeaders(owner),
@@ -762,16 +873,18 @@ describe("relay routes", () => {
     const bothFields = await relayFetch(`/v1/groups/${group.id}`, {
       method: "PATCH",
       headers: authHeaders(owner),
-      body: JSON.stringify({ title: "Patch both fields", sensitiveMediaDefault: false }),
+      body: JSON.stringify({
+        title: "Patch both fields",
+        sensitiveMediaDefault: false,
+      }),
     });
     expect(bothFields.status).toBe(200);
 
-    const groups = await relayJson<Array<{ id: string; title?: string; sensitiveMediaDefault?: boolean }>>(
-      "/v1/groups",
-      {
-        headers: { authorization: `Bearer ${owner.accessToken}` },
-      },
-    );
+    const groups = await relayJson<
+      Array<{ id: string; title?: string; sensitiveMediaDefault?: boolean }>
+    >("/v1/groups", {
+      headers: { authorization: `Bearer ${owner.accessToken}` },
+    });
 
     expect(groups.find((entry) => entry.id === group.id)).toMatchObject({
       title: "Patch both fields",
@@ -780,31 +893,49 @@ describe("relay routes", () => {
   });
 
   it("treats invalid stored group history mode as device-encrypted on group routes", async () => {
-    const owner = await bootstrapAccount("null-history-owner@example.com", "Null history owner");
-    const group = await relayJson<{ id: string; historyMode: string }>("/v1/groups", {
-      method: "POST",
-      headers: authHeaders(owner),
-      body: JSON.stringify({
-        title: "Null history group",
-        memberAccountIds: [],
-        memberCap: 6,
-        sensitiveMediaDefault: false,
-      }),
-    });
+    const owner = await bootstrapAccount(
+      "null-history-owner@example.com",
+      "Null history owner",
+    );
+    const group = await relayJson<{ id: string; historyMode: string }>(
+      "/v1/groups",
+      {
+        method: "POST",
+        headers: authHeaders(owner),
+        body: JSON.stringify({
+          title: "Null history group",
+          memberAccountIds: [],
+          memberCap: 6,
+          sensitiveMediaDefault: false,
+        }),
+      },
+    );
     expect(group.historyMode).toBe("device_encrypted");
 
-    executeLocalSql(`UPDATE conversations SET history_mode = '' WHERE id = '${group.id}'`);
+    executeLocalSql(
+      `UPDATE conversations SET history_mode = '' WHERE id = '${group.id}'`,
+    );
 
-    const list = await relayJson<Array<{ id: string; historyMode: string }>>("/v1/conversations", {
-      headers: { authorization: `Bearer ${owner.accessToken}` },
-    });
-    expect(list.find((entry) => entry.id === group.id)?.historyMode).toBe("device_encrypted");
+    const list = await relayJson<Array<{ id: string; historyMode: string }>>(
+      "/v1/conversations",
+      {
+        headers: { authorization: `Bearer ${owner.accessToken}` },
+      },
+    );
+    expect(list.find((entry) => entry.id === group.id)?.historyMode).toBe(
+      "device_encrypted",
+    );
 
-    const getMessages = await relayFetch(`/v1/groups/${group.id}/messages?limit=20`, {
-      headers: { authorization: `Bearer ${owner.accessToken}` },
-    });
+    const getMessages = await relayFetch(
+      `/v1/groups/${group.id}/messages?limit=20`,
+      {
+        headers: { authorization: `Bearer ${owner.accessToken}` },
+      },
+    );
     expect(getMessages.status).toBe(409);
-    expect(await getMessages.json()).toMatchObject({ code: "HISTORY_MODE_UNSUPPORTED" });
+    expect(await getMessages.json()).toMatchObject({
+      code: "HISTORY_MODE_UNSUPPORTED",
+    });
 
     const postMessage = await relayFetch(`/v1/groups/${group.id}/messages`, {
       method: "POST",
@@ -812,6 +943,8 @@ describe("relay routes", () => {
       body: JSON.stringify({ text: "Should stay encrypted" }),
     });
     expect(postMessage.status).toBe(409);
-    expect(await postMessage.json()).toMatchObject({ code: "HISTORY_MODE_UNSUPPORTED" });
+    expect(await postMessage.json()).toMatchObject({
+      code: "HISTORY_MODE_UNSUPPORTED",
+    });
   });
 });

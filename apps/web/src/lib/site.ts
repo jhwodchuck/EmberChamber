@@ -1,5 +1,6 @@
 export const siteUrl =
-  process.env.NEXT_PUBLIC_WEB_URL?.replace(/\/$/, "") ?? "https://emberchamber.com";
+  process.env.NEXT_PUBLIC_WEB_URL?.replace(/\/$/, "") ??
+  "https://emberchamber.com";
 
 export const authBootstrapEnabled =
   process.env.NEXT_PUBLIC_EMBERCHAMBER_AUTH_BOOTSTRAP_ENABLED === "true";
@@ -11,22 +12,48 @@ export const githubIssuesUrl = `${githubRepoUrl}/issues`;
 export const supportEmail = "support@emberchamber.com";
 
 export const betaScopeItems = [
-  { feature: "E2EE direct messages", status: "live" as const, detail: "Encrypted mailbox delivery across active beta surfaces" },
+  {
+    feature: "E2EE direct messages",
+    status: "live" as const,
+    detail: "Encrypted mailbox delivery across active beta surfaces",
+  },
   {
     feature: "Small group messages",
     status: "live" as const,
-    detail: "New groups are created as device-encrypted; legacy relay-hosted compatibility history still exists for older group and room flows",
+    detail:
+      "New groups are created as device-encrypted; legacy relay-hosted compatibility history still exists for older group and room flows",
   },
   {
     feature: "Encrypted attachments",
     status: "live" as const,
-    detail: "Browser encrypted-conversation uploads use client-side ciphertext; native attachment rollout is still uneven",
+    detail:
+      "Browser encrypted-conversation uploads use client-side ciphertext; native attachment rollout is still uneven",
   },
-  { feature: "Invite-only onboarding", status: "live" as const, detail: "Email magic-link, no public registration" },
-  { feature: "Device-local search", status: "live" as const, detail: "Index never sent to relay" },
-  { feature: "Account recovery", status: "live" as const, detail: "Private email bootstrap with limited total-device-loss recovery" },
-  { feature: "Passkey sign-in", status: "planned" as const, detail: "After email bootstrap stabilises" },
-  { feature: "iPhone client", status: "planned" as const, detail: "After first-wave targets are stable" },
+  {
+    feature: "Invite-only onboarding",
+    status: "live" as const,
+    detail: "Email magic-link, no public registration",
+  },
+  {
+    feature: "Device-local search",
+    status: "live" as const,
+    detail: "Index never sent to relay",
+  },
+  {
+    feature: "Account recovery",
+    status: "live" as const,
+    detail: "Private email bootstrap with limited total-device-loss recovery",
+  },
+  {
+    feature: "Passkey sign-in",
+    status: "planned" as const,
+    detail: "After email bootstrap stabilises",
+  },
+  {
+    feature: "iPhone client",
+    status: "planned" as const,
+    detail: "After first-wave targets are stable",
+  },
 ];
 
 export type PrivacyBoundaryItem = {
@@ -39,49 +66,61 @@ export type PrivacyBoundaryItem = {
 export const privacyBoundaryItems: PrivacyBoundaryItem[] = [
   {
     title: "Direct messages",
-    staysLocal: "Private keys, DM history, and the private-content search index stay on the device.",
+    staysLocal:
+      "Private keys, DM history, and the private-content search index stay on the device.",
     relayRole:
       "The relay stores account and conversation metadata plus ciphertext mailbox envelopes until they are acknowledged.",
-    currentNote: "The relay does not serve plaintext DM history back to the browser.",
+    currentNote:
+      "The relay does not serve plaintext DM history back to the browser.",
   },
   {
     title: "Group history",
-    staysLocal: "New groups are created with device-encrypted history and local client history.",
+    staysLocal:
+      "New groups are created with device-encrypted history and local client history.",
     relayRole:
       "The relay coordinates membership, epochs, and mailbox delivery for new groups while legacy compatibility history still exists for older group and room paths.",
-    currentNote: "Legacy relay-hosted group and room history still exists in compatibility paths and older data.",
+    currentNote:
+      "Legacy relay-hosted group and room history still exists in compatibility paths and older data.",
   },
   {
     title: "Browser attachments",
-    staysLocal: "Browser encrypted-conversation flows can encrypt attachment bytes and keep file keys with the client before upload.",
+    staysLocal:
+      "Browser encrypted-conversation flows can encrypt attachment bytes and keep file keys with the client before upload.",
     relayRole:
       "R2 stores attachment blobs and signed access metadata so downloads can be delivered to authorized members.",
-    currentNote: "This browser DM path is ahead of the native attachment path today.",
+    currentNote:
+      "This browser DM path is ahead of the native attachment path today.",
   },
   {
     title: "Native attachments",
-    staysLocal: "File selection, local cache, and local trust state remain with the client.",
+    staysLocal:
+      "File selection, local cache, and local trust state remain with the client.",
     relayRole:
       "Current mobile and desktop flows can still upload raw bytes to R2 through signed upload and download tickets.",
-    currentNote: "Native attachment encryption is still being migrated and should not be flattened into the browser DM story.",
+    currentNote:
+      "Native attachment encryption is still being migrated and should not be flattened into the browser DM story.",
   },
   {
     title: "Search",
-    staysLocal: "Search over private message content stays local to the device.",
+    staysLocal:
+      "Search over private message content stays local to the device.",
     relayRole:
       "The relay exposes joined-space metadata search, not server-side search over private message bodies.",
     currentNote: "Search is local-first today, not a server archive feature.",
   },
   {
     title: "Recovery",
-    staysLocal: "Private keys, local history, and trusted-device state remain tied to the devices you control.",
+    staysLocal:
+      "Private keys, local history, and trusted-device state remain tied to the devices you control.",
     relayRole:
       "Email bootstrap plus device and session metadata let the hosted beta restore access to an existing account.",
-    currentNote: "Total-device-loss recovery remains intentionally limited, and the fuller trusted-device recovery flow is not finished.",
+    currentNote:
+      "Total-device-loss recovery remains intentionally limited, and the fuller trusted-device recovery flow is not finished.",
   },
   {
     title: "Passkeys",
-    staysLocal: "When shipped, passkey private keys will live on user devices or platform authenticators rather than on the relay.",
+    staysLocal:
+      "When shipped, passkey private keys will live on user devices or platform authenticators rather than on the relay.",
     relayRole:
       "The relay schema and endpoints exist only as scaffolding today so the beta can add passkeys later without changing the product boundary.",
     currentNote: "Passkey sign-in is not live in the current beta.",
@@ -114,7 +153,8 @@ export const surfaceCapabilities = [
       "Native device integration",
       "Installable daily client",
     ],
-    caveat: "Push wiring is complete on mobile and relay. Production delivery requires EMBERCHAMBER_FCM_SERVICE_ACCOUNT_JSON and EMBERCHAMBER_PUSH_TOKEN_SECRET to be configured as relay secrets — see the operator playbook.",
+    caveat:
+      "Push wiring is complete on mobile and relay. Production delivery requires EMBERCHAMBER_FCM_SERVICE_ACCOUNT_JSON and EMBERCHAMBER_PUSH_TOKEN_SECRET to be configured as relay secrets — see the operator playbook.",
   },
   {
     name: "Windows",
@@ -162,7 +202,8 @@ export const launchPlatforms = [
     name: "Android",
     artifact: ".apk",
     status: "Primary beta client",
-    detail: "The main way to use EmberChamber. Native client with local device storage and relay-assisted delivery.",
+    detail:
+      "The main way to use EmberChamber. Native client with local device storage and relay-assisted delivery.",
   },
   {
     id: "windows",

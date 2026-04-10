@@ -42,7 +42,11 @@ export function suggestBrowserDeviceLabel() {
     };
   };
 
-  const platformHint = [browserNavigator.userAgentData?.platform, navigator.platform, navigator.userAgent]
+  const platformHint = [
+    browserNavigator.userAgentData?.platform,
+    navigator.platform,
+    navigator.userAgent,
+  ]
     .filter(Boolean)
     .join(" ");
 

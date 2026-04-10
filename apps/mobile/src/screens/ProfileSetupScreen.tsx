@@ -16,9 +16,13 @@ export type ProfileSetupScreenProps = {
 
 export function ProfileSetupScreen(props: ProfileSetupScreenProps) {
   const {
-    sessionMessage, profileSetupName, setProfileSetupName,
-    profileSetupError, setProfileSetupError,
-    isSubmittingProfile, onSubmit,
+    sessionMessage,
+    profileSetupName,
+    setProfileSetupName,
+    profileSetupError,
+    setProfileSetupError,
+    isSubmittingProfile,
+    onSubmit,
   } = props;
 
   return (
@@ -28,8 +32,8 @@ export function ProfileSetupScreen(props: ProfileSetupScreenProps) {
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Almost there</Text>
         <Text style={styles.sectionBody}>
-          Choose the name people in your circles will see. Profile photos can wait until the
-          Android client has a real sync path for them.
+          Choose the name people in your circles will see. Profile photos can
+          wait until the Android client has a real sync path for them.
         </Text>
 
         <View style={styles.fieldBlock}>
@@ -55,10 +59,7 @@ export function ProfileSetupScreen(props: ProfileSetupScreenProps) {
         ) : null}
 
         <Pressable
-          disabled={
-            isSubmittingProfile ||
-            !profileSetupName.trim()
-          }
+          disabled={isSubmittingProfile || !profileSetupName.trim()}
           onPress={onSubmit}
           style={({ pressed }) => [
             styles.primaryButton,

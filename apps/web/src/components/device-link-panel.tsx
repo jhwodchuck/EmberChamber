@@ -77,7 +77,10 @@ function formatExpiry(value?: string) {
   return parsed.toLocaleString();
 }
 
-function normalizeStartedSourceDeviceLink(response: DeviceLinkStartResponse, requesterLabel: string) {
+function normalizeStartedSourceDeviceLink(
+  response: DeviceLinkStartResponse,
+  requesterLabel: string,
+) {
   try {
     return {
       legacy: false,
@@ -87,7 +90,9 @@ function normalizeStartedSourceDeviceLink(response: DeviceLinkStartResponse, req
     };
   } catch {
     if (!response.linkId || !response.qrPayload?.trim()) {
-      throw new Error("The relay returned an unreadable device-link QR payload.");
+      throw new Error(
+        "The relay returned an unreadable device-link QR payload.",
+      );
     }
 
     const qrPayload = encodeDeviceLinkQrPayload({
@@ -114,7 +119,11 @@ function normalizeStartedSourceDeviceLink(response: DeviceLinkStartResponse, req
   }
 }
 
-export function DeviceLinkPanel({ signedIn, deviceLabel = "", className }: DeviceLinkPanelProps) {
+export function DeviceLinkPanel({
+  signedIn,
+  deviceLabel = "",
+  className,
+}: DeviceLinkPanelProps) {
   const router = useRouter();
   const setSession = useAuthStore((state) => state.setSession);
   const [activeLink, setActiveLink] = useState<ActiveLink | null>(null);
@@ -123,9 +132,14 @@ export function DeviceLinkPanel({ signedIn, deviceLabel = "", className }: Devic
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isWorking, setIsWorking] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
-  const [message, setMessage] = useState<{ tone: "error" | "success" | "warning" | "info"; title: string; body: string } | null>(null);
+  const [message, setMessage] = useState<{
+    tone: "error" | "success" | "warning" | "info";
+    title: string;
+    body: string;
+  } | null>(null);
   const [completedToken, setCompletedToken] = useState<string | null>(null);
-  const [scanExpectation, setScanExpectation] = useState<DeviceLinkQrMode>("source_display");
+  const [scanExpectation, setScanExpectation] =
+    useState<DeviceLinkQrMode>("source_display");
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   function reset() {
@@ -158,7 +172,10 @@ export function DeviceLinkPanel({ signedIn, deviceLabel = "", className }: Devic
       if (signedIn) {
         const response = await relayDeviceLinkApi.start(deviceLabel);
         const normalizedDeviceLabel = deviceLabel.trim() || "Current device";
-        const normalized = normalizeStartedSourceDeviceLink(response, normalizedDeviceLabel);
+        const normalized = normalizeStartedSourceDeviceLink(
+          response,
+          normalizedDeviceLabel,
+        );
         setActiveLink(
           normalized.legacy
             ? null
@@ -171,7 +188,12 @@ export function DeviceLinkPanel({ signedIn, deviceLabel = "", className }: Devic
               },
         );
         setStatus(normalized.status);
-        setQrImageUrl(await QRCode.toDataURL(normalized.qrPayload, { margin: 1, width: 260 }));
+        setQrImageUrl(
+          await QRCode.toDataURL(normalized.qrPayload, {
+            margin: 1,
+            width: 260,
+          }),
+        );
         if (normalized.legacy) {
           setMessage({
             tone: "warning",
@@ -203,7 +225,9 @@ export function DeviceLinkPanel({ signedIn, deviceLabel = "", className }: Devic
           expiresAt,
           canComplete: false,
         });
-        setQrImageUrl(await QRCode.toDataURL(qrPayload, { margin: 1, width: 260 }));
+        setQrImageUrl(
+          await QRCode.toDataURL(qrPayload, { margin: 1, width: 260 }),
+        );
       }
     } catch (error) {
       setMessage({
@@ -269,14 +293,20 @@ export function DeviceLinkPanel({ signedIn, deviceLabel = "", className }: Devic
             try {
               const parsed = parseDeviceLinkQrPayload(text);
               if (parsed.qrMode !== scanExpectation) {
-                throw new Error("That QR is for the opposite device-link flow.");
+                throw new Error(
+                  "That QR is for the opposite device-link flow.",
+                );
               }
               if (!relayOriginsMatch(getRelayOrigin(), parsed.relayOrigin)) {
-                throw new Error("That QR belongs to a different relay environment.");
+                throw new Error(
+                  "That QR belongs to a different relay environment.",
+                );
               }
 
               if (signedIn) {
-                const response = await relayDeviceLinkApi.scan({ qrPayload: text });
+                const response = await relayDeviceLinkApi.scan({
+                  qrPayload: text,
+                });
                 setActiveLink({
                   linkToken: parsed.linkToken,
                   qrMode: parsed.qrMode,
@@ -285,7 +315,10 @@ export function DeviceLinkPanel({ signedIn, deviceLabel = "", className }: Devic
                 });
                 setStatus(response);
               } else {
-                const response = await relayDeviceLinkApi.claim(text, deviceLabel.trim());
+                const response = await relayDeviceLinkApi.claim(
+                  text,
+                  deviceLabel.trim(),
+                );
                 setActiveLink({
                   linkToken: parsed.linkToken,
                   qrMode: parsed.qrMode,
@@ -298,7 +331,10 @@ export function DeviceLinkPanel({ signedIn, deviceLabel = "", className }: Devic
               setMessage({
                 tone: "error",
                 title: "QR scan failed",
-                body: error instanceof Error ? error.message : "Unknown QR scan error",
+                body:
+                  error instanceof Error
+                    ? error.message
+                    : "Unknown QR scan error",
               });
             } finally {
               setIsWorking(false);
@@ -372,7 +408,10 @@ export function DeviceLinkPanel({ signedIn, deviceLabel = "", className }: Devic
           setMessage({
             tone: "error",
             title: "Device-link status failed",
-            body: error instanceof Error ? error.message : "Unable to refresh QR status.",
+            body:
+              error instanceof Error
+                ? error.message
+                : "Unable to refresh QR status.",
           });
         }
       }
@@ -431,12 +470,19 @@ export function DeviceLinkPanel({ signedIn, deviceLabel = "", className }: Devic
       </div>
 
       <div className="mt-4 flex flex-wrap gap-3">
-        <button type="button" onClick={() => void beginShowQr()} className="btn-primary" disabled={isWorking}>
+        <button
+          type="button"
+          onClick={() => void beginShowQr()}
+          className="btn-primary"
+          disabled={isWorking}
+        >
           {isWorking ? "Preparing…" : signedIn ? "Show my QR" : "Show QR"}
         </button>
         <button
           type="button"
-          onClick={() => beginScanner(signedIn ? "target_display" : "source_display")}
+          onClick={() =>
+            beginScanner(signedIn ? "target_display" : "source_display")
+          }
           className="btn-ghost"
           disabled={isWorking}
         >
@@ -459,8 +505,15 @@ export function DeviceLinkPanel({ signedIn, deviceLabel = "", className }: Devic
 
       {isScannerOpen ? (
         <div className="mt-4 card">
-          <p className="text-sm font-medium text-[var(--text-primary)]">Scan a QR code</p>
-          <video ref={videoRef} className="mt-3 aspect-square w-full rounded-[1.2rem] bg-black/70" muted playsInline />
+          <p className="text-sm font-medium text-[var(--text-primary)]">
+            Scan a QR code
+          </p>
+          <video
+            ref={videoRef}
+            className="mt-3 aspect-square w-full rounded-[1.2rem] bg-black/70"
+            muted
+            playsInline
+          />
           <p className="mt-3 text-xs text-[var(--text-secondary)]">
             Camera permission is required while this scanner is open.
           </p>
@@ -483,21 +536,43 @@ export function DeviceLinkPanel({ signedIn, deviceLabel = "", className }: Devic
       {status || activeLink ? (
         <div className="mt-4">
           <StatusCallout
-            tone={status?.state === "expired" ? "warning" : status?.state === "consumed" ? "success" : "info"}
-            title={signedIn ? "Device-link status" : "Waiting for trusted-device approval"}
+            tone={
+              status?.state === "expired"
+                ? "warning"
+                : status?.state === "consumed"
+                  ? "success"
+                  : "info"
+            }
+            title={
+              signedIn
+                ? "Device-link status"
+                : "Waiting for trusted-device approval"
+            }
             action={
-              signedIn && status?.state === "pending_approval" && status.linkId ? (
-                <button type="button" onClick={() => void approveLink()} className="btn-primary" disabled={isApproving}>
+              signedIn &&
+              status?.state === "pending_approval" &&
+              status.linkId ? (
+                <button
+                  type="button"
+                  onClick={() => void approveLink()}
+                  className="btn-primary"
+                  disabled={isApproving}
+                >
                   {isApproving ? "Approving…" : "Approve"}
                 </button>
               ) : undefined
             }
           >
             {description}
-            {expiry ? <div className="mt-1 text-xs">Expires {expiry}</div> : null}
+            {expiry ? (
+              <div className="mt-1 text-xs">Expires {expiry}</div>
+            ) : null}
             {(status?.requesterLabel ?? activeLink?.requesterLabel) ? (
               <div className="mt-1 text-xs">
-                Device: <span className="font-medium">{status?.requesterLabel ?? activeLink?.requesterLabel}</span>
+                Device:{" "}
+                <span className="font-medium">
+                  {status?.requesterLabel ?? activeLink?.requesterLabel}
+                </span>
               </div>
             ) : null}
           </StatusCallout>

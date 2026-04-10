@@ -1,7 +1,12 @@
 import type { Dispatch, SetStateAction } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import type { DeviceLinkStatus } from "@emberchamber/protocol";
-import type { Field, FormMessage, GroupInvitePreview, MagicLinkResponse } from "../types";
+import type {
+  Field,
+  FormMessage,
+  GroupInvitePreview,
+  MagicLinkResponse,
+} from "../types";
 import { styles, theme } from "../styles";
 import { DeviceLinkCard } from "../components/DeviceLinkCard";
 import { StatusCard } from "../components/StatusCard";
@@ -103,7 +108,9 @@ export function OnboardingScreen(props: OnboardingScreenProps) {
           <Text
             style={[
               styles.segmentButtonLabel,
-              authMethod === "magic-link" ? styles.segmentButtonLabelActive : null,
+              authMethod === "magic-link"
+                ? styles.segmentButtonLabelActive
+                : null,
             ]}
           >
             Magic link
@@ -119,7 +126,9 @@ export function OnboardingScreen(props: OnboardingScreenProps) {
           <Text
             style={[
               styles.segmentButtonLabel,
-              authMethod === "device-link" ? styles.segmentButtonLabelActive : null,
+              authMethod === "device-link"
+                ? styles.segmentButtonLabelActive
+                : null,
             ]}
           >
             Link with QR
@@ -161,7 +170,9 @@ export function OnboardingScreen(props: OnboardingScreenProps) {
         <Text style={styles.helper}>
           This is what your signed-in device sees before approving this phone.
         </Text>
-        {errors.deviceLabel ? <Text style={styles.errorText}>{errors.deviceLabel}</Text> : null}
+        {errors.deviceLabel ? (
+          <Text style={styles.errorText}>{errors.deviceLabel}</Text>
+        ) : null}
       </View>
 
       {authMethod === "magic-link" ? (
@@ -170,7 +181,10 @@ export function OnboardingScreen(props: OnboardingScreenProps) {
             <View style={styles.inlineLabelRow}>
               <Text style={styles.label}>Group invite link</Text>
               {inviteInput.trim() ? (
-                <Pressable onPress={onPreviewInvite} disabled={isPreviewingInvite}>
+                <Pressable
+                  onPress={onPreviewInvite}
+                  disabled={isPreviewingInvite}
+                >
                   <Text style={styles.inlineAction}>
                     {isPreviewingInvite ? "Previewing…" : "Preview"}
                   </Text>
@@ -181,30 +195,45 @@ export function OnboardingScreen(props: OnboardingScreenProps) {
               autoCapitalize="none"
               placeholder="Paste /invite/{groupId}/{token}"
               placeholderTextColor={theme.colors.placeholder}
-              style={[styles.input, errors.groupInvite ? styles.inputError : null]}
+              style={[
+                styles.input,
+                errors.groupInvite ? styles.inputError : null,
+              ]}
               value={inviteInput}
               onChangeText={(value) => {
                 setInviteInput(value);
                 if (errors.groupInvite) {
-                  setErrors((current) => ({ ...current, groupInvite: undefined }));
+                  setErrors((current) => ({
+                    ...current,
+                    groupInvite: undefined,
+                  }));
                 }
               }}
             />
             <Text style={styles.helper}>
               Optional, but it can drop you into the right circle right away.
             </Text>
-            {errors.groupInvite ? <Text style={styles.errorText}>{errors.groupInvite}</Text> : null}
-            {invitePreviewError ? <Text style={styles.errorText}>{invitePreviewError}</Text> : null}
+            {errors.groupInvite ? (
+              <Text style={styles.errorText}>{errors.groupInvite}</Text>
+            ) : null}
+            {invitePreviewError ? (
+              <Text style={styles.errorText}>{invitePreviewError}</Text>
+            ) : null}
             {invitePreview ? (
               <View style={styles.infoCard}>
-                <Text style={styles.infoTitle}>{invitePreview.group.title}</Text>
+                <Text style={styles.infoTitle}>
+                  {invitePreview.group.title}
+                </Text>
                 <Text style={styles.infoBody}>
                   Invited by {invitePreview.invite.inviterDisplayName}. Members{" "}
-                  {invitePreview.group.memberCount}/{invitePreview.group.memberCap}. Status{" "}
+                  {invitePreview.group.memberCount}/
+                  {invitePreview.group.memberCap}. Status{" "}
                   {invitePreview.invite.status}.
                 </Text>
                 {invitePreview.group.joinRuleText ? (
-                  <Text style={styles.helper}>{invitePreview.group.joinRuleText}</Text>
+                  <Text style={styles.helper}>
+                    {invitePreview.group.joinRuleText}
+                  </Text>
                 ) : null}
               </View>
             ) : null}
@@ -227,8 +256,12 @@ export function OnboardingScreen(props: OnboardingScreenProps) {
                 }
               }}
             />
-            <Text style={styles.helper}>Used only for bootstrap and recovery.</Text>
-            {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
+            <Text style={styles.helper}>
+              Used only for bootstrap and recovery.
+            </Text>
+            {errors.email ? (
+              <Text style={styles.errorText}>{errors.email}</Text>
+            ) : null}
           </View>
 
           {inviteFieldVisible ? (
@@ -239,7 +272,10 @@ export function OnboardingScreen(props: OnboardingScreenProps) {
                   onPress={() => {
                     setInviteFieldVisible(false);
                     setInviteToken("");
-                    setErrors((current) => ({ ...current, inviteToken: undefined }));
+                    setErrors((current) => ({
+                      ...current,
+                      inviteToken: undefined,
+                    }));
                   }}
                 >
                   <Text style={styles.inlineAction}>Hide</Text>
@@ -249,23 +285,34 @@ export function OnboardingScreen(props: OnboardingScreenProps) {
                 autoCapitalize="none"
                 placeholder="Paste your beta invite token"
                 placeholderTextColor={theme.colors.placeholder}
-                style={[styles.input, errors.inviteToken ? styles.inputError : null]}
+                style={[
+                  styles.input,
+                  errors.inviteToken ? styles.inputError : null,
+                ]}
                 value={inviteToken}
                 onChangeText={(value) => {
                   setInviteToken(value);
                   if (errors.inviteToken) {
-                    setErrors((current) => ({ ...current, inviteToken: undefined }));
+                    setErrors((current) => ({
+                      ...current,
+                      inviteToken: undefined,
+                    }));
                   }
                 }}
               />
-              <Text style={styles.helper}>Only needed when the relay asks for broader beta access.</Text>
-              {errors.inviteToken ? <Text style={styles.errorText}>{errors.inviteToken}</Text> : null}
+              <Text style={styles.helper}>
+                Only needed when the relay asks for broader beta access.
+              </Text>
+              {errors.inviteToken ? (
+                <Text style={styles.errorText}>{errors.inviteToken}</Text>
+              ) : null}
             </View>
           ) : (
             <View style={styles.infoCard}>
               <Text style={styles.infoTitle}>No beta token on hand?</Text>
               <Text style={styles.infoBody}>
-                Returning users can continue with email alone. Some new accounts can also bootstrap directly from a valid group invite.
+                Returning users can continue with email alone. Some new accounts
+                can also bootstrap directly from a valid group invite.
               </Text>
               <Pressable onPress={() => setInviteFieldVisible(true)}>
                 <Text style={styles.inlineAction}>Add beta invite token</Text>
@@ -277,30 +324,57 @@ export function OnboardingScreen(props: OnboardingScreenProps) {
             onPress={() => {
               setAgeConfirmed18((current) => !current);
               if (errors.ageConfirmed18) {
-                setErrors((current) => ({ ...current, ageConfirmed18: undefined }));
+                setErrors((current) => ({
+                  ...current,
+                  ageConfirmed18: undefined,
+                }));
               }
             }}
-            style={[styles.checkboxCard, errors.ageConfirmed18 ? styles.inputError : null]}
+            style={[
+              styles.checkboxCard,
+              errors.ageConfirmed18 ? styles.inputError : null,
+            ]}
           >
-            <View style={[styles.checkboxBox, ageConfirmed18 ? styles.checkboxBoxChecked : null]}>
-              <Text style={styles.checkboxMark}>{ageConfirmed18 ? "✓" : ""}</Text>
+            <View
+              style={[
+                styles.checkboxBox,
+                ageConfirmed18 ? styles.checkboxBoxChecked : null,
+              ]}
+            >
+              <Text style={styles.checkboxMark}>
+                {ageConfirmed18 ? "✓" : ""}
+              </Text>
             </View>
             <View style={styles.checkboxCopy}>
-              <Text style={styles.label}>I confirm I am at least 18 years old</Text>
+              <Text style={styles.label}>
+                I confirm I am at least 18 years old
+              </Text>
               <Text style={styles.helper}>
                 Adults-only access is a permanent product rule.
               </Text>
-              {errors.ageConfirmed18 ? <Text style={styles.errorText}>{errors.ageConfirmed18}</Text> : null}
+              {errors.ageConfirmed18 ? (
+                <Text style={styles.errorText}>{errors.ageConfirmed18}</Text>
+              ) : null}
             </View>
           </Pressable>
 
           <Pressable
-            disabled={isSending || isCompleting || !email.trim() || !deviceLabel.trim() || !ageConfirmed18}
+            disabled={
+              isSending ||
+              isCompleting ||
+              !email.trim() ||
+              !deviceLabel.trim() ||
+              !ageConfirmed18
+            }
             onPress={onSubmit}
             style={({ pressed }) => [
               styles.primaryButton,
               (pressed || isSending) && styles.primaryButtonPressed,
-              (isSending || isCompleting || !email.trim() || !deviceLabel.trim() || !ageConfirmed18) &&
+              (isSending ||
+                isCompleting ||
+                !email.trim() ||
+                !deviceLabel.trim() ||
+                !ageConfirmed18) &&
                 styles.primaryButtonDisabled,
             ]}
           >
@@ -342,9 +416,13 @@ export function OnboardingScreen(props: OnboardingScreenProps) {
           {__DEV__ && challenge.debugCompletionToken ? (
             <Pressable
               style={styles.devButton}
-              onPress={() => onCompleteMagicLink(challenge.debugCompletionToken!)}
+              onPress={() =>
+                onCompleteMagicLink(challenge.debugCompletionToken!)
+              }
             >
-              <Text style={styles.devButtonLabel}>Dev-only: complete on this phone now</Text>
+              <Text style={styles.devButtonLabel}>
+                Dev-only: complete on this phone now
+              </Text>
             </Pressable>
           ) : null}
         </StatusCard>

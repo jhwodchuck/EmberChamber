@@ -32,7 +32,11 @@ function roleBadgeLabel(role: GroupMember["role"]) {
 function formatJoinDate(iso: string) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" });
+  return d.toLocaleDateString([], {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }
 
 export function MemberProfileSheet({
@@ -95,7 +99,9 @@ export function MemberProfileSheet({
                         : styles.roleBadgeMember,
                   ]}
                 >
-                  <Text style={styles.roleBadgeLabel}>{roleBadgeLabel(member.role)}</Text>
+                  <Text style={styles.roleBadgeLabel}>
+                    {roleBadgeLabel(member.role)}
+                  </Text>
                 </View>
                 {isSelf ? (
                   <View style={styles.roleBadgeSelf}>
@@ -113,7 +119,8 @@ export function MemberProfileSheet({
             </Text>
             {member.messageCount > 0 ? (
               <Text style={styles.memberProfileMetaText}>
-                {member.messageCount} message{member.messageCount === 1 ? "" : "s"} in room
+                {member.messageCount} message
+                {member.messageCount === 1 ? "" : "s"} in room
               </Text>
             ) : null}
           </View>
@@ -121,11 +128,16 @@ export function MemberProfileSheet({
           {/* Recent activity */}
           {recentMessages.length > 0 ? (
             <View style={styles.memberActivitySection}>
-              <Text style={styles.memberActivityLabel}>Recent in this chat</Text>
+              <Text style={styles.memberActivityLabel}>
+                Recent in this chat
+              </Text>
               {recentMessages.map((msg) => (
                 <View key={msg.id} style={styles.memberActivityRow}>
                   <Text style={styles.memberActivityText} numberOfLines={2}>
-                    {msg.text ?? (msg.attachment ? `[${msg.attachment.contentClass}]` : "[message]")}
+                    {msg.text ??
+                      (msg.attachment
+                        ? `[${msg.attachment.contentClass}]`
+                        : "[message]")}
                   </Text>
                 </View>
               ))}
@@ -151,7 +163,11 @@ export function MemberProfileSheet({
             />
             {noteDirty ? (
               <Pressable
-                style={isSavingNote ? styles.primaryButtonDisabled : styles.primaryButton}
+                style={
+                  isSavingNote
+                    ? styles.primaryButtonDisabled
+                    : styles.primaryButton
+                }
                 onPress={() => {
                   setNoteDirty(false);
                   onSaveNote(noteText);
@@ -169,7 +185,10 @@ export function MemberProfileSheet({
           {!isSelf ? (
             <View style={styles.memberProfileActions}>
               <Pressable
-                style={[styles.primaryButton, isOpeningDm ? styles.primaryButtonDisabled : null]}
+                style={[
+                  styles.primaryButton,
+                  isOpeningDm ? styles.primaryButtonDisabled : null,
+                ]}
                 onPress={onOpenDm}
                 disabled={isOpeningDm}
               >
@@ -178,7 +197,10 @@ export function MemberProfileSheet({
                 </Text>
               </Pressable>
 
-              <Pressable style={styles.secondaryButton} onPress={onSendContactRequest}>
+              <Pressable
+                style={styles.secondaryButton}
+                onPress={onSendContactRequest}
+              >
                 <Text style={styles.secondaryButtonLabel}>Contact request</Text>
               </Pressable>
             </View>

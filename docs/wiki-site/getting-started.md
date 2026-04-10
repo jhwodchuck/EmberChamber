@@ -4,12 +4,12 @@ This guide covers local development setup for every active surface in the EmberC
 
 ## Prerequisites
 
-| Tool | Version | Notes |
-|------|---------|-------|
-| Node.js | 20 LTS | Any 20.x release |
-| pnpm | 10.x | Managed via `corepack` — run `corepack enable` once |
-| Rust | stable | Required for `crates/core`, `crates/relay-protocol`, and the Tauri desktop shell |
-| Cargo | bundled with Rust | — |
+| Tool    | Version           | Notes                                                                            |
+| ------- | ----------------- | -------------------------------------------------------------------------------- |
+| Node.js | 20 LTS            | Any 20.x release                                                                 |
+| pnpm    | 10.x              | Managed via `corepack` — run `corepack enable` once                              |
+| Rust    | stable            | Required for `crates/core`, `crates/relay-protocol`, and the Tauri desktop shell |
+| Cargo   | bundled with Rust | —                                                                                |
 
 For Android mobile builds you also need the Android SDK (managed by Expo / EAS Build) and for Ubuntu desktop you need the Tauri system dependencies (GTK3, webkit2gtk, etc.).
 

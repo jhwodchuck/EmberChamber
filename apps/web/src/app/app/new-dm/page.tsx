@@ -40,17 +40,21 @@ export default function NewDmPage() {
       const { id } = await relayConversationApi.openDm(userId);
       router.push(`/app/chat/${id}`);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to start conversation");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to start conversation",
+      );
     }
   }
 
   return (
     <div className="flex h-full flex-col">
       <div className="border-b border-[var(--border)] px-4 py-3">
-        <h2 className="mb-2 font-semibold text-[var(--text-primary)]">New Message</h2>
+        <h2 className="mb-2 font-semibold text-[var(--text-primary)]">
+          New Message
+        </h2>
         <p className="mb-3 text-sm text-[var(--text-secondary)]">
-          Search by display name or username. Results only include people you already share access
-          with in EmberChamber.
+          Search by display name or username. Results only include people you
+          already share access with in EmberChamber.
         </p>
         <input
           type="text"
@@ -68,10 +72,13 @@ export default function NewDmPage() {
           </div>
         ) : trimmedQuery.length === 0 ? (
           <div className="rounded-[1.35rem] border border-dashed border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-5">
-            <p className="text-sm font-semibold text-[var(--text-primary)]">Search shared contacts</p>
+            <p className="text-sm font-semibold text-[var(--text-primary)]">
+              Search shared contacts
+            </p>
             <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-              Search by display name or username. If someone is missing, ask them to invite you
-              into the same space or send you an invite link first.
+              Search by display name or username. If someone is missing, ask
+              them to invite you into the same space or send you an invite link
+              first.
             </p>
           </div>
         ) : trimmedQuery.length < 2 ? (
@@ -80,10 +87,13 @@ export default function NewDmPage() {
           </p>
         ) : results.length === 0 ? (
           <div className="rounded-[1.35rem] border border-dashed border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-5">
-            <p className="text-sm font-semibold text-[var(--text-primary)]">No shared contacts matched</p>
+            <p className="text-sm font-semibold text-[var(--text-primary)]">
+              No shared contacts matched
+            </p>
             <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-              Results only come from people you already share access with. If this person is
-              missing, ask them to invite you into the same space or send you an invite link.
+              Results only come from people you already share access with. If
+              this person is missing, ask them to invite you into the same space
+              or send you an invite link.
             </p>
           </div>
         ) : (
@@ -97,8 +107,12 @@ export default function NewDmPage() {
               <div className="flex items-center gap-3">
                 <Avatar name={user.displayName} size="sm" />
                 <div>
-                  <p className="text-sm font-medium text-[var(--text-primary)]">{user.displayName}</p>
-                  <p className="text-xs text-[var(--text-secondary)]">@{user.username}</p>
+                  <p className="text-sm font-medium text-[var(--text-primary)]">
+                    {user.displayName}
+                  </p>
+                  <p className="text-xs text-[var(--text-secondary)]">
+                    @{user.username}
+                  </p>
                 </div>
               </div>
             </button>

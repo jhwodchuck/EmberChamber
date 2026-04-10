@@ -14,7 +14,10 @@ declare interface DurableObjectState {
 }
 
 declare interface DurableObjectStub {
-  fetch(input: RequestInfo | URL | string, init?: RequestInit): Promise<Response>;
+  fetch(
+    input: RequestInfo | URL | string,
+    init?: RequestInit,
+  ): Promise<Response>;
 }
 
 declare interface DurableObjectId {}
@@ -86,6 +89,6 @@ declare interface R2Bucket {
   put(
     key: string,
     value: ArrayBuffer | ArrayBufferView | ReadableStream | string,
-    options?: { httpMetadata?: { contentType?: string } }
+    options?: { httpMetadata?: { contentType?: string } },
   ): Promise<void>;
 }

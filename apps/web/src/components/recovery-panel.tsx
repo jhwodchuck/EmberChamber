@@ -27,7 +27,9 @@ export function RecoveryPanel({
         <h1 className="mt-5 text-balance font-display text-5xl font-semibold text-[var(--text-primary)] sm:text-6xl">
           {title}
         </h1>
-        <p className="mt-5 text-lg leading-8 text-[var(--text-secondary)]">{description}</p>
+        <p className="mt-5 text-lg leading-8 text-[var(--text-secondary)]">
+          {description}
+        </p>
         {children ? <div className="mt-8">{children}</div> : null}
       </div>
     </section>

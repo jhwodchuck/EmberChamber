@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import type { ConversationDetail, GroupThreadMessage } from "@emberchamber/protocol";
+import type {
+  ConversationDetail,
+  GroupThreadMessage,
+} from "@emberchamber/protocol";
 import { Avatar } from "@/components/avatar";
 import { useCompanionShell } from "@/components/companion-shell";
 import { FormattedMessage } from "@/components/formatted-message";
@@ -65,21 +68,26 @@ function describeConversationLoadError(error: unknown): ConversationLoadError {
     if (error.status === 404) {
       return {
         title: "Conversation not found",
-        message: "This chat link is stale, or the conversation is no longer available on this account.",
+        message:
+          "This chat link is stale, or the conversation is no longer available on this account.",
       };
     }
 
     if (error.status === 401 || error.status === 403) {
       return {
         title: "Access to this conversation is unavailable",
-        message: "Your browser session does not currently have access to this chat. Sign in again or ask an organizer to restore access.",
+        message:
+          "Your browser session does not currently have access to this chat. Sign in again or ask an organizer to restore access.",
       };
     }
   }
 
   return {
     title: "Conversation failed to load",
-    message: error instanceof Error ? error.message : "The relay did not return this conversation yet. Try the route again in a moment.",
+    message:
+      error instanceof Error
+        ? error.message
+        : "The relay did not return this conversation yet. Try the route again in a moment.",
   };
 }
 
@@ -89,24 +97,37 @@ export default function ChatPage() {
   const router = useRouter();
   const { user } = useAuthStore();
   const { mailboxRevision } = useCompanionShell();
-  const [conversation, setConversation] = useState<ConversationDetail | null>(null);
+  const [conversation, setConversation] = useState<ConversationDetail | null>(
+    null,
+  );
   const [groupMessages, setGroupMessages] = useState<GroupThreadMessage[]>([]);
   const [dmMessages, setDmMessages] = useState<StoredDmMessage[]>([]);
   const [content, setContent] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [loadError, setLoadError] = useState<ConversationLoadError | null>(null);
+  const [loadError, setLoadError] = useState<ConversationLoadError | null>(
+    null,
+  );
 
   async function loadRelayHostedMessages(conversationId: string) {
     try {
-      setGroupMessages(await relayConversationApi.listMessages(conversationId, 80));
+      setGroupMessages(
+        await relayConversationApi.listMessages(conversationId, 80),
+      );
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to load conversation messages");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to load conversation messages",
+      );
     }
   }
 
-  async function loadEncryptedConversationMessages(conversationId: string, options: { syncWorkspace?: boolean } = {}) {
+  async function loadEncryptedConversationMessages(
+    conversationId: string,
+    options: { syncWorkspace?: boolean } = {},
+  ) {
     const { syncWorkspace = false } = options;
 
     try {
@@ -115,7 +136,11 @@ export default function ChatPage() {
       }
       setDmMessages(await listStoredConversationMessages(conversationId));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to sync encrypted conversation history");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to sync encrypted conversation history",
+      );
     }
   }
 
@@ -154,7 +179,10 @@ export default function ChatPage() {
       return;
     }
 
-    if ((conversation.kind === "group" || conversation.kind === "room") && conversation.historyMode === "relay_hosted") {
+    if (
+      (conversation.kind === "group" || conversation.kind === "room") &&
+      conversation.historyMode === "relay_hosted"
+    ) {
       let cancelled = false;
       let ws: WebSocket | null = null;
       let reconnectTimer: number | null = null;
@@ -186,7 +214,9 @@ export default function ChatPage() {
             setGroupMessages((prev) => {
               if (prev.some((m) => m.id === message.id)) return prev;
               return [message, ...prev].sort(
-                (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                (a, b) =>
+                  new Date(b.createdAt).getTime() -
+                  new Date(a.createdAt).getTime(),
               );
             });
           } catch {
@@ -222,7 +252,9 @@ export default function ChatPage() {
       return;
     }
 
-    void loadEncryptedConversationMessages(conversation.id, { syncWorkspace: true });
+    void loadEncryptedConversationMessages(conversation.id, {
+      syncWorkspace: true,
+    });
   }, [conversation]);
 
   useEffect(() => {
@@ -239,7 +271,7 @@ export default function ChatPage() {
 
   async function compressWebImage(file: File): Promise<File> {
     if (!file.type.startsWith("image/")) return file;
-    
+
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
@@ -254,23 +286,28 @@ export default function ChatPage() {
             height = MAX_DIM;
           }
         }
-        
+
         const canvas = document.createElement("canvas");
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext("2d");
         ctx?.drawImage(img, 0, 0, width, height);
-        
+
         canvas.toBlob(
           (blob) => {
             if (blob) {
-              resolve(new File([blob], file.name, { type: "image/jpeg", lastModified: Date.now() }));
+              resolve(
+                new File([blob], file.name, {
+                  type: "image/jpeg",
+                  lastModified: Date.now(),
+                }),
+              );
             } else {
               resolve(file);
             }
           },
           "image/jpeg",
-          0.8
+          0.8,
         );
       };
       img.onerror = () => resolve(file);
@@ -297,7 +334,11 @@ export default function ChatPage() {
       retentionMode: "private_vault",
       protectionProfile: "standard",
     });
-    await uploadAttachment(ticket.uploadUrl, encrypted.ciphertext, "application/octet-stream");
+    await uploadAttachment(
+      ticket.uploadUrl,
+      encrypted.ciphertext,
+      "application/octet-stream",
+    );
     return ticket.attachmentId;
   }
 
@@ -322,8 +363,13 @@ export default function ChatPage() {
           file: selectedFile,
         });
         await loadEncryptedConversationMessages(conversation.id);
-      } else if (conversation.kind === "group" || conversation.kind === "room") {
-        const attachmentId = selectedFile ? await uploadGroupAttachment(selectedFile) : undefined;
+      } else if (
+        conversation.kind === "group" ||
+        conversation.kind === "room"
+      ) {
+        const attachmentId = selectedFile
+          ? await uploadGroupAttachment(selectedFile)
+          : undefined;
         await relayConversationApi.sendMessage(conversation.id, {
           text: trimmedContent || undefined,
           attachmentId,
@@ -335,7 +381,9 @@ export default function ChatPage() {
       setContent("");
       setSelectedFile(null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to send the message");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to send the message",
+      );
     } finally {
       setIsSending(false);
     }
@@ -355,7 +403,11 @@ export default function ChatPage() {
       anchor.click();
       URL.revokeObjectURL(objectUrl);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to download the attachment");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to download the attachment",
+      );
     }
   }
 
@@ -373,7 +425,11 @@ export default function ChatPage() {
       anchor.click();
       URL.revokeObjectURL(objectUrl);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to download the attachment");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to download the attachment",
+      );
     }
   }
 
@@ -383,9 +439,13 @@ export default function ChatPage() {
       : null;
   const conversationName =
     conversation?.kind === "direct_message"
-      ? peer?.displayName ?? conversation?.title ?? "Direct message"
-      : conversation?.title ??
-        (conversation?.kind === "room" ? "Room" : conversation?.kind === "community" ? "Community" : "Group");
+      ? (peer?.displayName ?? conversation?.title ?? "Direct message")
+      : (conversation?.title ??
+        (conversation?.kind === "room"
+          ? "Room"
+          : conversation?.kind === "community"
+            ? "Community"
+            : "Group"));
   const trustLabel =
     conversation?.historyMode === "device_encrypted"
       ? "Local-first history"
@@ -401,7 +461,11 @@ export default function ChatPage() {
           title={loadError.title}
           action={
             <div className="flex flex-wrap gap-2">
-              <button type="button" className="btn-primary" onClick={() => void loadConversation(id)}>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => void loadConversation(id)}
+              >
                 Try again
               </button>
               <Link href="/app" className="btn-ghost">
@@ -413,7 +477,9 @@ export default function ChatPage() {
           {loadError.message}
         </StatusCallout>
         <div className="rounded-[1.45rem] border border-[var(--border)] bg-[var(--bg-secondary)] px-5 py-5 text-sm leading-6 text-[var(--text-secondary)]">
-          Keep this route open if you are checking whether access changed. The retry action will re-fetch the same conversation id instead of dropping you back to overview.
+          Keep this route open if you are checking whether access changed. The
+          retry action will re-fetch the same conversation id instead of
+          dropping you back to overview.
         </div>
       </div>
     );
@@ -424,7 +490,9 @@ export default function ChatPage() {
       <div className="flex flex-shrink-0 items-start gap-3 border-b border-[var(--border)] bg-[var(--bg-primary)] px-4 py-3">
         <Avatar name={conversationName} size="sm" />
         <div className="min-w-0 flex-1">
-          <h2 className="truncate font-semibold text-[var(--text-primary)]">{conversationName}</h2>
+          <h2 className="truncate font-semibold text-[var(--text-primary)]">
+            {conversationName}
+          </h2>
           <p className="text-xs text-[var(--text-secondary)]">{trustLabel}</p>
           <p className="mt-1 text-xs text-[var(--text-secondary)]">
             Relay handles delivery. Your private keys remain on your devices.
@@ -440,7 +508,9 @@ export default function ChatPage() {
         ) : conversation?.historyMode === "device_encrypted" ? (
           dmMessages.length === 0 ? (
             <div className="flex h-full items-center justify-center">
-              <p className="text-[var(--text-secondary)]">No local encrypted history on this browser yet.</p>
+              <p className="text-[var(--text-secondary)]">
+                No local encrypted history on this browser yet.
+              </p>
             </div>
           ) : (
             dmMessages.map((message) => {
@@ -453,7 +523,8 @@ export default function ChatPage() {
                 >
                   <div className="max-w-[80%] rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-3">
                     <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-600">
-                      {isOwn ? "You" : message.senderDisplayName}{isOwn ? "  ✓✓" : ""}
+                      {isOwn ? "You" : message.senderDisplayName}
+                      {isOwn ? "  ✓✓" : ""}
                     </p>
                     {message.text ? (
                       <FormattedMessage text={message.text} />
@@ -476,7 +547,8 @@ export default function ChatPage() {
           groupMessages.length === 0 ? (
             <div className="flex h-full items-center justify-center">
               <p className="text-[var(--text-secondary)]">
-                No {conversation.kind === "room" ? "room" : "group"} messages yet.
+                No {conversation.kind === "room" ? "room" : "group"} messages
+                yet.
               </p>
             </div>
           ) : (
@@ -490,7 +562,8 @@ export default function ChatPage() {
                 >
                   <div className="max-w-[80%] rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-3">
                     <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-600">
-                      {isOwn ? "You" : message.senderDisplayName}{isOwn ? "  ✓✓" : ""}
+                      {isOwn ? "You" : message.senderDisplayName}
+                      {isOwn ? "  ✓✓" : ""}
                     </p>
                     {message.text ? (
                       <FormattedMessage text={message.text} />
@@ -498,7 +571,9 @@ export default function ChatPage() {
                     {message.attachment ? (
                       <button
                         type="button"
-                        onClick={() => void handleDownloadGroupAttachment(message)}
+                        onClick={() =>
+                          void handleDownloadGroupAttachment(message)
+                        }
                         className="mt-3 inline-flex rounded-xl border border-[var(--border)] px-3 py-2 text-sm text-brand-600"
                       >
                         Download {message.attachment.fileName}
@@ -511,7 +586,9 @@ export default function ChatPage() {
           )
         ) : dmMessages.length === 0 ? (
           <div className="flex h-full items-center justify-center">
-            <p className="text-[var(--text-secondary)]">No DM history on this browser yet.</p>
+            <p className="text-[var(--text-secondary)]">
+              No DM history on this browser yet.
+            </p>
           </div>
         ) : (
           dmMessages.map((message) => {
@@ -524,7 +601,8 @@ export default function ChatPage() {
               >
                 <div className="max-w-[80%] rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-3">
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-600">
-                    {isOwn ? "You" : message.senderDisplayName}{isOwn ? "  ✓✓" : ""}
+                    {isOwn ? "You" : message.senderDisplayName}
+                    {isOwn ? "  ✓✓" : ""}
                   </p>
                   {message.text ? (
                     <FormattedMessage text={message.text} />
@@ -545,7 +623,10 @@ export default function ChatPage() {
         )}
       </div>
 
-      <form onSubmit={handleSend} className="border-t border-[var(--border)] bg-[var(--bg-primary)] p-4">
+      <form
+        onSubmit={handleSend}
+        className="border-t border-[var(--border)] bg-[var(--bg-primary)] p-4"
+      >
         <div className="space-y-3">
           <textarea
             value={content}
@@ -565,7 +646,9 @@ export default function ChatPage() {
               <input
                 type="file"
                 className="hidden"
-                onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
+                onChange={(event) =>
+                  setSelectedFile(event.target.files?.[0] ?? null)
+                }
               />
             </label>
             <label className="btn-ghost cursor-pointer">
@@ -575,7 +658,9 @@ export default function ChatPage() {
                 accept="image/*"
                 capture="environment"
                 className="hidden"
-                onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
+                onChange={(event) =>
+                  setSelectedFile(event.target.files?.[0] ?? null)
+                }
               />
             </label>
             {selectedFile ? (
@@ -583,7 +668,11 @@ export default function ChatPage() {
                 {selectedFile.name} · {formatBytes(selectedFile.size)}
               </span>
             ) : null}
-            <button type="submit" className="btn-primary ml-auto" disabled={isSending}>
+            <button
+              type="submit"
+              className="btn-primary ml-auto"
+              disabled={isSending}
+            >
               {isSending ? "Sending…" : "Send"}
             </button>
           </div>

@@ -123,7 +123,9 @@ function readWorkspaceState(): WorkspaceState {
     return defaultWorkspaceState();
   }
 
-  const parsed = parseWorkspaceState(window.localStorage.getItem(WORKSPACE_STORAGE_KEY));
+  const parsed = parseWorkspaceState(
+    window.localStorage.getItem(WORKSPACE_STORAGE_KEY),
+  );
   if (!parsed) {
     window.localStorage.removeItem(WORKSPACE_STORAGE_KEY);
     return defaultWorkspaceState();
@@ -149,11 +151,18 @@ function writeWorkspaceState(state: WorkspaceState) {
 function trimStoredMessages(messages: StoredDmMessage[]) {
   return messages
     .slice()
-    .sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime())
+    .sort(
+      (left, right) =>
+        new Date(left.createdAt).getTime() -
+        new Date(right.createdAt).getTime(),
+    )
     .slice(-MAX_STORED_DM_MESSAGES);
 }
 
-function upsertMessageList(existing: StoredDmMessage[], message: StoredDmMessage) {
+function upsertMessageList(
+  existing: StoredDmMessage[],
+  message: StoredDmMessage,
+) {
   const next = existing.filter(
     (entry) =>
       entry.id !== message.id &&
@@ -191,7 +200,10 @@ async function openWorkspaceDb(): Promise<IDBDatabase | null> {
 
   if (!workspaceDbPromise) {
     workspaceDbPromise = new Promise((resolve) => {
-      const request = window.indexedDB.open(WORKSPACE_DB_NAME, WORKSPACE_DB_VERSION);
+      const request = window.indexedDB.open(
+        WORKSPACE_DB_NAME,
+        WORKSPACE_DB_VERSION,
+      );
 
       request.onupgradeneeded = () => {
         const db = request.result;
@@ -209,14 +221,18 @@ async function openWorkspaceDb(): Promise<IDBDatabase | null> {
   return workspaceDbPromise;
 }
 
-async function readConversationMessagesFromDb(conversationId: string): Promise<StoredDmMessage[]> {
+async function readConversationMessagesFromDb(
+  conversationId: string,
+): Promise<StoredDmMessage[]> {
   const db = await openWorkspaceDb();
   if (!db) {
     if (typeof window === "undefined") {
       return [];
     }
 
-    const raw = window.localStorage.getItem(fallbackMessageStorageKey(conversationId));
+    const raw = window.localStorage.getItem(
+      fallbackMessageStorageKey(conversationId),
+    );
     if (!raw) {
       return [];
     }
@@ -231,23 +247,35 @@ async function readConversationMessagesFromDb(conversationId: string): Promise<S
 
   return new Promise<StoredDmMessage[]>((resolve) => {
     const transaction = db.transaction(WORKSPACE_MESSAGE_STORE, "readonly");
-    const request = transaction.objectStore(WORKSPACE_MESSAGE_STORE).get(conversationId);
+    const request = transaction
+      .objectStore(WORKSPACE_MESSAGE_STORE)
+      .get(conversationId);
     request.onsuccess = () => {
       const stored = request.result;
-      resolve(Array.isArray(stored) ? trimStoredMessages(stored as StoredDmMessage[]) : []);
+      resolve(
+        Array.isArray(stored)
+          ? trimStoredMessages(stored as StoredDmMessage[])
+          : [],
+      );
     };
     request.onerror = () => resolve([]);
   });
 }
 
-async function persistConversationMessages(conversationId: string, messages: StoredDmMessage[]) {
+async function persistConversationMessages(
+  conversationId: string,
+  messages: StoredDmMessage[],
+) {
   const trimmed = trimStoredMessages(messages);
   workspaceMessageCache.set(conversationId, trimmed);
   const db = await openWorkspaceDb();
 
   if (!db) {
     if (typeof window !== "undefined") {
-      window.localStorage.setItem(fallbackMessageStorageKey(conversationId), JSON.stringify(trimmed));
+      window.localStorage.setItem(
+        fallbackMessageStorageKey(conversationId),
+        JSON.stringify(trimmed),
+      );
     }
     return;
   }
@@ -256,11 +284,15 @@ async function persistConversationMessages(conversationId: string, messages: Sto
     const transaction = db.transaction(WORKSPACE_MESSAGE_STORE, "readwrite");
     transaction.oncomplete = () => resolve();
     transaction.onerror = () => resolve();
-    transaction.objectStore(WORKSPACE_MESSAGE_STORE).put(trimmed, conversationId);
+    transaction
+      .objectStore(WORKSPACE_MESSAGE_STORE)
+      .put(trimmed, conversationId);
   });
 }
 
-async function loadConversationMessages(conversationId: string): Promise<StoredDmMessage[]> {
+async function loadConversationMessages(
+  conversationId: string,
+): Promise<StoredDmMessage[]> {
   if (workspaceMessageCache.has(conversationId)) {
     return workspaceMessageCache.get(conversationId) ?? [];
   }
@@ -280,14 +312,20 @@ async function migrateLegacyWorkspaceState() {
       return;
     }
 
-    const parsed = parseWorkspaceState(window.localStorage.getItem(WORKSPACE_STORAGE_KEY));
-    if (!parsed?.messagesByConversation || Object.keys(parsed.messagesByConversation).length === 0) {
+    const parsed = parseWorkspaceState(
+      window.localStorage.getItem(WORKSPACE_STORAGE_KEY),
+    );
+    if (
+      !parsed?.messagesByConversation ||
+      Object.keys(parsed.messagesByConversation).length === 0
+    ) {
       return;
     }
 
     await Promise.all(
-      Object.entries(parsed.messagesByConversation).map(([conversationId, messages]) =>
-        persistConversationMessages(conversationId, messages),
+      Object.entries(parsed.messagesByConversation).map(
+        ([conversationId, messages]) =>
+          persistConversationMessages(conversationId, messages),
       ),
     );
 
@@ -310,7 +348,10 @@ async function ensureRelayDeviceBundle() {
   }
 
   const state = readWorkspaceState();
-  if (state.registeredDeviceId === session.deviceId && isStoredDeviceBundle(state.bundle)) {
+  if (
+    state.registeredDeviceId === session.deviceId &&
+    isStoredDeviceBundle(state.bundle)
+  ) {
     return state.bundle;
   }
 
@@ -332,11 +373,10 @@ async function listDeviceBundles(accountId: string) {
     return cached;
   }
 
-  const request = relayDeviceApi.listBundles(accountId)
-    .catch((error) => {
-      deviceBundleCache.delete(accountId);
-      throw error;
-    });
+  const request = relayDeviceApi.listBundles(accountId).catch((error) => {
+    deviceBundleCache.delete(accountId);
+    throw error;
+  });
 
   deviceBundleCache.set(accountId, request);
   return request;
@@ -352,12 +392,16 @@ async function resolveSenderIdentityKey(accountId: string, deviceId: string) {
   return bundle.bundle.identityKeyB64;
 }
 
-export async function listStoredDmMessages(conversationId: string): Promise<StoredDmMessage[]> {
+export async function listStoredDmMessages(
+  conversationId: string,
+): Promise<StoredDmMessage[]> {
   await migrateLegacyWorkspaceState();
   return loadConversationMessages(conversationId);
 }
 
-export async function listStoredConversationMessages(conversationId: string): Promise<StoredDmMessage[]> {
+export async function listStoredConversationMessages(
+  conversationId: string,
+): Promise<StoredDmMessage[]> {
   return listStoredDmMessages(conversationId);
 }
 
@@ -368,7 +412,10 @@ export async function getConversationPreview(conversationId: string) {
 
 export async function getConversationPreviews(conversationIds: string[]) {
   const entries = await Promise.all(
-    conversationIds.map(async (conversationId) => [conversationId, await getConversationPreview(conversationId)] as const),
+    conversationIds.map(
+      async (conversationId) =>
+        [conversationId, await getConversationPreview(conversationId)] as const,
+    ),
   );
 
   return Object.fromEntries(entries) as Record<string, StoredDmMessage | null>;
@@ -395,7 +442,10 @@ export async function ingestRelayEnvelopes(
     try {
       payload = decryptConversationPayload<EncryptedConversationPayload>(
         envelope.ciphertext,
-        await resolveSenderIdentityKey(envelope.senderAccountId, envelope.senderDeviceId),
+        await resolveSenderIdentityKey(
+          envelope.senderAccountId,
+          envelope.senderDeviceId,
+        ),
         registeredBundle.privateKeyB64,
       );
     } catch {
@@ -439,7 +489,10 @@ export async function ingestRelayEnvelopes(
     ),
   );
 
-  state.mailboxCursor = options.cursor ?? envelopes[envelopes.length - 1]?.envelopeId ?? state.mailboxCursor;
+  state.mailboxCursor =
+    options.cursor ??
+    envelopes[envelopes.length - 1]?.envelopeId ??
+    state.mailboxCursor;
   state.knownEnvelopeIds = keepRecentEnvelopeIds(Array.from(knownEnvelopeIds));
   writeWorkspaceState(state);
 
@@ -464,7 +517,10 @@ export async function syncRelayMailbox() {
   const state = readWorkspaceState();
   const sync = await relayMailboxApi.sync(state.mailboxCursor);
   if (sync.envelopes.length === 0) {
-    if (sync.cursor.lastSeenEnvelopeId && sync.cursor.lastSeenEnvelopeId !== state.mailboxCursor) {
+    if (
+      sync.cursor.lastSeenEnvelopeId &&
+      sync.cursor.lastSeenEnvelopeId !== state.mailboxCursor
+    ) {
       writeWorkspaceState({
         ...state,
         mailboxCursor: sync.cursor.lastSeenEnvelopeId,
@@ -498,27 +554,34 @@ export async function sendConversationMessage(input: {
   await migrateLegacyWorkspaceState();
   const registeredBundle = await ensureRelayDeviceBundle();
 
-  const members = "members" in input.conversation
-    ? input.conversation.members
-    : (await relayConversationApi.get(input.conversation.id)).members;
+  const members =
+    "members" in input.conversation
+      ? input.conversation.members
+      : (await relayConversationApi.get(input.conversation.id)).members;
   const isDirectMessage = input.conversation.kind === "direct_message";
-  const recipientAccounts = members.filter((member) => member.accountId !== session.accountId);
+  const recipientAccounts = members.filter(
+    (member) => member.accountId !== session.accountId,
+  );
   if (isDirectMessage && recipientAccounts.length === 0) {
     throw new Error("A DM needs another member before it can send.");
   }
 
   const bundleLists = await Promise.all(
-    Array.from(new Set(input.conversation.memberAccountIds)).map(async (accountId) => ({
-      accountId,
-      bundles: await listDeviceBundles(accountId),
-    })),
+    Array.from(new Set(input.conversation.memberAccountIds)).map(
+      async (accountId) => ({
+        accountId,
+        bundles: await listDeviceBundles(accountId),
+      }),
+    ),
   );
   const recipientDevices = bundleLists
     .flatMap((entry) => entry.bundles)
     .filter((bundle) => bundle.deviceId !== session.deviceId);
 
   if (recipientDevices.length === 0) {
-    throw new Error("No recipient devices are registered for this conversation yet.");
+    throw new Error(
+      "No recipient devices are registered for this conversation yet.",
+    );
   }
 
   const trimmedText = input.text?.trim();
@@ -542,7 +605,11 @@ export async function sendConversationMessage(input: {
       protectionProfile: "standard",
     });
 
-    await uploadAttachment(ticket.uploadUrl, encrypted.ciphertext, "application/octet-stream");
+    await uploadAttachment(
+      ticket.uploadUrl,
+      encrypted.ciphertext,
+      "application/octet-stream",
+    );
     attachment = {
       id: ticket.attachmentId,
       fileName: input.file.name,
@@ -588,13 +655,19 @@ export async function sendConversationMessage(input: {
     epoch: input.conversation.epoch,
     envelopes: recipientDevices.map((bundle) => ({
       recipientDeviceId: bundle.deviceId,
-      ciphertext: encryptConversationPayload(payload, bundle.bundle.identityKeyB64, registeredBundle.privateKeyB64),
+      ciphertext: encryptConversationPayload(
+        payload,
+        bundle.bundle.identityKeyB64,
+        registeredBundle.privateKeyB64,
+      ),
       clientMessageId,
       attachmentIds,
     })),
   });
 
-  const existingMessages = await loadConversationMessages(input.conversation.id);
+  const existingMessages = await loadConversationMessages(
+    input.conversation.id,
+  );
   await persistConversationMessages(
     input.conversation.id,
     upsertMessageList(existingMessages, {
@@ -620,13 +693,19 @@ export async function sendDirectMessage(input: {
   return sendConversationMessage(input);
 }
 
-export async function readRelayAttachmentBlob(attachment: RelayReadableAttachment) {
+export async function readRelayAttachmentBlob(
+  attachment: RelayReadableAttachment,
+) {
   const attachmentId = attachment.attachmentId ?? attachment.id;
   if (!attachmentId) {
     throw new Error("Attachment id is missing.");
   }
 
-  if (attachment.encryptionMode !== "device_encrypted" || !attachment.fileKeyB64 || !attachment.fileIvB64) {
+  if (
+    attachment.encryptionMode !== "device_encrypted" ||
+    !attachment.fileKeyB64 ||
+    !attachment.fileIvB64
+  ) {
     const access = await relayAttachmentApi.refreshDownloadUrl(attachmentId);
     const response = await fetch(access.downloadUrl);
     if (!response.ok) {
@@ -647,7 +726,13 @@ export async function readRelayAttachmentBlob(attachment: RelayReadableAttachmen
   const iv = decodeBytes(attachment.fileIvB64);
   const plaintext =
     iv.length === 24
-      ? toArrayBuffer(decryptAttachmentBytes(ciphertext, attachment.fileKeyB64, attachment.fileIvB64))
+      ? toArrayBuffer(
+          decryptAttachmentBytes(
+            ciphertext,
+            attachment.fileKeyB64,
+            attachment.fileIvB64,
+          ),
+        )
       : toArrayBuffer(
           new Uint8Array(
             await crypto.subtle.decrypt(
@@ -666,7 +751,9 @@ export async function readRelayAttachmentBlob(attachment: RelayReadableAttachmen
   return new Blob([plaintext], { type: attachment.mimeType });
 }
 
-export async function readDmAttachmentBlob(attachment: WorkspaceEnvelopeAttachment) {
+export async function readDmAttachmentBlob(
+  attachment: WorkspaceEnvelopeAttachment,
+) {
   return readRelayAttachmentBlob(attachment);
 }
 
