@@ -1,6 +1,8 @@
 use emberchamber_core::ClientState;
+use serde::Serialize;
 use serde_json::Value;
 use tauri::{WebviewUrl, WebviewWindowBuilder};
+use tauri_plugin_updater::UpdaterExt;
 
 mod secure_state;
 
@@ -36,14 +38,77 @@ fn open_external_url(url: String) -> Result<(), String> {
     Ok(())
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AppUpdateStatus {
+    available: bool,
+    current_version: String,
+    version: Option<String>,
+    date: Option<String>,
+    body: Option<String>,
+}
+
+#[tauri::command]
+async fn check_for_app_update(app: tauri::AppHandle) -> Result<AppUpdateStatus, String> {
+    let current_version = app.package_info().version.to_string();
+    let update = app
+        .updater()
+        .map_err(|error| format!("Updater init failed: {error}"))?
+        .check()
+        .await
+        .map_err(|error| format!("Update check failed: {error}"))?;
+
+    if let Some(update) = update {
+        return Ok(AppUpdateStatus {
+            available: true,
+            current_version,
+            version: Some(update.version),
+            date: update.date,
+            body: update.body,
+        });
+    }
+
+    Ok(AppUpdateStatus {
+        available: false,
+        current_version,
+        version: None,
+        date: None,
+        body: None,
+    })
+}
+
+#[tauri::command]
+async fn install_app_update(app: tauri::AppHandle) -> Result<String, String> {
+    let update = app
+        .updater()
+        .map_err(|error| format!("Updater init failed: {error}"))?
+        .check()
+        .await
+        .map_err(|error| format!("Update check failed: {error}"))?;
+
+    let Some(update) = update else {
+        return Ok("No update is currently available.".to_string());
+    };
+
+    update
+        .download_and_install(|_, _| {}, || {})
+        .await
+        .map_err(|error| format!("Update install failed: {error}"))?;
+
+    app.restart();
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             load_secure_state,
             save_secure_state,
             clear_secure_state,
-            open_external_url
+            open_external_url,
+            check_for_app_update,
+            install_app_update
         ])
         .setup(|app| {
             let _bootstrap_state = ClientState::default();
