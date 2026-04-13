@@ -580,6 +580,8 @@ export function ConversationScreen({
 
           <TextInput
             multiline
+            autoCorrect
+            spellCheck
             placeholder={editingMessageId ? "Edit message…" : "Message…"}
             placeholderTextColor={theme.colors.placeholder}
             style={[styles.input, styles.composerInputDocked]}

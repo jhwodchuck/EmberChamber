@@ -62,6 +62,8 @@ export function ChecklistCreatorSheet({ visible, onClose, onSend }: Props) {
           >
             <TextInput
               style={[styles.input, styles.attachSubSheetInput]}
+              autoCorrect
+              spellCheck
               placeholder="Title…"
               placeholderTextColor={theme.colors.placeholder}
               value={title}
@@ -74,6 +76,8 @@ export function ChecklistCreatorSheet({ visible, onClose, onSend }: Props) {
                 <Text style={styles.attachCheckPrefix}>☐</Text>
                 <TextInput
                   style={[styles.input, { flex: 1 }]}
+                  autoCorrect
+                  spellCheck
                   placeholder={`Item ${i + 1}…`}
                   placeholderTextColor={theme.colors.placeholder}
                   value={item}
