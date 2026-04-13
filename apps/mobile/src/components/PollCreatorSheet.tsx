@@ -62,6 +62,8 @@ export function PollCreatorSheet({ visible, onClose, onSend }: Props) {
           >
             <TextInput
               style={[styles.input, styles.attachSubSheetInput]}
+              autoCorrect
+              spellCheck
               placeholder="Question…"
               placeholderTextColor={theme.colors.placeholder}
               value={question}
@@ -73,6 +75,8 @@ export function PollCreatorSheet({ visible, onClose, onSend }: Props) {
               <View key={i} style={styles.attachPollOptionRow}>
                 <TextInput
                   style={[styles.input, { flex: 1 }]}
+                  autoCorrect
+                  spellCheck
                   placeholder={`Option ${i + 1}…`}
                   placeholderTextColor={theme.colors.placeholder}
                   value={opt}
