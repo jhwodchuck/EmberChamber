@@ -2618,7 +2618,11 @@ export default function App() {
         ) : null}
         <KeyboardAvoidingView
           style={styles.keyboardShell}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          // Android 14+ edge-to-edge keeps the activity at full height and
+          // exposes the IME as an inset instead of shrinking the window.
+          // Use KAV height mode so bottom-aligned inputs and the conversation
+          // composer move above the keyboard on Android as well.
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
           {showEntryChrome ? (
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
