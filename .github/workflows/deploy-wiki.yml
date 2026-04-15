@@ -13,7 +13,7 @@ on:
 permissions:
   contents: write
   pages: write
-  id-token: write  # required by actions/deploy-pages
+  id-token: write
 
 # Only one deploy at a time
 concurrency:
@@ -26,15 +26,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version: 20
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v5
+        uses: pnpm/action-setup@v4
         with:
           version: 9
           run_install: false
@@ -46,7 +46,7 @@ jobs:
         run: pnpm --dir docs/wiki-site exec vitepress build .
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v3
         with:
           path: docs/wiki-site/.vitepress/dist
 
@@ -60,7 +60,7 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@v4
 
   sync-wiki:
     name: Sync markdown to GitHub Wiki
@@ -68,10 +68,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Push markdown pages to GitHub Wiki
-        uses: Andrew-Chen-Wang/github-wiki-action@v5
+        uses: Andrew-Chen-Wang/github-wiki-action@v4
         with:
           path: docs/wiki-site
           ignore: |

@@ -10,7 +10,10 @@ import {
 
 type AttachmentAction = "preview" | "open";
 
-export function useAttachmentManager(attachment: ManagedAttachment | null) {
+export function useAttachmentManager(
+  attachment: ManagedAttachment | null,
+  refreshAttachmentAccess?: () => Promise<ManagedAttachment | null>,
+) {
   const [status, setStatus] = useState<AttachmentTransferState>("idle");
   const [error, setError] = useState<string | null>(null);
   const [resolvedUri, setResolvedUri] = useState<string | null>(null);
@@ -49,8 +52,16 @@ export function useAttachmentManager(attachment: ManagedAttachment | null) {
       try {
         const nextUri =
           action === "preview"
-            ? await resolveAttachmentUri(attachment, setTransferState)
-            : await openManagedAttachment(attachment, setTransferState);
+            ? await resolveAttachmentUri(
+                attachment,
+                setTransferState,
+                refreshAttachmentAccess,
+              )
+            : await openManagedAttachment(
+                attachment,
+                setTransferState,
+                refreshAttachmentAccess,
+              );
         setResolvedUri(nextUri);
         setLastResolvedAt(new Date().toISOString());
         return nextUri;
@@ -66,7 +77,7 @@ export function useAttachmentManager(attachment: ManagedAttachment | null) {
         return null;
       }
     },
-    [attachment, setTransferState],
+    [attachment, refreshAttachmentAccess, setTransferState],
   );
 
   const prepareForPreview = useCallback(async () => {
