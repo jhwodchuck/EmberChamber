@@ -164,9 +164,10 @@ jobs:
         run: |
           node -e "const fs=require('fs'); const p='apps/mobile/app.json'; const d=JSON.parse(fs.readFileSync(p,'utf8')); d.expo=d.expo||{}; d.expo.android=d.expo.android||{}; d.expo.android.versionCode=Number(process.env.VERSION_CODE); fs.writeFileSync(p, JSON.stringify(d, null, 2)+'\\n');"
 
-      - name: Build protocol package for type-checking
-        if: inputs.validate_release_inputs
-        run: npm run build --workspace=packages/protocol
+      - name: Build shared workspace packages
+        run: |
+          npm run build --workspace=packages/protocol
+          npm run build --workspace=packages/shared
 
       - name: Validate Android release inputs
         if: inputs.validate_release_inputs
