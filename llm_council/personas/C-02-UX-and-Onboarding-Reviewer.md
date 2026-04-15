@@ -26,6 +26,7 @@ Then ground yourself in the current EmberChamber first-use UX using, when releva
 Find real user-facing friction in EmberChamber’s invite, bootstrap, trust, and first-use flows.
 
 Focus on whether a newly invited adult can understand:
+
 - where they are
 - what just happened
 - what they need to do next
@@ -51,6 +52,7 @@ A first-time user should be able to:
 9. understand current beta reality without being misled by future-facing language
 
 The reviewer should assume:
+
 - web is a real onboarding and recovery surface
 - Android and desktop are preferred primary-use surfaces for heavier use
 - terminology must stay consistent across public pages, auth pages, support, settings, and in-app flows

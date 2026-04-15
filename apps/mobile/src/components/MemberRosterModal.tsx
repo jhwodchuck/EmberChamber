@@ -1,4 +1,11 @@
-import { ActivityIndicator, Modal, Pressable, ScrollView, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 import type { GroupMember } from "../types";
 import { styles } from "../styles";
 
@@ -41,12 +48,17 @@ export function MemberRosterModal({
 
           {isLoading ? (
             <View style={styles.memberRosterLoading}>
-              <ActivityIndicator size="small" color={styles.primaryButton.backgroundColor} />
+              <ActivityIndicator
+                size="small"
+                color={styles.primaryButton.backgroundColor}
+              />
               <Text style={styles.memberRosterLoadingText}>Loading…</Text>
             </View>
           ) : members.length === 0 ? (
             <View style={styles.memberRosterLoading}>
-              <Text style={styles.memberRosterLoadingText}>No members found.</Text>
+              <Text style={styles.memberRosterLoadingText}>
+                No members found.
+              </Text>
             </View>
           ) : (
             <ScrollView
@@ -57,7 +69,8 @@ export function MemberRosterModal({
               {members.map((member) => {
                 const badge = roleBadgeLabel(member.role);
                 const isSelf = member.accountId === myAccountId;
-                const initial = member.displayName.trim().charAt(0).toUpperCase() || "?";
+                const initial =
+                  member.displayName.trim().charAt(0).toUpperCase() || "?";
 
                 return (
                   <Pressable
@@ -67,7 +80,9 @@ export function MemberRosterModal({
                     android_ripple={{ color: "rgba(255,255,255,0.06)" }}
                   >
                     <View style={styles.memberRosterAvatar}>
-                      <Text style={styles.memberRosterAvatarText}>{initial}</Text>
+                      <Text style={styles.memberRosterAvatarText}>
+                        {initial}
+                      </Text>
                     </View>
 
                     <View style={styles.memberRosterCopy}>
@@ -77,7 +92,8 @@ export function MemberRosterModal({
                       </Text>
                       {member.messageCount > 0 ? (
                         <Text style={styles.memberRosterMeta}>
-                          {member.messageCount} message{member.messageCount === 1 ? "" : "s"}
+                          {member.messageCount} message
+                          {member.messageCount === 1 ? "" : "s"}
                         </Text>
                       ) : null}
                     </View>
@@ -86,7 +102,9 @@ export function MemberRosterModal({
                       <View
                         style={[
                           styles.roleBadge,
-                          member.role === "owner" ? styles.roleBadgeOwner : styles.roleBadgeAdmin,
+                          member.role === "owner"
+                            ? styles.roleBadgeOwner
+                            : styles.roleBadgeAdmin,
                         ]}
                       >
                         <Text style={styles.roleBadgeLabel}>{badge}</Text>

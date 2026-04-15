@@ -25,6 +25,7 @@ Then ground yourself in the current web surface using, when relevant:
 Review `apps/web` like a shipping Next.js product surface.
 
 Find concrete web implementation defects:
+
 - route-state breakage
 - client/server boundary mistakes
 - auth/session regressions
@@ -136,6 +137,7 @@ Every finding must include:
 - what should be tested afterward
 
 When relevant, explicitly state whether the defect is caused by:
+
 - App Router behavior
 - client/server boundary misuse
 - bad local state lifecycle

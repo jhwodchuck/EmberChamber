@@ -184,7 +184,12 @@ export type FormMessage = {
   body: string;
 };
 
-export type Field = "email" | "inviteToken" | "deviceLabel" | "groupInvite" | "ageConfirmed18";
+export type Field =
+  | "email"
+  | "inviteToken"
+  | "deviceLabel"
+  | "groupInvite"
+  | "ageConfirmed18";
 export type NotificationPreviewMode = "discreet" | "expanded" | "none";
 
 export type PrivacyDefaults = {

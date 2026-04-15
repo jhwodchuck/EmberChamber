@@ -58,22 +58,22 @@ Expand from small groups into invite-gated multi-room communities.
 
 ## Later Phases
 
-| Feature | Priority |
-|---------|---------|
-| iPhone and macOS native apps | After first-wave surfaces are stable |
-| Voice / video calling | Deferred |
-| Large public-community channels | Out of scope for closed beta |
-| Auto-update channels | Post-Phase 1 |
-| App Store and TestFlight signed distribution | After iPhone decision |
-| Full operator dashboard for report review | Phase 2+ |
+| Feature                                      | Priority                             |
+| -------------------------------------------- | ------------------------------------ |
+| iPhone and macOS native apps                 | After first-wave surfaces are stable |
+| Voice / video calling                        | Deferred                             |
+| Large public-community channels              | Out of scope for closed beta         |
+| Auto-update channels                         | Post-Phase 1                         |
+| App Store and TestFlight signed distribution | After iPhone decision                |
+| Full operator dashboard for report review    | Phase 2+                             |
 
 ## Platform Commitment Matrix
 
-| Surface | First Beta | Notes |
-|---------|-----------|-------|
-| Android | ✅ Committed | Primary mobile surface |
-| Windows | ✅ Committed | Desktop shell via Tauri |
-| Ubuntu / Debian | ✅ Committed | Desktop shell via Tauri |
-| Web | ✅ Committed (secondary) | Capable secondary client for messaging, onboarding, and settings |
-| iPhone | 🔜 Deferred | Scaffold in repo; deferred until first-wave is stable |
-| macOS | 🔜 Deferred | Builds wire; signed distribution deferred |
+| Surface         | First Beta               | Notes                                                            |
+| --------------- | ------------------------ | ---------------------------------------------------------------- |
+| Android         | ✅ Committed             | Primary mobile surface                                           |
+| Windows         | ✅ Committed             | Desktop shell via Tauri                                          |
+| Ubuntu / Debian | ✅ Committed             | Desktop shell via Tauri                                          |
+| Web             | ✅ Committed (secondary) | Capable secondary client for messaging, onboarding, and settings |
+| iPhone          | 🔜 Deferred              | Scaffold in repo; deferred until first-wave is stable            |
+| macOS           | 🔜 Deferred              | Builds wire; signed distribution deferred                        |

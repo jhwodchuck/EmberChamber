@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
-import { BadgeCheck, Compass, MonitorSmartphone, ShieldCheck } from "lucide-react";
+import {
+  BadgeCheck,
+  Compass,
+  MonitorSmartphone,
+  ShieldCheck,
+} from "lucide-react";
 import { MarketingShell } from "@/components/marketing-shell";
 import { StartHereGuide } from "@/components/start-here-guide";
 
@@ -18,7 +23,10 @@ export default function StartPage() {
             className="pointer-events-none absolute right-0 top-0 h-64 w-64 bg-[radial-gradient(circle,rgba(255,170,110,0.16),transparent_65%)]"
             aria-hidden="true"
           />
-          <div className="pointer-events-none absolute inset-0 glow-grid opacity-35" aria-hidden="true" />
+          <div
+            className="pointer-events-none absolute inset-0 glow-grid opacity-35"
+            aria-hidden="true"
+          />
           <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-end">
             <div className="max-w-3xl">
               <div className="eyebrow">Start Here</div>
@@ -26,14 +34,18 @@ export default function StartPage() {
                 Pick the quickest correct path.
               </h1>
               <p className="mt-5 text-lg leading-8 text-[var(--text-secondary)]">
-                Start with the trust model if you&apos;re evaluating EmberChamber. If you already have
-                access or an invite, take the shortest route from here.
+                Start with the trust model if you&apos;re evaluating
+                EmberChamber. If you already have access or an invite, take the
+                shortest route from here.
               </p>
 
               <div className="mt-6 flex flex-wrap gap-3">
                 {["Invite-only access", "Adults-only beta"].map((item) => (
                   <div key={item} className="metric-pill">
-                    <BadgeCheck aria-hidden="true" className="h-3.5 w-3.5 text-brand-400" />
+                    <BadgeCheck
+                      aria-hidden="true"
+                      className="h-3.5 w-3.5 text-brand-400"
+                    />
                     {item}
                   </div>
                 ))}
@@ -58,12 +70,17 @@ export default function StartPage() {
                   body: "Check the posted Android and desktop builds when you want a longer-session client.",
                 },
               ].map((item) => (
-                <div key={item.label} className="showcase-frame rounded-[1.35rem] p-4">
+                <div
+                  key={item.label}
+                  className="showcase-frame rounded-[1.35rem] p-4"
+                >
                   <div className="flex items-center gap-2 text-brand-400">
                     <item.icon aria-hidden="true" className="h-4 w-4" />
                     <span className="section-kicker">{item.label}</span>
                   </div>
-                  <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{item.body}</p>
+                  <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+                    {item.body}
+                  </p>
                 </div>
               ))}
             </div>

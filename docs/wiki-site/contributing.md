@@ -6,14 +6,14 @@ Thank you for helping build EmberChamber. This guide covers the key rules for co
 
 Default to these paths for new work:
 
-| Work type | Path |
-|-----------|------|
-| Relay auth, invites, mailbox, groups, attachments | `apps/relay` |
-| Web UI, onboarding, invite landing, browser messaging | `apps/web` |
-| Android and iPhone client | `apps/mobile` |
-| Desktop shell and packaging | `apps/desktop`, `apps/desktop/src-tauri` |
-| Shared secure-state logic | `crates/core` |
-| Relay contract changes | `crates/relay-protocol` + `packages/protocol` (both) |
+| Work type                                             | Path                                                 |
+| ----------------------------------------------------- | ---------------------------------------------------- |
+| Relay auth, invites, mailbox, groups, attachments     | `apps/relay`                                         |
+| Web UI, onboarding, invite landing, browser messaging | `apps/web`                                           |
+| Android and iPhone client                             | `apps/mobile`                                        |
+| Desktop shell and packaging                           | `apps/desktop`, `apps/desktop/src-tauri`             |
+| Shared secure-state logic                             | `crates/core`                                        |
+| Relay contract changes                                | `crates/relay-protocol` + `packages/protocol` (both) |
 
 Legacy paths (`apps/api`, `infra/docker-compose.yml`, `services/*`) are not the target for new work. Only touch them if explicitly asked or if they block active builds.
 
@@ -49,17 +49,17 @@ If you change protocol payload shapes or auth/session types, verify **both** the
 
 Preserve the current beta direction. Do not reintroduce deprecated assumptions:
 
-| ✅ Keep | ❌ Do not reintroduce |
-|--------|----------------------|
-| Invite-only access | Public sign-up |
-| Adults-only 18+ affirmation | Removal of age gate |
-| Email magic-link bootstrap | Phone-number identity |
-| E2EE DMs via device mailbox | Server-readable DM history |
-| Small groups ≤ 12 members (Phase 1) | Unlimited public groups in Phase 1 |
-| Organizer/admin invite control | Free-for-all member invites in Phase 1 |
-| Local-first device history | Server-side search over private messages |
-| Pseudonymous identity | Google OAuth or phone-number identity |
-| Disclosure-based reporting | Routine content moderation visibility into private messages |
+| ✅ Keep                             | ❌ Do not reintroduce                                       |
+| ----------------------------------- | ----------------------------------------------------------- |
+| Invite-only access                  | Public sign-up                                              |
+| Adults-only 18+ affirmation         | Removal of age gate                                         |
+| Email magic-link bootstrap          | Phone-number identity                                       |
+| E2EE DMs via device mailbox         | Server-readable DM history                                  |
+| Small groups ≤ 12 members (Phase 1) | Unlimited public groups in Phase 1                          |
+| Organizer/admin invite control      | Free-for-all member invites in Phase 1                      |
+| Local-first device history          | Server-side search over private messages                    |
+| Pseudonymous identity               | Google OAuth or phone-number identity                       |
+| Disclosure-based reporting          | Routine content moderation visibility into private messages |
 
 ## Code Style
 

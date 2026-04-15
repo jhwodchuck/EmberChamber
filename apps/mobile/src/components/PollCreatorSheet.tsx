@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { styles, theme } from "../styles";
 
 type Props = {
@@ -40,7 +47,8 @@ export function PollCreatorSheet({ visible, onClose, onSend }: Props) {
     onClose();
   }
 
-  const canSend = question.trim().length > 0 && options.filter((o) => o.trim()).length >= 2;
+  const canSend =
+    question.trim().length > 0 && options.filter((o) => o.trim()).length >= 2;
 
   return (
     <Modal
@@ -80,7 +88,10 @@ export function PollCreatorSheet({ visible, onClose, onSend }: Props) {
                   maxLength={100}
                 />
                 {options.length > 2 ? (
-                  <Pressable style={styles.attachPollRemove} onPress={() => removeOption(i)}>
+                  <Pressable
+                    style={styles.attachPollRemove}
+                    onPress={() => removeOption(i)}
+                  >
                     <Text style={styles.attachPollRemoveLabel}>✕</Text>
                   </Pressable>
                 ) : null}
@@ -95,7 +106,10 @@ export function PollCreatorSheet({ visible, onClose, onSend }: Props) {
           </ScrollView>
 
           <Pressable
-            style={[styles.primaryButton, !canSend ? styles.primaryButtonDisabled : null]}
+            style={[
+              styles.primaryButton,
+              !canSend ? styles.primaryButtonDisabled : null,
+            ]}
             onPress={handleSend}
             disabled={!canSend}
           >

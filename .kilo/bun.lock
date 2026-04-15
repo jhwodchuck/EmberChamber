@@ -1,0 +1,18 @@
+{
+  "lockfileVersion": 1,
+  "configVersion": 1,
+  "workspaces": {
+    "": {
+      "dependencies": {
+        "@kilocode/plugin": "7.2.0",
+      },
+    },
+  },
+  "packages": {
+    "@kilocode/plugin": ["@kilocode/plugin@7.2.0", "", { "dependencies": { "@kilocode/sdk": "7.2.0", "zod": "4.1.8" } }, "sha512-QbRRJ0GNOnfrpB2Ffs/7epi7Ktjge3uqOGyEUBzkc2aLFnMyPU5An2BL75QfVPUBIW6wUkJPfTbki6tBjhFAmQ=="],
+
+    "@kilocode/sdk": ["@kilocode/sdk@7.2.0", "", {}, "sha512-lwOUj+j50LfJ81sZpbTIImwD+7B0j7RucgxmAxQTPVRWd8UKGts4jBcRkxTvXvx49gFljs6qvru0kMYoQi9N9g=="],
+
+    "zod": ["zod@4.1.8", "", {}, "sha512-5R1P+WwQqmmMIEACyzSvo4JXHY5WiAFHRMg+zBZKgKS+Q1viRa0C1hmUKtHltoIFKtIdki3pRxkmpP74jnNYHQ=="],
+  }
+}

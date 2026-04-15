@@ -42,7 +42,7 @@ jobs:
 
       - name: Restore npm package cache
         id: npm-cache-restore
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v4
         with:
           path: ${{ steps.npm-cache-dir.outputs.dir }}
           key: node-cache-${{ runner.os }}-${{ runner.arch }}-npm-${{ hashFiles('package-lock.json') }}
@@ -53,11 +53,204 @@ jobs:
 
       - name: Patch Expo iOS packages for Xcode 16.4
         shell: bash
-        run: python3 scripts/ci/patch-expo-ios-xcode16.py
+        run: |
+          python3 << 'PYEOF'
+          from pathlib import Path
+          import sys
+
+          def block(*lines):
+              return "\n".join(lines)
+
+          replacements = [
+              (
+                  Path("apps/mobile/node_modules/expo-modules-core/ios/Core/Views/ViewDefinition.swift"),
+                  "extension UIView: @MainActor AnyArgument {",
+                  "extension UIView: AnyArgument {",
+              ),
+              (
+                  Path("apps/mobile/node_modules/expo-modules-core/ios/Core/Views/SwiftUI/SwiftUIHostingView.swift"),
+                  "  public final class HostingView<Props: ViewProps, ContentView: View<Props>>: ExpoView, @MainActor AnyExpoSwiftUIHostingView {",
+                  "  public final class HostingView<Props: ViewProps, ContentView: View<Props>>: ExpoView, AnyExpoSwiftUIHostingView {",
+              ),
+              (
+                  Path("apps/mobile/node_modules/expo-modules-core/ios/Core/Views/SwiftUI/SwiftUIVirtualView.swift"),
+                  block(
+                      "    override func mountChildComponentView(_ childComponentView: UIView, index: Int) {",
+                      "      var children = props.children ?? []",
+                      "      let child: any AnyChild",
+                      "      if let view = childComponentView as AnyObject as? (any ExpoSwiftUI.View) {",
+                      "        child = view",
+                      "      } else {",
+                      "        child = UIViewHost(view: childComponentView)",
+                      "      }",
+                      "      children.insert(child, at: index)",
+                      "",
+                      "      props.children = children",
+                      "      props.objectWillChange.send()",
+                      "    }",
+                  ),
+                  block(
+                      "    override func mountChildComponentView(_ childComponentView: UIView, index: Int) {",
+                      "      performSynchronouslyOnMainActor {",
+                      "        var children = props.children ?? []",
+                      "        let child: any AnyChild",
+                      "        if let view = childComponentView as AnyObject as? (any ExpoSwiftUI.View) {",
+                      "          child = view",
+                      "        } else {",
+                      "          child = UIViewHost(view: childComponentView)",
+                      "        }",
+                      "        children.insert(child, at: index)",
+                      "",
+                      "        props.children = children",
+                      "        props.objectWillChange.send()",
+                      "      }",
+                      "    }",
+                  ),
+              ),
+              (
+                  Path("apps/mobile/node_modules/expo-modules-core/ios/Core/Views/SwiftUI/SwiftUIVirtualView.swift"),
+                  block(
+                      "    override func unmountChildComponentView(_ childComponentView: UIView, index: Int) {",
+                      "      // Make sure the view has no superview, React Native asserts against this.",
+                      "      childComponentView.removeFromSuperview()",
+                      "",
+                      "      let childViewId: ObjectIdentifier",
+                      "      if let child = childComponentView as AnyObject as? (any AnyChild) {",
+                      "        childViewId = child.id",
+                      "      } else {",
+                      "        childViewId = ObjectIdentifier(childComponentView)",
+                      "      }",
+                      "",
+                      "      if let children = props.children {",
+                      "        props.children = children.filter({ $0.id != childViewId })",
+                      "        #if DEBUG",
+                      "        assert(props.children?.count == children.count - 1, \"Failed to remove child view\")",
+                      "        #endif",
+                      "        props.objectWillChange.send()",
+                      "      }",
+                      "    }",
+                  ),
+                  block(
+                      "    override func unmountChildComponentView(_ childComponentView: UIView, index: Int) {",
+                      "      performSynchronouslyOnMainActor {",
+                      "        // Make sure the view has no superview, React Native asserts against this.",
+                      "        childComponentView.removeFromSuperview()",
+                      "",
+                      "        let childViewId: ObjectIdentifier",
+                      "        if let child = childComponentView as AnyObject as? (any AnyChild) {",
+                      "          childViewId = child.id",
+                      "        } else {",
+                      "          childViewId = ObjectIdentifier(childComponentView)",
+                      "        }",
+                      "",
+                      "        if let children = props.children {",
+                      "          props.children = children.filter({ $0.id != childViewId })",
+                      "          #if DEBUG",
+                      "          assert(props.children?.count == children.count - 1, \"Failed to remove child view\")",
+                      "          #endif",
+                      "          props.objectWillChange.send()",
+                      "        }",
+                      "      }",
+                      "    }",
+                  ),
+              ),
+              (
+                  Path("apps/mobile/node_modules/expo-modules-core/ios/Core/Views/SwiftUI/SwiftUIVirtualView.swift"),
+                  block(
+                      "    override func removeFromSuperview() {",
+                      "      // When the view is unmounted, the focus on TextFieldView stays active and it causes a crash, so we blur it here",
+                      "      // UIView does something similar to resign the first responder in removeFromSuperview, so we do the same for our virtual view",
+                      "      if let focusableView = contentView as? any ExpoSwiftUI.FocusableView {",
+                      "        focusableView.forceResignFirstResponder()",
+                      "      }",
+                      "      super.removeFromSuperview()",
+                      "    }",
+                  ),
+                  block(
+                      "    override func removeFromSuperview() {",
+                      "      performSynchronouslyOnMainActor {",
+                      "        // When the view is unmounted, the focus on TextFieldView stays active and it causes a crash, so we blur it here",
+                      "        // UIView does something similar to resign the first responder in removeFromSuperview, so we do the same for our virtual view",
+                      "        if let focusableView = contentView as? any ExpoSwiftUI.FocusableView {",
+                      "          focusableView.forceResignFirstResponder()",
+                      "        }",
+                      "        super.removeFromSuperview()",
+                      "      }",
+                      "    }",
+                  ),
+              ),
+              (
+                  Path("apps/mobile/node_modules/expo-modules-core/ios/Core/Views/SwiftUI/SwiftUIVirtualView.swift"),
+                  block(
+                      "extension ExpoSwiftUI.SwiftUIVirtualView: @MainActor ExpoSwiftUI.ViewWrapper {",
+                      "  func getWrappedView() -> Any {",
+                      "    if let wrapper = contentView as? ExpoSwiftUI.ViewWrapper {",
+                      "      return wrapper.getWrappedView()",
+                      "    }",
+                      "    return contentView",
+                      "  }",
+                      "}",
+                  ),
+                  block(
+                      "extension ExpoSwiftUI.SwiftUIVirtualView: ExpoSwiftUI.ViewWrapper {",
+                      "  func getWrappedView() -> Any {",
+                      "    let result: NonisolatedUnsafeVar<Any> = performSynchronouslyOnMainActor {",
+                      "      let wrappedView: Any",
+                      "      if let wrapper = contentView as? ExpoSwiftUI.ViewWrapper {",
+                      "        wrappedView = wrapper.getWrappedView()",
+                      "      } else {",
+                      "        wrappedView = contentView",
+                      "      }",
+                      "      return NonisolatedUnsafeVar(wrappedView)",
+                      "    }",
+                      "    return result.value",
+                      "  }",
+                      "}",
+                  ),
+              ),
+              (
+                  Path("apps/mobile/node_modules/expo-modules-core/ios/DevTools/URLAuthenticationChallengeForwardSender.swift"),
+                  "internal final class URLAuthenticationChallengeForwardSender: NSObject, URLAuthenticationChallengeSender {",
+                  "internal final class URLAuthenticationChallengeForwardSender: NSObject, URLAuthenticationChallengeSender, @unchecked Sendable {",
+              ),
+              (
+                  Path("apps/mobile/node_modules/expo-modules-core/ios/DevTools/URLSessionSessionDelegateProxy.swift"),
+                  "public final class URLSessionSessionDelegateProxy: NSObject, URLSessionDataDelegate {",
+                  "public final class URLSessionSessionDelegateProxy: NSObject, URLSessionDataDelegate, @unchecked Sendable {",
+              ),
+                (
+                  Path("apps/mobile/node_modules/expo-notifications/ios/ExpoNotifications/Notifications/DateComponentsSerializer.swift"),
+                  block(
+                    "    if #available(iOS 26.0, *) {",
+                    "      serializedComponents[\"isRepeatedDay\"] = dateComponents.isRepeatedDay ?? false",
+                    "    }",
+                  ),
+                  "    serializedComponents[\"isRepeatedDay\"] = false",
+                ),
+                    (
+                      Path("apps/mobile/node_modules/expo-image-picker/ios/MediaHandler.swift"),
+                      "      asset?.contentType ?? UTType(filenameExtension: fileExtension)",
+                      "      UTType(filenameExtension: fileExtension)",
+                    ),
+                    (
+                      Path("apps/mobile/node_modules/expo-image-picker/ios/MediaHandler.swift"),
+                      "      resource.contentType",
+                      "      UTType(resource.uniformTypeIdentifier) ?? UTType(filenameExtension: fileExtension)",
+                    ),
+          ]
+
+          for path, old, new in replacements:
+              src = path.read_text()
+              if old not in src:
+                  print(f"ERROR: expected source fragment not found in {path}", file=sys.stderr)
+                  sys.exit(1)
+              path.write_text(src.replace(old, new, 1))
+              print(f"patched {path}")
+          PYEOF
 
       - name: Save npm package cache
         if: steps.npm-cache-restore.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v4
         with:
           path: ${{ steps.npm-cache-dir.outputs.dir }}
           key: node-cache-${{ runner.os }}-${{ runner.arch }}-npm-${{ hashFiles('package-lock.json') }}
@@ -68,7 +261,68 @@ jobs:
       - name: Patch Podfile for Xcode 16.4 CI compatibility
         shell: bash
         run: |
-          python3 scripts/ci/patch-podfile-xcode16.py
+          python3 << 'PYEOF'
+          import sys
+
+          path = "apps/mobile/ios/Podfile"
+          with open(path) as f:
+              src = f.read()
+
+          # Find react_native_post_install( and use paren-counting to locate
+          # the matching closing ')'.  This handles nested calls like
+          # ccache_enabled?(podfile_properties) that broke the old regex.
+          marker = "react_native_post_install("
+          idx = src.find(marker)
+          if idx == -1:
+              print("ERROR: could not find react_native_post_install in Podfile", file=sys.stderr)
+              sys.exit(1)
+
+          paren_start = idx + len(marker) - 1   # index of the opening '('
+          depth = 0
+          close_idx = -1
+          for i in range(paren_start, len(src)):
+              if src[i] == "(":
+                  depth += 1
+              elif src[i] == ")":
+                  depth -= 1
+                  if depth == 0:
+                      close_idx = i
+                      break
+
+          if close_idx == -1:
+              print("ERROR: unbalanced parens after react_native_post_install", file=sys.stderr)
+              sys.exit(1)
+
+          # Insert patch right after the line that contains the closing ')'
+          eol = src.index("\n", close_idx)
+
+          patch = (
+              "\n"
+              "    # -- CI patches (must run after react_native_post_install) --\n"
+              "    installer.pods_project.targets.each do |target|\n"
+              "      target.build_configurations.each do |config|\n"
+              '        if target.name == "ExpoModulesCore"\n'
+              '          config.build_settings["SWIFT_VERSION"] = "5.10"\n'
+              '        end\n'
+              '        flags = config.build_settings["OTHER_SWIFT_FLAGS"] || "$(inherited)"\n'
+              '        unless flags.include?("-strict-concurrency")\n'
+              '          config.build_settings["OTHER_SWIFT_FLAGS"] = flags + " -strict-concurrency=minimal"\n'
+              '        end\n'
+              '        dt = config.build_settings["IPHONEOS_DEPLOYMENT_TARGET"].to_f\n'
+              '        config.build_settings["IPHONEOS_DEPLOYMENT_TARGET"] = "12.0" if dt < 12.0\n'
+              '        config.build_settings["GCC_WARN_ABOUT_DEPRECATED_FUNCTIONS"] = "NO"\n'
+              "      end\n"
+              "    end\n"
+              "    # -- end CI patches --\n"
+          )
+
+          patched = src[: eol + 1] + patch + src[eol + 1 :]
+
+          with open(path, "w") as f:
+              f.write(patched)
+
+          print("Podfile patched successfully")
+          PYEOF
           echo "--- Podfile post_install section ---"
           grep -A 35 'post_install' apps/mobile/ios/Podfile | head -40
 
@@ -84,7 +338,7 @@ jobs:
 
       - name: Restore CocoaPods cache
         id: cocoapods-cache-restore
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v4
         with:
           path: |
             apps/mobile/ios/Pods
@@ -100,7 +354,7 @@ jobs:
 
       - name: Save CocoaPods cache
         if: steps.cocoapods-cache-restore.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v4
         with:
           path: |
             apps/mobile/ios/Pods
@@ -185,7 +439,7 @@ jobs:
         run: xcodebuild -version
 
       - name: Download simulator app artifact
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v5
         with:
           name: emberchamber-ios-beta
           path: .

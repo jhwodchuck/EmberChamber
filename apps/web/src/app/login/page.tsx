@@ -5,7 +5,8 @@ import { MarketingShell } from "@/components/marketing-shell";
 
 export const metadata: Metadata = {
   title: "Sign In",
-  description: "Request a private adults-only email magic link for an existing EmberChamber beta account.",
+  description:
+    "Request a private adults-only email magic link for an existing EmberChamber beta account.",
 };
 
 export default async function LoginPage({
@@ -15,7 +16,9 @@ export default async function LoginPage({
 }) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const continueTo =
-    typeof resolvedSearchParams?.next === "string" ? resolvedSearchParams.next : null;
+    typeof resolvedSearchParams?.next === "string"
+      ? resolvedSearchParams.next
+      : null;
 
   return (
     <MarketingShell>

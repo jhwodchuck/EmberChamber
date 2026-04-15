@@ -63,11 +63,13 @@ async function importPrivateKey(privateKeyPem: string): Promise<CryptoKey> {
       hash: "SHA-256",
     },
     false,
-    ["sign"]
+    ["sign"],
   );
 }
 
-async function mintJwtAssertion(serviceAccount: FcmServiceAccount): Promise<string> {
+async function mintJwtAssertion(
+  serviceAccount: FcmServiceAccount,
+): Promise<string> {
   const issuedAt = Math.floor(Date.now() / 1000);
   const expiresAt = issuedAt + 3600;
   const header = encodeJson({ alg: "RS256", typ: "JWT" });
@@ -83,7 +85,7 @@ async function mintJwtAssertion(serviceAccount: FcmServiceAccount): Promise<stri
   const signature = await crypto.subtle.sign(
     "RSASSA-PKCS1-v1_5",
     key,
-    new TextEncoder().encode(unsigned)
+    new TextEncoder().encode(unsigned),
   );
   return `${unsigned}.${encodeBytes(new Uint8Array(signature))}`;
 }
@@ -94,7 +96,11 @@ async function getAccessToken(serviceAccountJson: string): Promise<{
 }> {
   const serviceAccount = parseServiceAccount(serviceAccountJson);
   const cacheKey = `${serviceAccount.project_id}:${serviceAccount.client_email}`;
-  if (cachedAccessToken && cachedAccessToken.cacheKey === cacheKey && cachedAccessToken.expiresAtMs - 60_000 > Date.now()) {
+  if (
+    cachedAccessToken &&
+    cachedAccessToken.cacheKey === cacheKey &&
+    cachedAccessToken.expiresAtMs - 60_000 > Date.now()
+  ) {
     return {
       accessToken: cachedAccessToken.accessToken,
       projectId: serviceAccount.project_id,
@@ -102,20 +108,25 @@ async function getAccessToken(serviceAccountJson: string): Promise<{
   }
 
   const jwtAssertion = await mintJwtAssertion(serviceAccount);
-  const response = await fetch(serviceAccount.token_uri ?? "https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: {
-      "content-type": "application/x-www-form-urlencoded",
+  const response = await fetch(
+    serviceAccount.token_uri ?? "https://oauth2.googleapis.com/token",
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+        assertion: jwtAssertion,
+      }).toString(),
     },
-    body: new URLSearchParams({
-      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-      assertion: jwtAssertion,
-    }).toString(),
-  });
+  );
 
   const bodyText = await response.text();
   if (!response.ok) {
-    throw new Error(`Unable to mint Firebase access token (${response.status}): ${bodyText}`);
+    throw new Error(
+      `Unable to mint Firebase access token (${response.status}): ${bodyText}`,
+    );
   }
 
   const body = JSON.parse(bodyText) as {
@@ -123,7 +134,9 @@ async function getAccessToken(serviceAccountJson: string): Promise<{
     expires_in?: number;
   };
   if (!body.access_token) {
-    throw new Error("Firebase access token response did not include an access token.");
+    throw new Error(
+      "Firebase access token response did not include an access token.",
+    );
   }
 
   cachedAccessToken = {
@@ -148,13 +161,13 @@ function isInvalidTokenResponse(status: number, bodyText: string): boolean {
   }
 
   return /UNREGISTERED|registration token|Requested entity was not found|not a valid FCM registration token/i.test(
-    bodyText
+    bodyText,
   );
 }
 
 export async function sendFcmNotification(
   serviceAccountJson: string,
-  payload: FcmNotificationPayload
+  payload: FcmNotificationPayload,
 ): Promise<{
   ok: boolean;
   invalidToken: boolean;
@@ -162,34 +175,37 @@ export async function sendFcmNotification(
   bodyText: string;
 }> {
   const { accessToken, projectId } = await getAccessToken(serviceAccountJson);
-  const response = await fetch(`https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`, {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${accessToken}`,
-      "content-type": "application/json; charset=utf-8",
-    },
-    body: JSON.stringify({
-      message: {
-        token: payload.token,
-        notification: {
-          title: payload.title,
-          body: payload.body,
-        },
-        data: payload.data,
-        android: {
-          priority: "HIGH",
-          ttl: `${Math.max(30, payload.ttlSeconds ?? 90)}s`,
-          collapseKey: payload.collapseKey,
-          restrictedPackageName: payload.restrictedPackageName,
+  const response = await fetch(
+    `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
+    {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        "content-type": "application/json; charset=utf-8",
+      },
+      body: JSON.stringify({
+        message: {
+          token: payload.token,
           notification: {
-            channelId: "messages",
-            defaultSound: true,
-            clickAction: "DEFAULT",
+            title: payload.title,
+            body: payload.body,
+          },
+          data: payload.data,
+          android: {
+            priority: "HIGH",
+            ttl: `${Math.max(30, payload.ttlSeconds ?? 90)}s`,
+            collapseKey: payload.collapseKey,
+            restrictedPackageName: payload.restrictedPackageName,
+            notification: {
+              channelId: "messages",
+              defaultSound: true,
+              clickAction: "DEFAULT",
+            },
           },
         },
-      },
-    }),
-  });
+      }),
+    },
+  );
 
   const bodyText = await response.text();
   return {

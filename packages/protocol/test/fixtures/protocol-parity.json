@@ -31,10 +31,7 @@
     "previewBlurHash": "LKO2?U%2Tw=w]~RBVZRi};RPxuwH"
   },
   "mailboxAck": {
-    "envelopeIds": [
-      "env-1",
-      "env-2"
-    ]
+    "envelopeIds": ["env-1", "env-2"]
   },
   "envelopeBatch": {
     "cursor": {
@@ -49,9 +46,7 @@
         "senderDeviceId": "33333333-3333-4333-8333-333333333333",
         "recipientDeviceId": "77777777-7777-4777-8777-777777777777",
         "ciphertext": "ciphertext-payload",
-        "attachmentIds": [
-          "attachment-1"
-        ],
+        "attachmentIds": ["attachment-1"],
         "clientMessageId": "client-msg-1",
         "createdAt": "2026-04-06T12:01:00Z",
         "expiresAt": "2026-04-06T13:01:00Z"
@@ -280,9 +275,7 @@
     "targetAccountId": "99999999-9999-4999-8999-999999999999",
     "targetAttachmentId": "attachment-1",
     "reason": "harassment",
-    "evidenceMessageIds": [
-      "message-1"
-    ],
+    "evidenceMessageIds": ["message-1"],
     "disclosedPayload": {
       "excerpt": "See attached",
       "source": "manual_report"

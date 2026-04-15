@@ -41,7 +41,7 @@ router.get("/", async (req: AuthRequest, res: Response, next) => {
                @@ plainto_tsquery('english', $1)
          ORDER BY member_count DESC
          LIMIT $2`,
-        [search, limit]
+        [search, limit],
       );
     } else {
       channels = await query(
@@ -50,7 +50,7 @@ router.get("/", async (req: AuthRequest, res: Response, next) => {
          WHERE visibility = 'public' AND archived_at IS NULL
          ORDER BY member_count DESC
          LIMIT $1`,
-        [limit]
+        [limit],
       );
     }
 
@@ -71,7 +71,7 @@ router.get("/me", async (req: AuthRequest, res: Response, next) => {
        INNER JOIN channel_members cm ON cm.channel_id = c.id
        WHERE cm.user_id = $1 AND cm.left_at IS NULL AND c.archived_at IS NULL
        ORDER BY c.updated_at DESC`,
-      [req.userId]
+      [req.userId],
     );
 
     res.json({ data: channels });
@@ -97,7 +97,7 @@ router.post("/", async (req: AuthRequest, res: Response, next) => {
       let finalSlug = slug;
       const existing = await client.query(
         "SELECT id FROM channels WHERE slug = $1",
-        [slug]
+        [slug],
       );
       if (existing.rows.length > 0) {
         finalSlug = `${slug}-${Date.now()}`;
@@ -107,7 +107,13 @@ router.post("/", async (req: AuthRequest, res: Response, next) => {
         `INSERT INTO channels (name, slug, description, visibility, owner_id, member_count)
          VALUES ($1, $2, $3, $4, $5, 1)
          RETURNING id, name, slug, description, visibility, created_at`,
-        [body.name, finalSlug, body.description ?? null, body.visibility, req.userId]
+        [
+          body.name,
+          finalSlug,
+          body.description ?? null,
+          body.visibility,
+          req.userId,
+        ],
       );
       const channel = rows[0];
 
@@ -115,7 +121,7 @@ router.post("/", async (req: AuthRequest, res: Response, next) => {
       await client.query(
         `INSERT INTO channel_members (channel_id, user_id, role)
          VALUES ($1, $2, 'owner')`,
-        [channel.id, req.userId]
+        [channel.id, req.userId],
       );
 
       return channel;
@@ -147,7 +153,7 @@ router.get("/:id", async (req: AuthRequest, res: Response, next) => {
       `SELECT id, name, slug, description, avatar_url, visibility, owner_id,
               member_count, post_count, created_at
        FROM channels WHERE id = $1 AND archived_at IS NULL`,
-      [id]
+      [id],
     );
 
     if (!channel) throw createError("Channel not found", 404);
@@ -157,7 +163,7 @@ router.get("/:id", async (req: AuthRequest, res: Response, next) => {
       const member = await queryOne(
         `SELECT id FROM channel_members
          WHERE channel_id = $1 AND user_id = $2 AND left_at IS NULL`,
-        [id, req.userId]
+        [id, req.userId],
       );
       if (!member) throw createError("Channel not found", 404);
     }
@@ -166,7 +172,7 @@ router.get("/:id", async (req: AuthRequest, res: Response, next) => {
     const myMembership = await queryOne<{ role: string }>(
       `SELECT role FROM channel_members
        WHERE channel_id = $1 AND user_id = $2 AND left_at IS NULL`,
-      [id, req.userId]
+      [id, req.userId],
     );
 
     res.json({ data: { ...channel, myRole: myMembership?.role ?? null } });
@@ -184,7 +190,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next) => {
     const member = await queryOne<{ role: string }>(
       `SELECT role FROM channel_members
        WHERE channel_id = $1 AND user_id = $2 AND left_at IS NULL`,
-      [id, req.userId]
+      [id, req.userId],
     );
 
     if (!member) throw createError("Channel not found", 404);
@@ -216,7 +222,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next) => {
 
     await query(
       `UPDATE channels SET ${updates.join(", ")} WHERE id = $${paramIdx}`,
-      params
+      params,
     );
 
     res.json({ data: { message: "Updated" } });
@@ -232,12 +238,16 @@ router.post("/:id/join", async (req: AuthRequest, res: Response, next) => {
 
     const channel = await queryOne<{ id: string; visibility: string }>(
       "SELECT id, visibility FROM channels WHERE id = $1 AND archived_at IS NULL",
-      [id]
+      [id],
     );
 
     if (!channel) throw createError("Channel not found", 404);
     if (channel.visibility === "private") {
-      throw createError("This channel requires an invite", 403, "INVITE_REQUIRED");
+      throw createError(
+        "This channel requires an invite",
+        403,
+        "INVITE_REQUIRED",
+      );
     }
 
     await withTransaction(async (client) => {
@@ -245,12 +255,12 @@ router.post("/:id/join", async (req: AuthRequest, res: Response, next) => {
         `INSERT INTO channel_members (channel_id, user_id, role)
          VALUES ($1, $2, 'subscriber')
          ON CONFLICT (channel_id, user_id) DO UPDATE SET left_at = NULL`,
-        [id, req.userId]
+        [id, req.userId],
       );
 
       await client.query(
         "UPDATE channels SET member_count = member_count + 1 WHERE id = $1",
-        [id]
+        [id],
       );
     });
 
@@ -268,7 +278,7 @@ router.post("/:id/leave", async (req: AuthRequest, res: Response, next) => {
     const member = await queryOne<{ role: string }>(
       `SELECT role FROM channel_members
        WHERE channel_id = $1 AND user_id = $2 AND left_at IS NULL`,
-      [id, req.userId]
+      [id, req.userId],
     );
 
     if (!member) throw createError("Not a member", 404);
@@ -280,12 +290,12 @@ router.post("/:id/leave", async (req: AuthRequest, res: Response, next) => {
       await client.query(
         `UPDATE channel_members SET left_at = NOW()
          WHERE channel_id = $1 AND user_id = $2`,
-        [id, req.userId]
+        [id, req.userId],
       );
 
       await client.query(
         "UPDATE channels SET member_count = GREATEST(0, member_count - 1) WHERE id = $1",
-        [id]
+        [id],
       );
     });
 
@@ -304,7 +314,7 @@ router.get("/:id/posts", async (req: AuthRequest, res: Response, next) => {
 
     const channel = await queryOne<{ visibility: string }>(
       "SELECT visibility FROM channels WHERE id = $1 AND archived_at IS NULL",
-      [id]
+      [id],
     );
 
     if (!channel) throw createError("Channel not found", 404);
@@ -313,7 +323,7 @@ router.get("/:id/posts", async (req: AuthRequest, res: Response, next) => {
       const member = await queryOne(
         `SELECT id FROM channel_members
          WHERE channel_id = $1 AND user_id = $2 AND left_at IS NULL`,
-        [id, req.userId]
+        [id, req.userId],
       );
       if (!member) throw createError("Channel not found", 404);
     }
@@ -329,7 +339,7 @@ router.get("/:id/posts", async (req: AuthRequest, res: Response, next) => {
          ${before ? "AND p.created_at < $3" : ""}
        ORDER BY p.created_at DESC
        LIMIT $2`,
-      before ? [id, limit, before] : [id, limit]
+      before ? [id, limit, before] : [id, limit],
     );
 
     res.json({ data: posts.reverse() });
@@ -351,14 +361,18 @@ router.post("/:id/posts", async (req: AuthRequest, res: Response, next) => {
     const member = await queryOne<{ role: string }>(
       `SELECT role FROM channel_members
        WHERE channel_id = $1 AND user_id = $2 AND left_at IS NULL`,
-      [id, req.userId]
+      [id, req.userId],
     );
 
     if (!member) throw createError("Not a member", 403);
 
     // Only owner/admin/moderator can post
     if (!["owner", "admin", "moderator"].includes(member.role)) {
-      throw createError("Only channel administrators can post", 403, "NOT_PUBLISHER");
+      throw createError(
+        "Only channel administrators can post",
+        403,
+        "NOT_PUBLISHER",
+      );
     }
 
     const post = await withTransaction(async (client) => {
@@ -366,20 +380,20 @@ router.post("/:id/posts", async (req: AuthRequest, res: Response, next) => {
         `INSERT INTO channel_posts (channel_id, author_id, content, attachment_id)
          VALUES ($1, $2, $3, $4)
          RETURNING id, channel_id, author_id, content, attachment_id, created_at`,
-        [id, req.userId, body.content ?? null, body.attachmentId ?? null]
+        [id, req.userId, body.content ?? null, body.attachmentId ?? null],
       );
 
       await client.query(
         `UPDATE channels SET post_count = post_count + 1, updated_at = NOW()
          WHERE id = $1`,
-        [id]
+        [id],
       );
 
       const author = await client.query(
         `SELECT username, display_name, avatar_url
          FROM users
          WHERE id = $1`,
-        [req.userId]
+        [req.userId],
       );
 
       return {
@@ -397,7 +411,7 @@ router.post("/:id/posts", async (req: AuthRequest, res: Response, next) => {
         type: "channel.post.new",
         payload: post,
         timestamp: new Date().toISOString(),
-      })
+      }),
     );
 
     res.status(201).json({ data: post });
@@ -416,7 +430,7 @@ router.delete(
       const post = await queryOne<{ author_id: string }>(
         `SELECT author_id FROM channel_posts
          WHERE id = $1 AND channel_id = $2 AND deleted_at IS NULL`,
-        [postId, id]
+        [postId, id],
       );
 
       if (!post) throw createError("Post not found", 404);
@@ -424,7 +438,7 @@ router.delete(
       const member = await queryOne<{ role: string }>(
         `SELECT role FROM channel_members
          WHERE channel_id = $1 AND user_id = $2 AND left_at IS NULL`,
-        [id, req.userId]
+        [id, req.userId],
       );
 
       const canDelete =
@@ -433,16 +447,15 @@ router.delete(
 
       if (!canDelete) throw createError("Cannot delete this post", 403);
 
-      await query(
-        "UPDATE channel_posts SET deleted_at = NOW() WHERE id = $1",
-        [postId]
-      );
+      await query("UPDATE channel_posts SET deleted_at = NOW() WHERE id = $1", [
+        postId,
+      ]);
 
       res.json({ data: { message: "Deleted" } });
     } catch (err) {
       next(err);
     }
-  }
+  },
 );
 
 export default router;

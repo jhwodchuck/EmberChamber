@@ -1,10 +1,7 @@
 import * as SQLite from "expo-sqlite";
 import { useCallback, useEffect, useState } from "react";
 import type { AuthSession } from "../types";
-import {
-  loadRelayStateValue,
-  saveRelayStateValue,
-} from "../lib/db";
+import { loadRelayStateValue, saveRelayStateValue } from "../lib/db";
 import {
   defaultMainShellState,
   getMainShellActiveTabKey,
@@ -30,7 +27,9 @@ export function usePersistedMainShellState({
   const [mainShellState, setMainShellState] = useState<PersistedMainShellState>(
     defaultMainShellState,
   );
-  const [restoredConversationId, setRestoredConversationId] = useState<string | null>(null);
+  const [restoredConversationId, setRestoredConversationId] = useState<
+    string | null
+  >(null);
   const [restoredConversationAnchorId, setRestoredConversationAnchorId] =
     useState<string | null>(null);
   const [isMainShellReady, setIsMainShellReady] = useState(false);
@@ -105,7 +104,10 @@ export function usePersistedMainShellState({
           loadRelayStateValue(db, getMainShellActiveTabKey(session.accountId)),
           loadRelayStateValue(db, getMainShellChatViewKey(session.accountId)),
           loadRelayStateValue(db, getMainShellChatFilterKey(session.accountId)),
-          loadRelayStateValue(db, getMainShellLastConversationKey(session.accountId)),
+          loadRelayStateValue(
+            db,
+            getMainShellLastConversationKey(session.accountId),
+          ),
         ]);
 
       if (cancelled) {

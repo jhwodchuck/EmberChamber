@@ -3,11 +3,16 @@ import Link from "next/link";
 import { CopyButton } from "@/components/copy-button";
 import { PrivacyBoundaryMatrix } from "@/components/privacy-boundary-matrix";
 import { MarketingShell } from "@/components/marketing-shell";
-import { githubIssuesUrl, privacyBoundaryItems, supportEmail } from "@/lib/site";
+import {
+  githubIssuesUrl,
+  privacyBoundaryItems,
+  supportEmail,
+} from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Support",
-  description: "Get help with EmberChamber beta access, invites, and app issues.",
+  description:
+    "Get help with EmberChamber beta access, invites, and app issues.",
 };
 
 const supportTracks = [
@@ -90,9 +95,16 @@ export default function SupportPage() {
 
           <div className="mt-8 grid gap-4 lg:grid-cols-3">
             {supportDecisionTree.map((item) => (
-              <div key={item.title} className="rounded-[1.35rem] border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
-                <p className="text-sm font-semibold text-[var(--text-primary)]">{item.title}</p>
-                <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{item.body}</p>
+              <div
+                key={item.title}
+                className="rounded-[1.35rem] border border-[var(--border)] bg-[var(--bg-secondary)] p-4"
+              >
+                <p className="text-sm font-semibold text-[var(--text-primary)]">
+                  {item.title}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                  {item.body}
+                </p>
                 <div className="mt-4">
                   <Link href={item.href} className="btn-ghost">
                     {item.label}
@@ -104,17 +116,27 @@ export default function SupportPage() {
 
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
             {quickAnswers.map((qa) => (
-              <div key={qa.question} className="rounded-[1.35rem] border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
-                <p className="text-sm font-semibold text-[var(--text-primary)]">{qa.question}</p>
-                <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{qa.answer}</p>
+              <div
+                key={qa.question}
+                className="rounded-[1.35rem] border border-[var(--border)] bg-[var(--bg-secondary)] p-4"
+              >
+                <p className="text-sm font-semibold text-[var(--text-primary)]">
+                  {qa.question}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                  {qa.answer}
+                </p>
               </div>
             ))}
           </div>
 
           <div className="mt-8 border-t border-[var(--border)] pt-8">
-            <p className="text-base font-semibold text-[var(--text-primary)]">Still need help?</p>
+            <p className="text-base font-semibold text-[var(--text-primary)]">
+              Still need help?
+            </p>
             <p className="mt-1 text-sm text-[var(--text-secondary)]">
-              Email us directly — it&apos;s the fastest path. Expect a reply within 1–2 business days.
+              Email us directly — it&apos;s the fastest path. Expect a reply
+              within 1–2 business days.
             </p>
           </div>
 
@@ -122,24 +144,36 @@ export default function SupportPage() {
             <a href={`mailto:${supportEmail}`} className="btn-primary">
               Email Support
             </a>
-            <CopyButton value={supportEmail} label="Copy Support Email" successMessage="Support email copied" />
+            <CopyButton
+              value={supportEmail}
+              label="Copy Support Email"
+              successMessage="Support email copied"
+            />
             <p className="text-sm text-[var(--text-secondary)]">
-              <span className="select-all font-medium text-[var(--text-primary)]">{supportEmail}</span>
+              <span className="select-all font-medium text-[var(--text-primary)]">
+                {supportEmail}
+              </span>
             </p>
           </div>
 
           <div className="mt-10 grid gap-5 lg:grid-cols-3">
             {supportTracks.map((track) => (
               <div key={track.title} className="card h-full">
-                <h2 className="text-lg font-semibold text-[var(--text-primary)]">{track.title}</h2>
-                <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{track.body}</p>
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+                  {track.title}
+                </h2>
+                <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+                  {track.body}
+                </p>
               </div>
             ))}
           </div>
 
           <div className="mt-10 grid gap-5 lg:grid-cols-2">
             <div className="card">
-              <h2 className="text-lg font-semibold text-[var(--text-primary)]">What to include</h2>
+              <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+                What to include
+              </h2>
               <ul className="mt-3 space-y-2 text-sm leading-6 text-[var(--text-secondary)]">
                 <li>The full URL where the failure happened.</li>
                 <li>Approximate time (UTC if you know it).</li>
@@ -147,26 +181,37 @@ export default function SupportPage() {
                 <li>Whether it reproduces after a page refresh.</li>
               </ul>
               <div className="mt-4">
-                <CopyButton value={bugReportTemplate} label="Copy Bug Template" successMessage="Bug template copied" />
+                <CopyButton
+                  value={bugReportTemplate}
+                  label="Copy Bug Template"
+                  successMessage="Bug template copied"
+                />
               </div>
             </div>
 
             <div className="card">
-              <h2 className="text-lg font-semibold text-[var(--text-primary)]">Invite codes that aren&apos;t working</h2>
+              <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+                Invite codes that aren&apos;t working
+              </h2>
               <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-                Codes can expire or run out of uses. Confirm with whoever sent yours that it&apos;s still
-                valid, then email support with the code. We can look it up on our end.
+                Codes can expire or run out of uses. Confirm with whoever sent
+                yours that it&apos;s still valid, then email support with the
+                code. We can look it up on our end.
               </p>
             </div>
           </div>
 
           <div className="mt-10 border-t border-[var(--border)] pt-8">
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]">Privacy boundary today</h2>
+            <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+              Privacy boundary today
+            </h2>
             <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-              The shortest accurate answer is that private keys, DM history, private-content
-              search, and new device-encrypted group history stay device-centered, while the hosted
-              beta still keeps account metadata, signed attachment storage, and a few legacy
-              compatibility paths. Browser and native attachment handling are not uniform yet.
+              The shortest accurate answer is that private keys, DM history,
+              private-content search, and new device-encrypted group history
+              stay device-centered, while the hosted beta still keeps account
+              metadata, signed attachment storage, and a few legacy
+              compatibility paths. Browser and native attachment handling are
+              not uniform yet.
             </p>
             <div className="mt-5">
               <PrivacyBoundaryMatrix items={privacyBoundaryItems.slice(0, 5)} />

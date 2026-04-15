@@ -21,9 +21,21 @@ export const defaultPrivacyDefaults: PrivacyDefaults = {
 };
 
 export const onboardingSteps = [
-  { number: "01", title: "Bring the invite you got", body: "A trusted group invite can bootstrap the account and land you in the right circle." },
-  { number: "02", title: "Confirm adults-only access", body: "EmberChamber beta access is limited to adults 18 and over with a clear self-attested gate." },
-  { number: "03", title: "Use the inbox you control", body: "Email stays private and only handles sign-in plus recovery." },
+  {
+    number: "01",
+    title: "Bring the invite you got",
+    body: "A trusted group invite can bootstrap the account and land you in the right circle.",
+  },
+  {
+    number: "02",
+    title: "Confirm adults-only access",
+    body: "EmberChamber beta access is limited to adults 18 and over with a clear self-attested gate.",
+  },
+  {
+    number: "03",
+    title: "Use the inbox you control",
+    body: "Email stays private and only handles sign-in plus recovery.",
+  },
 ] as const;
 
 export const onboardingAssurances = [

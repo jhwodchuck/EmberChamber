@@ -1,96 +1,168 @@
-import { useState } from "react";
-import { ActivityIndicator, Clipboard, Image, Linking, Pressable, Text, View } from "react-native";
+import { useEffect, useState, type ReactNode } from "react";
+import {
+  ActivityIndicator,
+  Clipboard,
+  Image,
+  Linking,
+  Pressable,
+  Text,
+  View,
+} from "react-native";
+import {
+  parseFormattedMessage,
+  type FormattedBlockNode,
+  type FormattedInlineNode,
+} from "@emberchamber/shared";
 import type { GroupThreadMessage } from "../types";
 import { formatBytes, parseSharedLocation } from "../lib/utils";
 import { styles, theme } from "../styles";
 import { ImageViewerModal } from "./ImageViewerModal";
-import { MessageContextMenu, type ContextMenuAction } from "./MessageContextMenu";
+import {
+  MessageContextMenu,
+  type ContextMenuAction,
+} from "./MessageContextMenu";
 import { useAttachmentManager } from "../hooks/useAttachmentManager";
 
-// ---------------------------------------------------------------------------
-// Lightweight inline markdown renderer
-// Bold **x**, italic _x_, inline `code`.
-// ---------------------------------------------------------------------------
-function renderMarkdown(text: string, keyPrefix = "md"): React.ReactNode[] {
-  // Split on bold, italic, code markers in order of precedence
-  const parts: React.ReactNode[] = [];
-  const re = /(\*\*(.+?)\*\*|_(.+?)_|`(.+?)`)/g;
-  let last = 0;
-  let m: RegExpExecArray | null;
-  let key = 0;
+type InlineRenderOptions = {
+  onOpenUrl: (url: string) => void;
+  isSpoilerRevealed: (spoilerId: string) => boolean;
+  onRevealSpoiler: (spoilerId: string) => void;
+};
 
-  while ((m = re.exec(text)) !== null) {
-    if (m.index > last) {
-      parts.push(text.slice(last, m.index));
-    }
-    if (m[2] !== undefined) {
-      parts.push(<Text key={`${keyPrefix}-${key++}`} style={{ fontWeight: "700" }}>{m[2]}</Text>);
-    } else if (m[3] !== undefined) {
-      parts.push(<Text key={`${keyPrefix}-${key++}`} style={{ fontStyle: "italic" }}>{m[3]}</Text>);
-    } else if (m[4] !== undefined) {
-      parts.push(
-        <Text key={`${keyPrefix}-${key++}`} style={{ fontFamily: "monospace", backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 4 }}>
-          {m[4]}
+function renderInlineNode(
+  node: FormattedInlineNode,
+  key: string,
+  options: InlineRenderOptions,
+): ReactNode {
+  switch (node.type) {
+    case "text":
+      return node.text;
+    case "link":
+      return (
+        <Text
+          key={key}
+          style={styles.inlineLink}
+          onPress={() => options.onOpenUrl(node.url)}
+        >
+          {node.text}
         </Text>
       );
-    }
-    last = m.index + m[0].length;
+    case "code":
+      return (
+        <Text key={key} style={styles.inlineCode}>
+          {node.text}
+        </Text>
+      );
+    case "mention":
+      return (
+        <Text key={key} style={styles.inlineMention}>
+          {node.text}
+        </Text>
+      );
+    case "spoiler":
+      if (!options.isSpoilerRevealed(key)) {
+        return (
+          <Text
+            key={key}
+            style={styles.inlineSpoiler}
+            suppressHighlighting
+            onPress={() => options.onRevealSpoiler(key)}
+          >
+            Spoiler
+          </Text>
+        );
+      }
+
+      return (
+        <Text key={key} style={styles.inlineSpoilerRevealed}>
+          {renderInlineNodes(node.children, `${key}-spoiler`, options)}
+        </Text>
+      );
+    case "bold":
+      return (
+        <Text key={key} style={styles.inlineBold}>
+          {renderInlineNodes(node.children, `${key}-bold`, options)}
+        </Text>
+      );
+    case "italic":
+      return (
+        <Text key={key} style={styles.inlineItalic}>
+          {renderInlineNodes(node.children, `${key}-italic`, options)}
+        </Text>
+      );
+    case "strikethrough":
+      return (
+        <Text key={key} style={styles.inlineStrikethrough}>
+          {renderInlineNodes(node.children, `${key}-strike`, options)}
+        </Text>
+      );
   }
-  if (last < text.length) parts.push(text.slice(last));
-  return parts;
 }
 
-function renderMessageText(text: string, onOpenUrl: (url: string) => void): React.ReactNode[] {
-  const parts: React.ReactNode[] = [];
-  const urlPattern = /\bhttps?:\/\/[^\s<>"']+[^\s<>"'.,!?;:)]/gi;
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-  let key = 0;
-
-  while ((match = urlPattern.exec(text)) !== null) {
-    const rawUrl = match[0];
-    const trailingPunctuation = rawUrl.match(/[.,!?;:)]*$/)?.[0] || "";
-    const cleanUrl = trailingPunctuation ? rawUrl.slice(0, -trailingPunctuation.length) : rawUrl;
-
-    if (match.index > lastIndex) {
-      parts.push(...renderMarkdown(text.slice(lastIndex, match.index), `md-${key}`));
-    }
-
-    parts.push(
-      <Text key={`link-${key++}`} style={styles.inlineLink} onPress={() => onOpenUrl(cleanUrl)}>
-        {cleanUrl}
-      </Text>
-    );
-
-    if (trailingPunctuation) {
-      parts.push(trailingPunctuation);
-    }
-
-    lastIndex = match.index + rawUrl.length;
-  }
-
-  if (lastIndex < text.length) {
-    parts.push(...renderMarkdown(text.slice(lastIndex), `md-tail-${key}`));
-  }
-
-  return parts;
+function renderInlineNodes(
+  nodes: FormattedInlineNode[],
+  keyPrefix: string,
+  options: InlineRenderOptions,
+): ReactNode[] {
+  return nodes.map((node, index) =>
+    renderInlineNode(node, `${keyPrefix}-${index}`, options),
+  );
 }
 
-// ---------------------------------------------------------------------------
+function renderFormattedBlocks(
+  blocks: FormattedBlockNode[],
+  keyPrefix: string,
+  options: InlineRenderOptions,
+) {
+  return blocks.map((block, index) => {
+    const key = `${keyPrefix}-${index}`;
+
+    switch (block.type) {
+      case "paragraph":
+        return (
+          <Text key={key} style={styles.messageText}>
+            {renderInlineNodes(block.children, `${key}-inline`, options)}
+          </Text>
+        );
+      case "quote":
+        return (
+          <View key={key} style={styles.quoteBlock}>
+            <Text style={styles.quoteText}>
+              {renderInlineNodes(block.children, `${key}-quote`, options)}
+            </Text>
+          </View>
+        );
+      case "codeBlock":
+        return (
+          <View key={key} style={styles.codeBlock}>
+            <Text style={styles.codeBlockText}>{block.text}</Text>
+          </View>
+        );
+    }
+  });
+}
 
 export function MessageBubble({
   message,
   isOwnMessage,
   onImageError,
   onAction,
+  onResolveAttachmentAccess,
 }: {
   message: GroupThreadMessage;
   isOwnMessage: boolean;
   onImageError?: (messageId: string) => void;
   onAction?: (messageId: string, action: ContextMenuAction) => void;
+  onResolveAttachmentAccess?: (
+    messageId: string,
+    attachment: NonNullable<GroupThreadMessage["attachment"]>,
+  ) => Promise<NonNullable<GroupThreadMessage["attachment"]> | null>;
 }) {
   const [menuVisible, setMenuVisible] = useState(false);
   const [viewerVisible, setViewerVisible] = useState(false);
+  const [revealedSpoilers, setRevealedSpoilers] = useState<
+    Record<string, true>
+  >({});
 
   async function handleOpenUrl(url: string) {
     try {
@@ -100,21 +172,91 @@ export function MessageBubble({
     }
   }
 
+  function isSpoilerRevealed(spoilerId: string) {
+    return Boolean(revealedSpoilers[spoilerId]);
+  }
+
+  function handleRevealSpoiler(spoilerId: string) {
+    setRevealedSpoilers((current) => {
+      if (current[spoilerId]) {
+        return current;
+      }
+
+      return {
+        ...current,
+        [spoilerId]: true,
+      };
+    });
+  }
+
+  const inlineRenderOptions = {
+    onOpenUrl: handleOpenUrl,
+    isSpoilerRevealed,
+    onRevealSpoiler: handleRevealSpoiler,
+  };
+
   if (message.kind === "system_notice") {
     return (
       <View style={styles.systemMessageCard}>
-        <Text style={styles.systemMessageText}>
-          {renderMessageText(message.text ?? "System notice", handleOpenUrl)}
-        </Text>
+        <View style={styles.formattedMessage}>
+          {renderFormattedBlocks(
+            parseFormattedMessage(message.text ?? "System notice"),
+            "system",
+            inlineRenderOptions,
+          )}
+        </View>
       </View>
     );
   }
 
   const hasText = Boolean(message.text?.trim());
+  const formattedBlocks = hasText
+    ? parseFormattedMessage(message.text ?? "")
+    : [];
   const attachment = message.attachment;
   const isImage = attachment?.contentClass === "image";
-  const sharedLocation = hasText && !attachment ? parseSharedLocation(message.text!) : null;
-  const attachmentManager = useAttachmentManager(attachment ?? null);
+  const sharedLocation =
+    hasText && !attachment ? parseSharedLocation(message.text!) : null;
+  const resolveAttachmentAccess =
+    attachment && onResolveAttachmentAccess
+      ? () => onResolveAttachmentAccess(message.id, attachment)
+      : undefined;
+  const attachmentManager = useAttachmentManager(
+    attachment ?? null,
+    resolveAttachmentAccess,
+  );
+  const shouldAutoloadEncryptedImagePreview = Boolean(
+    isImage &&
+      attachment?.encryptionMode === "device_encrypted" &&
+      attachment.protectionProfile !== "sensitive_media",
+  );
+  const inlineImageUri =
+    attachment?.encryptionMode === "device_encrypted"
+      ? attachmentManager.resolvedUri
+      : attachment?.downloadUrl;
+
+  useEffect(() => {
+    if (!shouldAutoloadEncryptedImagePreview) {
+      return;
+    }
+
+    if (
+      attachmentManager.resolvedUri ||
+      attachmentManager.isBusy ||
+      attachmentManager.status === "ready" ||
+      attachmentManager.status === "failed"
+    ) {
+      return;
+    }
+
+    void attachmentManager.prepareForPreview();
+  }, [
+    attachmentManager.isBusy,
+    attachmentManager.prepareForPreview,
+    attachmentManager.resolvedUri,
+    attachmentManager.status,
+    shouldAutoloadEncryptedImagePreview,
+  ]);
 
   async function handleOpenAttachment() {
     await attachmentManager.openExternally();
@@ -139,7 +281,12 @@ export function MessageBubble({
         delayLongPress={300}
         style={[styles.messageRow, isOwnMessage ? styles.messageRowOwn : null]}
       >
-        <View style={[styles.messageBubble, isOwnMessage ? styles.messageBubbleOwn : null]}>
+        <View
+          style={[
+            styles.messageBubble,
+            isOwnMessage ? styles.messageBubbleOwn : null,
+          ]}
+        >
           <Text style={styles.messageMeta}>
             {isOwnMessage ? "You" : message.senderDisplayName}
             {" · "}
@@ -156,7 +303,10 @@ export function MessageBubble({
           </Text>
 
           {sharedLocation ? (
-            <Pressable style={styles.locationCard} onPress={() => void handleOpenLocation()}>
+            <Pressable
+              style={styles.locationCard}
+              onPress={() => void handleOpenLocation()}
+            >
               <View style={styles.locationMapFrame}>
                 <Image
                   source={{ uri: sharedLocation.tileUrl }}
@@ -175,23 +325,31 @@ export function MessageBubble({
               </View>
               <View style={styles.locationCardBody}>
                 <Text style={styles.locationTitle}>{sharedLocation.title}</Text>
-                <Text style={styles.locationDetail}>{sharedLocation.detailLabel}</Text>
+                <Text style={styles.locationDetail}>
+                  {sharedLocation.detailLabel}
+                </Text>
                 <View style={styles.locationActionRow}>
                   <Text style={styles.locationActionLabel}>Open map</Text>
-                  <Text style={styles.locationAttribution}>Map data © OpenStreetMap</Text>
+                  <Text style={styles.locationAttribution}>
+                    Map data © OpenStreetMap
+                  </Text>
                 </View>
               </View>
             </Pressable>
           ) : hasText ? (
-            <Text style={styles.messageText}>
-              {renderMessageText(message.text!, handleOpenUrl)}
-            </Text>
+            <View style={styles.formattedMessage}>
+              {renderFormattedBlocks(
+                formattedBlocks,
+                message.id,
+                inlineRenderOptions,
+              )}
+            </View>
           ) : null}
 
-          {isImage && attachment?.encryptionMode !== "device_encrypted" ? (
+          {isImage && inlineImageUri ? (
             <Pressable onPress={() => setViewerVisible(true)}>
               <Image
-                source={{ uri: attachment!.downloadUrl }}
+                source={{ uri: inlineImageUri }}
                 style={styles.messageImage}
                 resizeMode="cover"
                 onError={() => onImageError?.(message.id)}
@@ -199,7 +357,9 @@ export function MessageBubble({
             </Pressable>
           ) : null}
 
-          {isImage && attachment?.encryptionMode === "device_encrypted" ? (
+          {isImage &&
+          attachment?.encryptionMode === "device_encrypted" &&
+          !inlineImageUri ? (
             <Pressable onPress={() => setViewerVisible(true)}>
               <View
                 style={[
@@ -211,7 +371,17 @@ export function MessageBubble({
                   },
                 ]}
               >
-                <Text style={styles.attachmentMeta}>Tap to decrypt and view</Text>
+                {attachmentManager.isBusy ? (
+                  <ActivityIndicator
+                    size="small"
+                    color={theme.colors.textSoft}
+                    style={{ marginBottom: 8 }}
+                  />
+                ) : null}
+                <Text style={styles.attachmentMeta}>
+                  {attachmentManager.statusLabel ||
+                    "Tap to decrypt and view"}
+                </Text>
               </View>
             </Pressable>
           ) : null}
@@ -222,13 +392,18 @@ export function MessageBubble({
                 style={[
                   styles.secondaryButton,
                   styles.attachmentActionButton,
-                  attachmentManager.isBusy ? styles.primaryButtonDisabled : null,
+                  attachmentManager.isBusy
+                    ? styles.primaryButtonDisabled
+                    : null,
                 ]}
                 onPress={() => void handleOpenAttachment()}
                 disabled={attachmentManager.isBusy}
               >
                 {attachmentManager.isBusy ? (
-                  <ActivityIndicator size="small" color={theme.colors.textSoft} />
+                  <ActivityIndicator
+                    size="small"
+                    color={theme.colors.textSoft}
+                  />
                 ) : (
                   <Text style={styles.secondaryButtonLabel}>
                     {attachmentManager.actionLabel}
@@ -237,7 +412,9 @@ export function MessageBubble({
               </Pressable>
               {attachmentManager.error ? (
                 <>
-                  <Text style={styles.errorText}>{attachmentManager.error}</Text>
+                  <Text style={styles.errorText}>
+                    {attachmentManager.error}
+                  </Text>
                   {attachmentManager.canRetry ? (
                     <Pressable
                       style={styles.attachmentRetryButton}
@@ -252,8 +429,11 @@ export function MessageBubble({
                     </Pressable>
                   ) : null}
                 </>
-              ) : attachmentManager.statusLabel && attachmentManager.status !== "ready" ? (
-                <Text style={styles.helper}>{attachmentManager.statusLabel}</Text>
+              ) : attachmentManager.statusLabel &&
+                attachmentManager.status !== "ready" ? (
+                <Text style={styles.helper}>
+                  {attachmentManager.statusLabel}
+                </Text>
               ) : null}
             </View>
           ) : null}
@@ -286,6 +466,8 @@ export function MessageBubble({
       {isImage ? (
         <ImageViewerModal
           attachment={attachment ?? null}
+          plainUri={attachmentManager.resolvedUri}
+          resolveAttachmentAccess={resolveAttachmentAccess}
           visible={viewerVisible}
           onClose={() => setViewerVisible(false)}
         />

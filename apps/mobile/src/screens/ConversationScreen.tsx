@@ -28,8 +28,14 @@ import { MessageBubble } from "../components/MessageBubble";
 import type { ContextMenuAction } from "../components/MessageContextMenu";
 import { MemberRosterModal } from "../components/MemberRosterModal";
 import { MemberProfileSheet } from "../components/MemberProfileSheet";
-import { AttachMenuSheet, type AttachMenuAction } from "../components/AttachMenuSheet";
-import { LocationPickerSheet, type LocationChoice } from "../components/LocationPickerSheet";
+import {
+  AttachMenuSheet,
+  type AttachMenuAction,
+} from "../components/AttachMenuSheet";
+import {
+  LocationPickerSheet,
+  type LocationChoice,
+} from "../components/LocationPickerSheet";
 import { PollCreatorSheet } from "../components/PollCreatorSheet";
 import { ChecklistCreatorSheet } from "../components/ChecklistCreatorSheet";
 
@@ -52,7 +58,9 @@ function formatConversationDate(value: string) {
   });
 }
 
-function buildConversationRows(messages: GroupThreadMessage[]): ConversationRow[] {
+function buildConversationRows(
+  messages: GroupThreadMessage[],
+): ConversationRow[] {
   const rows: ConversationRow[] = [];
   let activeDate = "";
 
@@ -84,18 +92,38 @@ function conversationInitial(title: string) {
 
 function describePendingAttachment(attachment: PendingAttachment) {
   if (attachment.mimeType.startsWith("image/")) {
-    return { title: "Photo ready", previewLabel: "Photo preview", icon: "🖼️", isImage: true };
+    return {
+      title: "Photo ready",
+      previewLabel: "Photo preview",
+      icon: "🖼️",
+      isImage: true,
+    };
   }
 
   if (attachment.mimeType.startsWith("video/")) {
-    return { title: "Video ready", previewLabel: "Video attached", icon: "🎬", isImage: false };
+    return {
+      title: "Video ready",
+      previewLabel: "Video attached",
+      icon: "🎬",
+      isImage: false,
+    };
   }
 
   if (attachment.mimeType.startsWith("audio/")) {
-    return { title: "Audio ready", previewLabel: "Audio attached", icon: "🎤", isImage: false };
+    return {
+      title: "Audio ready",
+      previewLabel: "Audio attached",
+      icon: "🎤",
+      isImage: false,
+    };
   }
 
-  return { title: "File ready", previewLabel: "Attachment attached", icon: "📄", isImage: false };
+  return {
+    title: "File ready",
+    previewLabel: "Attachment attached",
+    icon: "📄",
+    isImage: false,
+  };
 }
 
 export type ConversationScreenProps = {
@@ -122,6 +150,10 @@ export type ConversationScreenProps = {
   restoredAnchorMessageId?: string | null;
   onAnchorMessageChange?: (messageId: string | null) => void;
   onImageError: (messageId: string) => void;
+  onResolveAttachmentAccess?: (
+    messageId: string,
+    attachment: NonNullable<GroupThreadMessage["attachment"]>,
+  ) => Promise<NonNullable<GroupThreadMessage["attachment"]> | null>;
   onMessageAction: (messageId: string, action: ContextMenuAction) => void;
   onUpdateGroup: (title: string, sensitiveMedia: boolean) => Promise<void>;
   onCreateInvite: () => Promise<GroupInviteRecord | null>;
@@ -160,6 +192,7 @@ export function ConversationScreen({
   restoredAnchorMessageId = null,
   onAnchorMessageChange,
   onImageError,
+  onResolveAttachmentAccess,
   onMessageAction,
   onUpdateGroup,
   onCreateInvite,
@@ -172,8 +205,11 @@ export function ConversationScreen({
   onOpenDm,
   onSendContactRequest,
 }: ConversationScreenProps) {
-  const sendDisabled = (!messageDraft.trim() && !pendingAttachment) || isSendingMessage;
-  const pendingAttachmentView = pendingAttachment ? describePendingAttachment(pendingAttachment) : null;
+  const sendDisabled =
+    (!messageDraft.trim() && !pendingAttachment) || isSendingMessage;
+  const pendingAttachmentView = pendingAttachment
+    ? describePendingAttachment(pendingAttachment)
+    : null;
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
@@ -181,7 +217,9 @@ export function ConversationScreen({
   const [checklistCreatorOpen, setChecklistCreatorOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTitle, setSettingsTitle] = useState(selectedGroup.title);
-  const [settingsSensitive, setSettingsSensitive] = useState(selectedGroup.sensitiveMediaDefault);
+  const [settingsSensitive, setSettingsSensitive] = useState(
+    selectedGroup.sensitiveMediaDefault,
+  );
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [newInvite, setNewInvite] = useState<GroupInviteRecord | null>(null);
@@ -203,7 +241,9 @@ export function ConversationScreen({
   });
   const appliedRestoreSignatureRef = useRef<string | null>(null);
   const lastReportedAnchorIdRef = useRef<string | null>(null);
-  const anchorChangeHandlerRef = useRef<typeof onAnchorMessageChange>(onAnchorMessageChange);
+  const anchorChangeHandlerRef = useRef<typeof onAnchorMessageChange>(
+    onAnchorMessageChange,
+  );
   const viewabilityConfigRef = useRef({ itemVisiblePercentThreshold: 60 });
   const onViewableItemsChangedRef = useRef(
     ({
@@ -256,7 +296,8 @@ export function ConversationScreen({
   }, [selectedGroup.id]);
 
   useEffect(() => {
-    const conversationChanged = previousConversationIdRef.current !== selectedGroup.id;
+    const conversationChanged =
+      previousConversationIdRef.current !== selectedGroup.id;
     const previousWindow = previousMessageWindowRef.current;
     const initialThreadLoad =
       !conversationChanged &&
@@ -305,7 +346,11 @@ export function ConversationScreen({
   ]);
 
   useEffect(() => {
-    if (!conversationRows.length || restoredAnchorIndex < 0 || !restoredAnchorMessageId) {
+    if (
+      !conversationRows.length ||
+      restoredAnchorIndex < 0 ||
+      !restoredAnchorMessageId
+    ) {
       return;
     }
 
@@ -329,7 +374,9 @@ export function ConversationScreen({
     selectedGroup.id,
   ]);
 
-  function handleConversationScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
+  function handleConversationScroll(
+    event: NativeSyntheticEvent<NativeScrollEvent>,
+  ) {
     const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
     const distanceFromBottom =
       contentSize.height - (contentOffset.y + layoutMeasurement.height);
@@ -458,18 +505,26 @@ export function ConversationScreen({
         </View>
 
         {selectedGroup.canCreateInvites || selectedGroup.canManageMembers ? (
-          <Pressable onPress={openSettings} style={styles.conversationOverflowButton}>
+          <Pressable
+            onPress={openSettings}
+            style={styles.conversationOverflowButton}
+          >
             <Text style={styles.conversationOverflowLabel}>More</Text>
           </Pressable>
         ) : null}
 
-        <Pressable onPress={openRoster} style={styles.conversationOverflowButton}>
+        <Pressable
+          onPress={openRoster}
+          style={styles.conversationOverflowButton}
+        >
           <Text style={styles.conversationOverflowLabel}>People</Text>
         </Pressable>
       </View>
 
       {isLoadingThread ? (
-        <View style={[styles.conversationMessages, styles.conversationLoadingState]}>
+        <View
+          style={[styles.conversationMessages, styles.conversationLoadingState]}
+        >
           <View style={styles.threadList}>
             <View style={styles.skeletonBubble} />
             <View style={[styles.skeletonBubble, styles.skeletonBubbleSoft]} />
@@ -498,8 +553,11 @@ export function ConversationScreen({
             ) : (
               <MessageBubble
                 message={item.message}
-                isOwnMessage={item.message.senderAccountId === session.accountId}
+                isOwnMessage={
+                  item.message.senderAccountId === session.accountId
+                }
                 onImageError={onImageError}
+                onResolveAttachmentAccess={onResolveAttachmentAccess}
                 onAction={onMessageAction}
               />
             )
@@ -529,7 +587,9 @@ export function ConversationScreen({
         {pendingAttachment && !editingMessageId ? (
           <View style={styles.pendingAttachmentCard}>
             <View style={styles.pendingAttachmentHeader}>
-              <Text style={styles.infoTitle}>{pendingAttachmentView?.title ?? "Attachment ready"}</Text>
+              <Text style={styles.infoTitle}>
+                {pendingAttachmentView?.title ?? "Attachment ready"}
+              </Text>
               <Pressable onPress={() => setPendingAttachment(null)}>
                 <Text style={styles.inlineAction}>Remove</Text>
               </Pressable>
@@ -551,14 +611,17 @@ export function ConversationScreen({
                   },
                 ]}
               >
-                <Text style={{ fontSize: 30 }}>{pendingAttachmentView?.icon ?? "📄"}</Text>
+                <Text style={{ fontSize: 30 }}>
+                  {pendingAttachmentView?.icon ?? "📄"}
+                </Text>
                 <Text style={styles.infoTitle}>
                   {pendingAttachmentView?.previewLabel ?? "Attachment attached"}
                 </Text>
               </View>
             )}
             <Text style={styles.helper}>
-              {pendingAttachment.fileName} · {formatBytes(pendingAttachment.byteLength || 0)}
+              {pendingAttachment.fileName} ·{" "}
+              {formatBytes(pendingAttachment.byteLength || 0)}
             </Text>
           </View>
         ) : null}
@@ -606,12 +669,24 @@ export function ConversationScreen({
         onClose={() => setAttachMenuOpen(false)}
         onSelect={(action: AttachMenuAction) => {
           switch (action) {
-            case "camera": onTakePhoto(); break;
-            case "gallery": onPickPhoto(); break;
-            case "file": onPickFile(); break;
-            case "location": setLocationPickerOpen(true); break;
-            case "poll": setPollCreatorOpen(true); break;
-            case "checklist": setChecklistCreatorOpen(true); break;
+            case "camera":
+              onTakePhoto();
+              break;
+            case "gallery":
+              onPickPhoto();
+              break;
+            case "file":
+              onPickFile();
+              break;
+            case "location":
+              setLocationPickerOpen(true);
+              break;
+            case "poll":
+              setPollCreatorOpen(true);
+              break;
+            case "checklist":
+              setChecklistCreatorOpen(true);
+              break;
           }
         }}
       />
@@ -648,7 +723,10 @@ export function ConversationScreen({
         onRequestClose={() => setSettingsOpen(false)}
         statusBarTranslucent
       >
-        <Pressable style={styles.modalOverlay} onPress={() => setSettingsOpen(false)}>
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setSettingsOpen(false)}
+        >
           <Pressable style={styles.modalSheet}>
             <Text style={styles.modalTitle}>Conversation</Text>
 
@@ -677,20 +755,29 @@ export function ConversationScreen({
                     settingsSensitive ? styles.checkboxBoxChecked : null,
                   ]}
                 >
-                  {settingsSensitive ? <Text style={styles.checkboxMark}>✓</Text> : null}
+                  {settingsSensitive ? (
+                    <Text style={styles.checkboxMark}>✓</Text>
+                  ) : null}
                 </View>
                 <View style={styles.checkboxCopy}>
                   <Text style={styles.label}>Sensitive media defaults</Text>
-                  <Text style={styles.helper}>New members start with blur enabled.</Text>
+                  <Text style={styles.helper}>
+                    New members start with blur enabled.
+                  </Text>
                 </View>
               </Pressable>
             ) : null}
 
-            {settingsError ? <Text style={styles.errorText}>{settingsError}</Text> : null}
+            {settingsError ? (
+              <Text style={styles.errorText}>{settingsError}</Text>
+            ) : null}
 
             {selectedGroup.canManageMembers ? (
               <Pressable
-                style={[styles.primaryButton, isSavingSettings ? styles.primaryButtonDisabled : null]}
+                style={[
+                  styles.primaryButton,
+                  isSavingSettings ? styles.primaryButtonDisabled : null,
+                ]}
                 onPress={handleSaveSettings}
                 disabled={isSavingSettings}
               >
@@ -704,7 +791,10 @@ export function ConversationScreen({
               <View style={styles.fieldBlock}>
                 <Text style={styles.label}>Invite</Text>
                 <Pressable
-                  style={[styles.secondaryButton, isCreatingInvite ? styles.primaryButtonDisabled : null]}
+                  style={[
+                    styles.secondaryButton,
+                    isCreatingInvite ? styles.primaryButtonDisabled : null,
+                  ]}
                   onPress={handleCreateInvite}
                   disabled={isCreatingInvite}
                 >

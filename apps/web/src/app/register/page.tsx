@@ -5,7 +5,8 @@ import { RegisterForm } from "@/components/register-form";
 
 export const metadata: Metadata = {
   title: "Join Beta",
-  description: "Start adults-only invite-only EmberChamber beta onboarding with a private email bootstrap.",
+  description:
+    "Start adults-only invite-only EmberChamber beta onboarding with a private email bootstrap.",
 };
 
 export default async function RegisterPage({
@@ -15,7 +16,9 @@ export default async function RegisterPage({
 }) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const continueTo =
-    typeof resolvedSearchParams?.next === "string" ? resolvedSearchParams.next : null;
+    typeof resolvedSearchParams?.next === "string"
+      ? resolvedSearchParams.next
+      : null;
 
   return (
     <MarketingShell>

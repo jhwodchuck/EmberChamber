@@ -34,10 +34,15 @@ token_budget_tier: normal
 ```
 
 For `evidence_pack`, set:
+
 - `report_type: evidence_pack`
 - `persona_id: C-13`
 
 For `moderator_synthesis`, set:
+
 - `report_type: moderator_synthesis`
 - `persona_id: C-00`
+
+```
+
 ```

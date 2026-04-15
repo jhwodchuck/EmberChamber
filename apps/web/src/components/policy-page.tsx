@@ -21,14 +21,19 @@ export function PolicyPage({
             className="pointer-events-none absolute inset-y-0 right-0 w-80 bg-[radial-gradient(circle_at_center,rgba(255,170,110,0.16),transparent_62%)]"
             aria-hidden="true"
           />
-          <div className="pointer-events-none absolute inset-0 glow-grid opacity-35" aria-hidden="true" />
+          <div
+            className="pointer-events-none absolute inset-0 glow-grid opacity-35"
+            aria-hidden="true"
+          />
           <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-end">
             <div>
               <div className="eyebrow">{eyebrow}</div>
               <h1 className="mt-5 max-w-3xl text-balance font-display text-5xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-6xl">
                 {title}
               </h1>
-              <p className="mt-5 max-w-3xl text-lg leading-8 text-[var(--text-secondary)]">{intro}</p>
+              <p className="mt-5 max-w-3xl text-lg leading-8 text-[var(--text-secondary)]">
+                {intro}
+              </p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
@@ -55,8 +60,8 @@ export function PolicyPage({
               This page exists to define the product boundary, not to soften it.
             </p>
             <p className="mt-4 text-sm leading-7 text-[var(--text-secondary)]">
-              EmberChamber is private by design, but it is not a fantasy system with no operator
-              obligations or no platform rules.
+              EmberChamber is private by design, but it is not a fantasy system
+              with no operator obligations or no platform rules.
             </p>
 
             <div className="mt-6 flex flex-col gap-3">

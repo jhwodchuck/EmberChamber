@@ -12,7 +12,7 @@ export interface AccessTokenPayload {
 export async function signAccessToken(
   payload: Omit<AccessTokenPayload, "iat" | "exp">,
   secret: string,
-  ttlSeconds = 15 * 60
+  ttlSeconds = 15 * 60,
 ): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const fullPayload: AccessTokenPayload = {
@@ -25,7 +25,10 @@ export async function signAccessToken(
   return `${encoded}.${signature}`;
 }
 
-export async function verifyAccessToken(token: string, secret: string): Promise<AccessTokenPayload | null> {
+export async function verifyAccessToken(
+  token: string,
+  secret: string,
+): Promise<AccessTokenPayload | null> {
   const [encoded, signature] = token.split(".");
   if (!encoded || !signature) {
     return null;

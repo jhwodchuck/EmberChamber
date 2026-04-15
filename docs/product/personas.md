@@ -4,14 +4,14 @@ This document describes the current beta experience in the repo, not just the in
 
 ## Personas
 
-| Persona | Current need |
-| --- | --- |
-| **Trusted-circle organizer** | Creates a small private group, sets join rules, mints or revokes invites, and removes members when the boundary changes. |
-| **Privacy-conscious member** | Wants invite-only access without phone-number identity, keeps email private, and expects readable session/privacy controls. |
-| **Android-first beta tester** | Uses the most complete relay-native client and expects local storage, attachment sending, and sane first-session setup. |
-| **Desktop-heavy host** | Uses Windows, macOS, or Linux daily and wants the same relay-native bootstrap and group-management path without loading a hosted web wrapper. |
-| **Safety reviewer** | Handles disclosure-based reports and boundary incidents even though there is no full operator dashboard yet. |
-| **Web companion user** | Uses the browser for onboarding, settings, and invite review while the fully migrated web workspace is still in progress. |
+| Persona                       | Current need                                                                                                                                  |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Trusted-circle organizer**  | Creates a small private group, sets join rules, mints or revokes invites, and removes members when the boundary changes.                      |
+| **Privacy-conscious member**  | Wants invite-only access without phone-number identity, keeps email private, and expects readable session/privacy controls.                   |
+| **Android-first beta tester** | Uses the most complete relay-native client and expects local storage, attachment sending, and sane first-session setup.                       |
+| **Desktop-heavy host**        | Uses Windows, macOS, or Linux daily and wants the same relay-native bootstrap and group-management path without loading a hosted web wrapper. |
+| **Safety reviewer**           | Handles disclosure-based reports and boundary incidents even though there is no full operator dashboard yet.                                  |
+| **Web companion user**        | Uses the browser for onboarding, settings, and invite review while the fully migrated web workspace is still in progress.                     |
 
 ## Current Beta Flows
 

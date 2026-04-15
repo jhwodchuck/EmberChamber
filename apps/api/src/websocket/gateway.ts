@@ -17,9 +17,7 @@ interface WSMessage {
 }
 
 // Create a separate Redis subscriber instance
-const subscriber = new Redis(
-  process.env.REDIS_URL ?? "redis://localhost:6379"
-);
+const subscriber = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379");
 
 // Map: channelKey -> Set of WebSocket connections
 const subscriptions = new Map<string, Set<AuthenticatedWebSocket>>();
@@ -80,9 +78,7 @@ subscriber.on("error", (err) => {
   console.error("Redis subscriber error:", err);
 });
 
-export function createWebSocketServer(
-  wss: WebSocketServer
-): WebSocketServer {
+export function createWebSocketServer(wss: WebSocketServer): WebSocketServer {
   // Heartbeat ping interval
   const heartbeatInterval = setInterval(() => {
     for (const ws of wss.clients as Set<AuthenticatedWebSocket>) {
@@ -121,7 +117,7 @@ export function createWebSocketServer(
         const session = await queryOne<{ id: string; user_id: string }>(
           `SELECT id, user_id FROM sessions
            WHERE id = $1 AND revoked_at IS NULL AND expires_at > NOW()`,
-          [payload.sessionId]
+          [payload.sessionId],
         );
 
         if (session) {
@@ -142,7 +138,10 @@ export function createWebSocketServer(
         return;
       }
     } else {
-      send(ws, { type: "error", payload: { message: "Authentication required" } });
+      send(ws, {
+        type: "error",
+        payload: { message: "Authentication required" },
+      });
       ws.close(4401, "Unauthorized");
       return;
     }
@@ -152,7 +151,10 @@ export function createWebSocketServer(
       try {
         msg = JSON.parse(data.toString()) as WSMessage;
       } catch {
-        send(ws, { type: "error", payload: { message: "Invalid message format" } });
+        send(ws, {
+          type: "error",
+          payload: { message: "Invalid message format" },
+        });
         return;
       }
 
@@ -179,7 +181,7 @@ async function autoSubscribe(ws: AuthenticatedWebSocket): Promise<void> {
   const conversations = await query<{ conversation_id: string }>(
     `SELECT conversation_id FROM conversation_members
      WHERE user_id = $1 AND left_at IS NULL`,
-    [ws.userId]
+    [ws.userId],
   );
 
   for (const { conversation_id } of conversations) {
@@ -190,7 +192,7 @@ async function autoSubscribe(ws: AuthenticatedWebSocket): Promise<void> {
   const channels = await query<{ channel_id: string }>(
     `SELECT channel_id FROM channel_members
      WHERE user_id = $1 AND left_at IS NULL`,
-    [ws.userId]
+    [ws.userId],
   );
 
   for (const { channel_id } of channels) {
@@ -203,7 +205,7 @@ async function autoSubscribe(ws: AuthenticatedWebSocket): Promise<void> {
 
 async function handleClientMessage(
   ws: AuthenticatedWebSocket,
-  msg: WSMessage
+  msg: WSMessage,
 ): Promise<void> {
   if (!ws.userId) {
     send(ws, { type: "error", payload: { message: "Not authenticated" } });
@@ -219,7 +221,7 @@ async function handleClientMessage(
       const member = await queryOne(
         `SELECT id FROM conversation_members
          WHERE conversation_id = $1 AND user_id = $2 AND left_at IS NULL`,
-        [convId, ws.userId]
+        [convId, ws.userId],
       );
       if (member) {
         subscribe(`conv:${convId}`, ws);
@@ -235,7 +237,7 @@ async function handleClientMessage(
       const member = await queryOne(
         `SELECT id FROM channel_members
          WHERE channel_id = $1 AND user_id = $2 AND left_at IS NULL`,
-        [chanId, ws.userId]
+        [chanId, ws.userId],
       );
       if (member) {
         subscribe(`channel:${chanId}`, ws);
@@ -245,10 +247,16 @@ async function handleClientMessage(
     }
 
     case "ping":
-      send(ws, { type: "pong", payload: { timestamp: new Date().toISOString() } });
+      send(ws, {
+        type: "pong",
+        payload: { timestamp: new Date().toISOString() },
+      });
       break;
 
     default:
-      send(ws, { type: "error", payload: { message: `Unknown message type: ${msg.type}` } });
+      send(ws, {
+        type: "error",
+        payload: { message: `Unknown message type: ${msg.type}` },
+      });
   }
 }

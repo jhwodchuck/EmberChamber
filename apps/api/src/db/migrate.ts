@@ -16,7 +16,7 @@ async function runMigrations(): Promise<void> {
     `);
 
     const { rows: applied } = await client.query<{ version: string }>(
-      "SELECT version FROM schema_migrations ORDER BY version"
+      "SELECT version FROM schema_migrations ORDER BY version",
     );
     const appliedVersions = new Set(applied.map((r) => r.version));
 
@@ -39,7 +39,7 @@ async function runMigrations(): Promise<void> {
         await client.query(sql);
         await client.query(
           "INSERT INTO schema_migrations (version) VALUES ($1) ON CONFLICT (version) DO NOTHING",
-          [version]
+          [version],
         );
         await client.query("COMMIT");
         console.log(`  ✓ ${version} applied`);

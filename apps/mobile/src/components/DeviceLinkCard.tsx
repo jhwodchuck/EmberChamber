@@ -79,7 +79,9 @@ export function DeviceLinkCard({
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scannerLocked, setScannerLocked] = useState(false);
-  const [scannerMessage, setScannerMessage] = useState<FormMessage | null>(null);
+  const [scannerMessage, setScannerMessage] = useState<FormMessage | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!scannerOpen) {
@@ -115,7 +117,9 @@ export function DeviceLinkCard({
 
   return (
     <View style={styles.deviceLinkCard}>
-      <Text style={styles.sectionTitle}>{signedIn ? "Link another device" : "Link with another device"}</Text>
+      <Text style={styles.sectionTitle}>
+        {signedIn ? "Link another device" : "Link with another device"}
+      </Text>
       <Text style={styles.sectionBody}>{description}</Text>
 
       <View style={styles.buttonRow}>
@@ -161,7 +165,9 @@ export function DeviceLinkCard({
             pressed && styles.secondaryButtonPressed,
           ]}
         >
-          <Text style={styles.tertiaryButtonLabel}>Clear device-link state</Text>
+          <Text style={styles.tertiaryButtonLabel}>
+            Clear device-link state
+          </Text>
         </Pressable>
       ) : null}
 
@@ -196,9 +202,11 @@ export function DeviceLinkCard({
 
                     setScannerLocked(true);
                     setScannerOpen(false);
-                    void Promise.resolve(onScanPayload(event.data)).finally(() => {
-                      setScannerLocked(false);
-                    });
+                    void Promise.resolve(onScanPayload(event.data)).finally(
+                      () => {
+                        setScannerLocked(false);
+                      },
+                    );
                   }
             }
           />
@@ -225,7 +233,8 @@ export function DeviceLinkCard({
             />
           </View>
           <Text style={styles.helper}>
-            Keep this QR visible until the other device scans it and the approval step is complete.
+            Keep this QR visible until the other device scans it and the
+            approval step is complete.
           </Text>
         </View>
       ) : null}
@@ -240,12 +249,20 @@ export function DeviceLinkCard({
                   ? "success"
                   : "info"
             }
-            title={signedIn ? "Device-link status" : "Waiting for trusted-device approval"}
+            title={
+              signedIn
+                ? "Device-link status"
+                : "Waiting for trusted-device approval"
+            }
             body={description}
           >
-            {expiry ? <Text style={styles.helper}>Expires {expiry}</Text> : null}
+            {expiry ? (
+              <Text style={styles.helper}>Expires {expiry}</Text>
+            ) : null}
             {status.requesterLabel ? (
-              <Text style={styles.helper}>Device label: {status.requesterLabel}</Text>
+              <Text style={styles.helper}>
+                Device label: {status.requesterLabel}
+              </Text>
             ) : null}
           </StatusCard>
 

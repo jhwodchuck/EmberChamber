@@ -14,7 +14,10 @@ export default function NewGroupPage() {
     memberCap: 12,
     sensitiveMediaDefault: false,
   });
-  const [createdGroup, setCreatedGroup] = useState<{ id: string; title: string } | null>(null);
+  const [createdGroup, setCreatedGroup] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
   const [createdInvite, setCreatedInvite] = useState<Awaited<
     ReturnType<typeof relayGroupApi.createInvite>
   > | null>(null);
@@ -46,10 +49,14 @@ export default function NewGroupPage() {
         joinRuleText: form.joinRuleText.trim() || undefined,
       });
 
-      setCreatedGroup({ id: group.id, title: group.title ?? form.title.trim() });
+      setCreatedGroup({
+        id: group.id,
+        title: group.title ?? form.title.trim(),
+      });
       toast.success("Group created");
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to create group";
+      const message =
+        err instanceof Error ? err.message : "Failed to create group";
       setFormError(message);
       toast.error(message);
     } finally {
@@ -75,7 +82,8 @@ export default function NewGroupPage() {
       setCreatedInvite(invite);
       toast.success("Invite created");
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to create invite";
+      const message =
+        err instanceof Error ? err.message : "Failed to create invite";
       setInviteError(message);
       toast.error(message);
     } finally {
@@ -104,32 +112,46 @@ export default function NewGroupPage() {
           {createdGroup.title} is ready for its first invite.
         </h2>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
-          The group exists with the cap and safety defaults you chose. The next job is to mint the
-          first invite and share it deliberately rather than dropping people into an undefined
-          space.
+          The group exists with the cap and safety defaults you chose. The next
+          job is to mint the first invite and share it deliberately rather than
+          dropping people into an undefined space.
         </p>
 
         <div className="mt-8 grid gap-5 md:grid-cols-3">
           <div className="card">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">Step 1</p>
-            <h3 className="mt-3 text-lg font-semibold text-[var(--text-primary)]">Rules are set</h3>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">
+              Step 1
+            </p>
+            <h3 className="mt-3 text-lg font-semibold text-[var(--text-primary)]">
+              Rules are set
+            </h3>
             <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-              Join rules and media defaults are already attached to the group metadata.
+              Join rules and media defaults are already attached to the group
+              metadata.
             </p>
           </div>
           <div className="card">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">Step 2</p>
-            <h3 className="mt-3 text-lg font-semibold text-[var(--text-primary)]">Mint one invite</h3>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">
+              Step 2
+            </p>
+            <h3 className="mt-3 text-lg font-semibold text-[var(--text-primary)]">
+              Mint one invite
+            </h3>
             <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-              Share a single controlled invite rather than trying to onboard everyone manually.
+              Share a single controlled invite rather than trying to onboard
+              everyone manually.
             </p>
           </div>
           <div className="card">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">Step 3</p>
-            <h3 className="mt-3 text-lg font-semibold text-[var(--text-primary)]">Hand off to native</h3>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">
+              Step 3
+            </p>
+            <h3 className="mt-3 text-lg font-semibold text-[var(--text-primary)]">
+              Hand off to native
+            </h3>
             <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-              Keep the browser in control mode and let Android or desktop handle the actual vault
-              and message flow.
+              Keep the browser in control mode and let Android or desktop handle
+              the actual vault and message flow.
             </p>
           </div>
         </div>
@@ -143,7 +165,8 @@ export default function NewGroupPage() {
 
           {createdInvite ? (
             <StatusCallout tone="success" title="First invite ready">
-              Share <span className="font-mono text-xs">{inviteUrl()}</span> with the next member.
+              Share <span className="font-mono text-xs">{inviteUrl()}</span>{" "}
+              with the next member.
             </StatusCallout>
           ) : null}
         </div>
@@ -159,11 +182,19 @@ export default function NewGroupPage() {
               {isCreatingInvite ? "Creating Invite…" : "Create First Invite"}
             </button>
           ) : (
-            <button type="button" onClick={() => void copyInviteLink()} className="btn-primary">
+            <button
+              type="button"
+              onClick={() => void copyInviteLink()}
+              className="btn-primary"
+            >
               Copy Invite Link
             </button>
           )}
-          <button type="button" onClick={() => router.push("/app/discover")} className="btn-ghost">
+          <button
+            type="button"
+            onClick={() => router.push("/app/discover")}
+            className="btn-ghost"
+          >
             Open Invite Preview
           </button>
           <button
@@ -197,8 +228,9 @@ export default function NewGroupPage() {
         Create a small group with rules and safety defaults first
       </h2>
       <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
-        The browser is for setting the group boundary. Use it to define the cap, keep invite
-        control with organizers or admins, and make the join rule explicit before the first member arrives.
+        The browser is for setting the group boundary. Use it to define the cap,
+        keep invite control with organizers or admins, and make the join rule
+        explicit before the first member arrives.
       </p>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-5">
@@ -216,7 +248,12 @@ export default function NewGroupPage() {
             <input
               type="text"
               value={form.title}
-              onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  title: event.target.value,
+                }))
+              }
               className="input"
               required
               maxLength={80}
@@ -232,7 +269,10 @@ export default function NewGroupPage() {
             <textarea
               value={form.joinRuleText}
               onChange={(event) =>
-                setForm((current) => ({ ...current, joinRuleText: event.target.value }))
+                setForm((current) => ({
+                  ...current,
+                  joinRuleText: event.target.value,
+                }))
               }
               className="input resize-none"
               rows={4}
@@ -252,7 +292,10 @@ export default function NewGroupPage() {
               <select
                 value={String(form.memberCap)}
                 onChange={(event) =>
-                  setForm((current) => ({ ...current, memberCap: Number(event.target.value) }))
+                  setForm((current) => ({
+                    ...current,
+                    memberCap: Number(event.target.value),
+                  }))
                 }
                 className="input"
               >
@@ -265,9 +308,12 @@ export default function NewGroupPage() {
             </div>
 
             <div className="rounded-[1.35rem] border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
-              <p className="text-sm font-medium text-[var(--text-primary)]">Beta defaults</p>
+              <p className="text-sm font-medium text-[var(--text-primary)]">
+                Beta defaults
+              </p>
               <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                Owner or admin invite creation stays on. Member-created invites stay off in phase 1.
+                Owner or admin invite creation stays on. Member-created invites
+                stay off in phase 1.
               </p>
             </div>
           </div>
@@ -277,7 +323,10 @@ export default function NewGroupPage() {
               type="checkbox"
               checked={form.sensitiveMediaDefault}
               onChange={(event) =>
-                setForm((current) => ({ ...current, sensitiveMediaDefault: event.target.checked }))
+                setForm((current) => ({
+                  ...current,
+                  sensitiveMediaDefault: event.target.checked,
+                }))
               }
               className="mt-1"
             />
@@ -286,8 +335,9 @@ export default function NewGroupPage() {
                 Stronger media protections enabled
               </span>
               <span className="mt-1 block text-sm leading-6 text-[var(--text-secondary)]">
-                New attachments use the standard profile by default. Turn this on when the group
-                should begin with blur-and-reveal behavior and stricter handling.
+                New attachments use the standard profile by default. Turn this
+                on when the group should begin with blur-and-reveal behavior and
+                stricter handling.
               </span>
             </span>
           </label>
@@ -297,13 +347,18 @@ export default function NewGroupPage() {
               Organizer-managed invites
             </span>
             <span className="mt-1 block text-sm leading-6 text-[var(--text-secondary)]">
-              Phase 1 keeps invite creation with organizers and admins only. Member-created invites
-              can return later if a larger community explicitly needs them.
+              Phase 1 keeps invite creation with organizers and admins only.
+              Member-created invites can return later if a larger community
+              explicitly needs them.
             </span>
           </div>
         </div>
 
-        <button type="submit" className="btn-primary w-full" disabled={isCreatingGroup}>
+        <button
+          type="submit"
+          className="btn-primary w-full"
+          disabled={isCreatingGroup}
+        >
           {isCreatingGroup ? "Creating..." : "Create Group"}
         </button>
       </form>

@@ -24,7 +24,7 @@ export function signAccessToken(userId: string, sessionId: string): string {
   return jwt.sign(
     { sub: userId, sessionId, type: "access" } satisfies AccessTokenPayload,
     JWT_SECRET,
-    { expiresIn: ACCESS_TOKEN_EXPIRY }
+    { expiresIn: ACCESS_TOKEN_EXPIRY },
   );
 }
 
@@ -32,7 +32,7 @@ export function signRefreshToken(userId: string, sessionId: string): string {
   return jwt.sign(
     { sub: userId, sessionId, type: "refresh" } satisfies RefreshTokenPayload,
     JWT_REFRESH_SECRET,
-    { expiresIn: REFRESH_TOKEN_EXPIRY }
+    { expiresIn: REFRESH_TOKEN_EXPIRY },
   );
 }
 
@@ -43,10 +43,7 @@ export function verifyAccessToken(token: string): AccessTokenPayload {
 }
 
 export function verifyRefreshToken(token: string): RefreshTokenPayload {
-  const payload = jwt.verify(
-    token,
-    JWT_REFRESH_SECRET
-  ) as RefreshTokenPayload;
+  const payload = jwt.verify(token, JWT_REFRESH_SECRET) as RefreshTokenPayload;
   if (payload.type !== "refresh") throw new Error("Invalid token type");
   return payload;
 }

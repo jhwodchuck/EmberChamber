@@ -14,14 +14,14 @@ EmberChamber is built to store as little as possible on the relay and to keep de
 
 ## What Is Still In Progress
 
-| Feature | Current state | Target |
-|---------|--------------|--------|
-| Group thread E2EE | Thread text stored server-side in D1 | Replace relay-hosted readable history with end-to-end encrypted group state |
-| Attachment encryption | Browser DM path encrypts client-side; mobile and desktop still upload raw bytes | Encrypt all attachments client-side before upload on every surface |
-| Passkeys | Relay endpoints exist but return 501 | Wire passkey enrollment and use across all clients |
-| Trusted-device recovery | Device-link start/confirm exists; full handoff flow not complete | Finish recovery, safety-number style change signalling |
-| Operator safety tooling | Report records stored; no review dashboard | Add operator review queue, audit log, and controlled intervention API |
-| Automated cleanup | Cleanup queue wired | Finish mailbox envelope expiry and expired attachment record cleanup |
+| Feature                 | Current state                                                                   | Target                                                                      |
+| ----------------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Group thread E2EE       | Thread text stored server-side in D1                                            | Replace relay-hosted readable history with end-to-end encrypted group state |
+| Attachment encryption   | Browser DM path encrypts client-side; mobile and desktop still upload raw bytes | Encrypt all attachments client-side before upload on every surface          |
+| Passkeys                | Relay endpoints exist but return 501                                            | Wire passkey enrollment and use across all clients                          |
+| Trusted-device recovery | Device-link start/confirm exists; full handoff flow not complete                | Finish recovery, safety-number style change signalling                      |
+| Operator safety tooling | Report records stored; no review dashboard                                      | Add operator review queue, audit log, and controlled intervention API       |
+| Automated cleanup       | Cleanup queue wired                                                             | Finish mailbox envelope expiry and expired attachment record cleanup        |
 
 ## Identity Model
 
@@ -32,25 +32,25 @@ EmberChamber is built to store as little as possible on the relay and to keep de
 
 ## What the Relay Stores vs. Does Not Store
 
-| Data | Currently stored | Target |
-|------|-----------------|--------|
-| Account and session metadata | ✅ D1 | Keep; minimized |
-| Ciphertext DM envelopes | ✅ DeviceMailboxDO (until ack) | Keep; delete on ack |
-| Group thread text | ✅ D1 `conversation_messages` | Replace with E2EE group state |
-| Attachment blobs | ✅ R2 (raw bytes from mobile/desktop; encrypted bytes from web DM) | Move all clients to client-side encryption |
-| Decrypted DM history | ❌ Never stored on relay | Devices own their history |
-| Public contact discovery graph | ❌ Never | Stay out-of-scope |
-| Server-side search over private content | ❌ Never | Stay out-of-scope |
+| Data                                    | Currently stored                                                   | Target                                     |
+| --------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------ |
+| Account and session metadata            | ✅ D1                                                              | Keep; minimized                            |
+| Ciphertext DM envelopes                 | ✅ DeviceMailboxDO (until ack)                                     | Keep; delete on ack                        |
+| Group thread text                       | ✅ D1 `conversation_messages`                                      | Replace with E2EE group state              |
+| Attachment blobs                        | ✅ R2 (raw bytes from mobile/desktop; encrypted bytes from web DM) | Move all clients to client-side encryption |
+| Decrypted DM history                    | ❌ Never stored on relay                                           | Devices own their history                  |
+| Public contact discovery graph          | ❌ Never                                                           | Stay out-of-scope                          |
+| Server-side search over private content | ❌ Never                                                           | Stay out-of-scope                          |
 
 ## Threat Model Summary
 
-| Threat | Current mitigation | Gap |
-|--------|--------------------|-----|
-| Account takeover | Magic-link + invite-only bootstrap, session revocation, device labels | Passkeys and full recovery not yet live |
-| Metadata leakage | Blinded email, no public discovery graph | Relay sees group-thread text in current path |
-| Attachment overreach | Signed tickets, relay-side metadata | No client-side encryption on mobile/desktop yet |
-| Spam and raid | Invite-only, rate limiting, small-group caps, blocks | No operator dashboard or bulk review queue |
-| Compromised device | Session listing and self-revocation, manual group cleanup | No force-signout-all operator API |
+| Threat               | Current mitigation                                                    | Gap                                             |
+| -------------------- | --------------------------------------------------------------------- | ----------------------------------------------- |
+| Account takeover     | Magic-link + invite-only bootstrap, session revocation, device labels | Passkeys and full recovery not yet live         |
+| Metadata leakage     | Blinded email, no public discovery graph                              | Relay sees group-thread text in current path    |
+| Attachment overreach | Signed tickets, relay-side metadata                                   | No client-side encryption on mobile/desktop yet |
+| Spam and raid        | Invite-only, rate limiting, small-group caps, blocks                  | No operator dashboard or bulk review queue      |
+| Compromised device   | Session listing and self-revocation, manual group cleanup             | No force-signout-all operator API               |
 
 ## Communication Standards
 

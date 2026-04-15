@@ -68,7 +68,9 @@ export function InviteExplorer({
   }) => void;
 }) {
   const initialRef =
-    initialConversationId && initialToken ? `${initialConversationId}/${initialToken}` : "";
+    initialConversationId && initialToken
+      ? `${initialConversationId}/${initialToken}`
+      : "";
   const [inviteInput, setInviteInput] = useState(initialRef);
   const [preview, setPreview] = useState<Awaited<
     ReturnType<typeof relayConversationApi.previewInvite>
@@ -82,7 +84,10 @@ export function InviteExplorer({
     setSessionReady(hasRelaySession());
   }, []);
 
-  const normalizedInvite = useMemo(() => normalizeInviteReference(inviteInput), [inviteInput]);
+  const normalizedInvite = useMemo(
+    () => normalizeInviteReference(inviteInput),
+    [inviteInput],
+  );
 
   const previewInvite = useCallback(async (rawValue: string) => {
     const normalized = normalizeInviteReference(rawValue);
@@ -103,7 +108,9 @@ export function InviteExplorer({
       setPreview(data);
       setInviteInput(`${normalized.conversationId}/${normalized.inviteToken}`);
     } catch (err: unknown) {
-      setPreviewError(err instanceof Error ? err.message : "Invite preview failed.");
+      setPreviewError(
+        err instanceof Error ? err.message : "Invite preview failed.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -129,7 +136,9 @@ export function InviteExplorer({
 
       await handlePreview(clipboardText);
     } catch {
-      setPreviewError("Clipboard access is blocked. Paste the invite manually instead.");
+      setPreviewError(
+        "Clipboard access is blocked. Paste the invite manually instead.",
+      );
     }
   }
 
@@ -152,7 +161,9 @@ export function InviteExplorer({
         rootConversationKind: result.rootConversationKind,
       });
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to accept invite");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to accept invite",
+      );
     } finally {
       setIsJoining(false);
     }
@@ -190,13 +201,18 @@ export function InviteExplorer({
           >
             {isLoading ? "Checking…" : "Preview Invite"}
           </button>
-          <button type="button" onClick={() => void pasteFromClipboard()} className="btn-ghost">
+          <button
+            type="button"
+            onClick={() => void pasteFromClipboard()}
+            className="btn-ghost"
+          >
             <ClipboardPaste className="h-4 w-4" aria-hidden="true" />
             Paste
           </button>
         </div>
         <p className="mt-2 text-xs text-[var(--text-secondary)]">
-          Invite links include the target private space and the invite token together.
+          Invite links include the target private space and the invite token
+          together.
         </p>
       </div>
 
@@ -216,14 +232,18 @@ export function InviteExplorer({
               {preview.room?.title ?? preview.conversation.title}
             </h3>
             <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-              Issued by {preview.invite.inviterDisplayName}. Member cap {preview.conversation.memberCap},
-              current members {preview.conversation.memberCount}.
+              Issued by {preview.invite.inviterDisplayName}. Member cap{" "}
+              {preview.conversation.memberCap}, current members{" "}
+              {preview.conversation.memberCount}.
             </p>
           </div>
 
           <div className="grid gap-3 text-sm text-[var(--text-secondary)] sm:grid-cols-2">
             <p>
-              Status: <span className="font-medium text-[var(--text-primary)]">{preview.invite.status}</span>
+              Status:{" "}
+              <span className="font-medium text-[var(--text-primary)]">
+                {preview.invite.status}
+              </span>
             </p>
             <p>
               Uses:{" "}
@@ -271,8 +291,9 @@ export function InviteExplorer({
                 Target room
               </p>
               <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                {preview.room.title} with {preview.room.memberCount} members and a{" "}
-                {preview.room.roomAccessPolicy.replace("_", " ")} access policy.
+                {preview.room.title} with {preview.room.memberCount} members and
+                a {preview.room.roomAccessPolicy.replace("_", " ")} access
+                policy.
               </p>
             </div>
           ) : null}
@@ -289,7 +310,10 @@ export function InviteExplorer({
           ) : null}
 
           {preview.conversation.sensitiveMediaDefault ? (
-            <StatusCallout tone="warning" title="Sensitive media defaults are enabled">
+            <StatusCallout
+              tone="warning"
+              title="Sensitive media defaults are enabled"
+            >
               This space is configured for stronger leak deterrence by default.
             </StatusCallout>
           ) : null}
@@ -312,7 +336,10 @@ export function InviteExplorer({
                 >
                   Request Sign-In Link
                 </Link>
-                <Link href={`/register?next=${encodeURIComponent(nextInvitePath)}`} className="btn-ghost">
+                <Link
+                  href={`/register?next=${encodeURIComponent(nextInvitePath)}`}
+                  className="btn-ghost"
+                >
                   Join the Beta
                 </Link>
               </>
@@ -321,7 +348,9 @@ export function InviteExplorer({
             <button
               type="button"
               onClick={() =>
-                toast("Invite previews stay browser-safe. Open the native client after joining.")
+                toast(
+                  "Invite previews stay browser-safe. Open the native client after joining.",
+                )
               }
               className="btn-ghost"
             >

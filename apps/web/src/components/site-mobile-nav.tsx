@@ -51,11 +51,20 @@ export function SiteMobileNav() {
         className="btn-ghost px-3 md:hidden"
         onClick={() => setIsOpen((current) => !current)}
       >
-        {isOpen ? <X className="h-4 w-4" aria-hidden="true" /> : <Menu className="h-4 w-4" aria-hidden="true" />}
+        {isOpen ? (
+          <X className="h-4 w-4" aria-hidden="true" />
+        ) : (
+          <Menu className="h-4 w-4" aria-hidden="true" />
+        )}
       </button>
 
       {isOpen ? (
-        <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-label="Site navigation">
+        <div
+          className="fixed inset-0 z-50 md:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Site navigation"
+        >
           <button
             type="button"
             className="absolute inset-0 bg-black/55 backdrop-blur-sm"
@@ -67,7 +76,9 @@ export function SiteMobileNav() {
             className="absolute inset-x-4 top-4 overscroll-contain rounded-[2rem] border border-white/10 bg-[rgba(13,8,9,0.94)] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.42)]"
           >
             <div className="flex items-center justify-between gap-4">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#ffb890]">Navigate</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#ffb890]">
+                Navigate
+              </p>
               <button
                 type="button"
                 aria-label="Close navigation menu"
@@ -93,7 +104,11 @@ export function SiteMobileNav() {
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               {ctaLinks.map((item, index) => (
-                <Link key={item.href} href={item.href} className={index === 0 ? "btn-ghost" : "btn-primary"}>
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={index === 0 ? "btn-ghost" : "btn-primary"}
+                >
                   {item.label}
                 </Link>
               ))}

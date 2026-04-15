@@ -43,7 +43,10 @@ export function SiteHeader() {
 
         <div className="flex items-center gap-3">
           <SiteMobileNav />
-          <Link href={secondaryCta.href} className="btn-ghost hidden sm:inline-flex">
+          <Link
+            href={secondaryCta.href}
+            className="btn-ghost hidden sm:inline-flex"
+          >
             {secondaryCta.label}
           </Link>
           <Link href={primaryCta.href} className="btn-primary px-5">

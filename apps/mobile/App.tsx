@@ -11,6 +11,7 @@ import * as SystemUI from "expo-system-ui";
 import { startTransition, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Keyboard,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -102,9 +103,7 @@ import {
   getNotificationConversationId,
   getNotificationReason,
 } from "./src/lib/push";
-import {
-  useConversationCatalog,
-} from "./src/hooks/useConversationCatalog";
+import { useConversationCatalog } from "./src/hooks/useConversationCatalog";
 import { usePersistedMainShellState } from "./src/hooks/usePersistedMainShellState";
 import { styles, theme } from "./src/styles";
 import { OnboardingScreen } from "./src/screens/OnboardingScreen";
@@ -149,7 +148,8 @@ export default function App() {
   const [inviteInput, setInviteInput] = useState("");
   const [inviteFocusToken, setInviteFocusToken] = useState(0);
   const [messageDraft, setMessageDraft] = useState("");
-  const [pendingAttachment, setPendingAttachment] = useState<PendingAttachment | null>(null);
+  const [pendingAttachment, setPendingAttachment] =
+    useState<PendingAttachment | null>(null);
   const [isBooting, setIsBooting] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
@@ -164,30 +164,52 @@ export default function App() {
   const [profile, setProfile] = useState<MeProfile | null>(null);
   const [contactCard, setContactCard] = useState<ContactCard | null>(null);
   const [groups, setGroups] = useState<GroupMembershipSummary[]>([]);
-  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
-  const [threadMessages, setThreadMessages] = useState<GroupThreadMessage[]>([]);
-  const [invitePreview, setInvitePreview] = useState<GroupInvitePreview | null>(null);
-  const [invitePreviewError, setInvitePreviewError] = useState<string | null>(null);
+  const [selectedConversationId, setSelectedConversationId] = useState<
+    string | null
+  >(null);
+  const [threadMessages, setThreadMessages] = useState<GroupThreadMessage[]>(
+    [],
+  );
+  const [invitePreview, setInvitePreview] = useState<GroupInvitePreview | null>(
+    null,
+  );
+  const [invitePreviewError, setInvitePreviewError] = useState<string | null>(
+    null,
+  );
   const [inviteFieldVisible, setInviteFieldVisible] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
   const [formMessage, setFormMessage] = useState<FormMessage | null>(null);
-  const [sessionMessage, setSessionMessage] = useState<FormMessage | null>(null);
+  const [sessionMessage, setSessionMessage] = useState<FormMessage | null>(
+    null,
+  );
   const [vaultCount, setVaultCount] = useState(0);
   const [deviceBundleCount, setDeviceBundleCount] = useState(0);
   const [deviceBundleReady, setDeviceBundleReady] = useState(false);
-  const [deviceBundleError, setDeviceBundleError] = useState<string | null>(null);
-  const [privacyDefaults, setPrivacyDefaults] = useState<PrivacyDefaults>(defaultPrivacyDefaults);
+  const [deviceBundleError, setDeviceBundleError] = useState<string | null>(
+    null,
+  );
+  const [privacyDefaults, setPrivacyDefaults] = useState<PrivacyDefaults>(
+    defaultPrivacyDefaults,
+  );
   const [profileSetupActive, setProfileSetupActive] = useState(false);
   const [profileSetupName, setProfileSetupName] = useState("");
   const [isSubmittingProfile, setIsSubmittingProfile] = useState(false);
-  const [profileSetupError, setProfileSetupError] = useState<string | null>(null);
-  const [deviceLinkQrValue, setDeviceLinkQrValue] = useState<string | null>(null);
-  const [deviceLinkStatus, setDeviceLinkStatus] = useState<DeviceLinkStatus | null>(null);
-  const [deviceLinkMessage, setDeviceLinkMessage] = useState<FormMessage | null>(null);
+  const [profileSetupError, setProfileSetupError] = useState<string | null>(
+    null,
+  );
+  const [deviceLinkQrValue, setDeviceLinkQrValue] = useState<string | null>(
+    null,
+  );
+  const [deviceLinkStatus, setDeviceLinkStatus] =
+    useState<DeviceLinkStatus | null>(null);
+  const [deviceLinkMessage, setDeviceLinkMessage] =
+    useState<FormMessage | null>(null);
   const [isWorkingDeviceLink, setIsWorkingDeviceLink] = useState(false);
   const [isApprovingDeviceLink, setIsApprovingDeviceLink] = useState(false);
-  const [activeDeviceLink, setActiveDeviceLink] = useState<ActiveDeviceLink | null>(null);
-  const [completedDeviceLinkSessionId, setCompletedDeviceLinkSessionId] = useState<string | null>(null);
+  const [activeDeviceLink, setActiveDeviceLink] =
+    useState<ActiveDeviceLink | null>(null);
+  const [completedDeviceLinkSessionId, setCompletedDeviceLinkSessionId] =
+    useState<string | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
@@ -196,6 +218,7 @@ export default function App() {
   const [sessions, setSessions] = useState<SessionDescriptor[]>([]);
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
   const [sessionsError, setSessionsError] = useState<string | null>(null);
+  const [androidKeyboardVisible, setAndroidKeyboardVisible] = useState(false);
 
   const imageRefreshPendingRef = useRef(false);
   const groupsRef = useRef<GroupMembershipSummary[]>([]);
@@ -206,7 +229,8 @@ export default function App() {
   const selectedGroup =
     groups.find((group) => group.id === selectedConversationId) ??
     (session?.bootstrapConversationId
-      ? groups.find((group) => group.id === session.bootstrapConversationId) ?? null
+      ? (groups.find((group) => group.id === session.bootstrapConversationId) ??
+        null)
       : null);
 
   const {
@@ -273,7 +297,11 @@ export default function App() {
         headers.set(key, value);
       });
 
-      const response = await fetch(url, { ...init, headers, signal: controller.signal });
+      const response = await fetch(url, {
+        ...init,
+        headers,
+        signal: controller.signal,
+      });
       const rawBody = await response.text();
       let body = {} as T & RelayErrorResponse;
 
@@ -288,7 +316,9 @@ export default function App() {
       return { response, body };
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
-        throw new Error("The relay took too long to respond. Check your connection and try again.");
+        throw new Error(
+          "The relay took too long to respond. Check your connection and try again.",
+        );
       }
 
       throw error;
@@ -360,12 +390,17 @@ export default function App() {
     setIsLoadingSessions(true);
 
     try {
-      const nextSessions = await relayFetch<SessionDescriptor[]>(currentSession, "/v1/sessions");
+      const nextSessions = await relayFetch<SessionDescriptor[]>(
+        currentSession,
+        "/v1/sessions",
+      );
       setSessions(nextSessions);
       setSessionsError(null);
     } catch (error) {
       setSessionsError(
-        error instanceof Error ? error.message : "Unable to load signed-in sessions.",
+        error instanceof Error
+          ? error.message
+          : "Unable to load signed-in sessions.",
       );
     } finally {
       setIsLoadingSessions(false);
@@ -395,7 +430,11 @@ export default function App() {
     return file;
   }
 
-  async function uploadAttachmentBytes(uploadUrl: string, mimeType: string, bytes: ArrayBuffer) {
+  async function uploadAttachmentBytes(
+    uploadUrl: string,
+    mimeType: string,
+    bytes: ArrayBuffer,
+  ) {
     // Hermes does not support new Blob([ArrayBuffer | ArrayBufferView]), so we
     // pass an ArrayBuffer directly as the fetch body instead.
     const uploadResponse = await fetch(uploadUrl, {
@@ -428,7 +467,9 @@ export default function App() {
       };
     } catch {
       if (!response.linkId || !response.qrPayload?.trim()) {
-        throw new Error("The relay returned an unreadable device-link QR payload.");
+        throw new Error(
+          "The relay returned an unreadable device-link QR payload.",
+        );
       }
 
       const qrPayload = encodeDeviceLinkQrPayload({
@@ -455,11 +496,17 @@ export default function App() {
     }
   }
 
-  function buildSessionReadyMessage(nextSession: AuthSession, source: "magic-link" | "device-link"): FormMessage {
+  function buildSessionReadyMessage(
+    nextSession: AuthSession,
+    source: "magic-link" | "device-link",
+  ): FormMessage {
     if (nextSession.bootstrapConversationTitle) {
       return {
         tone: "success",
-        title: source === "device-link" ? "Device linked and thread ready" : "Signed in and thread ready",
+        title:
+          source === "device-link"
+            ? "Device linked and thread ready"
+            : "Signed in and thread ready",
         body: `${nextSession.bootstrapConversationTitle} should appear below as soon as account sync finishes.`,
       };
     }
@@ -474,8 +521,12 @@ export default function App() {
     };
   }
 
-  async function persistAuthenticatedSession(nextSession: AuthSession, source: "magic-link" | "device-link") {
-    const normalizedDeviceLabel = deviceLabel.trim() || suggestMobileDeviceLabel();
+  async function persistAuthenticatedSession(
+    nextSession: AuthSession,
+    source: "magic-link" | "device-link",
+  ) {
+    const normalizedDeviceLabel =
+      deviceLabel.trim() || suggestMobileDeviceLabel();
     const bootstrapInvite = normalizeInviteReference(inviteInput);
 
     await Promise.all([
@@ -494,7 +545,10 @@ export default function App() {
       setInviteFocusToken((current) => current + 1);
       setSessionMessage({
         tone: "success",
-        title: source === "device-link" ? "Device linked and invite ready" : "Signed in and invite ready",
+        title:
+          source === "device-link"
+            ? "Device linked and invite ready"
+            : "Signed in and invite ready",
         body: "The incoming invite is loaded under Invites. Review the preview there and join when you are ready.",
       });
     } else {
@@ -513,17 +567,28 @@ export default function App() {
     setCompletedDeviceLinkSessionId(null);
 
     try {
-      const normalizedDeviceLabel = deviceLabel.trim() || suggestMobileDeviceLabel();
-      const response = await relayFetch<DeviceLinkStartResponse>(currentSession, "/v1/devices/link/start", {
-        method: "POST",
-        body: JSON.stringify({ deviceLabel: normalizedDeviceLabel }),
-      });
-      const normalized = normalizeStartedSourceDeviceLink(response, normalizedDeviceLabel);
+      const normalizedDeviceLabel =
+        deviceLabel.trim() || suggestMobileDeviceLabel();
+      const response = await relayFetch<DeviceLinkStartResponse>(
+        currentSession,
+        "/v1/devices/link/start",
+        {
+          method: "POST",
+          body: JSON.stringify({ deviceLabel: normalizedDeviceLabel }),
+        },
+      );
+      const normalized = normalizeStartedSourceDeviceLink(
+        response,
+        normalizedDeviceLabel,
+      );
 
       setActiveDeviceLink(
         normalized.legacy
           ? null
-          : { linkToken: normalized.parsed.linkToken, qrMode: normalized.parsed.qrMode },
+          : {
+              linkToken: normalized.parsed.linkToken,
+              qrMode: normalized.parsed.qrMode,
+            },
       );
       setDeviceLinkQrValue(normalized.qrPayload);
       setDeviceLinkStatus(normalized.status);
@@ -570,7 +635,10 @@ export default function App() {
       });
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-      await SecureStore.setItemAsync(STORAGE_KEYS.deviceLabel, normalizedDeviceLabel);
+      await SecureStore.setItemAsync(
+        STORAGE_KEYS.deviceLabel,
+        normalizedDeviceLabel,
+      );
 
       setActiveDeviceLink({ linkToken, qrMode: "target_display" });
       setDeviceLinkQrValue(qrPayload);
@@ -606,40 +674,67 @@ export default function App() {
 
       if (sessionRef.current) {
         if (parsed.qrMode !== "target_display") {
-          throw new Error("That QR is meant for a new device, not a signed-in device.");
+          throw new Error(
+            "That QR is meant for a new device, not a signed-in device.",
+          );
         }
 
-        const response = await relayFetch<DeviceLinkStatus>(sessionRef.current, "/v1/devices/link/scan", {
-          method: "POST",
-          body: JSON.stringify({ qrPayload }),
-        });
+        const response = await relayFetch<DeviceLinkStatus>(
+          sessionRef.current,
+          "/v1/devices/link/scan",
+          {
+            method: "POST",
+            body: JSON.stringify({ qrPayload }),
+          },
+        );
 
-        setActiveDeviceLink({ linkToken: parsed.linkToken, qrMode: parsed.qrMode });
+        setActiveDeviceLink({
+          linkToken: parsed.linkToken,
+          qrMode: parsed.qrMode,
+        });
         setDeviceLinkQrValue(null);
         setDeviceLinkStatus(response);
         return;
       }
 
       if (deviceLabel.trim().length < 3) {
-        throw new Error("Name this phone before scanning so the approval request is readable.");
+        throw new Error(
+          "Name this phone before scanning so the approval request is readable.",
+        );
       }
       if (parsed.qrMode !== "source_display") {
-        throw new Error("That QR is meant to be scanned by a signed-in device.");
+        throw new Error(
+          "That QR is meant to be scanned by a signed-in device.",
+        );
       }
 
       const normalizedDeviceLabel = deviceLabel.trim();
-      await SecureStore.setItemAsync(STORAGE_KEYS.deviceLabel, normalizedDeviceLabel);
+      await SecureStore.setItemAsync(
+        STORAGE_KEYS.deviceLabel,
+        normalizedDeviceLabel,
+      );
 
-      const { response, body } = await fetchJson<DeviceLinkStatus>(`${relayUrl}/v1/devices/link/claim`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ qrPayload, deviceLabel: normalizedDeviceLabel }),
-      });
+      const { response, body } = await fetchJson<DeviceLinkStatus>(
+        `${relayUrl}/v1/devices/link/claim`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            qrPayload,
+            deviceLabel: normalizedDeviceLabel,
+          }),
+        },
+      );
       if (!response.ok) {
-        throw new Error(body.error ?? "Unable to claim this device-link request.");
+        throw new Error(
+          body.error ?? "Unable to claim this device-link request.",
+        );
       }
 
-      setActiveDeviceLink({ linkToken: parsed.linkToken, qrMode: parsed.qrMode });
+      setActiveDeviceLink({
+        linkToken: parsed.linkToken,
+        qrMode: parsed.qrMode,
+      });
       setDeviceLinkQrValue(null);
       setDeviceLinkStatus(body);
     } catch (error) {
@@ -663,10 +758,14 @@ export default function App() {
     setDeviceLinkMessage(null);
 
     try {
-      const response = await relayFetch<DeviceLinkStatus>(currentSession, "/v1/devices/link/confirm", {
-        method: "POST",
-        body: JSON.stringify({ linkId: deviceLinkStatus.linkId }),
-      });
+      const response = await relayFetch<DeviceLinkStatus>(
+        currentSession,
+        "/v1/devices/link/confirm",
+        {
+          method: "POST",
+          body: JSON.stringify({ linkId: deviceLinkStatus.linkId }),
+        },
+      );
       setDeviceLinkStatus(response);
       setDeviceLinkMessage({
         tone: "success",
@@ -684,12 +783,18 @@ export default function App() {
     }
   }
 
-  async function completeDeviceLink(linkToken: string, qrMode: DeviceLinkQrMode) {
-    const { response, body } = await fetchJson<AuthSession>(`${relayUrl}/v1/devices/link/complete`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ linkToken, qrMode }),
-    });
+  async function completeDeviceLink(
+    linkToken: string,
+    qrMode: DeviceLinkQrMode,
+  ) {
+    const { response, body } = await fetchJson<AuthSession>(
+      `${relayUrl}/v1/devices/link/complete`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ linkToken, qrMode }),
+      },
+    );
     if (!response.ok || !("accessToken" in body)) {
       throw new Error(body.error ?? "Unable to complete device linking.");
     }
@@ -699,38 +804,63 @@ export default function App() {
 
   async function ensureDeviceBundleRegistered(currentSession: AuthSession) {
     const localBundle =
-      (await loadStoredDeviceBundle(currentSession.deviceId)) ?? createDeviceBundleScaffold();
+      (await loadStoredDeviceBundle(currentSession.deviceId)) ??
+      createDeviceBundleScaffold();
     await saveStoredDeviceBundle(currentSession.deviceId, localBundle);
 
     const existingBundles = await relayFetch<DeviceKeyBundle[]>(
       currentSession,
       `/v1/accounts/${currentSession.accountId}/device-bundles`,
     );
-    deviceBundleDirectoryRef.current.set(currentSession.accountId, existingBundles);
+    deviceBundleDirectoryRef.current.set(
+      currentSession.accountId,
+      existingBundles,
+    );
 
-    if (existingBundles.some((bundle) => bundle.deviceId === currentSession.deviceId) && localBundle.privateKeyB64) {
+    if (
+      existingBundles.some(
+        (bundle) => bundle.deviceId === currentSession.deviceId,
+      ) &&
+      localBundle.privateKeyB64
+    ) {
       return existingBundles;
     }
 
-    await relayFetch<{ registered: boolean }>(currentSession, "/v1/devices/register", {
-      method: "POST",
-      body: JSON.stringify(toPublicPrekeyBundle(localBundle)),
-    });
+    await relayFetch<{ registered: boolean }>(
+      currentSession,
+      "/v1/devices/register",
+      {
+        method: "POST",
+        body: JSON.stringify(toPublicPrekeyBundle(localBundle)),
+      },
+    );
 
     const confirmedBundles = await relayFetch<DeviceKeyBundle[]>(
       currentSession,
       `/v1/accounts/${currentSession.accountId}/device-bundles`,
     );
-    deviceBundleDirectoryRef.current.set(currentSession.accountId, confirmedBundles);
+    deviceBundleDirectoryRef.current.set(
+      currentSession.accountId,
+      confirmedBundles,
+    );
 
-    if (!confirmedBundles.some((bundle) => bundle.deviceId === currentSession.deviceId)) {
-      throw new Error("This phone's device identity did not register correctly.");
+    if (
+      !confirmedBundles.some(
+        (bundle) => bundle.deviceId === currentSession.deviceId,
+      )
+    ) {
+      throw new Error(
+        "This phone's device identity did not register correctly.",
+      );
     }
 
     return confirmedBundles;
   }
 
-  async function listDeviceBundlesForAccount(currentSession: AuthSession, accountId: string) {
+  async function listDeviceBundlesForAccount(
+    currentSession: AuthSession,
+    accountId: string,
+  ) {
     const cached = deviceBundleDirectoryRef.current.get(accountId);
     if (cached) {
       return cached;
@@ -781,17 +911,23 @@ export default function App() {
 
     for (const envelope of sync.envelopes) {
       try {
-        const senderBundles = await listDeviceBundlesForAccount(currentSession, envelope.senderAccountId);
-        const senderBundle = senderBundles.find((entry) => entry.deviceId === envelope.senderDeviceId);
+        const senderBundles = await listDeviceBundlesForAccount(
+          currentSession,
+          envelope.senderAccountId,
+        );
+        const senderBundle = senderBundles.find(
+          (entry) => entry.deviceId === envelope.senderDeviceId,
+        );
         if (!senderBundle) {
           continue;
         }
 
-        const payload = decryptConversationPayload<EncryptedConversationPayload>(
-          envelope.ciphertext,
-          senderBundle.bundle.identityKeyB64,
-          localBundle.privateKeyB64,
-        );
+        const payload =
+          decryptConversationPayload<EncryptedConversationPayload>(
+            envelope.ciphertext,
+            senderBundle.bundle.identityKeyB64,
+            localBundle.privateKeyB64,
+          );
 
         if (payload.kind !== "ember_conversation_v1") {
           continue;
@@ -821,7 +957,11 @@ export default function App() {
         const mergedMessages = conversationMessages
           .filter((entry) => entry.id !== nextMessage.id)
           .concat(nextMessage)
-          .sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime());
+          .sort(
+            (left, right) =>
+              new Date(left.createdAt).getTime() -
+              new Date(right.createdAt).getTime(),
+          );
 
         updatedMessages.set(envelope.conversationId, mergedMessages);
         receivedConversationIds.add(envelope.conversationId);
@@ -842,14 +982,22 @@ export default function App() {
     }
 
     if (sync.cursor.lastSeenEnvelopeId) {
-      await saveRelayStateValue(db, MAILBOX_CURSOR_STATE_KEY, sync.cursor.lastSeenEnvelopeId);
+      await saveRelayStateValue(
+        db,
+        MAILBOX_CURSOR_STATE_KEY,
+        sync.cursor.lastSeenEnvelopeId,
+      );
     }
 
     if (ackEnvelopeIds.length > 0) {
-      await relayFetch<{ acknowledged: number }>(currentSession, "/v1/mailbox/ack", {
-        method: "POST",
-        body: JSON.stringify({ envelopeIds: ackEnvelopeIds }),
-      });
+      await relayFetch<{ acknowledged: number }>(
+        currentSession,
+        "/v1/mailbox/ack",
+        {
+          method: "POST",
+          body: JSON.stringify({ envelopeIds: ackEnvelopeIds }),
+        },
+      );
     }
 
     return {
@@ -857,8 +1005,13 @@ export default function App() {
     };
   }
 
-  async function refreshGroupThread(currentSession: AuthSession, conversationId: string) {
-    const targetGroup = groupsRef.current.find((group) => group.id === conversationId);
+  async function refreshGroupThread(
+    currentSession: AuthSession,
+    conversationId: string,
+  ) {
+    const targetGroup = groupsRef.current.find(
+      (group) => group.id === conversationId,
+    );
     if (targetGroup?.historyMode === "device_encrypted") {
       if (!db) {
         setThreadMessages([]);
@@ -884,10 +1037,14 @@ export default function App() {
     // Ack the latest message so other members' ✓✓ updates
     const latest = messages[messages.length - 1];
     if (latest) {
-      void relayFetch<{ acked: boolean }>(currentSession, `/v1/groups/${conversationId}/messages/ack`, {
-        method: "POST",
-        body: JSON.stringify({ lastReadMessageCreatedAt: latest.createdAt }),
-      }).catch(() => undefined);
+      void relayFetch<{ acked: boolean }>(
+        currentSession,
+        `/v1/groups/${conversationId}/messages/ack`,
+        {
+          method: "POST",
+          body: JSON.stringify({ lastReadMessageCreatedAt: latest.createdAt }),
+        },
+      ).catch(() => undefined);
     }
   }
 
@@ -897,31 +1054,46 @@ export default function App() {
 
     if (!registration) {
       try {
-        await relayFetch<{ cleared: boolean }>(currentSession, "/v1/devices/push-token", {
-          method: "DELETE",
-        });
+        await relayFetch<{ cleared: boolean }>(
+          currentSession,
+          "/v1/devices/push-token",
+          {
+            method: "DELETE",
+          },
+        );
       } catch {
         // Ignore cleanup errors if push was never registered server-side.
       }
       return false;
     }
 
-    await relayFetch<{ registered: boolean }>(currentSession, "/v1/devices/push-token", {
-      method: "POST",
-      body: JSON.stringify({
-        ...registration,
-        appId: Platform.OS === "android" ? "com.emberchamber.mobile" : "com.emberchamber.mobile.ios",
-        pushEnvironment: "production",
-      }),
-    });
+    await relayFetch<{ registered: boolean }>(
+      currentSession,
+      "/v1/devices/push-token",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          ...registration,
+          appId:
+            Platform.OS === "android"
+              ? "com.emberchamber.mobile"
+              : "com.emberchamber.mobile.ios",
+          pushEnvironment: "production",
+        }),
+      },
+    );
 
     return true;
   }
 
   async function clearNativePushToken(currentSession: AuthSession) {
-    await relayFetch<{ cleared: boolean }>(currentSession, "/v1/devices/push-token", {
-      method: "DELETE",
-    });
+    await relayFetch<{ cleared: boolean }>(
+      currentSession,
+      "/v1/devices/push-token",
+      {
+        method: "DELETE",
+      },
+    );
   }
 
   // ---- effects ----
@@ -937,6 +1109,24 @@ export default function App() {
   useEffect(() => {
     groupsRef.current = groups;
   }, [groups]);
+
+  useEffect(() => {
+    if (Platform.OS !== "android") {
+      return;
+    }
+
+    const showSubscription = Keyboard.addListener("keyboardDidShow", () => {
+      setAndroidKeyboardVisible(true);
+    });
+    const hideSubscription = Keyboard.addListener("keyboardDidHide", () => {
+      setAndroidKeyboardVisible(false);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (!activeDeviceLink || completedDeviceLinkSessionId) {
@@ -957,7 +1147,9 @@ export default function App() {
             activeDeviceLink.qrMode === "target_display" &&
             body.code === "DEVICE_LINK_NOT_FOUND";
           if (!awaitingSourceScan) {
-            throw new Error(body.error ?? "Unable to refresh device-link status.");
+            throw new Error(
+              body.error ?? "Unable to refresh device-link status.",
+            );
           }
         } else {
           if (cancelled) {
@@ -967,7 +1159,10 @@ export default function App() {
           setDeviceLinkStatus(body);
 
           if (!sessionRef.current && body.state === "approved") {
-            await completeDeviceLink(activeDeviceLink.linkToken, activeDeviceLink.qrMode);
+            await completeDeviceLink(
+              activeDeviceLink.linkToken,
+              activeDeviceLink.qrMode,
+            );
             return;
           }
 
@@ -980,7 +1175,8 @@ export default function App() {
           setDeviceLinkMessage({
             tone: "error",
             title: "Device-link status failed",
-            body: error instanceof Error ? error.message : "Unknown relay error",
+            body:
+              error instanceof Error ? error.message : "Unknown relay error",
           });
         }
       }
@@ -1005,7 +1201,10 @@ export default function App() {
   useEffect(() => {
     let mounted = true;
 
-    function captureIncomingUrl(url: string | null, options: { signedIn?: boolean } = {}) {
+    function captureIncomingUrl(
+      url: string | null,
+      options: { signedIn?: boolean } = {},
+    ) {
       if (!url || !mounted) {
         return;
       }
@@ -1034,16 +1233,23 @@ export default function App() {
     startTransition(() => {
       void (async () => {
         const nextDb = await bootstrapLocalStore();
-        const [savedEmail, savedInvite, savedDeviceLabel, nextPrivacyDefaults, vaultItems, savedSession, initialUrl] =
-          await Promise.all([
-            SecureStore.getItemAsync(STORAGE_KEYS.email),
-            SecureStore.getItemAsync(STORAGE_KEYS.inviteToken),
-            SecureStore.getItemAsync(STORAGE_KEYS.deviceLabel),
-            loadPrivacyDefaults(nextDb),
-            countVaultItems(nextDb),
-            loadStoredSession(),
-            Linking.getInitialURL(),
-          ]);
+        const [
+          savedEmail,
+          savedInvite,
+          savedDeviceLabel,
+          nextPrivacyDefaults,
+          vaultItems,
+          savedSession,
+          initialUrl,
+        ] = await Promise.all([
+          SecureStore.getItemAsync(STORAGE_KEYS.email),
+          SecureStore.getItemAsync(STORAGE_KEYS.inviteToken),
+          SecureStore.getItemAsync(STORAGE_KEYS.deviceLabel),
+          loadPrivacyDefaults(nextDb),
+          countVaultItems(nextDb),
+          loadStoredSession(),
+          Linking.getInitialURL(),
+        ]);
 
         if (!mounted) {
           return;
@@ -1054,7 +1260,9 @@ export default function App() {
         setEmail(savedEmail ?? "");
         setInviteToken(savedInvite ?? "");
         setDeviceLabel(
-          isLegacySuggestedDeviceLabel(savedDeviceLabel) ? suggestedDeviceLabel : (savedDeviceLabel ?? suggestedDeviceLabel),
+          isLegacySuggestedDeviceLabel(savedDeviceLabel)
+            ? suggestedDeviceLabel
+            : (savedDeviceLabel ?? suggestedDeviceLabel),
         );
         setPrivacyDefaults(nextPrivacyDefaults);
         setVaultCount(vaultItems);
@@ -1084,7 +1292,9 @@ export default function App() {
   }, [privacyDefaults.secureAppSwitcher]);
 
   useEffect(() => {
-    void SystemUI.setBackgroundColorAsync(theme.colors.background).catch(() => undefined);
+    void SystemUI.setBackgroundColorAsync(theme.colors.background).catch(
+      () => undefined,
+    );
   }, []);
 
   useEffect(() => {
@@ -1094,14 +1304,18 @@ export default function App() {
 
     let cancelled = false;
 
-    const handleNotificationSelection = (notification: Notifications.Notification) => {
+    const handleNotificationSelection = (
+      notification: Notifications.Notification,
+    ) => {
       const reason = getNotificationReason(notification);
       const conversationId = getNotificationConversationId(notification);
       if (conversationId && reason === "relay_hosted_message") {
         setSelectedConversationId(conversationId);
         const currentSession = sessionRef.current;
         if (currentSession) {
-          void refreshGroupThread(currentSession, conversationId).catch(() => undefined);
+          void refreshGroupThread(currentSession, conversationId).catch(
+            () => undefined,
+          );
         }
         return;
       }
@@ -1139,26 +1353,31 @@ export default function App() {
         return;
       }
 
-      receivedSubscription = Notifications.addNotificationReceivedListener((notification) => {
-        const conversationId = getNotificationConversationId(notification);
-        const reason = getNotificationReason(notification);
-        const currentSession = sessionRef.current;
+      receivedSubscription = Notifications.addNotificationReceivedListener(
+        (notification) => {
+          const conversationId = getNotificationConversationId(notification);
+          const reason = getNotificationReason(notification);
+          const currentSession = sessionRef.current;
 
-        if (
-          currentSession &&
-          reason === "relay_hosted_message" &&
-          conversationId &&
-          selectedConversationIdRef.current === conversationId
-        ) {
-          void refreshGroupThread(currentSession, conversationId).catch(() => undefined);
-        } else if (currentSession && reason === "mailbox") {
-          void syncEncryptedMailbox(currentSession).catch(() => undefined);
-        }
-      });
+          if (
+            currentSession &&
+            reason === "relay_hosted_message" &&
+            conversationId &&
+            selectedConversationIdRef.current === conversationId
+          ) {
+            void refreshGroupThread(currentSession, conversationId).catch(
+              () => undefined,
+            );
+          } else if (currentSession && reason === "mailbox") {
+            void syncEncryptedMailbox(currentSession).catch(() => undefined);
+          }
+        },
+      );
 
-      responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
-        handleNotificationSelection(response.notification);
-      });
+      responseSubscription =
+        Notifications.addNotificationResponseReceivedListener((response) => {
+          handleNotificationSelection(response.notification);
+        });
 
       pushTokenSubscription = Notifications.addPushTokenListener((token) => {
         const currentSession = sessionRef.current;
@@ -1166,21 +1385,29 @@ export default function App() {
           return;
         }
 
-        const provider = token.type === "fcm" ? "fcm" : token.type === "apns" ? "apns" : null;
+        const provider =
+          token.type === "fcm" ? "fcm" : token.type === "apns" ? "apns" : null;
         if (!provider) {
           return;
         }
 
-        void relayFetch<{ registered: boolean }>(currentSession, "/v1/devices/push-token", {
-          method: "POST",
-          body: JSON.stringify({
-            provider,
-            platform: Platform.OS === "android" ? "android" : "ios",
-            token: token.data,
-            appId: Platform.OS === "android" ? "com.emberchamber.mobile" : "com.emberchamber.mobile.ios",
-            pushEnvironment: "production",
-          }),
-        }).catch((error) => {
+        void relayFetch<{ registered: boolean }>(
+          currentSession,
+          "/v1/devices/push-token",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              provider,
+              platform: Platform.OS === "android" ? "android" : "ios",
+              token: token.data,
+              appId:
+                Platform.OS === "android"
+                  ? "com.emberchamber.mobile"
+                  : "com.emberchamber.mobile.ios",
+              pushEnvironment: "production",
+            }),
+          },
+        ).catch((error) => {
           console.warn("mobile_push_token_refresh_failed", error);
         });
       });
@@ -1225,7 +1452,9 @@ export default function App() {
 
     void (async () => {
       setIsLoadingAccount(true);
-      const cachedGroups = db ? await loadCachedGroups(db, session.accountId) : [];
+      const cachedGroups = db
+        ? await loadCachedGroups(db, session.accountId)
+        : [];
 
       if (!cancelled && cachedGroups.length) {
         setGroups(cachedGroups);
@@ -1242,7 +1471,9 @@ export default function App() {
         if (!cancelled) {
           setDeviceBundleReady(false);
           setDeviceBundleError(
-            error instanceof Error ? error.message : "Unable to register this phone with the relay.",
+            error instanceof Error
+              ? error.message
+              : "Unable to register this phone with the relay.",
           );
         }
       }
@@ -1262,7 +1493,11 @@ export default function App() {
         setContactCard(nextCard);
         setGroups(nextGroups);
         setProfileSetupActive(isDefaultDisplayName(nextProfile.displayName));
-        setProfileSetupName(isDefaultDisplayName(nextProfile.displayName) ? "" : nextProfile.displayName);
+        setProfileSetupName(
+          isDefaultDisplayName(nextProfile.displayName)
+            ? ""
+            : nextProfile.displayName,
+        );
 
         if (db) {
           await saveCachedGroups(db, session.accountId, nextGroups);
@@ -1290,7 +1525,9 @@ export default function App() {
         if (!cancelled) {
           setSessionMessage({
             tone: cachedGroups.length ? "warning" : "error",
-            title: cachedGroups.length ? "Relay sync paused" : "Signed in, but account sync failed",
+            title: cachedGroups.length
+              ? "Relay sync paused"
+              : "Signed in, but account sync failed",
             body: cachedGroups.length
               ? "Showing the last synced groups stored on this phone while the relay is unavailable."
               : error instanceof Error
@@ -1322,19 +1559,29 @@ export default function App() {
     }
 
     const selectedStillExists =
-      selectedConversationId && groups.some((group) => group.id === selectedConversationId);
+      selectedConversationId &&
+      groups.some((group) => group.id === selectedConversationId);
     if (selectedStillExists) {
       return;
     }
 
     const restoredGroup = restoredConversationId
-      ? groups.find((group) => group.id === restoredConversationId) ?? null
+      ? (groups.find((group) => group.id === restoredConversationId) ?? null)
       : null;
     const bootstrapGroup = session?.bootstrapConversationId
-      ? groups.find((group) => group.id === session.bootstrapConversationId) ?? null
+      ? (groups.find((group) => group.id === session.bootstrapConversationId) ??
+        null)
       : null;
-    setSelectedConversationId(restoredGroup?.id ?? bootstrapGroup?.id ?? groups[0]?.id ?? null);
-  }, [groups, isMainShellReady, restoredConversationId, selectedConversationId, session?.bootstrapConversationId]);
+    setSelectedConversationId(
+      restoredGroup?.id ?? bootstrapGroup?.id ?? groups[0]?.id ?? null,
+    );
+  }, [
+    groups,
+    isMainShellReady,
+    restoredConversationId,
+    selectedConversationId,
+    session?.bootstrapConversationId,
+  ]);
 
   useEffect(() => {
     if (!session || !selectedConversationId) {
@@ -1343,7 +1590,8 @@ export default function App() {
       return;
     }
 
-    const selectedGroupSummary = groups.find((group) => group.id === selectedConversationId) ?? null;
+    const selectedGroupSummary =
+      groups.find((group) => group.id === selectedConversationId) ?? null;
     let cancelled = false;
     setIsLoadingThread(true);
     let ws: WebSocket | null = null;
@@ -1363,17 +1611,25 @@ export default function App() {
         if (selectedGroupSummary?.historyMode === "device_encrypted") {
           await syncEncryptedMailbox(session);
           if (db && !cancelled) {
-            setThreadMessages(await loadCachedGroupMessages(db, selectedConversationId));
+            setThreadMessages(
+              await loadCachedGroupMessages(db, selectedConversationId),
+            );
           }
 
           if (!cancelled) {
             refreshTimer = setInterval(() => {
               void syncEncryptedMailbox(session)
                 .then(async () => {
-                  if (!db || cancelled || selectedConversationIdRef.current !== selectedConversationId) {
+                  if (
+                    !db ||
+                    cancelled ||
+                    selectedConversationIdRef.current !== selectedConversationId
+                  ) {
                     return;
                   }
-                  setThreadMessages(await loadCachedGroupMessages(db, selectedConversationId));
+                  setThreadMessages(
+                    await loadCachedGroupMessages(db, selectedConversationId),
+                  );
                 })
                 .catch(() => undefined);
             }, 8000);
@@ -1395,10 +1651,16 @@ export default function App() {
           // Ack so other members' ✓✓ updates
           const latestOnLoad = messages[messages.length - 1];
           if (latestOnLoad) {
-            void relayFetch<{ acked: boolean }>(session, `/v1/groups/${selectedConversationId}/messages/ack`, {
-              method: "POST",
-              body: JSON.stringify({ lastReadMessageCreatedAt: latestOnLoad.createdAt }),
-            }).catch(() => undefined);
+            void relayFetch<{ acked: boolean }>(
+              session,
+              `/v1/groups/${selectedConversationId}/messages/ack`,
+              {
+                method: "POST",
+                body: JSON.stringify({
+                  lastReadMessageCreatedAt: latestOnLoad.createdAt,
+                }),
+              },
+            ).catch(() => undefined);
           }
 
           if (!cancelled) {
@@ -1418,7 +1680,8 @@ export default function App() {
                 }
 
                 const socketSession = refreshBeforeConnect
-                  ? ((await refreshRelaySession(activeSession)) ?? sessionRef.current)
+                  ? ((await refreshRelaySession(activeSession)) ??
+                    sessionRef.current)
                   : activeSession;
                 if (cancelled || !socketSession?.accessToken) {
                   return;
@@ -1429,26 +1692,39 @@ export default function App() {
                 );
                 ws.onmessage = (event) => {
                   try {
-                    const message = JSON.parse(event.data) as GroupThreadMessage;
+                    const message = JSON.parse(
+                      event.data,
+                    ) as GroupThreadMessage;
                     setThreadMessages((prev) => {
                       if (prev.some((entry) => entry.id === message.id)) {
                         return prev;
                       }
                       const next = [message, ...prev].sort(
-                        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+                        (a, b) =>
+                          new Date(b.createdAt).getTime() -
+                          new Date(a.createdAt).getTime(),
                       );
                       if (db) {
-                        saveCachedGroupMessages(db, selectedConversationId, next).catch(() => {});
+                        saveCachedGroupMessages(
+                          db,
+                          selectedConversationId,
+                          next,
+                        ).catch(() => {});
                       }
                       return next;
                     });
-                    if (selectedConversationIdRef.current === selectedConversationId) {
+                    if (
+                      selectedConversationIdRef.current ===
+                      selectedConversationId
+                    ) {
                       void relayFetch<{ acked: boolean }>(
                         socketSession,
                         `/v1/groups/${selectedConversationId}/messages/ack`,
                         {
                           method: "POST",
-                          body: JSON.stringify({ lastReadMessageCreatedAt: message.createdAt }),
+                          body: JSON.stringify({
+                            lastReadMessageCreatedAt: message.createdAt,
+                          }),
                         },
                       ).catch(() => undefined);
                     }
@@ -1486,7 +1762,9 @@ export default function App() {
         if (!cancelled) {
           setSessionMessage({
             tone: cachedMessages.length ? "warning" : "error",
-            title: cachedMessages.length ? "Showing last synced thread" : "Unable to load this conversation",
+            title: cachedMessages.length
+              ? "Showing last synced thread"
+              : "Unable to load this conversation",
             body: cachedMessages.length
               ? "Relay sync failed. The last thread copy stored on this phone is still available."
               : error instanceof Error
@@ -1523,31 +1801,38 @@ export default function App() {
     const requireInviteToken = inviteFieldVisible && !bootstrapInvite;
 
     if (!email.trim()) {
-      nextErrors.email = "Enter the email that should receive the bootstrap link.";
+      nextErrors.email =
+        "Enter the email that should receive the bootstrap link.";
     } else if (!isValidEmail(email.trim())) {
-      nextErrors.email = "Enter a valid email address so the inbox step can complete.";
+      nextErrors.email =
+        "Enter a valid email address so the inbox step can complete.";
     }
 
     if (requireInviteToken) {
       if (!inviteToken.trim()) {
-        nextErrors.inviteToken = "New beta accounts need an invite token unless a group invite is present.";
+        nextErrors.inviteToken =
+          "New beta accounts need an invite token unless a group invite is present.";
       } else if (inviteToken.trim().length < 4) {
         nextErrors.inviteToken = "This invite token is too short to be valid.";
       }
     }
 
     if (inviteInput.trim() && !bootstrapInvite) {
-      nextErrors.groupInvite = "Paste a full invite link or a groupId/token pair.";
+      nextErrors.groupInvite =
+        "Paste a full invite link or a groupId/token pair.";
     }
 
     if (!ageConfirmed18) {
-      nextErrors.ageConfirmed18 = "EmberChamber beta access is limited to adults 18 and over.";
+      nextErrors.ageConfirmed18 =
+        "EmberChamber beta access is limited to adults 18 and over.";
     }
 
     if (!deviceLabel.trim()) {
-      nextErrors.deviceLabel = "Name this device so session review stays readable.";
+      nextErrors.deviceLabel =
+        "Name this device so session review stays readable.";
     } else if (deviceLabel.trim().length < 3) {
-      nextErrors.deviceLabel = "Use at least 3 characters so the device label is recognizable.";
+      nextErrors.deviceLabel =
+        "Use at least 3 characters so the device label is recognizable.";
     }
 
     setErrors(nextErrors);
@@ -1570,18 +1855,21 @@ export default function App() {
 
     setIsSending(true);
     try {
-      const { response, body } = await fetchJson<MagicLinkResponse>(`${relayUrl}/v1/auth/start`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          email: email.trim(),
-          inviteToken: inviteToken.trim() || undefined,
-          groupId: bootstrapInvite?.groupId,
-          groupInviteToken: bootstrapInvite?.inviteToken,
-          deviceLabel: deviceLabel.trim(),
-          ageConfirmed18: true,
-        }),
-      });
+      const { response, body } = await fetchJson<MagicLinkResponse>(
+        `${relayUrl}/v1/auth/start`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            email: email.trim(),
+            inviteToken: inviteToken.trim() || undefined,
+            groupId: bootstrapInvite?.groupId,
+            groupInviteToken: bootstrapInvite?.inviteToken,
+            deviceLabel: deviceLabel.trim(),
+            ageConfirmed18: true,
+          }),
+        },
+      );
       if (!response.ok) {
         if (body.code === "INVITE_REQUIRED") {
           setInviteFieldVisible(true);
@@ -1639,14 +1927,17 @@ export default function App() {
     });
 
     try {
-      const { response, body } = await fetchJson<AuthSession>(`${relayUrl}/v1/auth/complete`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          completionToken,
-          deviceLabel: deviceLabel.trim() || suggestMobileDeviceLabel(),
-        }),
-      });
+      const { response, body } = await fetchJson<AuthSession>(
+        `${relayUrl}/v1/auth/complete`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            completionToken,
+            deviceLabel: deviceLabel.trim() || suggestMobileDeviceLabel(),
+          }),
+        },
+      );
       if (!response.ok || !("accessToken" in body)) {
         throw new Error(body.error ?? "Unable to complete the magic link");
       }
@@ -1693,9 +1984,17 @@ export default function App() {
 
   async function previewInviteReference(
     rawValue: string,
-    options: { routeToInvites?: boolean; signedIn?: boolean; source?: "deep-link" | "manual" } = {},
+    options: {
+      routeToInvites?: boolean;
+      signedIn?: boolean;
+      source?: "deep-link" | "manual";
+    } = {},
   ) {
-    const { routeToInvites = false, signedIn = !!sessionRef.current, source = "manual" } = options;
+    const {
+      routeToInvites = false,
+      signedIn = !!sessionRef.current,
+      source = "manual",
+    } = options;
     const normalized = normalizeInviteReference(rawValue);
     const normalizedValue = normalized
       ? `${normalized.groupId}/${normalized.inviteToken}`
@@ -1755,7 +2054,8 @@ export default function App() {
 
       return body;
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Invite preview failed";
+      const message =
+        error instanceof Error ? error.message : "Invite preview failed";
       setInvitePreview(null);
       setInvitePreviewError(message);
       if (source === "deep-link") {
@@ -1801,7 +2101,10 @@ export default function App() {
         { method: "POST" },
       );
 
-      const nextGroups = await relayFetch<GroupMembershipSummary[]>(session, "/v1/groups");
+      const nextGroups = await relayFetch<GroupMembershipSummary[]>(
+        session,
+        "/v1/groups",
+      );
       setGroups(nextGroups);
       if (db) {
         await saveCachedGroups(db, session.accountId, nextGroups);
@@ -1814,19 +2117,23 @@ export default function App() {
         body: `${result.title} is ready below. You can send a text or photo now.`,
       });
     } catch (error) {
-      setInvitePreviewError(error instanceof Error ? error.message : "Invite acceptance failed");
+      setInvitePreviewError(
+        error instanceof Error ? error.message : "Invite acceptance failed",
+      );
     } finally {
       setIsAcceptingInvite(false);
     }
   }
 
-  async function buildPendingAttachmentFromAsset(asset: ImagePicker.ImagePickerAsset) {
+  async function buildPendingAttachmentFromAsset(
+    asset: ImagePicker.ImagePickerAsset,
+  ) {
     const assetFile = new ExpoFile(asset.uri);
     const inferredMimeType =
-      asset.mimeType
-      ?? (asset.type === "video" ? "video/mp4" : "image/jpeg");
+      asset.mimeType ?? (asset.type === "video" ? "video/mp4" : "image/jpeg");
     const inferredByteLength = asset.fileSize ?? assetFile.size ?? 0;
-    const isVideo = asset.type === "video" || inferredMimeType.startsWith("video/");
+    const isVideo =
+      asset.type === "video" || inferredMimeType.startsWith("video/");
 
     if (isVideo) {
       if (inferredByteLength > MAX_ATTACHMENT_BYTES) {
@@ -1858,7 +2165,8 @@ export default function App() {
 
     const manipulatedFile = new ExpoFile(manipulated.uri);
     const byteLength =
-      manipulatedFile.size || Math.floor(manipulated.width * manipulated.height * 0.3);
+      manipulatedFile.size ||
+      Math.floor(manipulated.width * manipulated.height * 0.3);
     if (byteLength > MAX_ATTACHMENT_BYTES) {
       throw new Error("That photo exceeds the 20 MB beta attachment limit.");
     }
@@ -1878,7 +2186,8 @@ export default function App() {
     setSessionMessage(null);
 
     try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
         setSessionMessage({
           tone: "warning",
@@ -1904,7 +2213,10 @@ export default function App() {
       setSessionMessage({
         tone: "error",
         title: "Media picker failed",
-        body: error instanceof Error ? error.message : "Unable to open the media library.",
+        body:
+          error instanceof Error
+            ? error.message
+            : "Unable to open the media library.",
       });
     } finally {
       setIsPickingPhoto(false);
@@ -1942,14 +2254,17 @@ export default function App() {
       setSessionMessage({
         tone: "error",
         title: "Camera capture failed",
-        body: error instanceof Error ? error.message : "Unable to capture media.",
+        body:
+          error instanceof Error ? error.message : "Unable to capture media.",
       });
     } finally {
       setIsPickingPhoto(false);
     }
   }
 
-  function getContentClass(mimeType: string): "image" | "video" | "audio" | "file" {
+  function getContentClass(
+    mimeType: string,
+  ): "image" | "video" | "audio" | "file" {
     if (mimeType.startsWith("image/")) return "image";
     if (mimeType.startsWith("video/")) return "video";
     if (mimeType.startsWith("audio/")) return "audio";
@@ -1960,7 +2275,9 @@ export default function App() {
     setIsPickingPhoto(true);
     setSessionMessage(null);
     try {
-      const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true });
+      const result = await DocumentPicker.getDocumentAsync({
+        copyToCacheDirectory: true,
+      });
       if (result.canceled || !result.assets.length) return;
       const asset = result.assets[0];
       if (asset.size && asset.size > MAX_ATTACHMENT_BYTES) {
@@ -1981,7 +2298,10 @@ export default function App() {
       setSessionMessage({
         tone: "error",
         title: "File picker failed",
-        body: error instanceof Error ? error.message : "Unable to open the file picker.",
+        body:
+          error instanceof Error
+            ? error.message
+            : "Unable to open the file picker.",
       });
     } finally {
       setIsPickingPhoto(false);
@@ -2012,9 +2332,10 @@ export default function App() {
 
       let header: string;
       if (choice.kind === "live") {
-        const dur = choice.durationMinutes < 60
-          ? `${choice.durationMinutes} min`
-          : `${choice.durationMinutes / 60} hr`;
+        const dur =
+          choice.durationMinutes < 60
+            ? `${choice.durationMinutes} min`
+            : `${choice.durationMinutes / 60} hr`;
         header = `\uD83D\uDCCD Live location (${dur} — one-time in beta)`;
       } else {
         header = "\uD83D\uDCCD Location";
@@ -2029,7 +2350,10 @@ export default function App() {
       setSessionMessage({
         tone: "error",
         title: "Location failed",
-        body: error instanceof Error ? error.message : "Unable to get your current location.",
+        body:
+          error instanceof Error
+            ? error.message
+            : "Unable to get your current location.",
       });
     }
   }
@@ -2054,7 +2378,10 @@ export default function App() {
 
     try {
       // ---- edit existing message ----
-      if (editingMessageId && selectedGroup.historyMode !== "device_encrypted") {
+      if (
+        editingMessageId &&
+        selectedGroup.historyMode !== "device_encrypted"
+      ) {
         await relayFetch<{ updated: boolean }>(
           session,
           `/v1/groups/${selectedGroup.id}/messages/${editingMessageId}`,
@@ -2088,48 +2415,61 @@ export default function App() {
         }>(session, `/v1/conversations/${selectedGroup.id}`);
 
         const bundleLists = await Promise.all(
-          Array.from(new Set(conversation.memberAccountIds)).map(async (accountId) => ({
-            accountId,
-            bundles: await listDeviceBundlesForAccount(session, accountId),
-          })),
+          Array.from(new Set(conversation.memberAccountIds)).map(
+            async (accountId) => ({
+              accountId,
+              bundles: await listDeviceBundlesForAccount(session, accountId),
+            }),
+          ),
         );
         const recipientDevices = bundleLists
           .flatMap((entry) => entry.bundles)
           .filter((bundle) => bundle.deviceId !== session.deviceId);
 
         if (recipientDevices.length === 0) {
-          throw new Error("No member devices are registered for this encrypted group yet.");
+          throw new Error(
+            "No member devices are registered for this encrypted group yet.",
+          );
         }
 
         let attachment: GroupThreadMessage["attachment"] | null = null;
         const attachmentIds: string[] = [];
 
         if (pendingAttachment) {
-          const attachmentFile = await loadPendingAttachmentFile(pendingAttachment);
+          const attachmentFile =
+            await loadPendingAttachmentFile(pendingAttachment);
           const fileBytes = await attachmentFile.bytes();
 
           if (fileBytes.byteLength > MAX_ATTACHMENT_BYTES) {
-            throw new Error("That photo exceeds the 20 MB beta attachment limit.");
+            throw new Error(
+              "That photo exceeds the 20 MB beta attachment limit.",
+            );
           }
 
           const encrypted = encryptAttachmentBytes(fileBytes);
-          const ticket = await relayFetch<AttachmentTicket>(session, "/v1/attachments/ticket", {
-            method: "POST",
-            body: JSON.stringify({
-              fileName: pendingAttachment.fileName,
-              mimeType: "application/octet-stream",
-              encryptionMode: "device_encrypted",
-              ciphertextByteLength: encrypted.ciphertext.byteLength,
-              ciphertextSha256B64: encrypted.ciphertextSha256B64,
-              plaintextByteLength: encrypted.plaintext.byteLength,
-              plaintextSha256B64: encrypted.plaintextSha256B64,
-              conversationId: selectedGroup.id,
-              conversationEpoch: selectedGroup.epoch,
-              contentClass: getContentClass(pendingAttachment.mimeType),
-              retentionMode: "private_vault",
-              protectionProfile: selectedGroup.sensitiveMediaDefault ? "sensitive_media" : "standard",
-            }),
-          });
+          const ticket = await relayFetch<AttachmentTicket>(
+            session,
+            "/v1/attachments/ticket",
+            {
+              method: "POST",
+              body: JSON.stringify({
+                fileName: pendingAttachment.fileName,
+                mimeType: "application/octet-stream",
+                encryptionMode: "device_encrypted",
+                ciphertextByteLength: encrypted.ciphertext.byteLength,
+                ciphertextSha256B64: encrypted.ciphertextSha256B64,
+                plaintextByteLength: encrypted.plaintext.byteLength,
+                plaintextSha256B64: encrypted.plaintextSha256B64,
+                conversationId: selectedGroup.id,
+                conversationEpoch: selectedGroup.epoch,
+                contentClass: getContentClass(pendingAttachment.mimeType),
+                retentionMode: "private_vault",
+                protectionProfile: selectedGroup.sensitiveMediaDefault
+                  ? "sensitive_media"
+                  : "standard",
+              }),
+            },
+          );
 
           await uploadAttachmentBytes(
             ticket.uploadUrl,
@@ -2139,7 +2479,7 @@ export default function App() {
 
           attachment = {
             id: ticket.attachmentId,
-            downloadUrl: "",
+            downloadUrl: ticket.downloadUrl,
             fileName: pendingAttachment.fileName,
             mimeType: pendingAttachment.mimeType,
             byteLength: fileBytes.byteLength,
@@ -2184,23 +2524,27 @@ export default function App() {
           clientMessageId,
         };
 
-        await relayFetch<{ acceptedEnvelopeIds: string[] }>(session, "/v1/messages/batch", {
-          method: "POST",
-          body: JSON.stringify({
-            conversationId: selectedGroup.id,
-            epoch: selectedGroup.epoch,
-            envelopes: recipientDevices.map((bundle) => ({
-              recipientDeviceId: bundle.deviceId,
-              ciphertext: encryptConversationPayload(
-                payload,
-                bundle.bundle.identityKeyB64,
-                localBundle.privateKeyB64,
-              ),
-              clientMessageId,
-              attachmentIds,
-            })),
-          }),
-        });
+        await relayFetch<{ acceptedEnvelopeIds: string[] }>(
+          session,
+          "/v1/messages/batch",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              conversationId: selectedGroup.id,
+              epoch: selectedGroup.epoch,
+              envelopes: recipientDevices.map((bundle) => ({
+                recipientDeviceId: bundle.deviceId,
+                ciphertext: encryptConversationPayload(
+                  payload,
+                  bundle.bundle.identityKeyB64,
+                  localBundle.privateKeyB64,
+                ),
+                clientMessageId,
+                attachmentIds,
+              })),
+            }),
+          },
+        );
 
         createdMessage = {
           id: clientMessageId,
@@ -2217,31 +2561,43 @@ export default function App() {
         let attachmentId: string | undefined;
 
         if (pendingAttachment) {
-          const attachmentFile = await loadPendingAttachmentFile(pendingAttachment);
+          const attachmentFile =
+            await loadPendingAttachmentFile(pendingAttachment);
           const fileBytes = await attachmentFile.bytes();
 
           if (fileBytes.byteLength > MAX_ATTACHMENT_BYTES) {
-            throw new Error("That photo exceeds the 20 MB beta attachment limit.");
+            throw new Error(
+              "That photo exceeds the 20 MB beta attachment limit.",
+            );
           }
 
-          const ticket = await relayFetch<AttachmentTicket>(session, "/v1/attachments/ticket", {
-            method: "POST",
-            body: JSON.stringify({
-              fileName: pendingAttachment.fileName,
-              mimeType: pendingAttachment.mimeType,
-              byteLength: fileBytes.byteLength,
-              conversationId: selectedGroup.id,
-              conversationEpoch: selectedGroup.epoch,
-              contentClass: getContentClass(pendingAttachment.mimeType),
-              retentionMode: "private_vault",
-              protectionProfile: selectedGroup.sensitiveMediaDefault ? "sensitive_media" : "standard",
-            }),
-          });
+          const ticket = await relayFetch<AttachmentTicket>(
+            session,
+            "/v1/attachments/ticket",
+            {
+              method: "POST",
+              body: JSON.stringify({
+                fileName: pendingAttachment.fileName,
+                mimeType: pendingAttachment.mimeType,
+                byteLength: fileBytes.byteLength,
+                conversationId: selectedGroup.id,
+                conversationEpoch: selectedGroup.epoch,
+                contentClass: getContentClass(pendingAttachment.mimeType),
+                retentionMode: "private_vault",
+                protectionProfile: selectedGroup.sensitiveMediaDefault
+                  ? "sensitive_media"
+                  : "standard",
+              }),
+            },
+          );
 
           await uploadAttachmentBytes(
             ticket.uploadUrl,
             pendingAttachment.mimeType,
-            fileBytes.buffer.slice(fileBytes.byteOffset, fileBytes.byteOffset + fileBytes.byteLength),
+            fileBytes.buffer.slice(
+              fileBytes.byteOffset,
+              fileBytes.byteOffset + fileBytes.byteLength,
+            ),
           );
 
           attachmentId = ticket.attachmentId;
@@ -2271,7 +2627,11 @@ export default function App() {
         refreshConversationCatalog();
 
         if (createdMessage.attachment) {
-          await persistVaultMediaRecord(db, createdMessage, profile?.displayName ?? deviceLabel);
+          await persistVaultMediaRecord(
+            db,
+            createdMessage,
+            profile?.displayName ?? deviceLabel,
+          );
           setVaultCount(await countVaultItems(db));
         }
       }
@@ -2279,21 +2639,31 @@ export default function App() {
       setSessionMessage({
         tone: "error",
         title: "Message failed to send",
-        body: error instanceof Error ? error.message : "Unable to send this message right now.",
+        body:
+          error instanceof Error
+            ? error.message
+            : "Unable to send this message right now.",
       });
     } finally {
       setIsSendingMessage(false);
     }
   }
 
-  async function updatePrivacyDefaults<K extends keyof PrivacyDefaults>(key: K, value: PrivacyDefaults[K]) {
+  async function updatePrivacyDefaults<K extends keyof PrivacyDefaults>(
+    key: K,
+    value: PrivacyDefaults[K],
+  ) {
     setPrivacyDefaults((current) => ({ ...current, [key]: value }));
 
     if (!db) {
       return;
     }
 
-    await savePrivacyDefault(db, key, typeof value === "boolean" ? (value ? "1" : "0") : value);
+    await savePrivacyDefault(
+      db,
+      key,
+      typeof value === "boolean" ? (value ? "1" : "0") : value,
+    );
   }
 
   function handleImageError(messageId: string) {
@@ -2314,6 +2684,69 @@ export default function App() {
         }, 30_000);
       }
     })();
+  }
+
+  async function handleResolveAttachmentAccess(
+    messageId: string,
+    attachment: NonNullable<GroupThreadMessage["attachment"]>,
+  ) {
+    const activeSession = sessionRef.current ?? session;
+    if (!activeSession) {
+      throw new Error("You must be signed in to open this attachment.");
+    }
+
+    const access = await relayFetch<{
+      attachmentId: string;
+      downloadUrl: string;
+      expiresAt: string;
+    }>(activeSession, `/v1/attachments/${attachment.id}/access`);
+    const nextAttachment = {
+      ...attachment,
+      downloadUrl: access.downloadUrl,
+    };
+
+    let nextMessagesToCache: GroupThreadMessage[] | null = null;
+    let conversationIdToCache: string | null = null;
+
+    setThreadMessages((prev) => {
+      let changed = false;
+      const next = prev.map((message) => {
+        if (
+          message.id !== messageId ||
+          !message.attachment ||
+          message.attachment.id !== attachment.id
+        ) {
+          return message;
+        }
+
+        changed = true;
+        conversationIdToCache = message.conversationId;
+        return {
+          ...message,
+          attachment: {
+            ...message.attachment,
+            downloadUrl: access.downloadUrl,
+          },
+        };
+      });
+
+      if (!changed) {
+        return prev;
+      }
+
+      nextMessagesToCache = next;
+      return next;
+    });
+
+    if (db && nextMessagesToCache && conversationIdToCache) {
+      await saveCachedGroupMessages(
+        db,
+        conversationIdToCache,
+        nextMessagesToCache,
+      );
+    }
+
+    return nextAttachment;
   }
 
   function handleMessageAction(messageId: string, action: ContextMenuAction) {
@@ -2360,12 +2793,19 @@ export default function App() {
 
   async function handleUpdateGroup(title: string, sensitiveMedia: boolean) {
     if (!session || !selectedGroup) return;
-    await relayFetch<{ updated: boolean }>(session, `/v1/groups/${selectedGroup.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ title, sensitiveMediaDefault: sensitiveMedia }),
-    });
+    await relayFetch<{ updated: boolean }>(
+      session,
+      `/v1/groups/${selectedGroup.id}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ title, sensitiveMediaDefault: sensitiveMedia }),
+      },
+    );
     // Refresh groups list so the title change reflects in ChatList
-    const nextGroups = await relayFetch<GroupMembershipSummary[]>(session, "/v1/groups");
+    const nextGroups = await relayFetch<GroupMembershipSummary[]>(
+      session,
+      "/v1/groups",
+    );
     setGroups(nextGroups);
     if (db) await saveCachedGroups(db, session.accountId, nextGroups);
   }
@@ -2373,10 +2813,14 @@ export default function App() {
   async function handleCreateInvite(): Promise<GroupInviteRecord | null> {
     if (!session || !selectedGroup) return null;
     try {
-      return await relayFetch<GroupInviteRecord>(session, `/v1/groups/${selectedGroup.id}/invites`, {
-        method: "POST",
-        body: JSON.stringify({ maxUses: 1, expiresInHours: 24 * 7 }),
-      });
+      return await relayFetch<GroupInviteRecord>(
+        session,
+        `/v1/groups/${selectedGroup.id}/invites`,
+        {
+          method: "POST",
+          body: JSON.stringify({ maxUses: 1, expiresInHours: 24 * 7 }),
+        },
+      );
     } catch {
       return null;
     }
@@ -2387,7 +2831,8 @@ export default function App() {
     setIsUploadingAvatar(true);
     setSessionMessage(null);
     try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
         setSessionMessage({
           tone: "warning",
@@ -2434,23 +2879,30 @@ export default function App() {
       const fileBytes = await file.bytes();
       const mimeType = "image/jpeg";
 
-      const ticket = await relayFetch<AttachmentTicket>(session, "/v1/attachments/ticket", {
-        method: "POST",
-        body: JSON.stringify({
-          fileName: `avatar-${Date.now()}.jpg`,
-          mimeType,
-          byteLength: fileBytes.byteLength,
-          contentClass: "image",
-          retentionMode: "private_vault",
-          protectionProfile: "standard",
-          encryptionMode: "none",
-        }),
-      });
+      const ticket = await relayFetch<AttachmentTicket>(
+        session,
+        "/v1/attachments/ticket",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            fileName: `avatar-${Date.now()}.jpg`,
+            mimeType,
+            byteLength: fileBytes.byteLength,
+            contentClass: "image",
+            retentionMode: "private_vault",
+            protectionProfile: "standard",
+            encryptionMode: "none",
+          }),
+        },
+      );
 
       await uploadAttachmentBytes(
         ticket.uploadUrl,
         mimeType,
-        fileBytes.buffer.slice(fileBytes.byteOffset, fileBytes.byteOffset + fileBytes.byteLength),
+        fileBytes.buffer.slice(
+          fileBytes.byteOffset,
+          fileBytes.byteOffset + fileBytes.byteLength,
+        ),
       );
 
       await relayFetch<MeProfile>(session, "/v1/me", {
@@ -2464,7 +2916,10 @@ export default function App() {
       setSessionMessage({
         tone: "error",
         title: "Avatar upload failed",
-        body: error instanceof Error ? error.message : "Unable to update profile picture.",
+        body:
+          error instanceof Error
+            ? error.message
+            : "Unable to update profile picture.",
       });
     } finally {
       setIsUploadingAvatar(false);
@@ -2488,7 +2943,9 @@ export default function App() {
     }
   }
 
-  async function handleLoadMemberNote(accountId: string): Promise<string | null> {
+  async function handleLoadMemberNote(
+    accountId: string,
+  ): Promise<string | null> {
     if (!db) return null;
     const { privateNote } = await loadContactLabel(db, accountId);
     return privateNote;
@@ -2496,7 +2953,9 @@ export default function App() {
 
   async function handleSaveMemberNote(accountId: string, note: string) {
     if (!db) return;
-    const label = groupMembers.find((m) => m.accountId === accountId)?.displayName ?? accountId;
+    const label =
+      groupMembers.find((m) => m.accountId === accountId)?.displayName ??
+      accountId;
     await saveContactLabel(db, accountId, label, note || null);
   }
 
@@ -2504,7 +2963,12 @@ export default function App() {
     if (!session) return;
     setIsOpeningDm(true);
     try {
-      type DmDescriptor = { id: string; epoch: number; historyMode: string; createdAt: string };
+      type DmDescriptor = {
+        id: string;
+        epoch: number;
+        historyMode: string;
+        createdAt: string;
+      };
       const dm = await relayFetch<DmDescriptor>(session, "/v1/dm/open", {
         method: "POST",
         body: JSON.stringify({ peerAccountId: targetAccountId }),
@@ -2547,7 +3011,10 @@ export default function App() {
     }
   }
 
-  function handleSendContactRequest(targetAccountId: string, displayName: string) {
+  function handleSendContactRequest(
+    targetAccountId: string,
+    displayName: string,
+  ) {
     // Prepopulate a DM with a contact intro draft
     void handleOpenDm(targetAccountId, displayName).then(() => {
       setMessageDraft("Hey! I'd like to connect with you. 👋");
@@ -2583,7 +3050,9 @@ export default function App() {
       setProfileSetupActive(false);
     } catch (error) {
       setProfileSetupError(
-        error instanceof Error ? error.message : "Profile setup failed. Try again.",
+        error instanceof Error
+          ? error.message
+          : "Profile setup failed. Try again.",
       );
     } finally {
       setIsSubmittingProfile(false);
@@ -2594,13 +3063,24 @@ export default function App() {
 
   const showEntryChrome = !session || profileSetupActive;
   const heroSignals = !session ? onboardingHeroSignals : [];
+  const keyboardShellBehavior: "padding" | "height" | undefined =
+    Platform.OS === "ios"
+      ? "padding"
+      : androidKeyboardVisible
+        ? "height"
+        : undefined;
 
   if (isBooting) {
     return (
       <SafeAreaProvider>
-        <SafeAreaView style={styles.loadingScreen} edges={["top", "right", "bottom", "left"]}>
+        <SafeAreaView
+          style={styles.loadingScreen}
+          edges={["top", "right", "bottom", "left"]}
+        >
           <ActivityIndicator size="large" color={theme.colors.textSoft} />
-          <Text style={styles.loadingText}>Preparing local device storage…</Text>
+          <Text style={styles.loadingText}>
+            Preparing local device storage…
+          </Text>
         </SafeAreaView>
       </SafeAreaProvider>
     );
@@ -2608,7 +3088,10 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={styles.screen} edges={["top", "right", "bottom", "left"]}>
+      <SafeAreaView
+        style={styles.screen}
+        edges={["top", "right", "bottom", "left"]}
+      >
         {showEntryChrome ? (
           <>
             <View pointerEvents="none" style={styles.backgroundOrbTop} />
@@ -2620,207 +3103,210 @@ export default function App() {
           style={styles.keyboardShell}
           // Android 14+ edge-to-edge keeps the activity at full height and
           // exposes the IME as an inset instead of shrinking the window.
-          // Use KAV height mode so bottom-aligned inputs and the conversation
-          // composer move above the keyboard on Android as well.
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          // Only enable height mode while the keyboard is visible so the shell
+          // snaps fully back once the IME closes.
+          behavior={keyboardShellBehavior}
+          enabled={Platform.OS === "ios" || androidKeyboardVisible}
         >
           {showEntryChrome ? (
-            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-            <View style={styles.heroCard}>
-              <View pointerEvents="none" style={styles.heroGlow} />
-              <View style={styles.brandRow}>
-                <View style={styles.brandMark}>
-                  <Text style={styles.brandMarkText}>EC</Text>
+            <ScrollView
+              contentContainerStyle={styles.content}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.heroCard}>
+                <View pointerEvents="none" style={styles.heroGlow} />
+                <View style={styles.brandRow}>
+                  <View style={styles.brandMark}>
+                    <Text style={styles.brandMarkText}>EC</Text>
+                  </View>
+                  <View style={styles.brandCopy}>
+                    <Text style={styles.eyebrow}>
+                      {!session ? "Android beta" : "Profile setup"}
+                    </Text>
+                    <Text style={styles.brandName}>EmberChamber</Text>
+                  </View>
                 </View>
-                <View style={styles.brandCopy}>
-                  <Text style={styles.eyebrow}>
-                    {!session ? "Android beta" : "Profile setup"}
-                  </Text>
-                  <Text style={styles.brandName}>EmberChamber</Text>
-                </View>
+                <Text style={styles.title}>
+                  {!session
+                    ? "Get this phone into your chats fast"
+                    : "Choose the name your circles will see"}
+                </Text>
+                <Text style={styles.subtitle}>
+                  {!session
+                    ? "Keep onboarding focused on the next action only: name this phone, confirm adults-only access, and finish sign-in from your inbox or a trusted device."
+                    : "Pick the display name that should appear in trusted-circle conversations on this device."}
+                </Text>
+                {!session ? (
+                  <View style={styles.heroSignalRow}>
+                    {heroSignals.map((signal) => (
+                      <View key={signal} style={styles.heroSignalChip}>
+                        <Text style={styles.heroSignalText}>{signal}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
               </View>
-              <Text style={styles.title}>
-                {!session
-                  ? "Get this phone into your chats fast"
-                  : "Choose the name your circles will see"}
-              </Text>
-              <Text style={styles.subtitle}>
-                {!session
-                  ? "Keep onboarding focused on the next action only: name this phone, confirm adults-only access, and finish sign-in from your inbox or a trusted device."
-                  : "Pick the display name that should appear in trusted-circle conversations on this device."}
-              </Text>
+
               {!session ? (
-                <View style={styles.heroSignalRow}>
-                  {heroSignals.map((signal) => (
-                    <View key={signal} style={styles.heroSignalChip}>
-                      <Text style={styles.heroSignalText}>{signal}</Text>
-                    </View>
+                <OnboardingScreen
+                  authMethod={authMethod}
+                  setAuthMethod={setAuthMethod}
+                  email={email}
+                  setEmail={setEmail}
+                  inviteToken={inviteToken}
+                  setInviteToken={setInviteToken}
+                  deviceLabel={deviceLabel}
+                  setDeviceLabel={setDeviceLabel}
+                  ageConfirmed18={ageConfirmed18}
+                  setAgeConfirmed18={setAgeConfirmed18}
+                  inviteInput={inviteInput}
+                  setInviteInput={setInviteInput}
+                  invitePreview={invitePreview}
+                  invitePreviewError={invitePreviewError}
+                  isPreviewingInvite={isPreviewingInvite}
+                  inviteFieldVisible={inviteFieldVisible}
+                  setInviteFieldVisible={setInviteFieldVisible}
+                  isSending={isSending}
+                  isCompleting={isCompleting}
+                  challenge={challenge}
+                  errors={errors}
+                  setErrors={setErrors}
+                  formMessage={formMessage}
+                  sessionMessage={sessionMessage}
+                  onSubmit={() => void submitMagicLink()}
+                  onCompleteMagicLink={(token) => void completeMagicLink(token)}
+                  onPreviewInvite={() => void previewInvite()}
+                  deviceLinkQrValue={deviceLinkQrValue}
+                  deviceLinkStatus={deviceLinkStatus}
+                  deviceLinkMessage={deviceLinkMessage}
+                  isWorkingDeviceLink={isWorkingDeviceLink}
+                  onShowDeviceLinkQr={() => void beginTargetDeviceLink()}
+                  onScanDeviceLinkQr={(payload) => scanDeviceLinkQr(payload)}
+                  onResetDeviceLink={resetDeviceLinkState}
+                />
+              ) : (
+                <ProfileSetupScreen
+                  sessionMessage={sessionMessage}
+                  profileSetupName={profileSetupName}
+                  setProfileSetupName={setProfileSetupName}
+                  profileSetupError={profileSetupError}
+                  setProfileSetupError={setProfileSetupError}
+                  isSubmittingProfile={isSubmittingProfile}
+                  onSubmit={() => void submitProfileSetup()}
+                />
+              )}
+
+              {!session ? (
+                <View style={styles.card}>
+                  <Text style={styles.sectionTitle}>Trust boundary</Text>
+                  {onboardingAssurances.map((item) => (
+                    <Text key={item} style={styles.bullet}>
+                      • {item}
+                    </Text>
                   ))}
                 </View>
               ) : null}
+            </ScrollView>
+          ) : !isMainShellReady ? (
+            <View style={styles.emptyState}>
+              <ActivityIndicator size="small" color={theme.colors.textSoft} />
+              <Text style={styles.emptyStateTitle}>Restoring workspace</Text>
+              <Text style={styles.emptyStateBody}>
+                Loading your last section and conversation on this device.
+              </Text>
             </View>
-
-            {!session ? (
-              <OnboardingScreen
-                authMethod={authMethod}
-                setAuthMethod={setAuthMethod}
-                email={email}
-                setEmail={setEmail}
-                inviteToken={inviteToken}
-                setInviteToken={setInviteToken}
-                deviceLabel={deviceLabel}
-                setDeviceLabel={setDeviceLabel}
-                ageConfirmed18={ageConfirmed18}
-                setAgeConfirmed18={setAgeConfirmed18}
-                inviteInput={inviteInput}
-                setInviteInput={setInviteInput}
-                invitePreview={invitePreview}
-                invitePreviewError={invitePreviewError}
-                isPreviewingInvite={isPreviewingInvite}
-                inviteFieldVisible={inviteFieldVisible}
-                setInviteFieldVisible={setInviteFieldVisible}
-                isSending={isSending}
-                isCompleting={isCompleting}
-                challenge={challenge}
-                errors={errors}
-                setErrors={setErrors}
-                formMessage={formMessage}
-                sessionMessage={sessionMessage}
-                onSubmit={() => void submitMagicLink()}
-                onCompleteMagicLink={(token) => void completeMagicLink(token)}
-                onPreviewInvite={() => void previewInvite()}
-                deviceLinkQrValue={deviceLinkQrValue}
-                deviceLinkStatus={deviceLinkStatus}
-                deviceLinkMessage={deviceLinkMessage}
-                isWorkingDeviceLink={isWorkingDeviceLink}
-                onShowDeviceLinkQr={() => void beginTargetDeviceLink()}
-                onScanDeviceLinkQr={(payload) => scanDeviceLinkQr(payload)}
-                onResetDeviceLink={resetDeviceLinkState}
-              />
-            ) : (
-              <ProfileSetupScreen
-                sessionMessage={sessionMessage}
-                profileSetupName={profileSetupName}
-                setProfileSetupName={setProfileSetupName}
-                profileSetupError={profileSetupError}
-                setProfileSetupError={setProfileSetupError}
-                isSubmittingProfile={isSubmittingProfile}
-                onSubmit={() => void submitProfileSetup()}
-              />
-            )}
-
-            {!session ? (
-              <View style={styles.card}>
-                <Text style={styles.sectionTitle}>Trust boundary</Text>
-                {onboardingAssurances.map((item) => (
-                  <Text key={item} style={styles.bullet}>
-                    • {item}
-                  </Text>
-                ))}
-              </View>
-            ) : null}
-          </ScrollView>
           ) : (
-            !isMainShellReady ? (
-              <View style={styles.emptyState}>
-                <ActivityIndicator size="small" color={theme.colors.textSoft} />
-                <Text style={styles.emptyStateTitle}>Restoring workspace</Text>
-                <Text style={styles.emptyStateBody}>
-                  Loading your last section and conversation on this device.
-                </Text>
-              </View>
-            ) : (
-              <MainScreen
-                session={session!}
-                profile={profile}
-                contactCard={contactCard}
-                groups={groups}
-                conversationPreviews={conversationPreviews}
-                conversationPreferences={conversationPreferences}
-                unreadCounts={unreadConversationCounts}
-                inviteFocusToken={inviteFocusToken}
-                selectedConversationId={selectedConversationId}
-                setSelectedConversationId={setSelectedConversationId}
-                selectedGroup={selectedGroup ?? null}
-                threadMessages={threadMessages}
-                inviteInput={inviteInput}
-                setInviteInput={setInviteInput}
-                invitePreview={invitePreview}
-                invitePreviewError={invitePreviewError}
-                messageDraft={messageDraft}
-                setMessageDraft={setMessageDraft}
-                pendingAttachment={pendingAttachment}
-                setPendingAttachment={setPendingAttachment}
-                isLoadingAccount={isLoadingAccount}
-                isLoadingThread={isLoadingThread}
-                isPreviewingInvite={isPreviewingInvite}
-                isAcceptingInvite={isAcceptingInvite}
-                isPickingPhoto={isPickingPhoto}
-                isSendingMessage={isSendingMessage}
-                deviceBundleReady={deviceBundleReady}
-                deviceBundleCount={deviceBundleCount}
-                deviceBundleError={deviceBundleError}
-                vaultCount={vaultCount}
-                privacyDefaults={privacyDefaults}
-                sessionMessage={sessionMessage}
-                email={email}
-                deviceLabel={deviceLabel}
-                deviceLinkQrValue={deviceLinkQrValue}
-                deviceLinkStatus={deviceLinkStatus}
-                deviceLinkMessage={deviceLinkMessage}
-                isWorkingDeviceLink={isWorkingDeviceLink}
-                isApprovingDeviceLink={isApprovingDeviceLink}
-                sessions={sessions}
-                isLoadingSessions={isLoadingSessions}
-                sessionsError={sessionsError}
-                onRefreshSessions={() => {
-                  if (sessionRef.current) {
-                    void refreshSignedInSessions(sessionRef.current);
-                  }
-                }}
-                editingMessageId={editingMessageId}
-                isUploadingAvatar={isUploadingAvatar}
-                unreadIds={unreadConversationIds}
-                onSignOut={() => void signOut()}
-                onShowDeviceLinkQr={() => void beginSourceDeviceLink()}
-                onScanDeviceLinkQr={(payload) => scanDeviceLinkQr(payload)}
-                onApproveDeviceLink={() => void approveDeviceLink()}
-                onResetDeviceLink={resetDeviceLinkState}
-                onPreviewInvite={() => void previewInvite()}
-                onAcceptInvite={() => void acceptInvite()}
-                onPickPhoto={() => void pickPhoto()}
-                onTakePhoto={() => void takePhoto()}
-                onPickFile={() => void pickFile()}
-                onPickLocation={(choice) => void pickLocation(choice)}
-                onSendRawText={(text) => void sendMessage(text)}
-                onSendMessage={() => void sendMessage()}
-                onUpdatePrivacy={updatePrivacyDefaults}
-                onImageError={handleImageError}
-                onCancelEdit={() => {
-                  setEditingMessageId(null);
-                  setMessageDraft("");
-                }}
-                onMessageAction={handleMessageAction}
-                onUpdateGroup={handleUpdateGroup}
-                onCreateInvite={handleCreateInvite}
-                onChangeAvatar={() => void handleChangeAvatar()}
-                onToggleConversationArchived={handleToggleConversationArchived}
-                onToggleConversationPinned={handleToggleConversationPinned}
-                onToggleConversationMuted={handleToggleConversationMuted}
-                groupMembers={groupMembers}
-                isLoadingMembers={isLoadingMembers}
-                isOpeningDm={isOpeningDm}
-                onOpenMembers={() => void handleOpenMembers()}
-                onLoadMemberNote={handleLoadMemberNote}
-                onSaveMemberNote={handleSaveMemberNote}
-                onOpenDm={handleOpenDm}
-                onSendContactRequest={handleSendContactRequest}
-                initialShellState={mainShellState}
-                onPersistShellState={persistMainShellState}
-                restoredConversationAnchorId={restoredConversationAnchorId}
-                onPersistConversationAnchor={persistConversationAnchor}
-              />
-            )
+            <MainScreen
+              session={session!}
+              profile={profile}
+              contactCard={contactCard}
+              groups={groups}
+              conversationPreviews={conversationPreviews}
+              conversationPreferences={conversationPreferences}
+              unreadCounts={unreadConversationCounts}
+              inviteFocusToken={inviteFocusToken}
+              selectedConversationId={selectedConversationId}
+              setSelectedConversationId={setSelectedConversationId}
+              selectedGroup={selectedGroup ?? null}
+              threadMessages={threadMessages}
+              inviteInput={inviteInput}
+              setInviteInput={setInviteInput}
+              invitePreview={invitePreview}
+              invitePreviewError={invitePreviewError}
+              messageDraft={messageDraft}
+              setMessageDraft={setMessageDraft}
+              pendingAttachment={pendingAttachment}
+              setPendingAttachment={setPendingAttachment}
+              isLoadingAccount={isLoadingAccount}
+              isLoadingThread={isLoadingThread}
+              isPreviewingInvite={isPreviewingInvite}
+              isAcceptingInvite={isAcceptingInvite}
+              isPickingPhoto={isPickingPhoto}
+              isSendingMessage={isSendingMessage}
+              deviceBundleReady={deviceBundleReady}
+              deviceBundleCount={deviceBundleCount}
+              deviceBundleError={deviceBundleError}
+              vaultCount={vaultCount}
+              privacyDefaults={privacyDefaults}
+              sessionMessage={sessionMessage}
+              email={email}
+              deviceLabel={deviceLabel}
+              deviceLinkQrValue={deviceLinkQrValue}
+              deviceLinkStatus={deviceLinkStatus}
+              deviceLinkMessage={deviceLinkMessage}
+              isWorkingDeviceLink={isWorkingDeviceLink}
+              isApprovingDeviceLink={isApprovingDeviceLink}
+              sessions={sessions}
+              isLoadingSessions={isLoadingSessions}
+              sessionsError={sessionsError}
+              onRefreshSessions={() => {
+                if (sessionRef.current) {
+                  void refreshSignedInSessions(sessionRef.current);
+                }
+              }}
+              editingMessageId={editingMessageId}
+              isUploadingAvatar={isUploadingAvatar}
+              unreadIds={unreadConversationIds}
+              onSignOut={() => void signOut()}
+              onShowDeviceLinkQr={() => void beginSourceDeviceLink()}
+              onScanDeviceLinkQr={(payload) => scanDeviceLinkQr(payload)}
+              onApproveDeviceLink={() => void approveDeviceLink()}
+              onResetDeviceLink={resetDeviceLinkState}
+              onPreviewInvite={() => void previewInvite()}
+              onAcceptInvite={() => void acceptInvite()}
+              onPickPhoto={() => void pickPhoto()}
+              onTakePhoto={() => void takePhoto()}
+              onPickFile={() => void pickFile()}
+              onPickLocation={(choice) => void pickLocation(choice)}
+              onSendRawText={(text) => void sendMessage(text)}
+              onSendMessage={() => void sendMessage()}
+              onUpdatePrivacy={updatePrivacyDefaults}
+              onImageError={handleImageError}
+              onResolveAttachmentAccess={handleResolveAttachmentAccess}
+              onCancelEdit={() => {
+                setEditingMessageId(null);
+                setMessageDraft("");
+              }}
+              onMessageAction={handleMessageAction}
+              onUpdateGroup={handleUpdateGroup}
+              onCreateInvite={handleCreateInvite}
+              onChangeAvatar={() => void handleChangeAvatar()}
+              onToggleConversationArchived={handleToggleConversationArchived}
+              onToggleConversationPinned={handleToggleConversationPinned}
+              onToggleConversationMuted={handleToggleConversationMuted}
+              groupMembers={groupMembers}
+              isLoadingMembers={isLoadingMembers}
+              isOpeningDm={isOpeningDm}
+              onOpenMembers={() => void handleOpenMembers()}
+              onLoadMemberNote={handleLoadMemberNote}
+              onSaveMemberNote={handleSaveMemberNote}
+              onOpenDm={handleOpenDm}
+              onSendContactRequest={handleSendContactRequest}
+              initialShellState={mainShellState}
+              onPersistShellState={persistMainShellState}
+              restoredConversationAnchorId={restoredConversationAnchorId}
+              onPersistConversationAnchor={persistConversationAnchor}
+            />
           )}
         </KeyboardAvoidingView>
       </SafeAreaView>

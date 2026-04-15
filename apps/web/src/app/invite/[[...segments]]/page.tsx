@@ -42,13 +42,15 @@ export default function InviteLandingPage() {
 
         {legacyInviteCode ? (
           <p className="mt-6 text-center text-xs text-[var(--text-secondary)]">
-            Legacy invite fragment detected: <span className="font-mono">{legacyInviteCode}</span>
+            Legacy invite fragment detected:{" "}
+            <span className="font-mono">{legacyInviteCode}</span>
           </p>
         ) : null}
 
         {restSegments.length > 0 ? (
           <p className="mt-6 text-center text-xs text-[var(--text-secondary)]">
-            Extra invite path segments were ignored so the preview can stay on the safe browser surface.
+            Extra invite path segments were ignored so the preview can stay on
+            the safe browser surface.
           </p>
         ) : null}
       </section>

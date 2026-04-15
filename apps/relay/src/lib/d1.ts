@@ -3,7 +3,10 @@ export async function dbFirst<T>(
   query: string,
   ...params: unknown[]
 ): Promise<T | null> {
-  return db.prepare(query).bind(...params).first<T>();
+  return db
+    .prepare(query)
+    .bind(...params)
+    .first<T>();
 }
 
 export async function dbAll<T>(
@@ -11,10 +14,20 @@ export async function dbAll<T>(
   query: string,
   ...params: unknown[]
 ): Promise<T[]> {
-  const result = await db.prepare(query).bind(...params).all<T>();
+  const result = await db
+    .prepare(query)
+    .bind(...params)
+    .all<T>();
   return result.results ?? [];
 }
 
-export async function dbRun(db: D1Database, query: string, ...params: unknown[]): Promise<void> {
-  await db.prepare(query).bind(...params).run();
+export async function dbRun(
+  db: D1Database,
+  query: string,
+  ...params: unknown[]
+): Promise<void> {
+  await db
+    .prepare(query)
+    .bind(...params)
+    .run();
 }

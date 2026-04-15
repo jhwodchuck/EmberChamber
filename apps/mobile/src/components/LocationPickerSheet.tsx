@@ -19,7 +19,12 @@ type Props = {
   onPick: (choice: LocationChoice) => void;
 };
 
-export function LocationPickerSheet({ visible, isLocating, onClose, onPick }: Props) {
+export function LocationPickerSheet({
+  visible,
+  isLocating,
+  onClose,
+  onPick,
+}: Props) {
   const [liveDuration, setLiveDuration] = useState(60);
 
   return (
@@ -37,7 +42,10 @@ export function LocationPickerSheet({ visible, isLocating, onClose, onPick }: Pr
 
           {/* One-time */}
           <Pressable
-            style={[styles.attachSubSheetOption, isLocating ? styles.primaryButtonDisabled : null]}
+            style={[
+              styles.attachSubSheetOption,
+              isLocating ? styles.primaryButtonDisabled : null,
+            ]}
             onPress={() => onPick({ kind: "once" })}
             disabled={isLocating}
           >
@@ -56,7 +64,9 @@ export function LocationPickerSheet({ visible, isLocating, onClose, onPick }: Pr
           <View style={styles.attachSubSheetOption}>
             <Text style={styles.attachSubSheetOptionIcon}>🔴</Text>
             <View style={[styles.attachSubSheetOptionCopy, { flex: 1 }]}>
-              <Text style={styles.attachSubSheetOptionLabel}>Live location</Text>
+              <Text style={styles.attachSubSheetOptionLabel}>
+                Live location
+              </Text>
               <Text style={styles.attachSubSheetOptionHint}>Duration</Text>
               <View style={styles.attachDurationRow}>
                 {LIVE_DURATIONS.map((d) => (
@@ -64,14 +74,18 @@ export function LocationPickerSheet({ visible, isLocating, onClose, onPick }: Pr
                     key={d.value}
                     style={[
                       styles.attachDurationChip,
-                      liveDuration === d.value ? styles.attachDurationChipActive : null,
+                      liveDuration === d.value
+                        ? styles.attachDurationChipActive
+                        : null,
                     ]}
                     onPress={() => setLiveDuration(d.value)}
                   >
                     <Text
                       style={[
                         styles.attachDurationChipLabel,
-                        liveDuration === d.value ? styles.attachDurationChipLabelActive : null,
+                        liveDuration === d.value
+                          ? styles.attachDurationChipLabelActive
+                          : null,
                       ]}
                     >
                       {d.label}
@@ -83,8 +97,13 @@ export function LocationPickerSheet({ visible, isLocating, onClose, onPick }: Pr
           </View>
 
           <Pressable
-            style={[styles.primaryButton, isLocating ? styles.primaryButtonDisabled : null]}
-            onPress={() => onPick({ kind: "live", durationMinutes: liveDuration })}
+            style={[
+              styles.primaryButton,
+              isLocating ? styles.primaryButtonDisabled : null,
+            ]}
+            onPress={() =>
+              onPick({ kind: "live", durationMinutes: liveDuration })
+            }
             disabled={isLocating}
           >
             <Text style={styles.primaryButtonLabel}>

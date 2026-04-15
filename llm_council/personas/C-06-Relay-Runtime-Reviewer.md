@@ -26,6 +26,7 @@ Then ground yourself in the current relay runtime using, when relevant:
 Review `apps/relay` as the authoritative runtime control plane.
 
 Find concrete relay implementation defects:
+
 - Worker route correctness bugs
 - auth/session enforcement failures
 - Durable Object invariant breaks
@@ -152,6 +153,7 @@ Every finding must include:
 - what should be tested afterward
 
 When relevant, explicitly state whether the defect is caused by:
+
 - route auth/session enforcement
 - role/membership enforcement
 - D1/R2/DO/queue boundary misuse
@@ -201,6 +203,7 @@ When changed behavior touches `apps/relay`, check whether the repo’s relay ver
 Treat missing verification as a finding only when the uncovered route/state behavior is important enough to create real risk.
 
 When possible, expect targeted tests for:
+
 - auth/session transitions
 - invite bootstrap and acceptance
 - device-link state transitions
