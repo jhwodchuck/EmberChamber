@@ -10,6 +10,8 @@ const PRIVATE_VAULT_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 export type ManagedAttachment = NonNullable<NonNullable<GroupThreadMessage["attachment"]>>;
 export type AttachmentTransferState = "idle" | "downloading" | "decrypting" | "ready" | "failed";
 
+type RefreshAttachmentAccess = () => Promise<ManagedAttachment | null>;
+
 export function getAttachmentActionLabel(attachment: ManagedAttachment) {
   if (attachment.contentClass === "audio") {
     return "Play audio";
@@ -74,6 +76,66 @@ export function describeAttachmentTransferState(status: AttachmentTransferState)
   return "";
 }
 
+async function ensureAttachmentDownloadUrl(
+  attachment: ManagedAttachment,
+  refreshAttachmentAccess?: RefreshAttachmentAccess,
+): Promise<ManagedAttachment & { downloadUrl: string }> {
+  if (attachment.downloadUrl) {
+    return {
+      ...attachment,
+      downloadUrl: attachment.downloadUrl,
+    };
+  }
+
+  if (!refreshAttachmentAccess) {
+    throw new Error("Attachment link is unavailable.");
+  }
+
+  const refreshedAttachment = await refreshAttachmentAccess();
+  if (refreshedAttachment?.downloadUrl) {
+    return {
+      ...refreshedAttachment,
+      downloadUrl: refreshedAttachment.downloadUrl,
+    };
+  }
+
+  throw new Error("Attachment link is unavailable.");
+}
+
+async function downloadAttachmentBytes(
+  attachment: ManagedAttachment,
+  refreshAttachmentAccess?: RefreshAttachmentAccess,
+) {
+  let resolvedAttachment = await ensureAttachmentDownloadUrl(
+    attachment,
+    refreshAttachmentAccess,
+  );
+  let response = await fetch(resolvedAttachment.downloadUrl);
+
+  if (!response.ok && refreshAttachmentAccess) {
+    const refreshedAttachment = await refreshAttachmentAccess();
+    if (
+      refreshedAttachment?.downloadUrl &&
+      refreshedAttachment.downloadUrl !== resolvedAttachment.downloadUrl
+    ) {
+      resolvedAttachment = {
+        ...refreshedAttachment,
+        downloadUrl: refreshedAttachment.downloadUrl,
+      };
+      response = await fetch(resolvedAttachment.downloadUrl);
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error("Unable to download the attachment.");
+  }
+
+  return {
+    attachment: resolvedAttachment,
+    bytes: await response.arrayBuffer(),
+  };
+}
+
 export function pruneManagedAttachmentCache(now = Date.now()) {
   const cacheDirectory = new Directory(Paths.cache, ATTACHMENT_CACHE_DIRECTORY);
   if (!cacheDirectory.exists) {
@@ -106,12 +168,9 @@ export function pruneManagedAttachmentCache(now = Date.now()) {
 export async function resolveAttachmentUri(
   attachment: ManagedAttachment,
   onStatusChange?: (status: AttachmentTransferState) => void,
+  refreshAttachmentAccess?: RefreshAttachmentAccess,
 ) {
   pruneManagedAttachmentCache();
-
-  if (!attachment.downloadUrl) {
-    throw new Error("Attachment link is unavailable.");
-  }
 
   const localFile = getAttachmentCacheFile(attachment);
   if (localFile.exists && (localFile.size ?? 0) > 0) {
@@ -126,12 +185,10 @@ export async function resolveAttachmentUri(
       throw new Error("Attachment keys are missing.");
     }
 
-    const response = await fetch(attachment.downloadUrl);
-    if (!response.ok) {
-      throw new Error("Unable to download the attachment.");
-    }
-
-    const ciphertext = await response.arrayBuffer();
+    const { bytes: ciphertext } = await downloadAttachmentBytes(
+      attachment,
+      refreshAttachmentAccess,
+    );
     onStatusChange?.("decrypting");
     const plain = decryptAttachmentBytes(
       ciphertext,
@@ -144,7 +201,12 @@ export async function resolveAttachmentUri(
     return localFile.contentUri || localFile.uri;
   }
 
-  await ExpoFile.downloadFileAsync(attachment.downloadUrl, localFile, { idempotent: true });
+  const { bytes } = await downloadAttachmentBytes(
+    attachment,
+    refreshAttachmentAccess,
+  );
+  localFile.create({ intermediates: true, overwrite: true });
+  localFile.write(new Uint8Array(bytes));
   onStatusChange?.("ready");
   return localFile.contentUri || localFile.uri;
 }
@@ -152,8 +214,13 @@ export async function resolveAttachmentUri(
 export async function openManagedAttachment(
   attachment: ManagedAttachment,
   onStatusChange?: (status: AttachmentTransferState) => void,
+  refreshAttachmentAccess?: RefreshAttachmentAccess,
 ) {
-  const localUri = await resolveAttachmentUri(attachment, onStatusChange);
+  const localUri = await resolveAttachmentUri(
+    attachment,
+    onStatusChange,
+    refreshAttachmentAccess,
+  );
 
   try {
     await Linking.openURL(localUri);

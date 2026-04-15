@@ -83,11 +83,16 @@ export function MessageBubble({
   isOwnMessage,
   onImageError,
   onAction,
+  onResolveAttachmentAccess,
 }: {
   message: GroupThreadMessage;
   isOwnMessage: boolean;
   onImageError?: (messageId: string) => void;
   onAction?: (messageId: string, action: ContextMenuAction) => void;
+  onResolveAttachmentAccess?: (
+    messageId: string,
+    attachment: NonNullable<GroupThreadMessage["attachment"]>,
+  ) => Promise<NonNullable<GroupThreadMessage["attachment"]> | null>;
 }) {
   const [menuVisible, setMenuVisible] = useState(false);
   const [viewerVisible, setViewerVisible] = useState(false);
@@ -114,7 +119,14 @@ export function MessageBubble({
   const attachment = message.attachment;
   const isImage = attachment?.contentClass === "image";
   const sharedLocation = hasText && !attachment ? parseSharedLocation(message.text!) : null;
-  const attachmentManager = useAttachmentManager(attachment ?? null);
+  const resolveAttachmentAccess =
+    attachment && onResolveAttachmentAccess
+      ? () => onResolveAttachmentAccess(message.id, attachment)
+      : undefined;
+  const attachmentManager = useAttachmentManager(
+    attachment ?? null,
+    resolveAttachmentAccess,
+  );
 
   async function handleOpenAttachment() {
     await attachmentManager.openExternally();
@@ -286,6 +298,7 @@ export function MessageBubble({
       {isImage ? (
         <ImageViewerModal
           attachment={attachment ?? null}
+          resolveAttachmentAccess={resolveAttachmentAccess}
           visible={viewerVisible}
           onClose={() => setViewerVisible(false)}
         />
