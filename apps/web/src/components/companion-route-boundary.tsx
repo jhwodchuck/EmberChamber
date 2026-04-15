@@ -42,11 +42,14 @@ export function CompanionRouteBoundary({
           </div>
 
           <aside className="rounded-[1.7rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.1),transparent),linear-gradient(160deg,#2a1512,#120a0b)] p-5 text-white shadow-[0_20px_60px_rgba(32,19,18,0.22)]">
-            <p className="text-sm uppercase tracking-[0.2em] text-[#f8bc9c]">Best next step</p>
+            <p className="text-sm uppercase tracking-[0.2em] text-[#f8bc9c]">
+              Best next step
+            </p>
             <div className="mt-5 space-y-4 text-sm leading-6 text-[#f3ddd3]">
               <p>{primaryAction.description}</p>
               <p>
-                The browser remains the companion surface for invite review, settings, recovery, and session control.
+                The browser remains the companion surface for invite review,
+                settings, recovery, and session control.
               </p>
             </div>
             <div className="mt-6 space-y-3">
@@ -83,7 +86,9 @@ export function CompanionRouteBoundary({
               className="panel px-6 py-7 transition-colors hover:border-brand-500"
             >
               <Icon className="h-5 w-5 text-brand-600" aria-hidden="true" />
-              <p className="mt-4 text-xl font-semibold text-[var(--text-primary)]">{action.label}</p>
+              <p className="mt-4 text-xl font-semibold text-[var(--text-primary)]">
+                {action.label}
+              </p>
               <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
                 {action.description}
               </p>

@@ -4,14 +4,14 @@ Operational procedures for the invite-only EmberChamber beta. Actions are limite
 
 ## Tool Reality
 
-| Need | Current path | Notes |
-|------|-------------|-------|
-| Review or revoke your own sessions | Web / mobile / desktop Settings → Sessions | Self-service only |
-| Create or revoke group invites | Group surface (owner/admin), or members if `allowMemberInvites` is on | No global freeze UI |
-| Remove a group member | Group surface (owner/admin) | Bumps group epoch |
-| Submit a disclosure-based report | Relay `POST /v1/reports` | Stored; no operator dashboard yet |
-| Issue a beta invite token | Manual D1 command (see below) | No operator UI yet |
-| Suspend an account or revoke another user's sessions | **Not implemented** | Requires engineering or direct DB intervention |
+| Need                                                 | Current path                                                          | Notes                                          |
+| ---------------------------------------------------- | --------------------------------------------------------------------- | ---------------------------------------------- |
+| Review or revoke your own sessions                   | Web / mobile / desktop Settings → Sessions                            | Self-service only                              |
+| Create or revoke group invites                       | Group surface (owner/admin), or members if `allowMemberInvites` is on | No global freeze UI                            |
+| Remove a group member                                | Group surface (owner/admin)                                           | Bumps group epoch                              |
+| Submit a disclosure-based report                     | Relay `POST /v1/reports`                                              | Stored; no operator dashboard yet              |
+| Issue a beta invite token                            | Manual D1 command (see below)                                         | No operator UI yet                             |
+| Suspend an account or revoke another user's sessions | **Not implemented**                                                   | Requires engineering or direct DB intervention |
 
 ## Invite Defaults
 
@@ -58,6 +58,7 @@ npx wrangler d1 execute emberchamber-relay-prod-db --env production --remote \
 ## Immediate Harm Escalation
 
 Prioritize these report categories for engineering escalation:
+
 - `non_consensual_intimate_media`
 - `coercion_or_extortion`
 - `underage_risk`
@@ -88,13 +89,13 @@ npx wrangler secret put ENCRYPTION_KEY      # email-at-rest encryption
 
 Signing credentials are stored as GitHub Actions secrets — never committed to the repo:
 
-| Secret | Purpose |
-|--------|---------|
-| `ANDROID_KEYSTORE_BASE64` | Base64-encoded release keystore |
-| `ANDROID_KEY_ALIAS` | Key alias (`emberchamber`) |
-| `ANDROID_STORE_PASSWORD` | Keystore password |
-| `ANDROID_KEY_PASSWORD` | Key password |
-| `ANDROID_GOOGLE_SERVICES_JSON` | Firebase Android config |
+| Secret                             | Purpose                           |
+| ---------------------------------- | --------------------------------- |
+| `ANDROID_KEYSTORE_BASE64`          | Base64-encoded release keystore   |
+| `ANDROID_KEY_ALIAS`                | Key alias (`emberchamber`)        |
+| `ANDROID_STORE_PASSWORD`           | Keystore password                 |
+| `ANDROID_KEY_PASSWORD`             | Key password                      |
+| `ANDROID_GOOGLE_SERVICES_JSON`     | Firebase Android config           |
 | `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` | Play Store deployment credentials |
 
 **Back up the keystore.** If it is lost, no further updates can be published under the same Play Store listing.

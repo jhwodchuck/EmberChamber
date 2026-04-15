@@ -61,10 +61,10 @@ cp apps/mobile/.env.example apps/mobile/.env
 
 Key variables:
 
-| Variable | Purpose |
-|----------|---------|
+| Variable                | Purpose                                                                               |
+| ----------------------- | ------------------------------------------------------------------------------------- |
 | `EXPO_PUBLIC_RELAY_URL` | Base URL of the relay (defaults to `http://10.0.2.2:8787` for local Android emulator) |
-| `EXPO_PUBLIC_WEB_URL` | Web app URL for invite landing links |
+| `EXPO_PUBLIC_WEB_URL`   | Web app URL for invite landing links                                                  |
 
 ## FCM Setup
 

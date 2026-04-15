@@ -1,6 +1,12 @@
 import { sha256 } from "js-sha256";
 import nacl from "tweetnacl";
-import type { AttachmentEncryptionMode, ContentClass, PrekeyBundle, ProtectionProfile, RetentionMode } from "./index";
+import type {
+  AttachmentEncryptionMode,
+  ContentClass,
+  PrekeyBundle,
+  ProtectionProfile,
+  RetentionMode,
+} from "./index";
 
 const utf8Encoder = new TextEncoder();
 const utf8Decoder = new TextDecoder();
@@ -62,7 +68,9 @@ function ensureNaclPrng() {
 
   nacl.setPRNG((target, size) => {
     for (let offset = 0; offset < size; offset += MAX_PRNG_CHUNK_BYTES) {
-      const chunk = new Uint8Array(Math.min(size - offset, MAX_PRNG_CHUNK_BYTES));
+      const chunk = new Uint8Array(
+        Math.min(size - offset, MAX_PRNG_CHUNK_BYTES),
+      );
       cryptoObject.getRandomValues?.(chunk);
       target.set(chunk, offset);
     }
@@ -78,7 +86,9 @@ function withSecureRandom<T>(operation: () => T): T {
     return operation();
   } catch (error) {
     if (error instanceof Error && error.message === "no PRNG") {
-      throw new Error("Secure random number generation is unavailable in this runtime.");
+      throw new Error(
+        "Secure random number generation is unavailable in this runtime.",
+      );
     }
 
     throw error;
@@ -90,7 +100,16 @@ function base64FromBinary(binary: string): string {
     return btoa(binary);
   }
 
-  const nodeBuffer = (globalThis as { Buffer?: { from(input: string, encoding: string): { toString(encoding: string): string } } }).Buffer;
+  const nodeBuffer = (
+    globalThis as {
+      Buffer?: {
+        from(
+          input: string,
+          encoding: string,
+        ): { toString(encoding: string): string };
+      };
+    }
+  ).Buffer;
   if (!nodeBuffer) {
     throw new Error("Base64 encoding is unavailable in this runtime.");
   }
@@ -103,7 +122,16 @@ function binaryFromBase64(value: string): string {
     return atob(value);
   }
 
-  const nodeBuffer = (globalThis as { Buffer?: { from(input: string, encoding: string): { toString(encoding: string): string } } }).Buffer;
+  const nodeBuffer = (
+    globalThis as {
+      Buffer?: {
+        from(
+          input: string,
+          encoding: string,
+        ): { toString(encoding: string): string };
+      };
+    }
+  ).Buffer;
   if (!nodeBuffer) {
     throw new Error("Base64 decoding is unavailable in this runtime.");
   }
@@ -142,11 +170,17 @@ export function toUint8Array(value: ArrayBuffer | Uint8Array): Uint8Array {
 }
 
 export function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
-  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+  return bytes.buffer.slice(
+    bytes.byteOffset,
+    bytes.byteOffset + bytes.byteLength,
+  ) as ArrayBuffer;
 }
 
-export function hashSha256B64(value: ArrayBuffer | Uint8Array | string): string {
-  const bytes = typeof value === "string" ? utf8Encoder.encode(value) : toUint8Array(value);
+export function hashSha256B64(
+  value: ArrayBuffer | Uint8Array | string,
+): string {
+  const bytes =
+    typeof value === "string" ? utf8Encoder.encode(value) : toUint8Array(value);
   return encodeBytes(new Uint8Array(sha256.arrayBuffer(bytes)));
 }
 
@@ -163,7 +197,9 @@ export function createStoredDeviceBundle(): StoredDeviceBundle {
   };
 }
 
-export function toPublicPrekeyBundle(bundle: StoredDeviceBundle | PrekeyBundle): PrekeyBundle {
+export function toPublicPrekeyBundle(
+  bundle: StoredDeviceBundle | PrekeyBundle,
+): PrekeyBundle {
   return {
     identityKeyB64: bundle.identityKeyB64,
     signedPrekeyB64: bundle.signedPrekeyB64,
@@ -172,7 +208,9 @@ export function toPublicPrekeyBundle(bundle: StoredDeviceBundle | PrekeyBundle):
   };
 }
 
-export function isStoredDeviceBundle(value: unknown): value is StoredDeviceBundle {
+export function isStoredDeviceBundle(
+  value: unknown,
+): value is StoredDeviceBundle {
   if (!value || typeof value !== "object") {
     return false;
   }
@@ -214,7 +252,9 @@ export function decryptConversationPayload<T>(
   senderIdentityKeyB64: string,
   recipientPrivateKeyB64: string,
 ): T {
-  const decodedEnvelope = JSON.parse(utf8Decoder.decode(decodeBytes(ciphertext))) as BoxEnvelope;
+  const decodedEnvelope = JSON.parse(
+    utf8Decoder.decode(decodeBytes(ciphertext)),
+  ) as BoxEnvelope;
   const plaintext = nacl.box.open(
     decodeBytes(decodedEnvelope.boxB64),
     decodeBytes(decodedEnvelope.nonceB64),
@@ -231,8 +271,12 @@ export function decryptConversationPayload<T>(
 
 export function encryptAttachmentBytes(value: ArrayBuffer | Uint8Array) {
   const plaintext = toUint8Array(value);
-  const fileKey = withSecureRandom(() => nacl.randomBytes(nacl.secretbox.keyLength));
-  const fileIv = withSecureRandom(() => nacl.randomBytes(nacl.secretbox.nonceLength));
+  const fileKey = withSecureRandom(() =>
+    nacl.randomBytes(nacl.secretbox.keyLength),
+  );
+  const fileIv = withSecureRandom(() =>
+    nacl.randomBytes(nacl.secretbox.nonceLength),
+  );
   const ciphertext = nacl.secretbox(plaintext, fileIv, fileKey);
 
   return {

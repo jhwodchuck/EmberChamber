@@ -25,7 +25,9 @@ type AttachmentAwareWebSocket = WebSocket & {
   deserializeAttachment(): unknown | null;
 };
 
-function isGroupSocketAttachment(value: unknown): value is GroupSocketAttachment {
+function isGroupSocketAttachment(
+  value: unknown,
+): value is GroupSocketAttachment {
   if (!value || typeof value !== "object") {
     return false;
   }
@@ -55,7 +57,9 @@ export class GroupCoordinatorDO extends DurableObject<GroupCoordinatorEnv> {
     return isGroupSocketAttachment(attachment) ? attachment : null;
   }
 
-  private async socketHasConversationAccess(attachment: GroupSocketAttachment): Promise<boolean> {
+  private async socketHasConversationAccess(
+    attachment: GroupSocketAttachment,
+  ): Promise<boolean> {
     const session = await dbFirst<{ id: string }>(
       this.env.DB,
       `SELECT s.id
@@ -79,7 +83,11 @@ export class GroupCoordinatorDO extends DurableObject<GroupCoordinatorEnv> {
     return Boolean(session);
   }
 
-  private closeSocket(ws: WebSocket, code = 4403, reason = "Conversation access expired") {
+  private closeSocket(
+    ws: WebSocket,
+    code = 4403,
+    reason = "Conversation access expired",
+  ) {
     try {
       ws.close(code, reason);
     } catch {
@@ -91,7 +99,9 @@ export class GroupCoordinatorDO extends DurableObject<GroupCoordinatorEnv> {
     // @ts-expect-error getWebSockets is available in modern CF DOs
     for (const ws of this.ctx.getWebSockets()) {
       const attachment = this.socketAttachment(ws);
-      const authorized = attachment ? await this.socketHasConversationAccess(attachment) : false;
+      const authorized = attachment
+        ? await this.socketHasConversationAccess(attachment)
+        : false;
       if (!authorized) {
         this.closeSocket(ws);
         continue;
@@ -115,7 +125,8 @@ export class GroupCoordinatorDO extends DurableObject<GroupCoordinatorEnv> {
     if (url.pathname === "/ws") {
       if (request.headers.get("Upgrade") === "websocket") {
         const attachment: GroupSocketAttachment = {
-          conversationId: request.headers.get("x-emberchamber-conversation-id") ?? "",
+          conversationId:
+            request.headers.get("x-emberchamber-conversation-id") ?? "",
           accountId: request.headers.get("x-emberchamber-account-id") ?? "",
           deviceId: request.headers.get("x-emberchamber-device-id") ?? "",
           sessionId: request.headers.get("x-emberchamber-session-id") ?? "",
@@ -126,7 +137,10 @@ export class GroupCoordinatorDO extends DurableObject<GroupCoordinatorEnv> {
         }
 
         // @ts-expect-error WebSocketPair is globally available in CF Workers
-        const [client, server] = Object.values(new WebSocketPair()) as [WebSocket, AttachmentAwareWebSocket];
+        const [client, server] = Object.values(new WebSocketPair()) as [
+          WebSocket,
+          AttachmentAwareWebSocket,
+        ];
         server.serializeAttachment(attachment);
         // @ts-expect-error acceptWebSocket is available in modern CF DOs
         this.ctx.acceptWebSocket(server);

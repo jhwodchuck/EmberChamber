@@ -61,6 +61,7 @@ env:
 
 permissions:
   contents: read
+  id-token: write
 
 concurrency:
   group: deploy-play-store-${{ github.event.inputs.track }}-${{ github.event.inputs.ref }}
@@ -77,14 +78,7 @@ jobs:
       artifact_name: emberchamber-play-store-aab
       require_google_services: true
       validate_release_inputs: true
-      build_apk: false
-      build_aab: true
-    secrets:
-      ANDROID_GOOGLE_SERVICES_JSON: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON }}
-      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-      ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
-      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+    secrets: inherit
 
   deploy:
     name: Upload AAB to Google Play
@@ -96,7 +90,6 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       VERSION_CODE: ${{ needs.build.outputs.version_code }}
-      VERSION_NAME: ${{ needs.build.outputs.version_name }}
     steps:
       - name: Validate inputs
         env:
@@ -128,7 +121,7 @@ jobs:
           fetch-depth: 0
 
       - name: Download signed AAB artifact
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           name: ${{ needs.build.outputs.artifact_name }}
           path: apps/mobile/artifacts/android-build
@@ -175,7 +168,7 @@ jobs:
           fi
 
           # Play Store "What's new" cap is 500 characters
-          BODY=$(printf '%s\n\n%s' "$VERSION_NAME" "$CHANGES" | head -c 490)
+          BODY=$(printf 'Beta %s\n\n%s' "$REF" "$CHANGES" | head -c 490)
 
           CHANGELOG_DIR="apps/mobile/fastlane/metadata/android/en-US/changelogs"
           mkdir -p "$CHANGELOG_DIR"
@@ -199,28 +192,19 @@ jobs:
             mkdir -p "$DEST_DIR"
           done
 
-          # Resolve the exact commit SHA for the ref being deployed so screenshots
-          # match the binary, not whatever happened to be latest on main.
-          DEPLOY_SHA=$(git rev-parse "${{ github.event.inputs.ref }}" 2>/dev/null || true)
-          if [ -z "$DEPLOY_SHA" ]; then
-            echo "Could not resolve commit SHA for ref '${{ github.event.inputs.ref }}'; skipping screenshot upload."
-            exit 0
-          fi
-          echo "Resolved deploy ref to commit $DEPLOY_SHA"
-
           RUN_ID=$(gh run list \
             --repo "$GITHUB_REPOSITORY" \
             --workflow ci-mobile.yml \
-            --commit "$DEPLOY_SHA" \
+            --branch main \
             --status success \
             --limit 1 \
             --json databaseId \
             --jq '.[0].databaseId // empty')
 
           if [ -z "$RUN_ID" ]; then
-            echo "No successful CI - Mobile run found for commit $DEPLOY_SHA; continuing without screenshot upload."
+            echo "No successful CI - Mobile run on main; continuing without screenshot upload."
           else
-            echo "Downloading Android screenshots from CI run $RUN_ID (commit $DEPLOY_SHA)"
+            echo "Downloading Android screenshots from CI run $RUN_ID"
             for ENTRY in "${SCREENSHOT_MAP[@]}"; do
               FORM_FACTOR="${ENTRY%%:*}"
               PLAY_DIR="${ENTRY#*:}"
@@ -316,11 +300,10 @@ jobs:
             "aab:$AAB_PATH"
             "track:$PLAY_TRACK"
             "release_status:$PLAY_RELEASE_STATUS"
-            "version_name:$VERSION_NAME"
             "in_app_update_priority:$PLAY_UPDATE_PRIORITY"
             "validate_only:$PLAY_VALIDATE_ONLY"
             "metadata_path:apps/mobile/fastlane/metadata/android"
-            "skip_upload_metadata:false"
+            "skip_upload_metadata:true"
             "skip_upload_images:false"
             "changes_not_sent_for_review:$PLAY_CHANGES_NOT_SENT_FOR_REVIEW"
           )

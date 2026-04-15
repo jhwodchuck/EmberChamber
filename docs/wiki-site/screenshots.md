@@ -65,4 +65,3 @@ _Tauri shell HTML · Playwright Chromium_
 <img src="/screenshots/desktop/01-shell.png" alt="Desktop shell — 01 shell" loading="lazy" style="width:100%;border-radius:6px;border:1px solid var(--vp-c-divider)">
 
 </div>
-

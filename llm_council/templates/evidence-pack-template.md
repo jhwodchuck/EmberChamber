@@ -39,25 +39,32 @@ token_budget_tier: normal
 # Changed paths grouped by domain
 
 ## Relay
+
 - `apps/relay/...`
 
 ## Web
+
 - `apps/web/...`
 
 ## Mobile
+
 - `apps/mobile/...`
 
 ## Desktop
+
 - `apps/desktop/...`
 
 ## Protocol and shared contracts
+
 - `packages/protocol/...`
 - `crates/relay-protocol/...`
 
 ## Rust core
+
 - `crates/core/...`
 
 ## Legacy
+
 - `apps/api/...`
 - `services/...`
 
@@ -85,6 +92,7 @@ token_budget_tier: normal
 # Snippet appendix
 
 ## Snippet 1
+
 ```text
 <relevant snippet>
 ```

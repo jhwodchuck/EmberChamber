@@ -27,7 +27,11 @@ export function StatusCallout({
     <div
       role={isError ? "alert" : "status"}
       aria-live={isError ? "assertive" : "polite"}
-      className={clsx("rounded-[1.35rem] border p-4 text-sm", toneStyles[tone], className)}
+      className={clsx(
+        "rounded-[1.35rem] border p-4 text-sm",
+        toneStyles[tone],
+        className,
+      )}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>

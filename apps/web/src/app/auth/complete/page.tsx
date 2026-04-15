@@ -13,8 +13,9 @@ export default function AuthCompletePage() {
             Finish sign-in for this browser.
           </h1>
           <p className="mt-5 text-base leading-7 text-[var(--text-secondary)]">
-            The email link signs in the device that opens it first. If you meant to use another
-            phone, browser, or desktop first, open the link there instead.
+            The email link signs in the device that opens it first. If you meant
+            to use another phone, browser, or desktop first, open the link there
+            instead.
           </p>
 
           <Suspense

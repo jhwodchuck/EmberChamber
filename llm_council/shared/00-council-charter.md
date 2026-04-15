@@ -25,6 +25,7 @@ The EmberChamber review council exists to improve product quality while minimizi
 Do not run the full council on every change.
 
 Use the smallest correct set of reviewers based on:
+
 - changed paths
 - security impact
 - release impact
@@ -35,6 +36,7 @@ Use the smallest correct set of reviewers based on:
 ## Report philosophy
 
 A good report:
+
 - stays within scope
 - flags real risks
 - avoids duplicate findings

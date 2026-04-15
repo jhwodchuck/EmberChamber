@@ -30,27 +30,30 @@ token_budget_tier: normal
 # Executive summary
 
 ## Overall call
+
 <one short paragraph>
 
 ## Scope observed
+
 - <what you reviewed>
 - <what you did not review>
 
 # Findings table
 
-| ID | Severity | Title | Why it matters | Owner area |
-| --- | --- | --- | --- | --- |
-| C-XX-01 | medium | <title> | <short impact> | <path or team> |
+| ID      | Severity | Title   | Why it matters | Owner area     |
+| ------- | -------- | ------- | -------------- | -------------- |
+| C-XX-01 | medium   | <title> | <short impact> | <path or team> |
 
 If there are no material findings, use:
 
-| ID | Severity | Title | Why it matters | Owner area |
-| --- | --- | --- | --- | --- |
-| none | note | No material findings | No concrete defect found in this persona's scope. | n/a |
+| ID   | Severity | Title                | Why it matters                                    | Owner area |
+| ---- | -------- | -------------------- | ------------------------------------------------- | ---------- |
+| none | note     | No material findings | No concrete defect found in this persona's scope. | n/a        |
 
 # Detailed findings
 
 ## C-XX-01 — <title>
+
 **Severity:** medium  
 **Evidence:** <paths, snippets, or evidence-pack references>  
 **Why it matters:** <specific impact>  

@@ -22,7 +22,11 @@ export type SharedLocationPreview = {
   markerTopPercent: number;
 };
 
-const LEGACY_DEFAULT_DEVICE_LABELS = new Set(["Android phone", "iPhone", "Mobile device"]);
+const LEGACY_DEFAULT_DEVICE_LABELS = new Set([
+  "Android phone",
+  "iPhone",
+  "Mobile device",
+]);
 
 export function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -72,7 +76,9 @@ export function suggestMobileDeviceLabel() {
   return "Mobile device";
 }
 
-export function parseSharedLocation(value: string): SharedLocationPreview | null {
+export function parseSharedLocation(
+  value: string,
+): SharedLocationPreview | null {
   const lines = value
     .split(/\r?\n/)
     .map((line) => line.trim())
@@ -94,15 +100,24 @@ export function parseSharedLocation(value: string): SharedLocationPreview | null
 
   const latitude = clampLatitude(coordinates.latitude);
   const longitude = clampLongitude(coordinates.longitude);
-  const accuracyMatch = lines.find((line) => /^Accuracy:/i.test(line))?.match(/(\d+(?:\.\d+)?)/);
-  const accuracyMeters = accuracyMatch ? Math.round(Number(accuracyMatch[1])) : null;
+  const accuracyMatch = lines
+    .find((line) => /^Accuracy:/i.test(line))
+    ?.match(/(\d+(?:\.\d+)?)/);
+  const accuracyMeters = accuracyMatch
+    ? Math.round(Number(accuracyMatch[1]))
+    : null;
   const isLive = /live location/i.test(titleLine);
-  const title = titleLine.replace(/^📍\s*/u, "").replace(/\s*\(.+\)\s*$/, "").trim()
-    || (isLive ? "Live location" : "Location");
+  const title =
+    titleLine
+      .replace(/^📍\s*/u, "")
+      .replace(/\s*\(.+\)\s*$/, "")
+      .trim() || (isLive ? "Live location" : "Location");
   const coordinateLabel =
-    lines.find((line) => /°\s*[NS],\s*\d+(?:\.\d+)?°\s*[EW]/i.test(line))
-    ?? `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
-  const detailLabel = accuracyMeters ? `${coordinateLabel} • ±${accuracyMeters} m` : coordinateLabel;
+    lines.find((line) => /°\s*[NS],\s*\d+(?:\.\d+)?°\s*[EW]/i.test(line)) ??
+    `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+  const detailLabel = accuracyMeters
+    ? `${coordinateLabel} • ±${accuracyMeters} m`
+    : coordinateLabel;
   const tilePreview = buildTilePreview(latitude, longitude, 14);
 
   return {
@@ -110,7 +125,9 @@ export function parseSharedLocation(value: string): SharedLocationPreview | null
     isLive,
     latitude,
     longitude,
-    mapUrl: urlLine ?? `https://maps.google.com/?q=${latitude.toFixed(6)},${longitude.toFixed(6)}`,
+    mapUrl:
+      urlLine ??
+      `https://maps.google.com/?q=${latitude.toFixed(6)},${longitude.toFixed(6)}`,
     accuracyMeters,
     coordinateLabel,
     detailLabel,
@@ -159,7 +176,9 @@ export function extractCompletionTokenFromUrl(input: string): string | null {
   return null;
 }
 
-export function normalizeInviteReference(value: string): InviteReference | null {
+export function normalizeInviteReference(
+  value: string,
+): InviteReference | null {
   const trimmed = value.trim();
   if (!trimmed) {
     return null;
@@ -242,11 +261,14 @@ function randomBase64(byteLength: number) {
 }
 
 function bytesToHex(bytes: Uint8Array) {
-  return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
+  return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join(
+    "",
+  );
 }
 
 function encodeBase64(bytes: Uint8Array) {
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  const alphabet =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
   let output = "";
 
   for (let index = 0; index < bytes.length; index += 3) {
@@ -265,7 +287,8 @@ function encodeBase64(bytes: Uint8Array) {
 }
 
 function cleanDeviceLabelPart(value: string | undefined) {
-  const trimmed = value?.trim().replace(/[_-]+/g, " ").replace(/\s+/g, " ") ?? "";
+  const trimmed =
+    value?.trim().replace(/[_-]+/g, " ").replace(/\s+/g, " ") ?? "";
   if (!trimmed) {
     return "";
   }
@@ -284,7 +307,8 @@ function cleanDeviceLabelPart(value: string | undefined) {
 function parseCoordinatesFromUrl(value: string) {
   try {
     const parsed = new URL(value);
-    const query = parsed.searchParams.get("q") ?? parsed.searchParams.get("query");
+    const query =
+      parsed.searchParams.get("q") ?? parsed.searchParams.get("query");
     if (!query) {
       return null;
     }
@@ -311,8 +335,10 @@ function parseCardinalCoordinates(value: string) {
     return null;
   }
 
-  const latitude = Number(match[1]) * (match[2]?.toUpperCase() === "S" ? -1 : 1);
-  const longitude = Number(match[3]) * (match[4]?.toUpperCase() === "W" ? -1 : 1);
+  const latitude =
+    Number(match[1]) * (match[2]?.toUpperCase() === "S" ? -1 : 1);
+  const longitude =
+    Number(match[3]) * (match[4]?.toUpperCase() === "W" ? -1 : 1);
   return { latitude, longitude };
 }
 
@@ -321,7 +347,9 @@ function buildTilePreview(latitude: number, longitude: number, zoom: number) {
   const scale = 2 ** zoom;
   const worldX = ((longitude + 180) / 360) * scale;
   const worldY =
-    ((1 - Math.log(Math.tan(latRadians) + 1 / Math.cos(latRadians)) / Math.PI) / 2) * scale;
+    ((1 - Math.log(Math.tan(latRadians) + 1 / Math.cos(latRadians)) / Math.PI) /
+      2) *
+    scale;
   const tileX = Math.floor(worldX);
   const tileY = Math.floor(worldY);
 

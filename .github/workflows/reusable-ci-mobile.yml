@@ -64,8 +64,6 @@ jobs:
       build_type: release
       sign: false
       artifact_name: emberchamber-android-release-screenshots
-      build_apk: true
-      build_aab: false
     secrets:
       ANDROID_GOOGLE_SERVICES_JSON: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON }}
 
@@ -84,7 +82,7 @@ jobs:
             wm_size: 1080x2220
             wm_density: 440
           - device_class: tablet
-            avd_profile: nexus_10
+            avd_profile: medium_tablet
             orientation: portrait
             wm_size: 1600x2560
             wm_density: 320

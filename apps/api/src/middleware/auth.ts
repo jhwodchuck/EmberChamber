@@ -10,7 +10,7 @@ export interface AuthRequest extends Request {
 export async function authenticate(
   req: AuthRequest,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void> {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith("Bearer ")) {
@@ -28,7 +28,7 @@ export async function authenticate(
        WHERE id = $1 AND user_id = $2
          AND revoked_at IS NULL
          AND expires_at > NOW()`,
-      [payload.sessionId, payload.sub]
+      [payload.sessionId, payload.sub],
     );
 
     if (!session) {
@@ -39,7 +39,7 @@ export async function authenticate(
     // Verify user is not suspended
     const user = await queryOne<{ id: string; is_suspended: boolean }>(
       "SELECT id, is_suspended FROM users WHERE id = $1 AND deleted_at IS NULL",
-      [payload.sub]
+      [payload.sub],
     );
 
     if (!user) {
@@ -63,7 +63,7 @@ export async function authenticate(
 export function optionalAuthenticate(
   req: AuthRequest,
   _res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith("Bearer ")) {

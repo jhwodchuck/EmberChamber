@@ -36,7 +36,10 @@ export function ScreenScaffold({
     return (
       <ScrollView
         style={styles.screenScroll}
-        contentContainerStyle={[styles.screenScrollContent, contentContainerStyle]}
+        contentContainerStyle={[
+          styles.screenScrollContent,
+          contentContainerStyle,
+        ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >

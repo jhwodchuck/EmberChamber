@@ -28,8 +28,12 @@ export function AuthCompleteClient() {
 
   const completionToken = searchParams?.get("token") ?? "";
   const forceBrowser = searchParams?.get("browser") === "1";
-  const requestedContinuationPath = normalizeAuthContinuationPath(searchParams?.get("next"));
-  const [storedContinuationPath, setStoredContinuationPath] = useState<string | null>(null);
+  const requestedContinuationPath = normalizeAuthContinuationPath(
+    searchParams?.get("next"),
+  );
+  const [storedContinuationPath, setStoredContinuationPath] = useState<
+    string | null
+  >(null);
 
   const prefersAppHandoff = useMemo(() => {
     if (typeof navigator === "undefined") {
@@ -91,7 +95,8 @@ export function AuthCompleteClient() {
     if (!completionToken) {
       setState({
         status: "error",
-        message: "This link is missing the completion token. Request a fresh email link.",
+        message:
+          "This link is missing the completion token. Request a fresh email link.",
       });
       return;
     }
@@ -110,8 +115,13 @@ export function AuthCompleteClient() {
 
     void (async () => {
       try {
-        const deviceLabel = window.localStorage.getItem(DEVICE_LABEL_STORAGE_KEY) ?? "Web browser";
-        const session = await completeMagicLink({ completionToken, deviceLabel });
+        const deviceLabel =
+          window.localStorage.getItem(DEVICE_LABEL_STORAGE_KEY) ??
+          "Web browser";
+        const session = await completeMagicLink({
+          completionToken,
+          deviceLabel,
+        });
         if (cancelled) {
           return;
         }
@@ -119,10 +129,14 @@ export function AuthCompleteClient() {
         setSession(session);
         setState({
           status: "success",
-          message: "This browser is signed in. Redirecting you into the web workspace…",
+          message:
+            "This browser is signed in. Redirecting you into the web workspace…",
         });
 
-        const redirectTarget = requestedContinuationPath ?? readStoredAuthContinuationPath() ?? "/app";
+        const redirectTarget =
+          requestedContinuationPath ??
+          readStoredAuthContinuationPath() ??
+          "/app";
         clearStoredAuthContinuationPath();
         window.setTimeout(() => {
           router.replace(redirectTarget);
@@ -134,7 +148,10 @@ export function AuthCompleteClient() {
 
         setState({
           status: "error",
-          message: error instanceof Error ? error.message : "Unable to complete the email link.",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Unable to complete the email link.",
         });
       }
     })();
@@ -142,7 +159,14 @@ export function AuthCompleteClient() {
     return () => {
       cancelled = true;
     };
-  }, [completionToken, forceBrowser, prefersAppHandoff, requestedContinuationPath, router, setSession]);
+  }, [
+    completionToken,
+    forceBrowser,
+    prefersAppHandoff,
+    requestedContinuationPath,
+    router,
+    setSession,
+  ]);
 
   return (
     <>

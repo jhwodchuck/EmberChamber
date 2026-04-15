@@ -37,7 +37,10 @@ export type SettingsScreenProps = {
   onScanDeviceLinkQr: (payload: string) => void | Promise<void>;
   onApproveDeviceLink: () => void;
   onResetDeviceLink: () => void;
-  onUpdatePrivacy: <K extends keyof PrivacyDefaults>(key: K, value: PrivacyDefaults[K]) => void;
+  onUpdatePrivacy: <K extends keyof PrivacyDefaults>(
+    key: K,
+    value: PrivacyDefaults[K],
+  ) => void;
   onChangeAvatar: () => void;
   onSignOut: () => void;
 };
@@ -72,7 +75,13 @@ export function SettingsScreen({
   onSignOut,
 }: SettingsScreenProps) {
   const initials = profile?.displayName
-    ? profile.displayName.trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase()
+    ? profile.displayName
+        .trim()
+        .split(/\s+/)
+        .map((w) => w[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase()
     : "?";
 
   return (
@@ -86,7 +95,9 @@ export function SettingsScreen({
         {isLoadingAccount ? (
           <View style={styles.inlineLoadingRow}>
             <ActivityIndicator size="small" color={theme.colors.textSoft} />
-            <Text style={styles.helper}>Loading your profile and device state…</Text>
+            <Text style={styles.helper}>
+              Loading your profile and device state…
+            </Text>
           </View>
         ) : (
           <>
@@ -94,7 +105,10 @@ export function SettingsScreen({
               <Pressable onPress={onChangeAvatar} disabled={isUploadingAvatar}>
                 <View style={styles.avatarCircle}>
                   {profile?.avatarUrl ? (
-                    <Image source={{ uri: profile.avatarUrl }} style={styles.avatarImage} />
+                    <Image
+                      source={{ uri: profile.avatarUrl }}
+                      style={styles.avatarImage}
+                    />
                   ) : (
                     <Text style={styles.avatarInitials}>{initials}</Text>
                   )}
@@ -110,7 +124,9 @@ export function SettingsScreen({
                     {isUploadingAvatar ? "Uploading…" : "Change photo"}
                   </Text>
                 </Pressable>
-                <Text style={styles.helper}>{profile?.displayName ?? "Loading…"}</Text>
+                <Text style={styles.helper}>
+                  {profile?.displayName ?? "Loading…"}
+                </Text>
               </View>
             </View>
             <View style={styles.metricRow}>
@@ -139,7 +155,8 @@ export function SettingsScreen({
               {deviceBundleReady ? "Synced" : "Pending"}
             </Text>
             <Text style={styles.helper}>
-              {deviceBundleCount} visible bundle{deviceBundleCount === 1 ? "" : "s"} on the relay.
+              {deviceBundleCount} visible bundle
+              {deviceBundleCount === 1 ? "" : "s"} on the relay.
             </Text>
           </View>
           <View style={styles.metricCard}>
@@ -147,7 +164,9 @@ export function SettingsScreen({
             <Text style={styles.metricValue}>{vaultCount}</Text>
           </View>
         </View>
-        {deviceBundleError ? <Text style={styles.errorText}>{deviceBundleError}</Text> : null}
+        {deviceBundleError ? (
+          <Text style={styles.errorText}>{deviceBundleError}</Text>
+        ) : null}
 
         <DeviceLinkCard
           signedIn
@@ -185,7 +204,9 @@ export function SettingsScreen({
                   <Text style={styles.sessionRowTitle}>{item.deviceLabel}</Text>
                   {item.isCurrent ? (
                     <View style={styles.sessionCurrentBadge}>
-                      <Text style={styles.sessionCurrentBadgeLabel}>Current</Text>
+                      <Text style={styles.sessionCurrentBadgeLabel}>
+                        Current
+                      </Text>
                     </View>
                   ) : null}
                 </View>
@@ -196,23 +217,29 @@ export function SettingsScreen({
                   {item.deviceModel ?? "Device model unavailable"}
                 </Text>
                 <Text style={styles.sessionRowMeta}>
-                  Seen {formatSessionTimestamp(item.lastSeenAt)} · Signed in {formatSessionTimestamp(item.createdAt)}
+                  Seen {formatSessionTimestamp(item.lastSeenAt)} · Signed in{" "}
+                  {formatSessionTimestamp(item.createdAt)}
                 </Text>
               </View>
             ))}
           </View>
         ) : (
-          <Text style={styles.helper}>Only this device session is visible right now.</Text>
+          <Text style={styles.helper}>
+            Only this device session is visible right now.
+          </Text>
         )}
 
-        {sessionsError ? <Text style={styles.errorText}>{sessionsError}</Text> : null}
+        {sessionsError ? (
+          <Text style={styles.errorText}>{sessionsError}</Text>
+        ) : null}
       </View>
 
       {contactCard ? (
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Contact token</Text>
           <Text style={styles.sectionBody}>
-            Keep this handy for later QR or copy flows without crowding the main messenger view.
+            Keep this handy for later QR or copy flows without crowding the main
+            messenger view.
           </Text>
           <Text selectable style={styles.codeText}>
             {contactCard.cardToken}
@@ -278,7 +305,10 @@ export function SettingsScreen({
           description="Request screenshot and app-switcher protection on supported devices."
           value={privacyDefaults.secureAppSwitcher}
           onPress={() =>
-            onUpdatePrivacy("secureAppSwitcher", !privacyDefaults.secureAppSwitcher)
+            onUpdatePrivacy(
+              "secureAppSwitcher",
+              !privacyDefaults.secureAppSwitcher,
+            )
           }
         />
       </View>

@@ -4,8 +4,14 @@ import { signAccessToken, verifyAccessToken } from "../src/lib/tokens";
 
 describe("relay crypto helpers", () => {
   it("normalizes email addresses before hashing", async () => {
-    const left = await blindIndex("secret", normalizeEmail("Alice@example.com "));
-    const right = await blindIndex("secret", normalizeEmail("alice@example.com"));
+    const left = await blindIndex(
+      "secret",
+      normalizeEmail("Alice@example.com "),
+    );
+    const right = await blindIndex(
+      "secret",
+      normalizeEmail("alice@example.com"),
+    );
 
     expect(left).toBe(right);
   });
@@ -18,7 +24,7 @@ describe("relay crypto helpers", () => {
         sessionId: "19b06453-ed6a-444e-a9f4-dd83940b0ae1",
       },
       "super-secret",
-      60
+      60,
     );
 
     const verified = await verifyAccessToken(token, "super-secret");

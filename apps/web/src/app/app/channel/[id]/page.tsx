@@ -12,16 +12,18 @@ export default function ChannelPage() {
         Legacy browser channels are retired from the active beta surface
       </h2>
       <p className="mb-6 text-sm text-[var(--text-secondary)]">
-        The web app now centers on relay-native direct messages, small groups, invite review,
-        joined-space search, and settings. Channel-style legacy browser routes are no longer part
-        of the active beta runtime.
+        The web app now centers on relay-native direct messages, small groups,
+        invite review, joined-space search, and settings. Channel-style legacy
+        browser routes are no longer part of the active beta runtime.
       </p>
       <div className="space-y-4">
         <div className="card">
-          <h3 className="text-lg font-semibold text-[var(--text-primary)]">Use instead</h3>
+          <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+            Use instead
+          </h3>
           <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-            Start a DM, create a private group, or use joined-space search to reach the conversation
-            you already share with someone.
+            Start a DM, create a private group, or use joined-space search to
+            reach the conversation you already share with someone.
           </p>
         </div>
       </div>

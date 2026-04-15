@@ -43,7 +43,10 @@ export function MessageContextMenu({
         {needsDivider ? <View style={styles.contextMenuDivider} /> : null}
         <Pressable
           style={styles.contextMenuItem}
-          onPress={() => { onClose(); onAction(action); }}
+          onPress={() => {
+            onClose();
+            onAction(action);
+          }}
         >
           <Text
             style={[
@@ -83,7 +86,11 @@ export function MessageContextMenu({
           ) : null}
 
           {isOwnMessage ? (
-            <Item label="Delete (locally)" destructive action={{ kind: "delete" }} />
+            <Item
+              label="Delete (locally)"
+              destructive
+              action={{ kind: "delete" }}
+            />
           ) : null}
         </Pressable>
       </Pressable>

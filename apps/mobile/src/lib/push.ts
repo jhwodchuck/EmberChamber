@@ -20,9 +20,12 @@ Notifications.setNotificationHandler({
 });
 
 if (!TaskManager.isTaskDefined(BACKGROUND_NOTIFICATION_TASK)) {
-  TaskManager.defineTask<Notifications.NotificationTaskPayload>(BACKGROUND_NOTIFICATION_TASK, async () => {
-    return Notifications.BackgroundNotificationTaskResult.NoData;
-  });
+  TaskManager.defineTask<Notifications.NotificationTaskPayload>(
+    BACKGROUND_NOTIFICATION_TASK,
+    async () => {
+      return Notifications.BackgroundNotificationTaskResult.NoData;
+    },
+  );
 }
 
 export async function ensurePushRuntimeConfiguredAsync() {
@@ -83,12 +86,16 @@ export async function getNativeDevicePushRegistrationAsync(): Promise<NativePush
   };
 }
 
-export function getNotificationConversationId(notification?: Notifications.Notification | null) {
+export function getNotificationConversationId(
+  notification?: Notifications.Notification | null,
+) {
   const value = notification?.request.content.data?.conversationId;
   return typeof value === "string" && value ? value : null;
 }
 
-export function getNotificationReason(notification?: Notifications.Notification | null) {
+export function getNotificationReason(
+  notification?: Notifications.Notification | null,
+) {
   const value = notification?.request.content.data?.reason;
   return value === "mailbox" || value === "relay_hosted_message" ? value : null;
 }

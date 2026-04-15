@@ -49,6 +49,7 @@ If there are no material findings, state `No material findings.` in the executiv
 ## Severity vocabulary
 
 Use only:
+
 - `critical`
 - `high`
 - `medium`
@@ -58,6 +59,7 @@ Use only:
 ## Actionability requirement
 
 Every `critical`, `high`, or `medium` finding must include:
+
 - why it matters
 - exact evidence
 - concrete fix

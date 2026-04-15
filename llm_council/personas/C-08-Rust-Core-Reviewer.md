@@ -26,6 +26,7 @@ Then ground yourself in the current Rust core layer using, when relevant:
 Review `crates/core` and closely related Rust state machinery.
 
 Find concrete core defects:
+
 - local-state invariant bugs
 - persistence and serialization hazards
 - misleading or brittle abstractions
@@ -134,6 +135,7 @@ Every finding must include:
 - what should be tested afterward
 
 When relevant, explicitly state whether the defect is caused by:
+
 - state monotonicity drift
 - dedupe/ack behavior
 - persistence/serialization assumptions
@@ -178,6 +180,7 @@ When changed behavior touches `crates/core`, check whether the repo’s current 
 - `cargo test -p emberchamber-core -p emberchamber-relay-protocol`
 
 When the change is meaningful, expect tests that directly exercise:
+
 - epoch monotonicity
 - outbox enqueue/delivery transitions
 - conversation/local-state upsert behavior

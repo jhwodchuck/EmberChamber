@@ -14,12 +14,16 @@ function fromBinary(binary: string): Uint8Array {
 }
 
 export function encodeBytes(bytes: Uint8Array): string {
-  return btoa(toBinary(bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  return btoa(toBinary(bytes))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
 }
 
 export function decodeBytes(value: string): Uint8Array {
   const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
-  const padding = normalized.length % 4 === 0 ? "" : "=".repeat(4 - (normalized.length % 4));
+  const padding =
+    normalized.length % 4 === 0 ? "" : "=".repeat(4 - (normalized.length % 4));
   return fromBinary(atob(normalized + padding));
 }
 

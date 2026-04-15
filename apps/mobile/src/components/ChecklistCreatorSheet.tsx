@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { styles, theme } from "../styles";
 
 type Props = {
@@ -40,7 +47,8 @@ export function ChecklistCreatorSheet({ visible, onClose, onSend }: Props) {
     onClose();
   }
 
-  const canSend = title.trim().length > 0 && items.filter((o) => o.trim()).length >= 1;
+  const canSend =
+    title.trim().length > 0 && items.filter((o) => o.trim()).length >= 1;
 
   return (
     <Modal
@@ -81,7 +89,10 @@ export function ChecklistCreatorSheet({ visible, onClose, onSend }: Props) {
                   maxLength={200}
                 />
                 {items.length > 1 ? (
-                  <Pressable style={styles.attachPollRemove} onPress={() => removeItem(i)}>
+                  <Pressable
+                    style={styles.attachPollRemove}
+                    onPress={() => removeItem(i)}
+                  >
                     <Text style={styles.attachPollRemoveLabel}>✕</Text>
                   </Pressable>
                 ) : null}
@@ -94,7 +105,10 @@ export function ChecklistCreatorSheet({ visible, onClose, onSend }: Props) {
           </ScrollView>
 
           <Pressable
-            style={[styles.primaryButton, !canSend ? styles.primaryButtonDisabled : null]}
+            style={[
+              styles.primaryButton,
+              !canSend ? styles.primaryButtonDisabled : null,
+            ]}
             onPress={handleSend}
             disabled={!canSend}
           >

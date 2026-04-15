@@ -1,14 +1,26 @@
 import { decryptAttachmentBytes } from "@emberchamber/protocol";
 import { Directory, File as ExpoFile, Paths } from "expo-file-system";
-import { Linking } from "react-native";
+import * as FileSystemLegacy from "expo-file-system/legacy";
+import * as IntentLauncher from "expo-intent-launcher";
+import { Linking, Platform } from "react-native";
 import type { GroupThreadMessage } from "../types";
 
 const ATTACHMENT_CACHE_DIRECTORY = "managed-attachments";
 const EPHEMERAL_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const PRIVATE_VAULT_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const ANDROID_FLAG_GRANT_READ_URI_PERMISSION = 1;
 
-export type ManagedAttachment = NonNullable<NonNullable<GroupThreadMessage["attachment"]>>;
-export type AttachmentTransferState = "idle" | "downloading" | "decrypting" | "ready" | "failed";
+export type ManagedAttachment = NonNullable<
+  NonNullable<GroupThreadMessage["attachment"]>
+>;
+export type AttachmentTransferState =
+  | "idle"
+  | "downloading"
+  | "decrypting"
+  | "ready"
+  | "failed";
+
+type RefreshAttachmentAccess = () => Promise<ManagedAttachment | null>;
 
 export function getAttachmentActionLabel(attachment: ManagedAttachment) {
   if (attachment.contentClass === "audio") {
@@ -54,7 +66,9 @@ function getCacheTtlMsFromFile(file: ExpoFile) {
     : PRIVATE_VAULT_CACHE_TTL_MS;
 }
 
-export function describeAttachmentTransferState(status: AttachmentTransferState) {
+export function describeAttachmentTransferState(
+  status: AttachmentTransferState,
+) {
   if (status === "downloading") {
     return "Downloading attachment…";
   }
@@ -72,6 +86,66 @@ export function describeAttachmentTransferState(status: AttachmentTransferState)
   }
 
   return "";
+}
+
+async function ensureAttachmentDownloadUrl(
+  attachment: ManagedAttachment,
+  refreshAttachmentAccess?: RefreshAttachmentAccess,
+): Promise<ManagedAttachment & { downloadUrl: string }> {
+  if (attachment.downloadUrl) {
+    return {
+      ...attachment,
+      downloadUrl: attachment.downloadUrl,
+    };
+  }
+
+  if (!refreshAttachmentAccess) {
+    throw new Error("Attachment link is unavailable.");
+  }
+
+  const refreshedAttachment = await refreshAttachmentAccess();
+  if (refreshedAttachment?.downloadUrl) {
+    return {
+      ...refreshedAttachment,
+      downloadUrl: refreshedAttachment.downloadUrl,
+    };
+  }
+
+  throw new Error("Attachment link is unavailable.");
+}
+
+async function downloadAttachmentBytes(
+  attachment: ManagedAttachment,
+  refreshAttachmentAccess?: RefreshAttachmentAccess,
+) {
+  let resolvedAttachment = await ensureAttachmentDownloadUrl(
+    attachment,
+    refreshAttachmentAccess,
+  );
+  let response = await fetch(resolvedAttachment.downloadUrl!);
+
+  if (!response.ok && refreshAttachmentAccess) {
+    const refreshedAttachment = await refreshAttachmentAccess();
+    if (
+      refreshedAttachment?.downloadUrl &&
+      refreshedAttachment.downloadUrl !== resolvedAttachment.downloadUrl
+    ) {
+      resolvedAttachment = {
+        ...refreshedAttachment,
+        downloadUrl: refreshedAttachment.downloadUrl,
+      };
+      response = await fetch(resolvedAttachment.downloadUrl);
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error("Unable to download the attachment.");
+  }
+
+  return {
+    attachment: resolvedAttachment,
+    bytes: await response.arrayBuffer(),
+  };
 }
 
 export function pruneManagedAttachmentCache(now = Date.now()) {
@@ -106,17 +180,14 @@ export function pruneManagedAttachmentCache(now = Date.now()) {
 export async function resolveAttachmentUri(
   attachment: ManagedAttachment,
   onStatusChange?: (status: AttachmentTransferState) => void,
+  refreshAttachmentAccess?: RefreshAttachmentAccess,
 ) {
   pruneManagedAttachmentCache();
-
-  if (!attachment.downloadUrl) {
-    throw new Error("Attachment link is unavailable.");
-  }
 
   const localFile = getAttachmentCacheFile(attachment);
   if (localFile.exists && (localFile.size ?? 0) > 0) {
     onStatusChange?.("ready");
-    return localFile.contentUri || localFile.uri;
+    return localFile.uri;
   }
 
   onStatusChange?.("downloading");
@@ -126,12 +197,10 @@ export async function resolveAttachmentUri(
       throw new Error("Attachment keys are missing.");
     }
 
-    const response = await fetch(attachment.downloadUrl);
-    if (!response.ok) {
-      throw new Error("Unable to download the attachment.");
-    }
-
-    const ciphertext = await response.arrayBuffer();
+    const { bytes: ciphertext } = await downloadAttachmentBytes(
+      attachment,
+      refreshAttachmentAccess,
+    );
     onStatusChange?.("decrypting");
     const plain = decryptAttachmentBytes(
       ciphertext,
@@ -141,24 +210,54 @@ export async function resolveAttachmentUri(
     localFile.create({ intermediates: true, overwrite: true });
     localFile.write(plain);
     onStatusChange?.("ready");
-    return localFile.contentUri || localFile.uri;
+    return localFile.uri;
   }
 
-  await ExpoFile.downloadFileAsync(attachment.downloadUrl, localFile, { idempotent: true });
+  const { bytes } = await downloadAttachmentBytes(
+    attachment,
+    refreshAttachmentAccess,
+  );
+  localFile.create({ intermediates: true, overwrite: true });
+  localFile.write(new Uint8Array(bytes));
   onStatusChange?.("ready");
-  return localFile.contentUri || localFile.uri;
+  return localFile.uri;
+}
+
+async function openAttachmentOnAndroid(
+  localUri: string,
+  attachment: ManagedAttachment,
+) {
+  const contentUri = await FileSystemLegacy.getContentUriAsync(localUri);
+  await IntentLauncher.startActivityAsync("android.intent.action.VIEW", {
+    data: contentUri,
+    flags: ANDROID_FLAG_GRANT_READ_URI_PERMISSION,
+    type: attachment.mimeType,
+  });
+  return contentUri;
 }
 
 export async function openManagedAttachment(
   attachment: ManagedAttachment,
   onStatusChange?: (status: AttachmentTransferState) => void,
+  refreshAttachmentAccess?: RefreshAttachmentAccess,
 ) {
-  const localUri = await resolveAttachmentUri(attachment, onStatusChange);
+  const localUri = await resolveAttachmentUri(
+    attachment,
+    onStatusChange,
+    refreshAttachmentAccess,
+  );
 
   try {
+    if (Platform.OS === "android") {
+      return await openAttachmentOnAndroid(localUri, attachment);
+    }
+
     await Linking.openURL(localUri);
   } catch {
-    if (attachment.downloadUrl) {
+    if (
+      attachment.encryptionMode !== "device_encrypted" &&
+      attachment.downloadUrl
+    ) {
       await Linking.openURL(attachment.downloadUrl);
       return attachment.downloadUrl;
     }

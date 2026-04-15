@@ -18,6 +18,7 @@ type ImageViewerModalProps = {
   attachment: Attachment | null;
   /** Pre-built object URL (already decrypted, e.g. from a local file). */
   plainUri?: string | null;
+  resolveAttachmentAccess?: () => Promise<Attachment | null>;
   visible: boolean;
   onClose: () => void;
 };
@@ -25,6 +26,7 @@ type ImageViewerModalProps = {
 export function ImageViewerModal({
   attachment,
   plainUri,
+  resolveAttachmentAccess,
   visible,
   onClose,
 }: ImageViewerModalProps) {
@@ -39,7 +41,7 @@ export function ImageViewerModal({
     retry,
     status,
     statusLabel,
-  } = useAttachmentManager(attachment);
+  } = useAttachmentManager(attachment, resolveAttachmentAccess);
 
   useEffect(() => {
     if (!visible) {
@@ -103,7 +105,10 @@ export function ImageViewerModal({
                 </Text>
               </Pressable>
             ) : null}
-            <Pressable onPress={onClose} style={[styles.secondaryButton, { marginTop: 12 }]}>
+            <Pressable
+              onPress={onClose}
+              style={[styles.secondaryButton, { marginTop: 12 }]}
+            >
               <Text style={styles.secondaryButtonLabel}>Close</Text>
             </Pressable>
           </View>

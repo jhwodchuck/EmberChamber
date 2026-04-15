@@ -40,12 +40,12 @@ The relay never sees the passphrase or the plaintext bundle.
 
 ## Platform scope
 
-| Surface | Export | Import | Notes |
-| ------- | ------ | ------ | ----- |
-| Android | ✅ target | ✅ target | Use DocumentPicker for save/open |
-| Web | 📋 later | 📋 later | Local file access is limited but feasible |
-| Windows | 📋 later | 📋 later | Tauri shell has file system access |
-| Ubuntu | 📋 later | 📋 later | Tauri shell has file system access |
+| Surface | Export    | Import    | Notes                                     |
+| ------- | --------- | --------- | ----------------------------------------- |
+| Android | ✅ target | ✅ target | Use DocumentPicker for save/open          |
+| Web     | 📋 later  | 📋 later  | Local file access is limited but feasible |
+| Windows | 📋 later  | 📋 later  | Tauri shell has file system access        |
+| Ubuntu  | 📋 later  | 📋 later  | Tauri shell has file system access        |
 
 Start with Android as the primary surface since that is where local SQLite history and key material matter most.
 

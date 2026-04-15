@@ -10,9 +10,15 @@ import { relayConversationApi } from "@/lib/relay";
 
 type RoomMemberSelection = Record<string, string>;
 
-function defaultRoomMemberSelection(community: ConversationDetail): RoomMemberSelection {
+function defaultRoomMemberSelection(
+  community: ConversationDetail,
+): RoomMemberSelection {
   return Object.fromEntries(
-    (community.rooms ?? []).map((room) => [room.id, community.members.find((member) => member.role === "member")?.accountId ?? ""]),
+    (community.rooms ?? []).map((room) => [
+      room.id,
+      community.members.find((member) => member.role === "member")?.accountId ??
+        "",
+    ]),
   );
 }
 
@@ -60,7 +66,10 @@ export default function CommunityDetailPage() {
       allowMemberInvites: Boolean(data.allowMemberInvites),
       inviteFreezeEnabled: Boolean(data.inviteFreezeEnabled),
     });
-    setRoomSelections((current) => ({ ...defaultRoomMemberSelection(data), ...current }));
+    setRoomSelections((current) => ({
+      ...defaultRoomMemberSelection(data),
+      ...current,
+    }));
   }, [id, router]);
 
   useEffect(() => {
@@ -75,7 +84,9 @@ export default function CommunityDetailPage() {
         await refreshCommunity();
       } catch (error) {
         if (!cancelled) {
-          toast.error(error instanceof Error ? error.message : "Failed to load community");
+          toast.error(
+            error instanceof Error ? error.message : "Failed to load community",
+          );
           router.push("/app");
         }
       } finally {
@@ -94,11 +105,16 @@ export default function CommunityDetailPage() {
     event.preventDefault();
     setIsSavingPolicies(true);
     try {
-      const updated = await relayConversationApi.updateCommunityPolicies(id, policyForm);
+      const updated = await relayConversationApi.updateCommunityPolicies(
+        id,
+        policyForm,
+      );
       setCommunity(updated);
       toast.success("Community policies updated");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update policies");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update policies",
+      );
     } finally {
       setIsSavingPolicies(false);
     }
@@ -119,7 +135,9 @@ export default function CommunityDetailPage() {
         sensitiveMediaDefault: roomForm.sensitiveMediaDefault,
         roomAccessPolicy: roomForm.roomAccessPolicy,
         memberAccountIds:
-          roomForm.roomAccessPolicy === "restricted" ? roomForm.memberAccountIds : undefined,
+          roomForm.roomAccessPolicy === "restricted"
+            ? roomForm.memberAccountIds
+            : undefined,
       });
       await refreshCommunity();
       setRoomForm({
@@ -131,7 +149,9 @@ export default function CommunityDetailPage() {
       });
       toast.success("Room created");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to create room");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to create room",
+      );
     } finally {
       setIsCreatingRoom(false);
     }
@@ -152,7 +172,9 @@ export default function CommunityDetailPage() {
       setCreatedInviteUrl(invite.inviteUrl);
       toast.success("Invite created");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to create invite");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to create invite",
+      );
     } finally {
       setIsCreatingInvite(false);
     }
@@ -194,7 +216,9 @@ export default function CommunityDetailPage() {
       }
       await refreshCommunity();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update room access");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update room access",
+      );
     } finally {
       setBusyRoomId(null);
       setBusyMemberId(null);
@@ -208,7 +232,9 @@ export default function CommunityDetailPage() {
       await refreshCommunity();
       toast.success("Community member removed");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to remove member");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to remove member",
+      );
     } finally {
       setBusyMemberId(null);
     }
@@ -226,7 +252,9 @@ export default function CommunityDetailPage() {
   const canManageRooms = community.capabilities.canManageRooms;
   const canGrantRoomAccess = community.capabilities.canGrantRoomAccess;
   const roomOptions = community.rooms ?? [];
-  const memberOptions = community.members.filter((member) => member.role !== "owner");
+  const memberOptions = community.members.filter(
+    (member) => member.role !== "owner",
+  );
 
   return (
     <div className="space-y-8 p-6 sm:p-8">
@@ -246,7 +274,10 @@ export default function CommunityDetailPage() {
           </div>
 
           <div className="flex flex-wrap gap-3">
-            <Link href={`/app/search?communityId=${community.id}`} className="btn-ghost">
+            <Link
+              href={`/app/search?communityId=${community.id}`}
+              className="btn-ghost"
+            >
               Search This Community
             </Link>
             <Link href="/app/new-community" className="btn-ghost">
@@ -257,15 +288,25 @@ export default function CommunityDetailPage() {
 
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
           <div className="rounded-[1.3rem] border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">Members</p>
-            <p className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">{community.memberCount}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">
+              Members
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">
+              {community.memberCount}
+            </p>
           </div>
           <div className="rounded-[1.3rem] border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">Rooms</p>
-            <p className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">{roomOptions.length}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">
+              Rooms
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">
+              {roomOptions.length}
+            </p>
           </div>
           <div className="rounded-[1.3rem] border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">Invite policy</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">
+              Invite policy
+            </p>
             <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">
               {community.inviteFreezeEnabled
                 ? "Frozen"
@@ -279,14 +320,19 @@ export default function CommunityDetailPage() {
 
       {canManagePolicies ? (
         <section className="panel px-6 py-7">
-          <h3 className="text-xl font-semibold text-[var(--text-primary)]">Policies</h3>
+          <h3 className="text-xl font-semibold text-[var(--text-primary)]">
+            Policies
+          </h3>
           <form onSubmit={handleSavePolicies} className="mt-5 space-y-4">
             <label className="flex items-start gap-3 rounded-[1.2rem] border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
               <input
                 type="checkbox"
                 checked={policyForm.allowMemberInvites}
                 onChange={(event) =>
-                  setPolicyForm((current) => ({ ...current, allowMemberInvites: event.target.checked }))
+                  setPolicyForm((current) => ({
+                    ...current,
+                    allowMemberInvites: event.target.checked,
+                  }))
                 }
                 className="mt-1 h-4 w-4 rounded border-[var(--border)] text-brand-600"
               />
@@ -295,7 +341,8 @@ export default function CommunityDetailPage() {
                   Allow member invites
                 </span>
                 <span className="mt-1 block text-sm leading-6 text-[var(--text-secondary)]">
-                  Trusted members can mint invites when the community policy allows it.
+                  Trusted members can mint invites when the community policy
+                  allows it.
                 </span>
               </span>
             </label>
@@ -305,7 +352,10 @@ export default function CommunityDetailPage() {
                 type="checkbox"
                 checked={policyForm.inviteFreezeEnabled}
                 onChange={(event) =>
-                  setPolicyForm((current) => ({ ...current, inviteFreezeEnabled: event.target.checked }))
+                  setPolicyForm((current) => ({
+                    ...current,
+                    inviteFreezeEnabled: event.target.checked,
+                  }))
                 }
                 className="mt-1 h-4 w-4 rounded border-[var(--border)] text-brand-600"
               />
@@ -314,12 +364,17 @@ export default function CommunityDetailPage() {
                   Freeze new joins
                 </span>
                 <span className="mt-1 block text-sm leading-6 text-[var(--text-secondary)]">
-                  Existing invites stop working until organizers unfreeze the community.
+                  Existing invites stop working until organizers unfreeze the
+                  community.
                 </span>
               </span>
             </label>
 
-            <button type="submit" className="btn-primary" disabled={isSavingPolicies}>
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={isSavingPolicies}
+            >
               {isSavingPolicies ? "Saving Policies…" : "Save Policies"}
             </button>
           </form>
@@ -331,10 +386,12 @@ export default function CommunityDetailPage() {
           <section className="panel px-6 py-7">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h3 className="text-xl font-semibold text-[var(--text-primary)]">Rooms</h3>
+                <h3 className="text-xl font-semibold text-[var(--text-primary)]">
+                  Rooms
+                </h3>
                 <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                  Rooms stay scoped to members of this community. Restricted rooms need explicit
-                  access grants from organizers.
+                  Rooms stay scoped to members of this community. Restricted
+                  rooms need explicit access grants from organizers.
                 </p>
               </div>
               {canManageRooms ? (
@@ -347,9 +404,12 @@ export default function CommunityDetailPage() {
             <div className="mt-6 space-y-4">
               {roomOptions.map((room) => {
                 const selectedAccountId = roomSelections[room.id] ?? "";
-                const selectedMember = community.members.find((member) => member.accountId === selectedAccountId);
+                const selectedMember = community.members.find(
+                  (member) => member.accountId === selectedAccountId,
+                );
                 const accessActionLabel =
-                  selectedAccountId && room.memberAccountIds.includes(selectedAccountId)
+                  selectedAccountId &&
+                  room.memberAccountIds.includes(selectedAccountId)
                     ? "Remove Access"
                     : "Grant Access";
 
@@ -364,31 +424,45 @@ export default function CommunityDetailPage() {
                           {room.title ?? "Untitled room"}
                         </p>
                         <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                          {room.memberCount} members, {room.roomAccessPolicy?.replace("_", " ")} access
+                          {room.memberCount} members,{" "}
+                          {room.roomAccessPolicy?.replace("_", " ")} access
                         </p>
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        <Link href={`/app/chat/${room.id}`} className="btn-ghost">
+                        <Link
+                          href={`/app/chat/${room.id}`}
+                          className="btn-ghost"
+                        >
                           Open Room
                         </Link>
-                        <Link href={`/app/search?communityId=${community.id}`} className="btn-ghost">
+                        <Link
+                          href={`/app/search?communityId=${community.id}`}
+                          className="btn-ghost"
+                        >
                           Search Scope
                         </Link>
                       </div>
                     </div>
 
-                    {canGrantRoomAccess && room.roomAccessPolicy === "restricted" ? (
+                    {canGrantRoomAccess &&
+                    room.roomAccessPolicy === "restricted" ? (
                       <div className="mt-4 flex flex-col gap-3 sm:flex-row">
                         <select
                           value={selectedAccountId}
                           onChange={(event) =>
-                            setRoomSelections((current) => ({ ...current, [room.id]: event.target.value }))
+                            setRoomSelections((current) => ({
+                              ...current,
+                              [room.id]: event.target.value,
+                            }))
                           }
                           className="input flex-1"
                         >
                           <option value="">Select a community member</option>
                           {memberOptions.map((member) => (
-                            <option key={member.accountId} value={member.accountId}>
+                            <option
+                              key={member.accountId}
+                              value={member.accountId}
+                            >
                               {member.displayName} ({member.role})
                             </option>
                           ))}
@@ -397,15 +471,20 @@ export default function CommunityDetailPage() {
                           type="button"
                           onClick={() => void toggleRoomMember(room.id)}
                           className="btn-primary"
-                          disabled={!selectedAccountId || busyRoomId === room.id}
+                          disabled={
+                            !selectedAccountId || busyRoomId === room.id
+                          }
                         >
-                          {busyRoomId === room.id && busyMemberId === selectedAccountId
+                          {busyRoomId === room.id &&
+                          busyMemberId === selectedAccountId
                             ? "Updating…"
                             : accessActionLabel}
                         </button>
                         {selectedMember ? (
                           <p className="self-center text-xs text-[var(--text-secondary)]">
-                            {room.memberAccountIds.includes(selectedMember.accountId)
+                            {room.memberAccountIds.includes(
+                              selectedMember.accountId,
+                            )
                               ? "Selected member already has room access."
                               : "Selected member is in the community but not this room yet."}
                           </p>
@@ -420,7 +499,9 @@ export default function CommunityDetailPage() {
 
           {canManageRooms ? (
             <section className="panel px-6 py-7">
-              <h3 className="text-xl font-semibold text-[var(--text-primary)]">Create a Room</h3>
+              <h3 className="text-xl font-semibold text-[var(--text-primary)]">
+                Create a Room
+              </h3>
               <form onSubmit={handleCreateRoom} className="mt-5 space-y-4">
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-[var(--text-primary)]">
@@ -429,7 +510,12 @@ export default function CommunityDetailPage() {
                   <input
                     type="text"
                     value={roomForm.title}
-                    onChange={(event) => setRoomForm((current) => ({ ...current, title: event.target.value }))}
+                    onChange={(event) =>
+                      setRoomForm((current) => ({
+                        ...current,
+                        title: event.target.value,
+                      }))
+                    }
                     className="input"
                     maxLength={80}
                     placeholder="Hosts only"
@@ -447,7 +533,9 @@ export default function CommunityDetailPage() {
                       onChange={(event) =>
                         setRoomForm((current) => ({
                           ...current,
-                          roomAccessPolicy: event.target.value as "all_members" | "restricted",
+                          roomAccessPolicy: event.target.value as
+                            | "all_members"
+                            | "restricted",
                         }))
                       }
                       className="input"
@@ -473,7 +561,9 @@ export default function CommunityDetailPage() {
                         }
                         className="h-4 w-4 rounded border-[var(--border)] text-brand-600"
                       />
-                      <span className="text-sm text-[var(--text-secondary)]">Use stronger defaults</span>
+                      <span className="text-sm text-[var(--text-secondary)]">
+                        Use stronger defaults
+                      </span>
                     </label>
                   </div>
                 </div>
@@ -485,7 +575,10 @@ export default function CommunityDetailPage() {
                   <textarea
                     value={roomForm.joinRuleText}
                     onChange={(event) =>
-                      setRoomForm((current) => ({ ...current, joinRuleText: event.target.value }))
+                      setRoomForm((current) => ({
+                        ...current,
+                        joinRuleText: event.target.value,
+                      }))
                     }
                     className="input resize-none"
                     rows={3}
@@ -507,13 +600,23 @@ export default function CommunityDetailPage() {
                         >
                           <input
                             type="checkbox"
-                            checked={roomForm.memberAccountIds.includes(member.accountId)}
+                            checked={roomForm.memberAccountIds.includes(
+                              member.accountId,
+                            )}
                             onChange={(event) =>
                               setRoomForm((current) => ({
                                 ...current,
                                 memberAccountIds: event.target.checked
-                                  ? Array.from(new Set([...current.memberAccountIds, member.accountId]))
-                                  : current.memberAccountIds.filter((accountId) => accountId !== member.accountId),
+                                  ? Array.from(
+                                      new Set([
+                                        ...current.memberAccountIds,
+                                        member.accountId,
+                                      ]),
+                                    )
+                                  : current.memberAccountIds.filter(
+                                      (accountId) =>
+                                        accountId !== member.accountId,
+                                    ),
                               }))
                             }
                             className="h-4 w-4 rounded border-[var(--border)] text-brand-600"
@@ -527,7 +630,11 @@ export default function CommunityDetailPage() {
                   </div>
                 ) : null}
 
-                <button type="submit" className="btn-primary" disabled={isCreatingRoom}>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={isCreatingRoom}
+                >
                   {isCreatingRoom ? "Creating Room…" : "Create Room"}
                 </button>
               </form>
@@ -537,11 +644,16 @@ export default function CommunityDetailPage() {
 
         <div className="space-y-6">
           <section className="panel px-6 py-7">
-            <h3 className="text-xl font-semibold text-[var(--text-primary)]">Mint an Invite</h3>
+            <h3 className="text-xl font-semibold text-[var(--text-primary)]">
+              Mint an Invite
+            </h3>
             {!community.capabilities.canCreateInvites ? (
-              <StatusCallout tone="info" title="Invite creation is currently organizer-only">
-                Member-created invites stay disabled until organizers enable them for this
-                community.
+              <StatusCallout
+                tone="info"
+                title="Invite creation is currently organizer-only"
+              >
+                Member-created invites stay disabled until organizers enable
+                them for this community.
               </StatusCallout>
             ) : null}
             <form onSubmit={handleCreateInvite} className="mt-5 space-y-4">
@@ -572,7 +684,10 @@ export default function CommunityDetailPage() {
                   <select
                     value={inviteForm.roomId}
                     onChange={(event) =>
-                      setInviteForm((current) => ({ ...current, roomId: event.target.value }))
+                      setInviteForm((current) => ({
+                        ...current,
+                        roomId: event.target.value,
+                      }))
                     }
                     className="input"
                   >
@@ -618,7 +733,10 @@ export default function CommunityDetailPage() {
                     max={100}
                     value={inviteForm.maxUses}
                     onChange={(event) =>
-                      setInviteForm((current) => ({ ...current, maxUses: Number(event.target.value) }))
+                      setInviteForm((current) => ({
+                        ...current,
+                        maxUses: Number(event.target.value),
+                      }))
                     }
                     className="input"
                   />
@@ -632,7 +750,10 @@ export default function CommunityDetailPage() {
                 <textarea
                   value={inviteForm.note}
                   onChange={(event) =>
-                    setInviteForm((current) => ({ ...current, note: event.target.value }))
+                    setInviteForm((current) => ({
+                      ...current,
+                      note: event.target.value,
+                    }))
                   }
                   className="input resize-none"
                   rows={3}
@@ -643,7 +764,9 @@ export default function CommunityDetailPage() {
 
               {createdInviteUrl ? (
                 <StatusCallout tone="success" title="Invite ready">
-                  <span className="break-all font-mono text-xs">{createdInviteUrl}</span>
+                  <span className="break-all font-mono text-xs">
+                    {createdInviteUrl}
+                  </span>
                 </StatusCallout>
               ) : null}
 
@@ -672,7 +795,9 @@ export default function CommunityDetailPage() {
           </section>
 
           <section className="panel px-6 py-7">
-            <h3 className="text-xl font-semibold text-[var(--text-primary)]">Members</h3>
+            <h3 className="text-xl font-semibold text-[var(--text-primary)]">
+              Members
+            </h3>
             <div className="mt-5 space-y-3">
               {community.members.map((member) => (
                 <div
@@ -680,7 +805,9 @@ export default function CommunityDetailPage() {
                   className="flex items-center justify-between gap-3 rounded-[1.1rem] border border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-3"
                 >
                   <div>
-                    <p className="text-sm font-medium text-[var(--text-primary)]">{member.displayName}</p>
+                    <p className="text-sm font-medium text-[var(--text-primary)]">
+                      {member.displayName}
+                    </p>
                     <p className="text-xs uppercase tracking-[0.16em] text-[var(--text-secondary)]">
                       {member.role}
                     </p>
@@ -691,12 +818,16 @@ export default function CommunityDetailPage() {
                     <button
                       type="button"
                       className="btn-ghost"
-                      onClick={() => void removeCommunityMember(member.accountId)}
+                      onClick={() =>
+                        void removeCommunityMember(member.accountId)
+                      }
                     >
                       Remove
                     </button>
                   ) : busyMemberId === member.accountId ? (
-                    <span className="text-xs text-[var(--text-secondary)]">Updating…</span>
+                    <span className="text-xs text-[var(--text-secondary)]">
+                      Updating…
+                    </span>
                   ) : null}
                 </div>
               ))}

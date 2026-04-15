@@ -2,10 +2,17 @@ const AUTH_CONTINUATION_STORAGE_KEY = "emberchamber.auth.v1.next";
 const AUTH_CONTINUATION_BASE_URL = "https://emberchamber.invalid";
 
 function isAllowedAuthContinuationPath(pathname: string) {
-  return pathname === "/app" || pathname.startsWith("/app/") || pathname === "/invite" || pathname.startsWith("/invite/");
+  return (
+    pathname === "/app" ||
+    pathname.startsWith("/app/") ||
+    pathname === "/invite" ||
+    pathname.startsWith("/invite/")
+  );
 }
 
-export function normalizeAuthContinuationPath(value?: string | null): string | null {
+export function normalizeAuthContinuationPath(
+  value?: string | null,
+): string | null {
   if (!value) {
     return null;
   }
@@ -17,7 +24,10 @@ export function normalizeAuthContinuationPath(value?: string | null): string | n
 
   try {
     const url = new URL(trimmed, AUTH_CONTINUATION_BASE_URL);
-    if (url.origin !== AUTH_CONTINUATION_BASE_URL || !isAllowedAuthContinuationPath(url.pathname)) {
+    if (
+      url.origin !== AUTH_CONTINUATION_BASE_URL ||
+      !isAllowedAuthContinuationPath(url.pathname)
+    ) {
       return null;
     }
 
@@ -32,7 +42,9 @@ export function readStoredAuthContinuationPath() {
     return null;
   }
 
-  return normalizeAuthContinuationPath(window.localStorage.getItem(AUTH_CONTINUATION_STORAGE_KEY));
+  return normalizeAuthContinuationPath(
+    window.localStorage.getItem(AUTH_CONTINUATION_STORAGE_KEY),
+  );
 }
 
 export function clearStoredAuthContinuationPath() {

@@ -4,7 +4,7 @@ export class HttpError extends Error {
   constructor(
     public readonly status: number,
     message: string,
-    public readonly code?: string
+    public readonly code?: string,
   ) {
     super(message);
   }
@@ -17,7 +17,10 @@ function normalizeAllowedOrigins(raw: string): string[] {
     .filter(Boolean);
 }
 
-export function buildCorsHeaders(request: Request, allowedOriginsRaw: string): Record<string, string> {
+export function buildCorsHeaders(
+  request: Request,
+  allowedOriginsRaw: string,
+): Record<string, string> {
   const headers: Record<string, string> = {
     "access-control-allow-methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
     "access-control-allow-headers": "authorization,content-type",
@@ -27,14 +30,21 @@ export function buildCorsHeaders(request: Request, allowedOriginsRaw: string): R
 
   const origin = request.headers.get("origin");
   const allowedOrigins = normalizeAllowedOrigins(allowedOriginsRaw);
-  if (origin && (allowedOrigins.includes("*") || allowedOrigins.includes(origin))) {
+  if (
+    origin &&
+    (allowedOrigins.includes("*") || allowedOrigins.includes(origin))
+  ) {
     headers["access-control-allow-origin"] = origin;
   }
 
   return headers;
 }
 
-export function withCors(response: Response, request: Request, allowedOriginsRaw: string): Response {
+export function withCors(
+  response: Response,
+  request: Request,
+  allowedOriginsRaw: string,
+): Response {
   const headers = new Headers(response.headers);
   const corsHeaders = buildCorsHeaders(request, allowedOriginsRaw);
 
@@ -49,7 +59,10 @@ export function withCors(response: Response, request: Request, allowedOriginsRaw
   });
 }
 
-export function preflightResponse(request: Request, allowedOriginsRaw: string): Response {
+export function preflightResponse(
+  request: Request,
+  allowedOriginsRaw: string,
+): Response {
   return new Response(null, {
     status: 204,
     headers: buildCorsHeaders(request, allowedOriginsRaw),
@@ -72,7 +85,10 @@ export async function readJson<T>(request: Request): Promise<T> {
 
 export function errorResponse(error: unknown): Response {
   if (error instanceof HttpError) {
-    return json({ error: error.message, code: error.code }, { status: error.status });
+    return json(
+      { error: error.message, code: error.code },
+      { status: error.status },
+    );
   }
 
   if (error instanceof ZodError) {
@@ -82,7 +98,7 @@ export function errorResponse(error: unknown): Response {
         code: "INVALID_REQUEST",
         details: error.flatten(),
       },
-      { status: 400 }
+      { status: 400 },
     );
   }
 

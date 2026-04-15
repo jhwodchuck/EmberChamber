@@ -31,7 +31,10 @@ function formatBytes(bytes: number) {
   }
 
   const units = ["B", "KB", "MB", "GB"];
-  const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  const exponent = Math.min(
+    Math.floor(Math.log(bytes) / Math.log(1024)),
+    units.length - 1,
+  );
   const value = bytes / 1024 ** exponent;
 
   return `${value >= 10 || exponent === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[exponent]}`;
@@ -46,15 +49,27 @@ const platformAccent = {
 const platformProfiles = {
   android: {
     bestFor: "Pocket-first daily use",
-    moments: ["Native mobile integration", "Primary mobile client", "Best for staying in the circle all day"],
+    moments: [
+      "Native mobile integration",
+      "Primary mobile client",
+      "Best for staying in the circle all day",
+    ],
   },
   windows: {
     bestFor: "Longer sessions and desk-first use",
-    moments: ["Native desktop shell", "Room for longer threads", "Strong default for desktop-heavy testers"],
+    moments: [
+      "Native desktop shell",
+      "Room for longer threads",
+      "Strong default for desktop-heavy testers",
+    ],
   },
   ubuntu: {
     bestFor: "Linux operators and native desktop fans",
-    moments: ["AppImage and .deb packaging", "Same runtime capability as desktop", "Useful when Linux is your primary environment"],
+    moments: [
+      "AppImage and .deb packaging",
+      "Same runtime capability as desktop",
+      "Useful when Linux is your primary environment",
+    ],
   },
 } as const;
 
@@ -97,11 +112,15 @@ async function DownloadPageInner({
   }));
   const totalPostedAssets = platformBuilds.reduce(
     (count, entry) => count + (entry.build?.downloads.length ?? 0),
-    0
+    0,
   );
-  const surfacesWithBuilds = platformBuilds.filter((entry) => entry.build).length;
+  const surfacesWithBuilds = platformBuilds.filter(
+    (entry) => entry.build,
+  ).length;
   const representedTags = new Set(
-    platformBuilds.flatMap((entry) => (entry.build ? [entry.build.releaseTag] : []))
+    platformBuilds.flatMap((entry) =>
+      entry.build ? [entry.build.releaseTag] : [],
+    ),
   ).size;
 
   return (
@@ -113,16 +132,21 @@ async function DownloadPageInner({
               className="pointer-events-none absolute right-0 top-0 h-72 w-72 bg-[radial-gradient(circle,rgba(255,170,110,0.16),transparent_62%)]"
               aria-hidden="true"
             />
-            <div className="pointer-events-none absolute inset-0 glow-grid opacity-35" aria-hidden="true" />
+            <div
+              className="pointer-events-none absolute inset-0 glow-grid opacity-35"
+              aria-hidden="true"
+            />
             <div className="relative max-w-3xl">
               <div className="eyebrow">Launch Targets</div>
               <h1 className="mt-5 text-balance font-display text-5xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-6xl">
-                Pick the surface you want to live in, then verify the posted build.
+                Pick the surface you want to live in, then verify the posted
+                build.
               </h1>
               <p className="mt-5 text-lg leading-8 text-[var(--text-secondary)]">
-                Android, Windows, and Ubuntu are the first committed native surfaces. The browser
-                still matters for onboarding, lighter sessions, settings, and immediate access when
-                no posted native build exists yet.
+                Android, Windows, and Ubuntu are the first committed native
+                surfaces. The browser still matters for onboarding, lighter
+                sessions, settings, and immediate access when no posted native
+                build exists yet.
               </p>
 
               <div className="mt-6 flex flex-wrap gap-3">
@@ -135,7 +159,11 @@ async function DownloadPageInner({
               </div>
 
               <div className="mt-6 flex flex-wrap gap-3">
-                {["Android first-wave priority", "Desktop clients posted from release feed", "Web remains the fallback surface"].map((item) => (
+                {[
+                  "Android first-wave priority",
+                  "Desktop clients posted from release feed",
+                  "Web remains the fallback surface",
+                ].map((item) => (
                   <span key={item} className="metric-pill">
                     <BadgeCheck className="h-3.5 w-3.5 text-brand-400" />
                     {item}
@@ -153,21 +181,36 @@ async function DownloadPageInner({
                   {surfacesWithBuilds}/3 native surfaces have a posted build
                 </h2>
                 <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-                  GitHub Releases is the source of truth. Each platform card below shows the latest
-                  release tag that actually contains that platform&apos;s posted artifacts.
+                  GitHub Releases is the source of truth. Each platform card
+                  below shows the latest release tag that actually contains that
+                  platform&apos;s posted artifacts.
                 </p>
 
                 <div className="mt-6 grid gap-3">
                   {[
-                    { label: "Posted assets", value: String(totalPostedAssets) },
-                    { label: "Native surfaces live", value: `${surfacesWithBuilds}/3` },
-                    { label: "Release tags represented", value: String(representedTags) },
+                    {
+                      label: "Posted assets",
+                      value: String(totalPostedAssets),
+                    },
+                    {
+                      label: "Native surfaces live",
+                      value: `${surfacesWithBuilds}/3`,
+                    },
+                    {
+                      label: "Release tags represented",
+                      value: String(representedTags),
+                    },
                   ].map((item) => (
-                    <div key={item.label} className="rounded-[1.2rem] border border-white/8 bg-white/[0.04] px-4 py-3">
+                    <div
+                      key={item.label}
+                      className="rounded-[1.2rem] border border-white/8 bg-white/[0.04] px-4 py-3"
+                    >
                       <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#a98982]">
                         {item.label}
                       </p>
-                      <p className="mt-2 text-xl font-semibold text-[var(--text-primary)]">{item.value}</p>
+                      <p className="mt-2 text-xl font-semibold text-[var(--text-primary)]">
+                        {item.value}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -186,8 +229,9 @@ async function DownloadPageInner({
                   No public release posted yet
                 </h2>
                 <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-                  This page reflects posted binaries only. If nothing is attached to a release yet,
-                  use the browser or build from source.
+                  This page reflects posted binaries only. If nothing is
+                  attached to a release yet, use the browser or build from
+                  source.
                 </p>
               </>
             )}
@@ -200,18 +244,29 @@ async function DownloadPageInner({
             Start with the surface that matches the moment, not the slogan.
           </h2>
           <p className="mt-4 section-copy">
-            Posted builds can land on different tags. The right choice is whichever surface is
-            actually available and best suited to the session you are starting.
+            Posted builds can land on different tags. The right choice is
+            whichever surface is actually available and best suited to the
+            session you are starting.
           </p>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-3">
           {recommendedToday.map((item) =>
             item.href.startsWith("/") ? (
-              <Link key={item.title} href={item.href} className="rounded-[1.45rem] border border-white/8 bg-white/[0.04] p-5 transition-[border-color,transform] hover:-translate-y-0.5 hover:border-brand-500/25">
-                <p className="text-lg font-semibold text-[var(--text-primary)]">{item.title}</p>
-                <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{item.body}</p>
-                <span className="mt-4 inline-flex text-sm font-medium text-brand-300">{item.label}</span>
+              <Link
+                key={item.title}
+                href={item.href}
+                className="rounded-[1.45rem] border border-white/8 bg-white/[0.04] p-5 transition-[border-color,transform] hover:-translate-y-0.5 hover:border-brand-500/25"
+              >
+                <p className="text-lg font-semibold text-[var(--text-primary)]">
+                  {item.title}
+                </p>
+                <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+                  {item.body}
+                </p>
+                <span className="mt-4 inline-flex text-sm font-medium text-brand-300">
+                  {item.label}
+                </span>
               </Link>
             ) : (
               <a
@@ -219,9 +274,15 @@ async function DownloadPageInner({
                 href={item.href}
                 className="rounded-[1.45rem] border border-white/8 bg-white/[0.04] p-5 transition-[border-color,transform] hover:-translate-y-0.5 hover:border-brand-500/25"
               >
-                <p className="text-lg font-semibold text-[var(--text-primary)]">{item.title}</p>
-                <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{item.body}</p>
-                <span className="mt-4 inline-flex text-sm font-medium text-brand-300">{item.label}</span>
+                <p className="text-lg font-semibold text-[var(--text-primary)]">
+                  {item.title}
+                </p>
+                <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+                  {item.body}
+                </p>
+                <span className="mt-4 inline-flex text-sm font-medium text-brand-300">
+                  {item.label}
+                </span>
               </a>
             ),
           )}
@@ -229,7 +290,11 @@ async function DownloadPageInner({
 
         <div className="mt-8 grid gap-5 lg:grid-cols-3">
           {platformBuilds.map(({ platform, build }) => (
-            <div key={platform.name} id={platform.id} className="card relative h-full overflow-hidden p-6">
+            <div
+              key={platform.name}
+              id={platform.id}
+              className="card relative h-full overflow-hidden p-6"
+            >
               <div
                 className={`absolute inset-x-0 top-0 h-24 bg-gradient-to-r ${
                   platformAccent[platform.id as keyof typeof platformAccent]
@@ -239,15 +304,21 @@ async function DownloadPageInner({
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <p className="section-kicker">{platform.artifact}</p>
-                    <h2 className="mt-3 text-2xl font-semibold text-[var(--text-primary)]">{platform.name}</h2>
+                    <h2 className="mt-3 text-2xl font-semibold text-[var(--text-primary)]">
+                      {platform.name}
+                    </h2>
                   </div>
                   <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 text-brand-400">
                     <MonitorSmartphone aria-hidden="true" className="h-5 w-5" />
                   </div>
                 </div>
 
-                <p className="mt-3 text-sm font-medium text-brand-300">{platform.status}</p>
-                <p className="mt-4 text-sm leading-7 text-[var(--text-secondary)]">{platform.detail}</p>
+                <p className="mt-3 text-sm font-medium text-brand-300">
+                  {platform.status}
+                </p>
+                <p className="mt-4 text-sm leading-7 text-[var(--text-secondary)]">
+                  {platform.detail}
+                </p>
 
                 {build ? (
                   <div className="mt-4 rounded-[1.35rem] border border-white/8 bg-white/[0.04] px-4 py-4">
@@ -259,14 +330,19 @@ async function DownloadPageInner({
                     </p>
                     <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
                       {build.prerelease ? "Prerelease" : "Release"}
-                      {build.publishedAt ? ` published ${formatUtcDate(build.publishedAt)} UTC.` : "."}
+                      {build.publishedAt
+                        ? ` published ${formatUtcDate(build.publishedAt)} UTC.`
+                        : "."}
                     </p>
                     <a
                       href={build.releaseUrl}
                       className="mt-3 inline-flex items-center gap-2 text-xs font-medium text-brand-300 transition-colors hover:text-brand-200"
                     >
                       Open tagged release
-                      <ArrowUpRight aria-hidden="true" className="h-3.5 w-3.5" />
+                      <ArrowUpRight
+                        aria-hidden="true"
+                        className="h-3.5 w-3.5"
+                      />
                     </a>
                   </div>
                 ) : null}
@@ -276,11 +352,20 @@ async function DownloadPageInner({
                     Best for
                   </p>
                   <p className="mt-2 text-sm font-semibold text-[#fff1e8]">
-                    {platformProfiles[platform.id as keyof typeof platformProfiles].bestFor}
+                    {
+                      platformProfiles[
+                        platform.id as keyof typeof platformProfiles
+                      ].bestFor
+                    }
                   </p>
                   <div className="mt-4 space-y-2">
-                    {platformProfiles[platform.id as keyof typeof platformProfiles].moments.map((item) => (
-                      <div key={item} className="signal-line py-2.5 text-xs leading-5">
+                    {platformProfiles[
+                      platform.id as keyof typeof platformProfiles
+                    ].moments.map((item) => (
+                      <div
+                        key={item}
+                        className="signal-line py-2.5 text-xs leading-5"
+                      >
                         <span className="signal-dot mt-1.5" />
                         <span>{item}</span>
                       </div>
@@ -310,10 +395,13 @@ async function DownloadPageInner({
                     </>
                   ) : (
                     <div className="rounded-[1.3rem] border border-dashed border-white/12 bg-white/[0.03] p-4">
-                      <p className="text-sm font-medium text-[var(--text-primary)]">No public build posted yet</p>
+                      <p className="text-sm font-medium text-[var(--text-primary)]">
+                        No public build posted yet
+                      </p>
                       <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                        This surface is part of the beta plan, but no downloadable public binary is
-                        attached to the release feed yet.
+                        This surface is part of the beta plan, but no
+                        downloadable public binary is attached to the release
+                        feed yet.
                       </p>
                     </div>
                   )}
@@ -330,19 +418,25 @@ async function DownloadPageInner({
               What each surface can actually do.
             </h2>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-              All surfaces share the same relay contracts and local-first direction, but not the
-              same current encryption maturity. Browser DMs and new groups are ahead of legacy
-              compatibility history and native attachment encryption, so read these cards as
-              current-state guidance rather than parity claims.
+              All surfaces share the same relay contracts and local-first
+              direction, but not the same current encryption maturity. Browser
+              DMs and new groups are ahead of legacy compatibility history and
+              native attachment encryption, so read these cards as current-state
+              guidance rather than parity claims.
             </p>
 
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
               {surfaceCapabilities.map((surface) => (
-                <div key={surface.name} className="rounded-[1.45rem] border border-white/8 bg-white/[0.04] p-5">
+                <div
+                  key={surface.name}
+                  className="rounded-[1.45rem] border border-white/8 bg-white/[0.04] p-5"
+                >
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="section-kicker">{surface.badge}</p>
-                      <h3 className="mt-2 text-xl font-semibold text-[var(--text-primary)]">{surface.name}</h3>
+                      <h3 className="mt-2 text-xl font-semibold text-[var(--text-primary)]">
+                        {surface.name}
+                      </h3>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 text-brand-400">
                       <Box aria-hidden="true" className="h-4 w-4" />
@@ -353,13 +447,21 @@ async function DownloadPageInner({
                   </p>
                   <ul className="mt-4 space-y-2">
                     {surface.capabilities.map((capability) => (
-                      <li key={capability} className="flex items-start gap-2 text-sm leading-6 text-[var(--text-secondary)]">
-                        <BadgeCheck aria-hidden="true" className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand-400" />
+                      <li
+                        key={capability}
+                        className="flex items-start gap-2 text-sm leading-6 text-[var(--text-secondary)]"
+                      >
+                        <BadgeCheck
+                          aria-hidden="true"
+                          className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand-400"
+                        />
                         <span>{capability}</span>
                       </li>
                     ))}
                     {surface.caveat ? (
-                      <li className="text-sm leading-6 text-[var(--text-secondary)]">{surface.caveat}</li>
+                      <li className="text-sm leading-6 text-[var(--text-secondary)]">
+                        {surface.caveat}
+                      </li>
                     ) : null}
                   </ul>
                 </div>
@@ -378,8 +480,9 @@ async function DownloadPageInner({
                 iPhone and macOS remain later-surface work.
               </h2>
               <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-                They still exist in the repo, but the first-wave release discipline is focused on
-                Android, Windows, Ubuntu, and the browser companion.
+                They still exist in the repo, but the first-wave release
+                discipline is focused on Android, Windows, Ubuntu, and the
+                browser companion.
               </p>
 
               <div className="mt-6 space-y-3">
@@ -400,12 +503,17 @@ async function DownloadPageInner({
                     body: "If a platform build is not posted there, assume web is still the right surface for now.",
                   },
                 ].map((item) => (
-                  <div key={item.title} className="rounded-[1.35rem] border border-white/8 bg-white/[0.04] p-4">
+                  <div
+                    key={item.title}
+                    className="rounded-[1.35rem] border border-white/8 bg-white/[0.04] p-4"
+                  >
                     <div className="flex items-center gap-2 text-brand-400">
                       <item.icon aria-hidden="true" className="h-4 w-4" />
                       <span className="section-kicker">{item.title}</span>
                     </div>
-                    <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{item.body}</p>
+                    <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+                      {item.body}
+                    </p>
                   </div>
                 ))}
               </div>

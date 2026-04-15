@@ -14,10 +14,7 @@ import type {
   GroupMembershipSummary,
   GroupThreadMessage,
 } from "../types";
-import {
-  CHAT_LIST_FILTERS,
-  type ChatListFilter,
-} from "../lib/mainShell";
+import { CHAT_LIST_FILTERS, type ChatListFilter } from "../lib/mainShell";
 import { parseSharedLocation } from "../lib/utils";
 import { styles, theme } from "../styles";
 import { ScreenScaffold } from "../components/ScreenScaffold";
@@ -48,22 +45,32 @@ function formatTimestamp(value: string | null) {
     parsed.getDate() === now.getDate();
 
   if (sameDay) {
-    return parsed.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    return parsed.toLocaleTimeString([], {
+      hour: "numeric",
+      minute: "2-digit",
+    });
   }
 
   return parsed.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
-function previewText(group: GroupMembershipSummary, message: GroupThreadMessage | null) {
+function previewText(
+  group: GroupMembershipSummary,
+  message: GroupThreadMessage | null,
+) {
   if (!message) {
-    return group.historyMode === "device_encrypted" ? "Encrypted chat" : "No messages yet";
+    return group.historyMode === "device_encrypted"
+      ? "Encrypted chat"
+      : "No messages yet";
   }
 
   if (message.kind === "system_notice") {
     return message.text ?? "Update";
   }
 
-  const sharedLocation = message.text ? parseSharedLocation(message.text) : null;
+  const sharedLocation = message.text
+    ? parseSharedLocation(message.text)
+    : null;
   if (sharedLocation) {
     return sharedLocation.isLive ? "Live location" : "Shared location";
   }
@@ -75,10 +82,12 @@ function previewText(group: GroupMembershipSummary, message: GroupThreadMessage 
         ? "Video"
         : message.attachment?.contentClass === "audio"
           ? "Audio"
-      : message.attachment?.fileName ?? "Attachment";
+          : (message.attachment?.fileName ?? "Attachment");
 
   if (message.text?.trim()) {
-    return message.attachment ? `${attachmentLabel}: ${message.text.trim()}` : message.text.trim();
+    return message.attachment
+      ? `${attachmentLabel}: ${message.text.trim()}`
+      : message.text.trim();
   }
 
   return message.attachment ? attachmentLabel : "New message";
@@ -138,7 +147,10 @@ function SwipeableChatRow({
           Math.abs(gestureState.dx) > 6,
         onPanResponderMove: (_event, gestureState) => {
           const baseOffset = isOpen ? -CHAT_ACTION_WIDTH : 0;
-          const nextOffset = Math.max(-CHAT_ACTION_WIDTH, Math.min(0, baseOffset + gestureState.dx));
+          const nextOffset = Math.max(
+            -CHAT_ACTION_WIDTH,
+            Math.min(0, baseOffset + gestureState.dx),
+          );
           translateX.setValue(nextOffset);
         },
         onPanResponderRelease: (_event, gestureState) => {
@@ -204,23 +216,19 @@ function SwipeableChatRow({
       </View>
 
       <Animated.View
-        style={[
-          styles.chatRowAnimated,
-          { transform: [{ translateX }] },
-        ]}
+        style={[styles.chatRowAnimated, { transform: [{ translateX }] }]}
         {...panResponder.panHandlers}
       >
         <Pressable
           onPress={handleRowPress}
           onLongPress={() => onSetOpen(isOpen ? null : item.group.id)}
           android_ripple={{ color: "rgba(255, 255, 255, 0.06)" }}
-          style={[
-            styles.chatRow,
-            isSelected ? styles.chatRowActive : null,
-          ]}
+          style={[styles.chatRow, isSelected ? styles.chatRowActive : null]}
         >
           <View style={styles.chatAvatar}>
-            <Text style={styles.chatAvatarText}>{groupInitial(item.group.title)}</Text>
+            <Text style={styles.chatAvatarText}>
+              {groupInitial(item.group.title)}
+            </Text>
           </View>
 
           <View style={styles.chatRowCopy}>
@@ -242,7 +250,9 @@ function SwipeableChatRow({
                     isUnread ? styles.chatRowTimeUnread : null,
                   ]}
                 >
-                  {formatTimestamp(item.latestMessage?.createdAt ?? item.group.updatedAt)}
+                  {formatTimestamp(
+                    item.latestMessage?.createdAt ?? item.group.updatedAt,
+                  )}
                 </Text>
                 {item.preference.isPinned ? (
                   <Text style={styles.chatStateLabel}>PIN</Text>
@@ -318,7 +328,9 @@ export function ChatListScreen({
   onToggleConversationMuted,
   onOpenInvites,
 }: ChatListScreenProps) {
-  const [openConversationId, setOpenConversationId] = useState<string | null>(null);
+  const [openConversationId, setOpenConversationId] = useState<string | null>(
+    null,
+  );
   const resumeItem = items[0] ?? null;
 
   useEffect(() => {
@@ -348,7 +360,10 @@ export function ChatListScreen({
           <View style={styles.resumeHeader}>
             <Text style={styles.resumeEyebrow}>Resume thread</Text>
             <Text style={styles.resumeTimestamp}>
-              {formatTimestamp(resumeItem.latestMessage?.createdAt ?? resumeItem.group.updatedAt)}
+              {formatTimestamp(
+                resumeItem.latestMessage?.createdAt ??
+                  resumeItem.group.updatedAt,
+              )}
             </Text>
           </View>
           <Text style={styles.resumeTitle} numberOfLines={1}>
@@ -370,7 +385,9 @@ export function ChatListScreen({
         </Pressable>
       ) : (
         <Pressable style={styles.resumeEmptyCard} onPress={onOpenInvites}>
-          <Text style={styles.resumeEmptyTitle}>Start your first trusted circle</Text>
+          <Text style={styles.resumeEmptyTitle}>
+            Start your first trusted circle
+          </Text>
           <Text style={styles.resumeEmptyBody}>
             Open invites to join a circle and begin chatting.
           </Text>
