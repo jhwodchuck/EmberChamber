@@ -31,8 +31,7 @@ import type {
 } from "@emberchamber/protocol";
 
 const relayUrl =
-  process.env.NEXT_PUBLIC_RELAY_URL?.replace(/\/$/, "") ??
-  "http://127.0.0.1:8787";
+  process.env.NEXT_PUBLIC_RELAY_URL?.replace(/\/$/, "") ?? "http://127.0.0.1:8787";
 
 export function getRelayWebsocketUrl() {
   const url = new URL(relayUrl);
@@ -66,11 +65,7 @@ export class RelayRequestError extends Error {
 }
 
 function parseRelayError(status: number, body: RelayErrorBody) {
-  return new RelayRequestError(
-    body.error ?? "Relay request failed",
-    status,
-    body.code,
-  );
+  return new RelayRequestError(body.error ?? "Relay request failed", status, body.code);
 }
 
 export function readRelaySession(): RelayStoredSession | null {
@@ -96,10 +91,7 @@ export function storeRelaySession(session: RelayStoredSession) {
     return;
   }
 
-  window.localStorage.setItem(
-    RELAY_SESSION_STORAGE_KEY,
-    JSON.stringify(session),
-  );
+  window.localStorage.setItem(RELAY_SESSION_STORAGE_KEY, JSON.stringify(session));
 }
 
 export function clearRelaySession() {
@@ -162,10 +154,7 @@ async function refreshRelaySession(): Promise<RelayStoredSession | null> {
     }
 
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(
-      () => controller.abort(),
-      RELAY_FETCH_TIMEOUT_MS,
-    );
+    const timeoutId = window.setTimeout(() => controller.abort(), RELAY_FETCH_TIMEOUT_MS);
 
     try {
       const response = await fetch(`${relayUrl}/v1/auth/refresh`, {
@@ -208,18 +197,13 @@ async function refreshRelaySession(): Promise<RelayStoredSession | null> {
   }
 }
 
-export async function ensureRelayAccessToken(
-  minTtlSeconds = 60,
-): Promise<RelayStoredSession | null> {
+export async function ensureRelayAccessToken(minTtlSeconds = 60): Promise<RelayStoredSession | null> {
   const current = readRelaySession();
   if (!current) {
     return null;
   }
 
-  if (
-    !current.accessToken ||
-    isAccessTokenNearExpiry(current.accessToken, minTtlSeconds)
-  ) {
+  if (!current.accessToken || isAccessTokenNearExpiry(current.accessToken, minTtlSeconds)) {
     return refreshRelaySession();
   }
 
@@ -244,9 +228,7 @@ async function relayFetch<T>(
   const session = auth ? readRelaySession() : null;
   const headers: HeadersInit = {
     "content-type": "application/json",
-    ...(auth && session?.accessToken
-      ? { authorization: `Bearer ${session.accessToken}` }
-      : {}),
+    ...(auth && session?.accessToken ? { authorization: `Bearer ${session.accessToken}` } : {}),
     ...options.headers,
   };
 
@@ -258,9 +240,7 @@ async function relayFetch<T>(
 
   // Honour any signal already supplied by the caller by chaining it.
   if (options.signal) {
-    options.signal.addEventListener("abort", () => controller.abort(), {
-      once: true,
-    });
+    options.signal.addEventListener("abort", () => controller.abort(), { once: true });
   }
 
   let response: Response;
@@ -281,8 +261,7 @@ async function relayFetch<T>(
     }
   }
 
-  const body = ((await response.json().catch(() => ({}))) ?? {}) as T &
-    RelayErrorBody;
+  const body = ((await response.json().catch(() => ({}))) ?? {}) as T & RelayErrorBody;
   if (response.ok) {
     return body as T;
   }
@@ -297,9 +276,7 @@ async function relayFetch<T>(
   throw parseRelayError(response.status, body);
 }
 
-export async function startMagicLink(
-  input: AuthStartRequest,
-): Promise<MagicLinkChallenge> {
+export async function startMagicLink(input: AuthStartRequest): Promise<MagicLinkChallenge> {
   return relayFetch<MagicLinkChallenge>(
     "/v1/auth/start",
     {
@@ -342,12 +319,9 @@ export const relayAccountApi = {
     }),
   listSessions: () => relayFetch<SessionDescriptor[]>("/v1/sessions"),
   revokeSession: (sessionId: string) =>
-    relayFetch<{ revoked: boolean; sessionId: string }>(
-      `/v1/sessions/${sessionId}`,
-      {
-        method: "DELETE",
-      },
-    ),
+    relayFetch<{ revoked: boolean; sessionId: string }>(`/v1/sessions/${sessionId}`, {
+      method: "DELETE",
+    }),
 };
 
 export const relayGroupApi = {
@@ -383,16 +357,11 @@ export const relayGroupApi = {
       { method: "POST" },
     ),
   revokeInvite: (groupId: string, inviteId: string) =>
-    relayFetch<{ revoked: boolean; inviteId: string }>(
-      `/v1/groups/${groupId}/invites/${inviteId}`,
-      {
-        method: "DELETE",
-      },
-    ),
+    relayFetch<{ revoked: boolean; inviteId: string }>(`/v1/groups/${groupId}/invites/${inviteId}`, {
+      method: "DELETE",
+    }),
   listMessages: (groupId: string, limit = 50) =>
-    relayFetch<GroupThreadMessage[]>(
-      `/v1/groups/${groupId}/messages?limit=${encodeURIComponent(String(limit))}`,
-    ),
+    relayFetch<GroupThreadMessage[]>(`/v1/groups/${groupId}/messages?limit=${encodeURIComponent(String(limit))}`),
   sendMessage: (
     groupId: string,
     data: { text?: string; attachmentId?: string; clientMessageId?: string },
@@ -402,18 +371,15 @@ export const relayGroupApi = {
       body: JSON.stringify(data),
     }),
   removeMember: (groupId: string, accountId: string) =>
-    relayFetch<{
-      removed: boolean;
-      conversationId: string;
-      targetAccountId: string;
-      epoch: number;
-    }>(`/v1/groups/${groupId}/members/${accountId}/remove`, { method: "POST" }),
+    relayFetch<{ removed: boolean; conversationId: string; targetAccountId: string; epoch: number }>(
+      `/v1/groups/${groupId}/members/${accountId}/remove`,
+      { method: "POST" },
+    ),
 };
 
 export const relayConversationApi = {
   list: () => relayFetch<ConversationSummary[]>("/v1/conversations"),
-  get: (conversationId: string) =>
-    relayFetch<ConversationDetail>(`/v1/conversations/${conversationId}`),
+  get: (conversationId: string) => relayFetch<ConversationDetail>(`/v1/conversations/${conversationId}`),
   search: (query: string, communityId?: string) =>
     relayFetch<ConversationSearchResult>(
       `/v1/search?q=${encodeURIComponent(query)}${
@@ -461,33 +427,20 @@ export const relayConversationApi = {
       body: JSON.stringify(data),
     }),
   addRoomMember: (communityId: string, roomId: string, accountId: string) =>
-    relayFetch<{
-      added: boolean;
-      communityId: string;
-      roomId: string;
-      targetAccountId: string;
-    }>(
+    relayFetch<{ added: boolean; communityId: string; roomId: string; targetAccountId: string }>(
       `/v1/communities/${communityId}/rooms/${roomId}/members/${accountId}/add`,
       { method: "POST" },
     ),
   removeRoomMember: (communityId: string, roomId: string, accountId: string) =>
-    relayFetch<{
-      removed: boolean;
-      communityId: string;
-      roomId: string;
-      targetAccountId: string;
-    }>(
+    relayFetch<{ removed: boolean; communityId: string; roomId: string; targetAccountId: string }>(
       `/v1/communities/${communityId}/rooms/${roomId}/members/${accountId}/remove`,
       { method: "POST" },
     ),
   removeCommunityMember: (communityId: string, accountId: string) =>
-    relayFetch<{
-      removed: boolean;
-      communityId: string;
-      targetAccountId: string;
-    }>(`/v1/communities/${communityId}/members/${accountId}/remove`, {
-      method: "POST",
-    }),
+    relayFetch<{ removed: boolean; communityId: string; targetAccountId: string }>(
+      `/v1/communities/${communityId}/members/${accountId}/remove`,
+      { method: "POST" },
+    ),
   listMessages: (conversationId: string, limit = 50) =>
     relayFetch<GroupThreadMessage[]>(
       `/v1/conversations/${conversationId}/messages?limit=${encodeURIComponent(String(limit))}`,
@@ -496,13 +449,10 @@ export const relayConversationApi = {
     conversationId: string,
     data: { text?: string; attachmentId?: string; clientMessageId?: string },
   ) =>
-    relayFetch<GroupThreadMessage>(
-      `/v1/conversations/${conversationId}/messages`,
-      {
-        method: "POST",
-        body: JSON.stringify(data),
-      },
-    ),
+    relayFetch<GroupThreadMessage>(`/v1/conversations/${conversationId}/messages`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
   createInvite: (
     conversationId: string,
     data: {
@@ -513,13 +463,10 @@ export const relayConversationApi = {
       roomId?: string;
     } = {},
   ) =>
-    relayFetch<ConversationInviteDescriptor>(
-      `/v1/conversations/${conversationId}/invites`,
-      {
-        method: "POST",
-        body: JSON.stringify(data),
-      },
-    ),
+    relayFetch<ConversationInviteDescriptor>(`/v1/conversations/${conversationId}/invites`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
   previewInvite: (conversationId: string, inviteToken: string) =>
     relayFetch<ConversationInvitePreview>(
       `/v1/conversations/${conversationId}/invites/${encodeURIComponent(inviteToken)}/preview`,
@@ -532,23 +479,17 @@ export const relayConversationApi = {
       { method: "POST" },
     ),
   revokeInvite: (conversationId: string, inviteId: string) =>
-    relayFetch<{ revoked: boolean; inviteId: string }>(
-      `/v1/conversations/${conversationId}/invites/${inviteId}`,
-      {
-        method: "DELETE",
-      },
-    ),
+    relayFetch<{ revoked: boolean; inviteId: string }>(`/v1/conversations/${conversationId}/invites/${inviteId}`, {
+      method: "DELETE",
+    }),
 };
 
 export const relayDeviceApi = {
   registerBundle: (bundle: PrekeyBundle) =>
-    relayFetch<{ registered: boolean; deviceId: string }>(
-      "/v1/devices/register",
-      {
-        method: "POST",
-        body: JSON.stringify(bundle),
-      },
-    ),
+    relayFetch<{ registered: boolean; deviceId: string }>("/v1/devices/register", {
+      method: "POST",
+      body: JSON.stringify(bundle),
+    }),
   listBundles: (accountId: string) =>
     relayFetch<DeviceKeyBundle[]>(`/v1/accounts/${accountId}/device-bundles`),
 };
@@ -557,9 +498,7 @@ export const relayDeviceLinkApi = {
   start: (deviceLabel?: string) =>
     relayFetch<DeviceLinkStartResponse>("/v1/devices/link/start", {
       method: "POST",
-      body: JSON.stringify(
-        deviceLabel?.trim() ? { deviceLabel: deviceLabel.trim() } : {},
-      ),
+      body: JSON.stringify(deviceLabel?.trim() ? { deviceLabel: deviceLabel.trim() } : {}),
     }),
   scan: (input: DeviceLinkScanRequest) =>
     relayFetch<DeviceLinkStatus>("/v1/devices/link/scan", {
@@ -586,10 +525,7 @@ export const relayDeviceLinkApi = {
       method: "POST",
       body: JSON.stringify({ linkId }),
     }),
-  complete: (input: {
-    linkToken: string;
-    qrMode: DeviceLinkStatus["qrMode"];
-  }) =>
+  complete: (input: { linkToken: string; qrMode: DeviceLinkStatus["qrMode"] }) =>
     relayFetch<AuthSession>(
       "/v1/devices/link/complete",
       {
@@ -631,9 +567,7 @@ export const relayMailboxApi = {
         rejected: number;
         queued: number;
       };
-    }>(
-      `/v1/mailbox/sync?after=${encodeURIComponent(cursor ?? "")}&limit=${encodeURIComponent(String(limit))}`,
-    ),
+    }>(`/v1/mailbox/sync?after=${encodeURIComponent(cursor ?? "")}&limit=${encodeURIComponent(String(limit))}`),
   ack: (data: MailboxAck) =>
     relayFetch<{ acknowledged: number }>("/v1/mailbox/ack", {
       method: "POST",
@@ -672,18 +606,12 @@ export const relayAttachmentApi = {
       body: JSON.stringify(data),
     }),
   refreshDownloadUrl: (attachmentId: string) =>
-    relayFetch<{
-      attachmentId: string;
-      downloadUrl: string;
-      expiresAt: string;
-    }>(`/v1/attachments/${attachmentId}/access`),
+    relayFetch<{ attachmentId: string; downloadUrl: string; expiresAt: string }>(
+      `/v1/attachments/${attachmentId}/access`,
+    ),
 };
 
-export async function uploadAttachment(
-  uploadUrl: string,
-  body: ArrayBuffer,
-  contentType: string,
-) {
+export async function uploadAttachment(uploadUrl: string, body: ArrayBuffer, contentType: string) {
   const response = await fetch(uploadUrl, {
     method: "PUT",
     headers: {
@@ -693,8 +621,7 @@ export async function uploadAttachment(
   });
 
   if (!response.ok) {
-    const errorBody = ((await response.json().catch(() => ({}))) ??
-      {}) as RelayErrorBody;
+    const errorBody = ((await response.json().catch(() => ({}))) ?? {}) as RelayErrorBody;
     throw parseRelayError(response.status, errorBody);
   }
 

@@ -37,16 +37,6 @@ on:
         required: false
         type: string
         default: ""
-      build_apk:
-        description: Build APK (assembleRelease / assembleDebug)
-        required: false
-        type: boolean
-        default: true
-      build_aab:
-        description: Build AAB via bundleRelease (release builds only)
-        required: false
-        type: boolean
-        default: true
     secrets:
       ANDROID_GOOGLE_SERVICES_JSON:
         required: false
@@ -71,9 +61,6 @@ on:
       version_code:
         description: Android versionCode used for the build
         value: ${{ jobs.build.outputs.version_code }}
-      version_name:
-        description: Android versionName injected into the build (e.g. 0.1.0-beta.12)
-        value: ${{ jobs.build.outputs.version_name }}
       mapping_path:
         description: R8/ProGuard mapping.txt path (release only; empty when minification is off)
         value: ${{ jobs.build.outputs.mapping_path }}
@@ -82,6 +69,7 @@ jobs:
   build:
     name: Build Android (${{ inputs.build_type }})
     permissions:
+      id-token: write
       contents: read
     runs-on: ubuntu-22.04
     env:
@@ -92,7 +80,6 @@ jobs:
       apk_path: ${{ steps.meta.outputs.apk_path }}
       aab_path: ${{ steps.meta.outputs.aab_path }}
       version_code: ${{ steps.version-code.outputs.version_code }}
-      version_name: ${{ steps.version-name.outputs.version_name }}
       mapping_path: ${{ steps.meta.outputs.mapping_path }}
     steps:
       - uses: actions/checkout@v6
@@ -110,10 +97,10 @@ jobs:
           java-version: 17
           distribution: temurin
 
-      - uses: android-actions/setup-android@v4
+      - uses: android-actions/setup-android@v3
 
       - name: Cache Gradle packages
-        uses: actions/cache@v5
+        uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
@@ -173,31 +160,12 @@ jobs:
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
           echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
 
-      - name: Resolve Android versionName
-        id: version-name
-        env:
-          INPUT_REF: ${{ inputs.ref || github.ref_name }}
+      - name: Inject Android versionCode into Expo config
         run: |
-          # Strip refs/tags/ prefix, then strip leading 'v' from tag names like v0.1.0-beta.12
-          RAW="${INPUT_REF##refs/tags/}"
-          VERSION_NAME="${RAW#v}"
+          node -e "const fs=require('fs'); const p='apps/mobile/app.json'; const d=JSON.parse(fs.readFileSync(p,'utf8')); d.expo=d.expo||{}; d.expo.android=d.expo.android||{}; d.expo.android.versionCode=Number(process.env.VERSION_CODE); fs.writeFileSync(p, JSON.stringify(d, null, 2)+'\\n');"
 
-          # Only use it if it looks like a semver-ish string (starts digit.digit)
-          if echo "$VERSION_NAME" | grep -qE '^[0-9]+\.[0-9]'; then
-            echo "versionName from ref: $VERSION_NAME"
-          else
-            VERSION_NAME=$(node -pe "require('./apps/mobile/app.json').expo.version")
-            echo "Ref is not a version tag; using app.json versionName: $VERSION_NAME"
-          fi
-
-          echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
-          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
-
-      - name: Inject Android versionCode and versionName into Expo config
-        run: |
-          node -e "const fs=require('fs'); const p='apps/mobile/app.json'; const d=JSON.parse(fs.readFileSync(p,'utf8')); d.expo=d.expo||{}; d.expo.android=d.expo.android||{}; d.expo.android.versionCode=Number(process.env.VERSION_CODE); d.expo.version=process.env.VERSION_NAME; fs.writeFileSync(p, JSON.stringify(d, null, 2)+'\\n');"
-
-      - name: Build protocol package
+      - name: Build protocol package for type-checking
+        if: inputs.validate_release_inputs
         run: npm run build --workspace=packages/protocol
 
       - name: Validate Android release inputs
@@ -212,53 +180,6 @@ jobs:
 
       - name: Make Gradle wrapper executable
         run: chmod +x apps/mobile/android/gradlew
-
-      - name: Enable R8 minification and extend ProGuard rules
-        if: inputs.build_type == 'release' && inputs.sign
-        run: |
-          PROPS=apps/mobile/android/gradle.properties
-          RULES=apps/mobile/android/app/proguard-rules.pro
-
-          # --- gradle.properties: enable R8 full-mode + resource shrinking ---
-          if ! grep -q 'enableMinifyInReleaseBuilds' "$PROPS"; then
-            printf '\n# R8 full-mode minification (produces mapping.txt for Play crash symbolication)\nandroid.enableMinifyInReleaseBuilds=true\nandroid.enableShrinkResourcesInReleaseBuilds=true\n' >> "$PROPS"
-            echo "gradle.properties: Enabled R8 minification and resource shrinking"
-          else
-            echo "gradle.properties: R8 already enabled, skipping"
-          fi
-
-          # --- proguard-rules.pro: keep rules for RN/Expo ecosystem ---
-          if ! grep -q 'emberchamber-r8-rules' "$RULES"; then
-            printf '\n# emberchamber-r8-rules — appended by CI workflow\n' >> "$RULES"
-            printf -- '-keep class com.facebook.react.** { *; }\n' >> "$RULES"
-            printf -- '-keep class com.facebook.hermes.** { *; }\n' >> "$RULES"
-            printf -- '-keep class com.facebook.jni.** { *; }\n' >> "$RULES"
-            printf -- '-keep class com.facebook.soloader.** { *; }\n' >> "$RULES"
-            printf -- '-keep class com.facebook.react.bridge.** { *; }\n' >> "$RULES"
-            printf -- '-keepclassmembers class * { @com.facebook.react.bridge.ReactMethod *; }\n' >> "$RULES"
-            printf -- '-keepclassmembers class * { @com.facebook.react.bridge.ReactProp *; }\n' >> "$RULES"
-            printf -- '-keepclassmembers class * { @com.facebook.react.bridge.ReactPropGroup *; }\n' >> "$RULES"
-            printf -- '-keep class com.facebook.hermes.unicode.** { *; }\n' >> "$RULES"
-            printf -- '-keep class expo.modules.** { *; }\n' >> "$RULES"
-            printf -- '-keep class host.exp.** { *; }\n' >> "$RULES"
-            printf -- '-keep class com.google.firebase.** { *; }\n' >> "$RULES"
-            printf -- '-keep class com.google.android.gms.** { *; }\n' >> "$RULES"
-            printf -- '-keep class com.facebook.react.fabric.** { *; }\n' >> "$RULES"
-            printf -- '-keep class com.facebook.react.uimanager.** { *; }\n' >> "$RULES"
-            printf -- '-keep class com.facebook.react.turbomodule.** { *; }\n' >> "$RULES"
-            printf -- '-dontwarn okhttp3.**\n' >> "$RULES"
-            printf -- '-dontwarn okio.**\n' >> "$RULES"
-            printf -- '-keep class okhttp3.** { *; }\n' >> "$RULES"
-            printf -- '-keep interface okhttp3.** { *; }\n' >> "$RULES"
-            printf -- '-dontwarn kotlinx.coroutines.**\n' >> "$RULES"
-            printf -- '-keep class kotlinx.coroutines.** { *; }\n' >> "$RULES"
-            printf -- '-dontwarn com.google.firebase.ktx.Firebase\n' >> "$RULES"
-            printf -- '-dontwarn com.google.firebase.ktx.FirebaseExtensionsKt\n' >> "$RULES"
-            printf -- '-dontwarn com.google.firebase.installations.ktx.InstallationsKt\n' >> "$RULES"
-            echo "proguard-rules.pro: Appended React Native / Expo keep rules"
-          else
-            echo "proguard-rules.pro: Keep rules already present, skipping"
-          fi
 
       - name: Assert Android signing secrets are configured
         if: inputs.sign
@@ -299,8 +220,6 @@ jobs:
         env:
           BUILD_TYPE: ${{ inputs.build_type }}
           USE_PROD_SIGNING: ${{ inputs.sign }}
-          BUILD_APK: ${{ inputs.build_apk }}
-          BUILD_AAB: ${{ inputs.build_aab }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
@@ -310,19 +229,8 @@ jobs:
             exit 0
           fi
 
-          # Compose release task list from build_apk / build_aab inputs
-          GRADLE_TASKS=""
-          [ "$BUILD_APK" = "true" ] && GRADLE_TASKS="$GRADLE_TASKS assembleRelease"
-          [ "$BUILD_AAB" = "true" ] && GRADLE_TASKS="$GRADLE_TASKS bundleRelease"
-          GRADLE_TASKS="${GRADLE_TASKS# }"  # strip leading space
-          if [ -z "$GRADLE_TASKS" ]; then
-            echo "build_apk and build_aab are both false — nothing to build" >&2
-            exit 1
-          fi
-
           if [ "$USE_PROD_SIGNING" = "true" ]; then
-            # shellcheck disable=SC2086
-            ./gradlew $GRADLE_TASKS \
+            ./gradlew assembleRelease bundleRelease \
               -Pandroid.injected.signing.store.file="$GITHUB_WORKSPACE/apps/mobile/android/app/emberchamber-release.keystore" \
               -Pandroid.injected.signing.store.password="$ANDROID_STORE_PASSWORD" \
               -Pandroid.injected.signing.key.alias="$ANDROID_KEY_ALIAS" \
@@ -330,8 +238,7 @@ jobs:
             exit 0
           fi
 
-          # shellcheck disable=SC2086
-          ./gradlew $GRADLE_TASKS \
+          ./gradlew assembleRelease bundleRelease \
             -Pandroid.injected.signing.store.file="$HOME/.android/debug.keystore" \
             -Pandroid.injected.signing.store.password="android" \
             -Pandroid.injected.signing.key.alias="androiddebugkey" \
@@ -342,40 +249,30 @@ jobs:
         id: meta
         env:
           BUILD_TYPE: ${{ inputs.build_type }}
-          BUILD_APK: ${{ inputs.build_apk }}
-          BUILD_AAB: ${{ inputs.build_aab }}
           INPUT_ARTIFACT_NAME: ${{ inputs.artifact_name }}
         run: |
           SAFE_REF=$(printf '%s' "${{ inputs.ref || github.ref_name }}" | tr '/:@' '-')
           OUT_DIR=apps/mobile/artifacts/android-build
           mkdir -p "$OUT_DIR"
 
-          APK_DEST=""
-          AAB_DEST=""
-          MAPPING_DEST=""
-
           if [ "$BUILD_TYPE" = "debug" ]; then
             APK_SRC=apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
             APK_DEST="$OUT_DIR/emberchamber-${SAFE_REF}-debug.apk"
             cp "$APK_SRC" "$APK_DEST"
+            AAB_DEST=""
             ARTIFACT_NAME=${INPUT_ARTIFACT_NAME:-emberchamber-android-debug}
           else
+            APK_SRC=apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+            AAB_SRC=apps/mobile/android/app/build/outputs/bundle/release/app-release.aab
+            APK_DEST="$OUT_DIR/emberchamber-${SAFE_REF}-release.apk"
+            AAB_DEST="$OUT_DIR/emberchamber-${SAFE_REF}-release.aab"
+            cp "$APK_SRC" "$APK_DEST"
+            cp "$AAB_SRC" "$AAB_DEST"
             ARTIFACT_NAME=${INPUT_ARTIFACT_NAME:-emberchamber-android-release}
-
-            if [ "$BUILD_APK" = "true" ]; then
-              APK_SRC=apps/mobile/android/app/build/outputs/apk/release/app-release.apk
-              APK_DEST="$OUT_DIR/emberchamber-${SAFE_REF}-release.apk"
-              cp "$APK_SRC" "$APK_DEST"
-            fi
-
-            if [ "$BUILD_AAB" = "true" ]; then
-              AAB_SRC=apps/mobile/android/app/build/outputs/bundle/release/app-release.aab
-              AAB_DEST="$OUT_DIR/emberchamber-${SAFE_REF}-release.aab"
-              cp "$AAB_SRC" "$AAB_DEST"
-            fi
 
             # Collect R8/ProGuard mapping file when present
             MAPPING_SRC=apps/mobile/android/app/build/outputs/mapping/release/mapping.txt
+            MAPPING_DEST=""
             if [ -f "$MAPPING_SRC" ]; then
               MAPPING_DEST="$OUT_DIR/mapping.txt"
               cp "$MAPPING_SRC" "$MAPPING_DEST"

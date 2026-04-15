@@ -7,10 +7,7 @@ import toast from "react-hot-toast";
 import type { ConversationSearchResult } from "@emberchamber/protocol";
 import { Avatar } from "@/components/avatar";
 import { StatusCallout } from "@/components/status-callout";
-import {
-  conversationDefaultTitle,
-  conversationTypeLabel,
-} from "@/lib/conversation-labels";
+import { conversationDefaultTitle, conversationTypeLabel } from "@/lib/conversation-labels";
 import { relayConversationApi } from "@/lib/relay";
 import { conversationHref } from "@/lib/conversation-routes";
 
@@ -46,14 +43,10 @@ export default function SearchPage() {
 
     setIsSearching(true);
     try {
-      setResults(
-        await relayConversationApi.search(nextQuery.trim(), scopedCommunityId),
-      );
+      setResults(await relayConversationApi.search(nextQuery.trim(), scopedCommunityId));
     } catch (error) {
       setSearchError(
-        error instanceof Error
-          ? error.message
-          : "Search failed — the relay may be temporarily unavailable.",
+        error instanceof Error ? error.message : "Search failed — the relay may be temporarily unavailable.",
       );
       toast.error("Search failed");
     } finally {
@@ -66,24 +59,19 @@ export default function SearchPage() {
       const conversation = await relayConversationApi.openDm(accountId);
       router.push(`/app/chat/${conversation.id}`);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to open the DM",
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to open the DM");
     }
   }
 
-  const showConversations =
-    activeTab === "all" || activeTab === "conversations";
+  const showConversations = activeTab === "all" || activeTab === "conversations";
   const showAccounts = activeTab === "all" || activeTab === "accounts";
 
   return (
     <div className="mx-auto flex h-full max-w-3xl flex-col p-6">
-      <h2 className="mb-2 text-xl font-bold text-[var(--text-primary)]">
-        Search
-      </h2>
+      <h2 className="mb-2 text-xl font-bold text-[var(--text-primary)]">Search</h2>
       <p className="mb-4 text-sm text-[var(--text-secondary)]">
-        Search on web is relay-native now. It looks through joined conversation
-        metadata and shared contacts, not private message bodies.
+        Search on web is relay-native now. It looks through joined conversation metadata and shared
+        contacts, not private message bodies.
       </p>
       {scopedCommunityId ? (
         <p className="mb-4 text-xs font-medium uppercase tracking-[0.18em] text-brand-600">
@@ -137,11 +125,7 @@ export default function SearchPage() {
       </div>
 
       {isSearching ? (
-        <div
-          className="flex justify-center py-8"
-          aria-label="Searching…"
-          role="status"
-        >
+        <div className="flex justify-center py-8" aria-label="Searching…" role="status">
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
         </div>
       ) : (
@@ -155,16 +139,12 @@ export default function SearchPage() {
                 {results.conversations.map((conversation) => (
                   <Link
                     key={conversation.id}
-                    href={conversationHref({
-                      id: conversation.id,
-                      kind: conversation.kind,
-                    })}
+                    href={conversationHref({ id: conversation.id, kind: conversation.kind })}
                     className="block card transition-colors hover:bg-[var(--bg-primary)]"
                   >
                     <div className="mb-1 flex items-center justify-between gap-3">
                       <span className="text-sm font-medium text-[var(--text-primary)]">
-                        {conversation.title ??
-                          conversationDefaultTitle(conversation.kind)}
+                        {conversation.title ?? conversationDefaultTitle(conversation.kind)}
                       </span>
                       <span className="text-xs uppercase tracking-[0.14em] text-[var(--text-secondary)]">
                         {conversationTypeLabel(conversation.kind)}
@@ -200,12 +180,8 @@ export default function SearchPage() {
                   >
                     <Avatar name={account.displayName} size="sm" />
                     <div>
-                      <p className="font-medium text-[var(--text-primary)]">
-                        {account.displayName}
-                      </p>
-                      <p className="text-sm text-[var(--text-secondary)]">
-                        @{account.username}
-                      </p>
+                      <p className="font-medium text-[var(--text-primary)]">{account.displayName}</p>
+                      <p className="text-sm text-[var(--text-secondary)]">@{account.username}</p>
                     </div>
                   </button>
                 ))}

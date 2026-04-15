@@ -5,31 +5,146 @@ on:
     branches: [main]
     paths:
       - "apps/mobile/**"
-      - "packages/protocol/**"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/ci-mobile.yml"
       - ".github/workflows/build-android.yml"
-      - ".github/workflows/reusable-ci-mobile.yml"
+      - ".github/workflows/release-android.yml"
   pull_request:
     paths:
       - "apps/mobile/**"
-      - "packages/protocol/**"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/ci-mobile.yml"
       - ".github/workflows/build-android.yml"
-      - ".github/workflows/reusable-ci-mobile.yml"
+      - ".github/workflows/release-android.yml"
 
 concurrency:
   group: ci-mobile-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  ci:
-    uses: ./.github/workflows/reusable-ci-mobile.yml
+  verify-android:
+    name: Verify Android mobile app
+    permissions:
+      id-token: write
+      contents: read
+    runs-on: ubuntu-22.04
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      EXPO_NO_TELEMETRY: "1"
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Write Firebase Android app config
+        env:
+          ANDROID_GOOGLE_SERVICES_JSON: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -z "$ANDROID_GOOGLE_SERVICES_JSON" ]; then
+            echo "ANDROID_GOOGLE_SERVICES_JSON is not configured; continuing without google-services.json"
+            exit 0
+          fi
+          mkdir -p apps/mobile/secrets
+          printf '%s' "$ANDROID_GOOGLE_SERVICES_JSON" > apps/mobile/secrets/google-services.json
+
+      - name: Verify Android mobile project
+        run: npm run verify:android --workspace=apps/mobile
+
+      - name: Fix failing Android verification
+        uses: fly-ci/wingman-action@v1
+        if: ${{ failure() && github.event.pull_request != null }}
+
+  build-android-release:
+    name: Build Android release APK for screenshots
+    needs: verify-android
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/build-android.yml
     with:
-      runner: '"ubuntu-22.04"'
-      capture_screenshots: ${{ github.event_name == 'push' }}
-    secrets:
-      ANDROID_GOOGLE_SERVICES_JSON: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON }}
+      build_type: release
+      sign: false
+      artifact_name: emberchamber-android-release-screenshots
+    secrets: inherit
+
+  android-screenshots:
+    name: Capture Android screenshots (${{ matrix.device_class }})
+    permissions:
+      id-token: write
+      contents: read
+    runs-on: ubuntu-22.04
+    needs: build-android-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - device_class: phone
+            avd_profile: pixel_6
+            orientation: portrait
+            wm_size: 1080x2400
+            wm_density: 420
+          - device_class: tablet
+            avd_profile: pixel_tablet
+            orientation: portrait
+            wm_size: 1600x2560
+            wm_density: 320
+          - device_class: chromebook
+            avd_profile: pixel_c
+            orientation: landscape
+            wm_size: 1366x768
+            wm_density: 160
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download release APK artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: ${{ needs.build-android-release.outputs.artifact_name }}
+          path: apps/mobile/artifacts/android-build
+
+      - name: Resolve APK path
+        run: |
+          APK_PATH=$(find apps/mobile/artifacts/android-build -name '*.apk' | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            echo "No APK found in downloaded build artifacts" >&2
+            exit 1
+          fi
+          echo "APK_PATH=$APK_PATH" >> "$GITHUB_ENV"
+
+      - name: Capture emulator screenshots
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          profile: ${{ matrix.avd_profile }}
+          avd-name: ci-screenshot-avd-${{ matrix.device_class }}-${{ matrix.avd_profile }}
+          force-avd-creation: true
+          disable-animations: true
+          script: |
+            adb install -r "$APK_PATH"
+            adb shell screencap -p /sdcard/emberchamber-ci-warmup.png >/dev/null || true
+            adb shell rm -f /sdcard/emberchamber-ci-warmup.png >/dev/null || true
+            bash apps/mobile/scripts/capture-android-screenshots.sh "apps/mobile/artifacts/android-screenshots/${{ matrix.device_class }}" "com.emberchamber.mobile" "${{ matrix.device_class }}" "${{ matrix.wm_size }}" "${{ matrix.wm_density }}" "${{ matrix.orientation }}"
+
+      - name: Upload Android screenshot artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: emberchamber-android-screenshots-${{ matrix.device_class }}-${{ github.run_number }}
+          path: apps/mobile/artifacts/android-screenshots/${{ matrix.device_class }}
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Fix failing Android screenshot capture
+        uses: fly-ci/wingman-action@v1
+        if: ${{ failure() && github.event.pull_request != null }}

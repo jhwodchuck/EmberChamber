@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
   Clipboard,
@@ -147,11 +147,16 @@ export function MessageBubble({
   isOwnMessage,
   onImageError,
   onAction,
+  onResolveAttachmentAccess,
 }: {
   message: GroupThreadMessage;
   isOwnMessage: boolean;
   onImageError?: (messageId: string) => void;
   onAction?: (messageId: string, action: ContextMenuAction) => void;
+  onResolveAttachmentAccess?: (
+    messageId: string,
+    attachment: NonNullable<GroupThreadMessage["attachment"]>,
+  ) => Promise<NonNullable<GroupThreadMessage["attachment"]> | null>;
 }) {
   const [menuVisible, setMenuVisible] = useState(false);
   const [viewerVisible, setViewerVisible] = useState(false);
@@ -212,7 +217,46 @@ export function MessageBubble({
   const isImage = attachment?.contentClass === "image";
   const sharedLocation =
     hasText && !attachment ? parseSharedLocation(message.text!) : null;
-  const attachmentManager = useAttachmentManager(attachment ?? null);
+  const resolveAttachmentAccess =
+    attachment && onResolveAttachmentAccess
+      ? () => onResolveAttachmentAccess(message.id, attachment)
+      : undefined;
+  const attachmentManager = useAttachmentManager(
+    attachment ?? null,
+    resolveAttachmentAccess,
+  );
+  const shouldAutoloadEncryptedImagePreview = Boolean(
+    isImage &&
+      attachment?.encryptionMode === "device_encrypted" &&
+      attachment.protectionProfile !== "sensitive_media",
+  );
+  const inlineImageUri =
+    attachment?.encryptionMode === "device_encrypted"
+      ? attachmentManager.resolvedUri
+      : attachment?.downloadUrl;
+
+  useEffect(() => {
+    if (!shouldAutoloadEncryptedImagePreview) {
+      return;
+    }
+
+    if (
+      attachmentManager.resolvedUri ||
+      attachmentManager.isBusy ||
+      attachmentManager.status === "ready" ||
+      attachmentManager.status === "failed"
+    ) {
+      return;
+    }
+
+    void attachmentManager.prepareForPreview();
+  }, [
+    attachmentManager.isBusy,
+    attachmentManager.prepareForPreview,
+    attachmentManager.resolvedUri,
+    attachmentManager.status,
+    shouldAutoloadEncryptedImagePreview,
+  ]);
 
   async function handleOpenAttachment() {
     await attachmentManager.openExternally();
@@ -302,10 +346,10 @@ export function MessageBubble({
             </View>
           ) : null}
 
-          {isImage && attachment?.encryptionMode !== "device_encrypted" ? (
+          {isImage && inlineImageUri ? (
             <Pressable onPress={() => setViewerVisible(true)}>
               <Image
-                source={{ uri: attachment!.downloadUrl }}
+                source={{ uri: inlineImageUri }}
                 style={styles.messageImage}
                 resizeMode="cover"
                 onError={() => onImageError?.(message.id)}
@@ -313,7 +357,9 @@ export function MessageBubble({
             </Pressable>
           ) : null}
 
-          {isImage && attachment?.encryptionMode === "device_encrypted" ? (
+          {isImage &&
+          attachment?.encryptionMode === "device_encrypted" &&
+          !inlineImageUri ? (
             <Pressable onPress={() => setViewerVisible(true)}>
               <View
                 style={[
@@ -325,8 +371,16 @@ export function MessageBubble({
                   },
                 ]}
               >
+                {attachmentManager.isBusy ? (
+                  <ActivityIndicator
+                    size="small"
+                    color={theme.colors.textSoft}
+                    style={{ marginBottom: 8 }}
+                  />
+                ) : null}
                 <Text style={styles.attachmentMeta}>
-                  Tap to decrypt and view
+                  {attachmentManager.statusLabel ||
+                    "Tap to decrypt and view"}
                 </Text>
               </View>
             </Pressable>
@@ -412,6 +466,8 @@ export function MessageBubble({
       {isImage ? (
         <ImageViewerModal
           attachment={attachment ?? null}
+          plainUri={attachmentManager.resolvedUri}
+          resolveAttachmentAccess={resolveAttachmentAccess}
           visible={viewerVisible}
           onClose={() => setViewerVisible(false)}
         />

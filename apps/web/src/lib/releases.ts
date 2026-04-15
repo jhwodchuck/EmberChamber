@@ -37,8 +37,7 @@ export type PlatformReleaseAvailability = {
   buildsByPlatform: Record<string, PlatformPostedBuild | null>;
 };
 
-const RELEASES_API_URL =
-  "https://api.github.com/repos/jhwodchuck/EmberChamber/releases";
+const RELEASES_API_URL = "https://api.github.com/repos/jhwodchuck/EmberChamber/releases";
 
 const PLATFORM_SUFFIXES = {
   android: [".apk", ".aab"],

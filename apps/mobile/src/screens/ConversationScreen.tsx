@@ -150,6 +150,10 @@ export type ConversationScreenProps = {
   restoredAnchorMessageId?: string | null;
   onAnchorMessageChange?: (messageId: string | null) => void;
   onImageError: (messageId: string) => void;
+  onResolveAttachmentAccess?: (
+    messageId: string,
+    attachment: NonNullable<GroupThreadMessage["attachment"]>,
+  ) => Promise<NonNullable<GroupThreadMessage["attachment"]> | null>;
   onMessageAction: (messageId: string, action: ContextMenuAction) => void;
   onUpdateGroup: (title: string, sensitiveMedia: boolean) => Promise<void>;
   onCreateInvite: () => Promise<GroupInviteRecord | null>;
@@ -188,6 +192,7 @@ export function ConversationScreen({
   restoredAnchorMessageId = null,
   onAnchorMessageChange,
   onImageError,
+  onResolveAttachmentAccess,
   onMessageAction,
   onUpdateGroup,
   onCreateInvite,
@@ -469,10 +474,9 @@ export function ConversationScreen({
     <KeyboardAvoidingView
       style={styles.conversationShell}
       // iOS: "padding" keeps the composer above the keyboard.
-      // Android: app.json sets softwareKeyboardLayoutMode="resize" so the OS
-      // shrinks the window; KAV is intentionally inert here to avoid
-      // double-adjusting. The tab bar is hidden by MainScreen while this
-      // screen is fullscreen, giving the composer direct access to the bottom.
+      // Android: the app-level shell handles IME avoidance. On recent
+      // edge-to-edge Android builds the activity remains full height even with
+      // adjustResize, so keeping this local KAV inert avoids double movement.
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={0}
     >
@@ -553,6 +557,7 @@ export function ConversationScreen({
                   item.message.senderAccountId === session.accountId
                 }
                 onImageError={onImageError}
+                onResolveAttachmentAccess={onResolveAttachmentAccess}
                 onAction={onMessageAction}
               />
             )
