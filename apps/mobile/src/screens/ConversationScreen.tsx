@@ -122,6 +122,10 @@ export type ConversationScreenProps = {
   restoredAnchorMessageId?: string | null;
   onAnchorMessageChange?: (messageId: string | null) => void;
   onImageError: (messageId: string) => void;
+  onResolveAttachmentAccess?: (
+    messageId: string,
+    attachment: NonNullable<GroupThreadMessage["attachment"]>,
+  ) => Promise<NonNullable<GroupThreadMessage["attachment"]> | null>;
   onMessageAction: (messageId: string, action: ContextMenuAction) => void;
   onUpdateGroup: (title: string, sensitiveMedia: boolean) => Promise<void>;
   onCreateInvite: () => Promise<GroupInviteRecord | null>;
@@ -160,6 +164,7 @@ export function ConversationScreen({
   restoredAnchorMessageId = null,
   onAnchorMessageChange,
   onImageError,
+  onResolveAttachmentAccess,
   onMessageAction,
   onUpdateGroup,
   onCreateInvite,
@@ -500,6 +505,7 @@ export function ConversationScreen({
                 message={item.message}
                 isOwnMessage={item.message.senderAccountId === session.accountId}
                 onImageError={onImageError}
+                onResolveAttachmentAccess={onResolveAttachmentAccess}
                 onAction={onMessageAction}
               />
             )

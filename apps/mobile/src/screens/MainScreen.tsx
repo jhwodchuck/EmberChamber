@@ -89,6 +89,10 @@ export type MainScreenProps = {
   onSendMessage: () => void;
   onUpdatePrivacy: <K extends keyof PrivacyDefaults>(key: K, value: PrivacyDefaults[K]) => void;
   onImageError: (messageId: string) => void;
+  onResolveAttachmentAccess?: (
+    messageId: string,
+    attachment: NonNullable<GroupThreadMessage["attachment"]>,
+  ) => Promise<NonNullable<GroupThreadMessage["attachment"]> | null>;
   editingMessageId: string | null;
   onCancelEdit: () => void;
   onMessageAction: (messageId: string, action: ContextMenuAction) => void;
@@ -175,6 +179,7 @@ export function MainScreen(props: MainScreenProps) {
     onSendMessage,
     onUpdatePrivacy,
     onImageError,
+    onResolveAttachmentAccess,
     editingMessageId,
     onCancelEdit,
     onMessageAction,
@@ -344,6 +349,7 @@ export function MainScreen(props: MainScreenProps) {
         onPersistConversationAnchor(selectedGroup.id, messageId)
       }
       onImageError={onImageError}
+      onResolveAttachmentAccess={onResolveAttachmentAccess}
       onMessageAction={onMessageAction}
       onUpdateGroup={onUpdateGroup}
       onCreateInvite={onCreateInvite}

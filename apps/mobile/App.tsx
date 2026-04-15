@@ -11,6 +11,7 @@ import * as SystemUI from "expo-system-ui";
 import { startTransition, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Keyboard,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -196,6 +197,7 @@ export default function App() {
   const [sessions, setSessions] = useState<SessionDescriptor[]>([]);
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
   const [sessionsError, setSessionsError] = useState<string | null>(null);
+  const [androidKeyboardVisible, setAndroidKeyboardVisible] = useState(false);
 
   const imageRefreshPendingRef = useRef(false);
   const groupsRef = useRef<GroupMembershipSummary[]>([]);
@@ -937,6 +939,24 @@ export default function App() {
   useEffect(() => {
     groupsRef.current = groups;
   }, [groups]);
+
+  useEffect(() => {
+    if (Platform.OS !== "android") {
+      return;
+    }
+
+    const showSubscription = Keyboard.addListener("keyboardDidShow", () => {
+      setAndroidKeyboardVisible(true);
+    });
+    const hideSubscription = Keyboard.addListener("keyboardDidHide", () => {
+      setAndroidKeyboardVisible(false);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (!activeDeviceLink || completedDeviceLinkSessionId) {
@@ -2139,7 +2159,7 @@ export default function App() {
 
           attachment = {
             id: ticket.attachmentId,
-            downloadUrl: "",
+            downloadUrl: ticket.downloadUrl,
             fileName: pendingAttachment.fileName,
             mimeType: pendingAttachment.mimeType,
             byteLength: fileBytes.byteLength,
@@ -2314,6 +2334,69 @@ export default function App() {
         }, 30_000);
       }
     })();
+  }
+
+  async function handleResolveAttachmentAccess(
+    messageId: string,
+    attachment: NonNullable<GroupThreadMessage["attachment"]>,
+  ) {
+    const activeSession = sessionRef.current ?? session;
+    if (!activeSession) {
+      throw new Error("You must be signed in to open this attachment.");
+    }
+
+    const access = await relayFetch<{
+      attachmentId: string;
+      downloadUrl: string;
+      expiresAt: string;
+    }>(activeSession, `/v1/attachments/${attachment.id}/access`);
+    const nextAttachment = {
+      ...attachment,
+      downloadUrl: access.downloadUrl,
+    };
+
+    let nextMessagesToCache: GroupThreadMessage[] | null = null;
+    let conversationIdToCache: string | null = null;
+
+    setThreadMessages((prev) => {
+      let changed = false;
+      const next = prev.map((message) => {
+        if (
+          message.id !== messageId ||
+          !message.attachment ||
+          message.attachment.id !== attachment.id
+        ) {
+          return message;
+        }
+
+        changed = true;
+        conversationIdToCache = message.conversationId;
+        return {
+          ...message,
+          attachment: {
+            ...message.attachment,
+            downloadUrl: access.downloadUrl,
+          },
+        };
+      });
+
+      if (!changed) {
+        return prev;
+      }
+
+      nextMessagesToCache = next;
+      return next;
+    });
+
+    if (db && nextMessagesToCache && conversationIdToCache) {
+      await saveCachedGroupMessages(
+        db,
+        conversationIdToCache,
+        nextMessagesToCache,
+      );
+    }
+
+    return nextAttachment;
   }
 
   function handleMessageAction(messageId: string, action: ContextMenuAction) {
@@ -2594,6 +2677,12 @@ export default function App() {
 
   const showEntryChrome = !session || profileSetupActive;
   const heroSignals = !session ? onboardingHeroSignals : [];
+  const keyboardShellBehavior: "padding" | "height" | undefined =
+    Platform.OS === "ios"
+      ? "padding"
+      : androidKeyboardVisible
+        ? "height"
+        : undefined;
 
   if (isBooting) {
     return (
@@ -2620,9 +2709,10 @@ export default function App() {
           style={styles.keyboardShell}
           // Android 14+ edge-to-edge keeps the activity at full height and
           // exposes the IME as an inset instead of shrinking the window.
-          // Use KAV height mode so bottom-aligned inputs and the conversation
-          // composer move above the keyboard on Android as well.
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          // Only enable height mode while the keyboard is visible so the shell
+          // snaps fully back once the IME closes.
+          behavior={keyboardShellBehavior}
+          enabled={Platform.OS === "ios" || androidKeyboardVisible}
         >
           {showEntryChrome ? (
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -2796,6 +2886,7 @@ export default function App() {
                 onSendMessage={() => void sendMessage()}
                 onUpdatePrivacy={updatePrivacyDefaults}
                 onImageError={handleImageError}
+                onResolveAttachmentAccess={handleResolveAttachmentAccess}
                 onCancelEdit={() => {
                   setEditingMessageId(null);
                   setMessageDraft("");
