@@ -84,7 +84,7 @@ jobs:
             wm_size: 1080x2220
             wm_density: 440
           - device_class: tablet
-            avd_profile: nexus_10
+            avd_profile: pixel_tablet
             orientation: portrait
             wm_size: 1600x2560
             wm_density: 320
