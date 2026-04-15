@@ -27,6 +27,9 @@ concurrency:
 
 jobs:
   ci:
+    permissions:
+      id-token: write
+      contents: read
     uses: ./.github/workflows/reusable-ci-mobile.yml
     with:
       runner: '"ubuntu-22.04"'
