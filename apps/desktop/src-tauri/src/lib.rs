@@ -63,7 +63,7 @@ async fn check_for_app_update(app: tauri::AppHandle) -> Result<AppUpdateStatus, 
             available: true,
             current_version,
             version: Some(update.version),
-            date: update.date,
+            date: update.date.map(|date| date.to_string()),
             body: update.body,
         });
     }

@@ -3,7 +3,7 @@
     "name": "EmberChamber",
     "slug": "emberchamber-mobile",
     "scheme": "emberchamber",
-    "version": "0.1.0-beta.16",
+    "version": "0.1.0-beta.20",
     "description": "Invite-only messaging for trusted circles.",
     "orientation": "default",
     "userInterfaceStyle": "automatic",
