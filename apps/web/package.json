@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "type-check": "tsc --noEmit",
+    "type-check": "npm --prefix ../../packages/protocol run build && npm --prefix ../../packages/shared run build && tsc --noEmit",
     "e2e": "playwright test e2e --workers=1 --reporter=line"
   },
   "dependencies": {
