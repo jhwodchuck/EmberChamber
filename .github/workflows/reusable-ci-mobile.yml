@@ -64,8 +64,6 @@ jobs:
       build_type: release
       sign: false
       artifact_name: emberchamber-android-release-screenshots
-      build_apk: true
-      build_aab: false
     secrets:
       ANDROID_GOOGLE_SERVICES_JSON: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON }}
 
