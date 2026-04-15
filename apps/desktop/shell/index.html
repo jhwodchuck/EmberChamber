@@ -1154,6 +1154,7 @@
         groupsStatus: null,
         invitesStatus: null,
         settingsStatus: null,
+        desktopUpdateStatus: null,
         sessionsStatus: null,
         threadStatus: null,
         secureStorageMode: nativeDesktop ? "loading" : "browser",
@@ -1212,6 +1213,14 @@
           autoDownloadSensitiveMedia: false,
           allowSensitiveExport: false,
           secureAppSwitcher: true,
+        },
+        desktopUpdate: {
+          available: false,
+          currentVersion: "",
+          version: "",
+          publishedAt: "",
+          notes: "",
+          lastCheckedAt: "",
         },
         threadComposer: {
           text: "",
@@ -3691,6 +3700,93 @@
         }
       }
 
+      async function checkDesktopUpdate() {
+        if (!nativeDesktop) {
+          state.desktopUpdateStatus = createStatus(
+            "warning",
+            "Desktop updater unavailable",
+            "Update checks are only available in the packaged desktop app."
+          );
+          render();
+          return;
+        }
+
+        setBusy("check-desktop-update");
+        state.desktopUpdateStatus = createStatus("info", "Checking for updates", "Contacting update channel...");
+        render();
+
+        try {
+          const result = await desktopInvoke("check_for_app_update");
+          state.desktopUpdate = {
+            available: Boolean(result?.available),
+            currentVersion: result?.currentVersion || "",
+            version: result?.version || "",
+            publishedAt: result?.date || "",
+            notes: result?.body || "",
+            lastCheckedAt: new Date().toISOString(),
+          };
+          state.desktopUpdateStatus = result?.available
+            ? createStatus(
+                "success",
+                "Update available",
+                `Version ${result.version} is ready to install.`,
+                result.date ? `Published ${formatDateTime(result.date)}` : undefined
+              )
+            : createStatus(
+                "success",
+                "You are up to date",
+                result?.currentVersion
+                  ? `Version ${result.currentVersion} is currently the newest available build.`
+                  : "No newer release was found."
+              );
+        } catch (error) {
+          state.desktopUpdateStatus = createStatus(
+            "error",
+            "Update check failed",
+            error instanceof Error ? error.message : "Unknown updater error"
+          );
+        } finally {
+          clearBusy();
+        }
+      }
+
+      async function installDesktopUpdate() {
+        if (!nativeDesktop) {
+          state.desktopUpdateStatus = createStatus(
+            "warning",
+            "Desktop updater unavailable",
+            "Automatic updates are only available in the packaged desktop app."
+          );
+          render();
+          return;
+        }
+
+        setBusy("install-desktop-update");
+        state.desktopUpdateStatus = createStatus(
+          "info",
+          "Installing update",
+          "Downloading and applying the latest package. The desktop app will restart automatically."
+        );
+        render();
+
+        try {
+          const resultMessage = await desktopInvoke("install_app_update");
+          state.desktopUpdateStatus = createStatus(
+            "success",
+            "Update status",
+            typeof resultMessage === "string" ? resultMessage : "Update install request completed."
+          );
+        } catch (error) {
+          state.desktopUpdateStatus = createStatus(
+            "error",
+            "Update install failed",
+            error instanceof Error ? error.message : "Unknown updater error"
+          );
+        } finally {
+          clearBusy();
+        }
+      }
+
       function saveRelayUrl() {
         state.relayUrl = writeStoredRelayOverride(state.relayUrl);
         state.settingsStatus =
@@ -3990,6 +4086,16 @@
 
         if (action === "check-relay") {
           await checkRelayHealth();
+          return;
+        }
+
+        if (action === "check-desktop-update") {
+          await checkDesktopUpdate();
+          return;
+        }
+
+        if (action === "install-desktop-update") {
+          await installDesktopUpdate();
           return;
         }
 
@@ -5839,6 +5945,22 @@
                   <p class="group-copy" style="margin-top: 10px">${escapeHtml(secureStorageModeLabel())}</p>
                   ${state.secureStorageDetail ? `<p class="secondary-meta" style="margin-top: 8px">${escapeHtml(state.secureStorageDetail)}</p>` : ""}
                 </div>
+                ${renderStatus(state.desktopUpdateStatus)}
+                <div class="rule-block">
+                  <p class="label">Desktop updates</p>
+                  <p class="group-copy" style="margin-top: 10px">
+                    ${
+                      state.desktopUpdate.lastCheckedAt
+                        ? `Last checked ${escapeHtml(formatDateTime(state.desktopUpdate.lastCheckedAt))}.`
+                        : "No update check has run yet."
+                    }
+                  </p>
+                  ${
+                    state.desktopUpdate.currentVersion
+                      ? `<p class="secondary-meta" style="margin-top: 8px">Current ${escapeHtml(state.desktopUpdate.currentVersion)}${state.desktopUpdate.version ? ` · Latest ${escapeHtml(state.desktopUpdate.version)}` : ""}</p>`
+                      : ""
+                  }
+                </div>
                 <div class="field">
                   <label for="workspace-relay-url">Relay URL</label>
                   <input id="workspace-relay-url" type="url" data-bind="relayUrl" value="${escapeHtml(state.relayUrl)}" />
@@ -5847,6 +5969,12 @@
                   <button class="secondary-button" type="submit">Save relay URL</button>
                   <button class="ghost-button" type="button" data-action="check-relay" ${isBusy("check-relay") ? "disabled" : ""}>
                     ${isBusy("check-relay") ? "Checking relay..." : "Check relay"}
+                  </button>
+                  <button class="ghost-button" type="button" data-action="check-desktop-update" ${isBusy("check-desktop-update") || isBusy("install-desktop-update") ? "disabled" : ""}>
+                    ${isBusy("check-desktop-update") ? "Checking updates..." : "Check updates"}
+                  </button>
+                  <button class="ghost-button" type="button" data-action="install-desktop-update" ${!state.desktopUpdate.available || isBusy("check-desktop-update") || isBusy("install-desktop-update") ? "disabled" : ""}>
+                    ${isBusy("install-desktop-update") ? "Installing update..." : "Install update"}
                   </button>
                   <button class="ghost-button" type="button" data-action="use-default-relay">Use default relay</button>
                   <button class="ghost-button" type="button" data-action="use-local-relay">Use local relay</button>
