@@ -42,7 +42,7 @@
     "test": "npm run test --workspace=packages/protocol && npm run test --workspace=apps/relay && cargo test -p emberchamber-core -p emberchamber-relay-protocol",
     "test:legacy": "npm run test --workspace=apps/api",
     "lint": "npm run lint --workspace=apps/web && npm run lint --workspace=apps/relay",
-    "type-check": "npm run type-check --workspace=packages/protocol && npm run type-check --workspace=apps/relay && npm run type-check --workspace=apps/web && npm run build --workspace=packages/shared && cargo check -p emberchamber-core -p emberchamber-relay-protocol",
+    "type-check": "npm run type-check --workspace=packages/protocol && npm run type-check --workspace=apps/relay && npm run type-check --workspace=apps/web && cargo check -p emberchamber-core -p emberchamber-relay-protocol",
     "verify:all": "npm run check:repo-contracts && npm test --workspace=packages/protocol && npm run build --workspace=apps/relay && npm test --workspace=apps/relay && npm run lint --workspace=apps/web && npm run build --workspace=apps/web && npm run type-check --workspace=apps/mobile && cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml && cargo test -p emberchamber-core -p emberchamber-relay-protocol",
     "format": "prettier --write \"{*.md,*.json,apps/**/*.{ts,tsx,md,json},packages/**/*.{ts,tsx,md,json},docs/**/*.{ts,tsx,md,json},llm_council/**/*.{ts,tsx,md,json},infra/**/*.{ts,tsx,md,json},services/**/*.{ts,tsx,md,json},tools/**/*.{ts,tsx,md,json}}\" --ignore-path .prettierignore"
   },
