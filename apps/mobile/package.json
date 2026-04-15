@@ -17,7 +17,7 @@
     "build:ios": "expo prebuild --platform ios --no-install",
     "verify:google-services": "node ./scripts/verify-google-services-file.js",
     "verify:android": "npm run doctor && npm run type-check && npm run prebuild",
-    "type-check": "tsc --noEmit"
+    "type-check": "npm --prefix ../../packages/protocol run build && npm --prefix ../../packages/shared run build && tsc --noEmit"
   },
   "expo": {
     "install": {
@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "@emberchamber/protocol": "^0.1.0",
+    "@emberchamber/shared": "^0.1.0",
     "expo": "~55.0.15",
     "expo-camera": "~55.0.15",
     "expo-document-picker": "~55.0.13",
