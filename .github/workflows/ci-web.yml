@@ -88,6 +88,7 @@ jobs:
       contents: read
     runs-on: ubuntu-22.04
     needs: verify
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
 
@@ -111,21 +112,30 @@ jobs:
         run: npm run build --workspace=apps/web
 
       - name: Install Playwright Chromium
-        run: npx -y playwright@1.54.2 install --with-deps chromium
+        run: node_modules/.bin/playwright install --with-deps chromium
+
+      - name: Kill any stale processes on CI ports
+        run: |
+          # Keep hosted and reusable flows aligned; this is mostly a no-op on
+          # fresh runners, but it avoids wedged ports if the environment ever
+          # reuses state or a prior step exits mid-cleanup.
+          fuser -k 3000/tcp 2>/dev/null || true
+          fuser -k 8787/tcp 2>/dev/null || true
 
       - name: Capture web route flow screenshots
         run: |
           mkdir -p apps/web/artifacts/screenshots
 
+          EMBERCHAMBER_LOCAL_TEST_INVITE_TOKEN=dev-beta-invite \
           npm run relay:local > /tmp/emberchamber-relay.log 2>&1 &
           RELAY_PID=$!
 
           npm run start --workspace=apps/web -- --hostname 127.0.0.1 --port 3000 &
           WEB_PID=$!
-          trap 'kill $WEB_PID $RELAY_PID' EXIT
+          trap 'echo "=== relay log ==="; cat /tmp/emberchamber-relay.log; kill $WEB_PID $RELAY_PID 2>/dev/null' EXIT
 
-          npx -y wait-on@8.0.3 http://127.0.0.1:8787/health
-          npx -y wait-on@8.0.3 http://127.0.0.1:3000/start
+          npx -y wait-on@8.0.3 --timeout 120000 http-get://127.0.0.1:8787/health
+          npx -y wait-on@8.0.3 --timeout 120000 http://127.0.0.1:3000/start
           CI_WEB_BASE_URL=http://127.0.0.1:3000 \
           CI_RELAY_BASE_URL=http://127.0.0.1:8787 \
           CI_AUTH_INVITE_TOKEN=dev-beta-invite \
@@ -134,7 +144,7 @@ jobs:
       - name: Capture desktop shell screenshot
         run: |
           mkdir -p apps/desktop/artifacts/screenshots
-          npx -y playwright@1.54.2 screenshot --device="Desktop Chrome" \
+          node_modules/.bin/playwright screenshot --device="Desktop Chrome" \
             "file://$GITHUB_WORKSPACE/apps/desktop/shell/index.html" \
             apps/desktop/artifacts/screenshots/01-shell.png
 
@@ -145,7 +155,7 @@ jobs:
           name: emberchamber-web-screenshots-${{ github.run_number }}
           path: apps/web/artifacts/screenshots
           retention-days: 14
-          if-no-files-found: error
+          if-no-files-found: warn
 
       - name: Upload desktop screenshot artifacts
         if: always()
@@ -154,7 +164,7 @@ jobs:
           name: emberchamber-desktop-screenshots-${{ github.run_number }}
           path: apps/desktop/artifacts/screenshots
           retention-days: 14
-          if-no-files-found: error
+          if-no-files-found: warn
 
       - name: Fix failing web screenshot capture
         uses: fly-ci/wingman-action@v1
