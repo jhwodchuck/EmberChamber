@@ -42,7 +42,7 @@ jobs:
     name: Publish Android artifacts to GitHub Release
     runs-on: ubuntu-22.04
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v') || startsWith(inputs.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || startsWith(inputs.ref, 'refs/tags/v') || startsWith(inputs.ref, 'v')
     permissions:
       contents: write
     steps:
@@ -55,6 +55,6 @@ jobs:
       - name: Publish to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          prerelease: ${{ contains(github.ref_name, '-beta.') || contains(github.ref_name, '-rc.') }}
+          prerelease: ${{ contains(github.ref_name, '-beta.') || contains(github.ref_name, '-rc.') || contains(inputs.ref, '-beta.') || contains(inputs.ref, '-rc.') }}
           generate_release_notes: true
           files: dist/android/*
