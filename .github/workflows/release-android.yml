@@ -52,9 +52,28 @@ jobs:
           name: ${{ needs.build.outputs.artifact_name }}
           path: dist/android
 
+      - name: Resolve GitHub Release tag
+        id: release_tag
+        env:
+          INPUT_REF: ${{ inputs.ref }}
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            TAG_NAME="${GITHUB_REF#refs/tags/}"
+          elif [[ "$INPUT_REF" == refs/tags/* ]]; then
+            TAG_NAME="${INPUT_REF#refs/tags/}"
+          elif [[ "$INPUT_REF" == v* ]]; then
+            TAG_NAME="$INPUT_REF"
+          else
+            echo "Android release publish requires a v* tag ref, got '${INPUT_REF:-$GITHUB_REF}'" >&2
+            exit 1
+          fi
+
+          echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
+
       - name: Publish to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.release_tag.outputs.tag_name }}
           prerelease: ${{ contains(github.ref_name, '-beta.') || contains(github.ref_name, '-rc.') || contains(inputs.ref, '-beta.') || contains(inputs.ref, '-rc.') }}
           generate_release_notes: true
           files: dist/android/*
