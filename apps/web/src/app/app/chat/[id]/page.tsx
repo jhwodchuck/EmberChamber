@@ -549,6 +549,7 @@ export default function ChatPage() {
           <textarea
             value={content}
             onChange={(event) => setContent(event.target.value)}
+            spellCheck
             className="input min-h-[96px] resize-none"
             placeholder={
               conversation?.kind === "direct_message"
