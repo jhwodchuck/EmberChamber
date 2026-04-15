@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000",
-    "build": "next build",
+    "build": "npm --prefix ../../packages/protocol run build && npm --prefix ../../packages/shared run build && next build",
     "start": "next start",
     "lint": "eslint .",
     "type-check": "npm --prefix ../../packages/protocol run build && npm --prefix ../../packages/shared run build && tsc --noEmit",
