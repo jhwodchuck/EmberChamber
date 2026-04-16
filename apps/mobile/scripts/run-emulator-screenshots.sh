@@ -19,10 +19,20 @@ fi
 adb shell screencap -p /sdcard/emberchamber-ci-warmup.png >/dev/null || true
 adb shell rm -f /sdcard/emberchamber-ci-warmup.png >/dev/null || true
 
-bash "$(dirname "$0")/capture-android-screenshots.sh" \
-  "apps/mobile/artifacts/android-screenshots/${DEVICE_CLASS}" \
-  "com.emberchamber.mobile" \
-  "${DEVICE_CLASS}" \
-  "${WM_SIZE}" \
-  "${WM_DENSITY}" \
-  "${ORIENTATION}" || true
+if [[ "$DEVICE_CLASS" == "auto" ]]; then
+  bash "$(dirname "$0")/capture-auto-screenshots.sh" \
+    "apps/mobile/artifacts/android-screenshots/${DEVICE_CLASS}" \
+    "com.emberchamber.mobile" \
+    "${DEVICE_CLASS}" \
+    "${WM_SIZE}" \
+    "${WM_DENSITY}" \
+    "${ORIENTATION}" || true
+else
+  bash "$(dirname "$0")/capture-android-screenshots.sh" \
+    "apps/mobile/artifacts/android-screenshots/${DEVICE_CLASS}" \
+    "com.emberchamber.mobile" \
+    "${DEVICE_CLASS}" \
+    "${WM_SIZE}" \
+    "${WM_DENSITY}" \
+    "${ORIENTATION}" || true
+fi
