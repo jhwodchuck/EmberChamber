@@ -242,6 +242,11 @@ export function ConversationScreen({
     start: messageDraft.length,
     end: messageDraft.length,
   });
+  // Android: only pass `selection` to TextInput when a programmatic change
+  // (e.g. formatting) requires it. Always feeding back draftSelection via the
+  // `selection` prop races Android's native cursor placement and causes the
+  // first typed character to jump to the end of the input.
+  const [selectionOverride, setSelectionOverride] = useState<DraftSelection | null>(null);
   const listRef = useRef<FlatList<ConversationRow>>(null);
   const messageInputRef = useRef<TextInput>(null);
   const shouldAutoScrollRef = useRef(true);
@@ -308,12 +313,6 @@ export function ConversationScreen({
   useEffect(() => {
     anchorChangeHandlerRef.current = onAnchorMessageChange;
   }, [onAnchorMessageChange]);
-
-  useEffect(() => {
-    setDraftSelection((current) =>
-      normalizeDraftSelection(current, messageDraft.length),
-    );
-  }, [messageDraft.length]);
 
   useEffect(() => {
     appliedRestoreSignatureRef.current = null;
@@ -455,6 +454,8 @@ export function ConversationScreen({
 
       return nextSelection;
     });
+    // Clear any programmatic override — native has acknowledged the position.
+    setSelectionOverride(null);
   }
 
   function handleFormattingAction(action: DraftFormatAction) {
@@ -462,6 +463,7 @@ export function ConversationScreen({
     setFormattingMenuOpen(false);
     setMessageDraft(nextDraft.text);
     setDraftSelection(nextDraft.selection);
+    setSelectionOverride(nextDraft.selection);
 
     requestAnimationFrame(() => {
       messageInputRef.current?.focus();
@@ -746,7 +748,7 @@ export function ConversationScreen({
             style={[styles.input, styles.composerInputDocked]}
             value={messageDraft}
             onChangeText={setMessageDraft}
-            selection={draftSelection}
+            selection={selectionOverride ?? undefined}
             onSelectionChange={handleDraftSelectionChange}
           />
 
