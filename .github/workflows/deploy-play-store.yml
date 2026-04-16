@@ -272,7 +272,7 @@ jobs:
               .compact
               .map(&:to_i)
               .uniq
-              .reject { |code| code == current_version_code }
+              .select { |code| code > current_version_code }
             puts version_codes.join(',')
           ensure
             begin
