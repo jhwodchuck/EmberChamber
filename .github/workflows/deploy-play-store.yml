@@ -126,7 +126,7 @@ jobs:
           fetch-depth: 0
 
       - name: Download signed AAB artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ needs.build.outputs.artifact_name }}
           path: apps/mobile/artifacts/android-build
