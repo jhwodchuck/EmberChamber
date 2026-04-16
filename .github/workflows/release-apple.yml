@@ -439,7 +439,7 @@ jobs:
         run: xcodebuild -version
 
       - name: Download simulator app artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: emberchamber-ios-beta
           path: .
