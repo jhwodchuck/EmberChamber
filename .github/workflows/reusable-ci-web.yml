@@ -88,10 +88,14 @@ jobs:
           fuser -k 8787/tcp 2>/dev/null || true
 
       - name: Capture web route flow screenshots
+        env:
+          NEXT_PUBLIC_RELAY_URL: http://127.0.0.1:8787
+          NEXT_PUBLIC_WEB_URL: http://127.0.0.1:3000
+          NEXT_PUBLIC_EMBERCHAMBER_AUTH_BOOTSTRAP_ENABLED: "true"
+          EMBERCHAMBER_LOCAL_TEST_INVITE_TOKEN: dev-beta-invite
         run: |
           mkdir -p apps/web/artifacts/screenshots
 
-          EMBERCHAMBER_LOCAL_TEST_INVITE_TOKEN=dev-beta-invite \
           npm run relay:local > /tmp/emberchamber-relay.log 2>&1 &
           RELAY_PID=$!
 
@@ -101,9 +105,9 @@ jobs:
 
           npx -y wait-on@8.0.3 --timeout 120000 http-get://127.0.0.1:8787/health
           npx -y wait-on@8.0.3 --timeout 120000 http://127.0.0.1:3000/start
-          CI_WEB_BASE_URL=http://127.0.0.1:3000 \
-          CI_RELAY_BASE_URL=http://127.0.0.1:8787 \
-          CI_AUTH_INVITE_TOKEN=dev-beta-invite \
+          CI_WEB_BASE_URL="$NEXT_PUBLIC_WEB_URL" \
+          CI_RELAY_BASE_URL="$NEXT_PUBLIC_RELAY_URL" \
+          CI_AUTH_INVITE_TOKEN="$EMBERCHAMBER_LOCAL_TEST_INVITE_TOKEN" \
           npm run e2e --workspace=apps/web
 
       - name: Capture desktop shell screenshot
