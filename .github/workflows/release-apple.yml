@@ -42,7 +42,7 @@ jobs:
 
       - name: Restore npm package cache
         id: npm-cache-restore
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: ${{ steps.npm-cache-dir.outputs.dir }}
           key: node-cache-${{ runner.os }}-${{ runner.arch }}-npm-${{ hashFiles('package-lock.json') }}
@@ -250,7 +250,7 @@ jobs:
 
       - name: Save npm package cache
         if: steps.npm-cache-restore.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: ${{ steps.npm-cache-dir.outputs.dir }}
           key: node-cache-${{ runner.os }}-${{ runner.arch }}-npm-${{ hashFiles('package-lock.json') }}
@@ -338,7 +338,7 @@ jobs:
 
       - name: Restore CocoaPods cache
         id: cocoapods-cache-restore
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: |
             apps/mobile/ios/Pods
@@ -354,7 +354,7 @@ jobs:
 
       - name: Save CocoaPods cache
         if: steps.cocoapods-cache-restore.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: |
             apps/mobile/ios/Pods
