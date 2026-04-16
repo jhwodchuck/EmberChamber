@@ -58,12 +58,18 @@ function normalizeEmail(value: string) {
 export function BootstrapAuthForm({
   mode,
   continueTo,
+  initialEntryMethod,
 }: {
   mode: BootstrapAuthMode;
   continueTo?: string | null;
+  initialEntryMethod?: BootstrapEntryMethod;
 }) {
   const [entryMethod, setEntryMethod] =
-    useState<BootstrapEntryMethod>("magic-link");
+    useState<BootstrapEntryMethod>(
+      mode === "signin" && initialEntryMethod === "device-link"
+        ? "device-link"
+        : "magic-link",
+    );
   const [magicLinkStep, setMagicLinkStep] = useState<MagicLinkStep>(1);
   const [email, setEmail] = useState("");
   const [inviteToken, setInviteToken] = useState("");

@@ -9,7 +9,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { StatusCallout } from "@/components/status-callout";
-import { authBootstrapEnabled } from "@/lib/site";
+import { authBootstrapEnabled, publicSignInCta } from "@/lib/site";
 
 type StartPath = {
   icon: LucideIcon;
@@ -129,23 +129,23 @@ function getStartPaths(): StartPath[] {
           },
         }
       : {
-          icon: LifeBuoy,
+          icon: KeyRound,
           eyebrow: "Already Have Access",
-          title: "Recover the right path quietly",
-          body: "If access feels off, email support with your device label and the private email you used to register.",
+          title: "Open the web client with a trusted device",
+          body: "If you already have a signed-in phone or desktop client, use QR device link to attach this browser without waiting on production email bootstrap.",
           accent: "from-rose-300/18 via-rose-200/5 to-transparent",
-          tempo: "Recovery and continuity",
+          tempo: "Fastest when one device is already signed in",
           highlights: [
-            "Share device label if blocked",
-            "Use the original private email",
+            "Trusted device approves this browser",
+            "Support remains available if state drifts",
           ],
           primary: {
-            href: "/support",
-            label: "Email Support",
+            href: publicSignInCta.href,
+            label: publicSignInCta.label,
           },
           secondary: {
-            href: "/trust-and-safety",
-            label: "How It Works",
+            href: "/support",
+            label: "Recovery Help",
           },
         },
     {
