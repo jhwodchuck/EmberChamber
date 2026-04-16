@@ -34,6 +34,11 @@ const SECTIONS = [
     note: "Pixel C · 1366 × 768 · landscape",
   },
   {
+    dir: "android/auto",
+    title: "Android Auto",
+    note: "Automotive 1024p · 1024 × 768 · landscape · Car App Library messaging UI",
+  },
+  {
     dir: "web",
     title: "Web companion",
     note: "New-user auth flow · Playwright + Chromium",
