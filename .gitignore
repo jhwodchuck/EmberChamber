@@ -15,6 +15,12 @@ android/
 ios/
 # Fastlane Play Store metadata lives inside an android/ path; un-ignore it.
 !apps/mobile/fastlane/metadata/android/
+# Android Auto: hand-written Kotlin sources and manifest resource are not generated.
+!apps/mobile/android/app/src/main/java/com/emberchamber/mobile/MainApplication.kt
+!apps/mobile/android/app/src/main/java/com/emberchamber/mobile/MainActivity.kt
+!apps/mobile/android/app/src/main/java/com/emberchamber/mobile/auto/
+!apps/mobile/android/app/src/main/java/com/emberchamber/mobile/auto/**
+!apps/mobile/android/app/src/main/res/xml/automotive_app_desc.xml
 
 # Environment files
 .env
