@@ -3,14 +3,14 @@
     "name": "EmberChamber",
     "slug": "emberchamber-mobile",
     "scheme": "emberchamber",
-    "version": "0.1.0-beta.21",
+    "version": "0.1.0-beta.22",
     "description": "Invite-only messaging for trusted circles.",
     "orientation": "default",
     "userInterfaceStyle": "automatic",
     "icon": "./assets/icon.png",
     "android": {
       "package": "com.emberchamber.mobile",
-      "versionCode": 2,
+      "versionCode": 3,
       "softwareKeyboardLayoutMode": "pan",
       "blockedPermissions": ["android.permission.RECORD_AUDIO"],
       "adaptiveIcon": {
