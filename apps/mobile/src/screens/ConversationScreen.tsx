@@ -245,6 +245,9 @@ export function ConversationScreen({
   const listRef = useRef<FlatList<ConversationRow>>(null);
   const messageInputRef = useRef<TextInput>(null);
   const shouldAutoScrollRef = useRef(true);
+  // Android: defer scroll-to-end until onContentSizeChange fires so it runs
+  // after native layout is settled, avoiding oscillation with KAV height.
+  const pendingScrollToEndRef = useRef(false);
   const previousConversationIdRef = useRef<string | null>(null);
   const previousMessageWindowRef = useRef<{
     firstMessageId: string | null;
@@ -363,13 +366,16 @@ export function ConversationScreen({
       return;
     }
 
-    requestAnimationFrame(() => {
-      listRef.current?.scrollToEnd({
-        // Android already has shell + IME resize adjustments. Avoid animated
-        // bottom snaps there because they can fight list anchoring after send.
-        animated: Platform.OS !== "android" && !conversationChanged,
+    if (Platform.OS === "android") {
+      // Defer scroll to onContentSizeChange so it fires after the native
+      // layout has settled — avoids oscillation with KAV height adjustments
+      // that cause post-send flicker when using requestAnimationFrame.
+      pendingScrollToEndRef.current = true;
+    } else {
+      requestAnimationFrame(() => {
+        listRef.current?.scrollToEnd({ animated: !conversationChanged });
       });
-    });
+    }
   }, [
     conversationRows.length,
     firstMessageId,
@@ -613,6 +619,18 @@ export function ConversationScreen({
           onViewableItemsChanged={onViewableItemsChangedRef.current}
           scrollEventThrottle={16}
           viewabilityConfig={viewabilityConfigRef.current}
+          // Android: scroll-to-bottom fires here (after native layout settles)
+          // instead of in a requestAnimationFrame to prevent post-send flicker.
+          onContentSizeChange={
+            Platform.OS === "android"
+              ? () => {
+                  if (pendingScrollToEndRef.current) {
+                    pendingScrollToEndRef.current = false;
+                    listRef.current?.scrollToEnd({ animated: false });
+                  }
+                }
+              : undefined
+          }
           renderItem={({ item }) =>
             item.type === "date" ? (
               <View style={styles.dateSeparator}>
