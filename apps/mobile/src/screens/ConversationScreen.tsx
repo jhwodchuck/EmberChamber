@@ -11,6 +11,7 @@ import {
   Pressable,
   Text,
   TextInput,
+  type TextInputSelectionChangeEventData,
   type ViewToken,
   View,
 } from "react-native";
@@ -28,6 +29,7 @@ import { MessageBubble } from "../components/MessageBubble";
 import type { ContextMenuAction } from "../components/MessageContextMenu";
 import { MemberRosterModal } from "../components/MemberRosterModal";
 import { MemberProfileSheet } from "../components/MemberProfileSheet";
+import { FormattingMenuSheet } from "../components/FormattingMenuSheet";
 import {
   AttachMenuSheet,
   type AttachMenuAction,
@@ -38,6 +40,12 @@ import {
 } from "../components/LocationPickerSheet";
 import { PollCreatorSheet } from "../components/PollCreatorSheet";
 import { ChecklistCreatorSheet } from "../components/ChecklistCreatorSheet";
+import {
+  applyDraftFormatting,
+  normalizeDraftSelection,
+  type DraftSelection,
+  type DraftFormatAction,
+} from "../lib/messageDraftFormatting";
 
 const AUTO_SCROLL_THRESHOLD = 96;
 
@@ -211,6 +219,7 @@ export function ConversationScreen({
     ? describePendingAttachment(pendingAttachment)
     : null;
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
+  const [formattingMenuOpen, setFormattingMenuOpen] = useState(false);
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const [pollCreatorOpen, setPollCreatorOpen] = useState(false);
@@ -229,7 +238,12 @@ export function ConversationScreen({
   const [profileNote, setProfileNote] = useState<string | null>(null);
   const [isLoadingNote, setIsLoadingNote] = useState(false);
   const [isSavingNote, setIsSavingNote] = useState(false);
+  const [draftSelection, setDraftSelection] = useState<DraftSelection>({
+    start: messageDraft.length,
+    end: messageDraft.length,
+  });
   const listRef = useRef<FlatList<ConversationRow>>(null);
+  const messageInputRef = useRef<TextInput>(null);
   const shouldAutoScrollRef = useRef(true);
   const previousConversationIdRef = useRef<string | null>(null);
   const previousMessageWindowRef = useRef<{
@@ -291,9 +305,23 @@ export function ConversationScreen({
   }, [onAnchorMessageChange]);
 
   useEffect(() => {
+    setDraftSelection((current) =>
+      normalizeDraftSelection(current, messageDraft.length),
+    );
+  }, [messageDraft.length]);
+
+  useEffect(() => {
     appliedRestoreSignatureRef.current = null;
     lastReportedAnchorIdRef.current = null;
   }, [selectedGroup.id]);
+
+  useEffect(() => {
+    setFormattingMenuOpen(false);
+    setDraftSelection({
+      start: messageDraft.length,
+      end: messageDraft.length,
+    });
+  }, [editingMessageId, selectedGroup.id]);
 
   useEffect(() => {
     const conversationChanged =
@@ -394,6 +422,37 @@ export function ConversationScreen({
     listRef.current?.scrollToOffset({
       offset: estimatedOffset,
       animated: false,
+    });
+  }
+
+  function handleDraftSelectionChange(
+    event: NativeSyntheticEvent<TextInputSelectionChangeEventData>,
+  ) {
+    const nextSelection = normalizeDraftSelection(
+      event.nativeEvent.selection,
+      messageDraft.length,
+    );
+
+    setDraftSelection((current) => {
+      if (
+        current.start === nextSelection.start &&
+        current.end === nextSelection.end
+      ) {
+        return current;
+      }
+
+      return nextSelection;
+    });
+  }
+
+  function handleFormattingAction(action: DraftFormatAction) {
+    const nextDraft = applyDraftFormatting(messageDraft, draftSelection, action);
+    setFormattingMenuOpen(false);
+    setMessageDraft(nextDraft.text);
+    setDraftSelection(nextDraft.selection);
+
+    requestAnimationFrame(() => {
+      messageInputRef.current?.focus();
     });
   }
 
@@ -640,7 +699,18 @@ export function ConversationScreen({
             </Pressable>
           ) : null}
 
+          <Pressable
+            style={styles.composerIconButton}
+            onPress={() => setFormattingMenuOpen(true)}
+            onLongPress={() => setFormattingMenuOpen(true)}
+            delayLongPress={220}
+            accessibilityLabel="Formatting options"
+          >
+            <Text style={styles.composerFormatLabel}>Aa</Text>
+          </Pressable>
+
           <TextInput
+            ref={messageInputRef}
             multiline
             autoCorrect
             spellCheck
@@ -649,6 +719,8 @@ export function ConversationScreen({
             style={[styles.input, styles.composerInputDocked]}
             value={messageDraft}
             onChangeText={setMessageDraft}
+            selection={draftSelection}
+            onSelectionChange={handleDraftSelectionChange}
           />
 
           <Pressable
@@ -665,6 +737,12 @@ export function ConversationScreen({
           </Pressable>
         </View>
       </View>
+
+      <FormattingMenuSheet
+        visible={formattingMenuOpen}
+        onClose={() => setFormattingMenuOpen(false)}
+        onSelect={handleFormattingAction}
+      />
 
       <AttachMenuSheet
         visible={attachMenuOpen}

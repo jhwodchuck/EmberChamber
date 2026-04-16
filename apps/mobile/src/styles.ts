@@ -1441,6 +1441,34 @@ export const styles = StyleSheet.create({
   formatButtonLabelActive: {
     color: colors.textSoft,
   },
+  formatMenuHeader: {
+    paddingHorizontal: 24,
+    paddingBottom: 12,
+    gap: 6,
+  },
+  formatMenuItemMeta: {
+    flex: 1,
+    gap: 4,
+  },
+  formatMenuSyntax: {
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 18,
+    fontFamily: Platform.select({
+      ios: "Menlo",
+      android: "monospace",
+      default: "monospace",
+    }),
+  },
+  formatMenuFooter: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+  },
+  formatMenuFooterText: {
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 18,
+  },
   editModeBanner: {
     flexDirection: "row",
     alignItems: "center",
@@ -1775,6 +1803,12 @@ export const styles = StyleSheet.create({
   composerIconLabel: {
     fontSize: 17,
     lineHeight: 20,
+  },
+  composerFormatLabel: {
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: "800",
+    lineHeight: 16,
   },
   composerSendCircle: {
     width: 40,
