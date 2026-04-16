@@ -92,7 +92,7 @@ jobs:
             wm_size: 1366x768
             wm_density: 160
           - device_class: auto
-            avd_profile: automotive_1024p_landscape
+            avd_profile: ""
             orientation: landscape
             wm_size: 1024x768
             wm_density: 160
@@ -116,6 +116,12 @@ jobs:
           fi
           echo "APK_PATH=$APK_PATH" >> "$GITHUB_ENV"
 
+      - name: Install automotive system image
+        if: matrix.device_class == 'auto'
+        run: |
+          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager \
+            "system-images;android-33;android-automotive-playstore;x86_64"
+
       - name: Capture emulator screenshots
         uses: reactivecircus/android-emulator-runner@v2
         continue-on-error: true
@@ -123,8 +129,8 @@ jobs:
           api-level: ${{ matrix.device_class == 'auto' && '33' || '30' }}
           arch: x86_64
           target: ${{ matrix.device_class == 'auto' && 'android-automotive-playstore' || 'google_apis' }}
-          profile: ${{ matrix.avd_profile }}
-          avd-name: ci-screenshot-avd-${{ matrix.device_class }}-${{ matrix.avd_profile }}
+          profile: ${{ matrix.avd_profile != '' && matrix.avd_profile || 'pixel_5' }}
+          avd-name: ci-screenshot-avd-${{ matrix.device_class }}
           force-avd-creation: true
           disable-animations: true
           emulator-boot-timeout: 1200
