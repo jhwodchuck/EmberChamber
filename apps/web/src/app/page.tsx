@@ -9,6 +9,7 @@ import {
   Sparkles,
   Users,
 } from "lucide-react";
+import { HomeScreenshotProof } from "@/components/home-screenshot-proof";
 import { MarketingShell } from "@/components/marketing-shell";
 import { ProductPreview } from "@/components/product-mockup";
 import { StartHereSummary } from "@/components/start-here-guide";
@@ -145,6 +146,8 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      <HomeScreenshotProof />
 
       <section className="mx-auto max-w-6xl px-6 py-10 sm:py-14">
         <div className="section-spotlight relative overflow-hidden rounded-[2.4rem] px-6 py-8 sm:px-8 sm:py-10">

@@ -5,6 +5,10 @@ export const siteUrl =
 export const authBootstrapEnabled =
   process.env.NEXT_PUBLIC_EMBERCHAMBER_AUTH_BOOTSTRAP_ENABLED === "true";
 
+export const publicSignInCta = authBootstrapEnabled
+  ? { href: "/login", label: "Sign In" }
+  : { href: "/login?method=device-link", label: "Use QR Sign-In" };
+
 export const githubRepoUrl = "https://github.com/jhwodchuck/EmberChamber";
 export const githubReleasesUrl = `${githubRepoUrl}/releases`;
 export const githubSourceZipUrl = `${githubRepoUrl}/archive/refs/heads/main.zip`;

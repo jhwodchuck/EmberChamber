@@ -1,11 +1,7 @@
 import Link from "next/link";
-import { authBootstrapEnabled, footerLinks } from "@/lib/site";
+import { footerLinks, publicSignInCta } from "@/lib/site";
 
 export function SiteFooter() {
-  const secondaryCta = authBootstrapEnabled
-    ? { href: "/login", label: "Return to Sign In" }
-    : { href: "/download", label: "View Launch Targets" };
-
   return (
     <footer className="px-6 pb-10 pt-16 sm:pt-20">
       <div className="mx-auto max-w-6xl">
@@ -31,8 +27,8 @@ export function SiteFooter() {
               <Link href="/start" className="btn-primary">
                 Start Here
               </Link>
-              <Link href={secondaryCta.href} className="btn-ghost">
-                {secondaryCta.label}
+              <Link href={publicSignInCta.href} className="btn-ghost">
+                {publicSignInCta.label}
               </Link>
             </div>
           </div>

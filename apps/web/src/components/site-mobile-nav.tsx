@@ -4,17 +4,17 @@ import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { authBootstrapEnabled, primaryNav } from "@/lib/site";
+import { authBootstrapEnabled, primaryNav, publicSignInCta } from "@/lib/site";
 
 export function SiteMobileNav() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const ctaLinks = authBootstrapEnabled
     ? [
-        { href: "/login", label: "Sign In" },
+        publicSignInCta,
         { href: "/start", label: "Join Beta" },
       ]
-    : [{ href: "/download", label: "View Downloads" }];
+    : [publicSignInCta, { href: "/download", label: "View Downloads" }];
 
   useEffect(() => {
     setIsOpen(false);

@@ -20,6 +20,7 @@ import {
   getConversationPreviews,
   ingestRelayEnvelopes,
 } from "@/lib/relay-workspace";
+import { authBootstrapEnabled, publicSignInCta } from "@/lib/site";
 import { useAuthStore } from "@/lib/store";
 import { calcReconnectDelayMs } from "@/lib/backoff";
 
@@ -328,17 +329,27 @@ export function CompanionShell({ children }: { children: ReactNode }) {
         <div className="mx-auto max-w-4xl rounded-[2rem] border border-[var(--border)] bg-[var(--bg-elevated)] p-8 shadow-[0_16px_48px_rgba(32,19,18,0.08)]">
           <div className="eyebrow">Web Access</div>
           <h1 className="mt-5 text-balance font-display text-5xl font-semibold text-[var(--text-primary)] sm:text-6xl">
-            Confirm the email link before using the web app.
+            {authBootstrapEnabled
+              ? "Confirm the email link before using the web app."
+              : "Open the web app from a device you already trust."}
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-[var(--text-secondary)]">
-            The browser covers onboarding, messaging, invite review, search, and settings. Confirm
-            the email link to continue.
+            {authBootstrapEnabled
+              ? "The browser covers onboarding, messaging, invite review, search, and settings. Confirm the email link to continue."
+              : "The browser covers messaging, invite review, search, and settings. If another EmberChamber device is already signed in, approve this browser with QR and continue here."}
           </p>
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
-            <Link href="/login" className="card transition-colors hover:border-brand-500">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">Request Magic Link</p>
+            <Link
+              href={publicSignInCta.href}
+              className="card transition-colors hover:border-brand-500"
+            >
+              <p className="text-sm font-semibold text-[var(--text-primary)]">
+                {publicSignInCta.label}
+              </p>
               <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                Sign in from the private inbox that already has beta access.
+                {authBootstrapEnabled
+                  ? "Use the private inbox that already has beta access, or switch to QR inside the sign-in form."
+                  : "Approve this browser from a phone or desktop client that already has a live EmberChamber session."}
               </p>
             </Link>
             <Link href="/register" className="card transition-colors hover:border-brand-500">

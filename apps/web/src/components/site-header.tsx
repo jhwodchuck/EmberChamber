@@ -1,12 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { SiteMobileNav } from "@/components/site-mobile-nav";
-import { authBootstrapEnabled, primaryNav } from "@/lib/site";
+import { primaryNav, publicSignInCta } from "@/lib/site";
 
 export function SiteHeader() {
-  const secondaryCta = authBootstrapEnabled
-    ? { href: "/login", label: "Sign In" }
-    : { href: "/download", label: "View Downloads" };
   const primaryCta = { href: "/start", label: "Start Here" };
 
   return (
@@ -44,10 +41,10 @@ export function SiteHeader() {
         <div className="flex items-center gap-3">
           <SiteMobileNav />
           <Link
-            href={secondaryCta.href}
+            href={publicSignInCta.href}
             className="btn-ghost hidden sm:inline-flex"
           >
-            {secondaryCta.label}
+            {publicSignInCta.label}
           </Link>
           <Link href={primaryCta.href} className="btn-primary px-5">
             {primaryCta.label}
