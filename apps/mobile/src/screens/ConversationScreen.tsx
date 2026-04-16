@@ -286,6 +286,8 @@ export function ConversationScreen({
     () => buildConversationRows(threadMessages),
     [threadMessages],
   );
+  const maintainVisibleContentPosition =
+    Platform.OS === "ios" ? { minIndexForVisible: 0 } : undefined;
   const firstMessageId = threadMessages[0]?.id ?? null;
   const lastMessageId = threadMessages[threadMessages.length - 1]?.id ?? null;
   const restoredAnchorIndex = useMemo(
@@ -362,7 +364,11 @@ export function ConversationScreen({
     }
 
     requestAnimationFrame(() => {
-      listRef.current?.scrollToEnd({ animated: !conversationChanged });
+      listRef.current?.scrollToEnd({
+        // Android already has shell + IME resize adjustments. Avoid animated
+        // bottom snaps there because they can fight list anchoring after send.
+        animated: Platform.OS !== "android" && !conversationChanged,
+      });
     });
   }, [
     conversationRows.length,
@@ -598,7 +604,10 @@ export function ConversationScreen({
           data={conversationRows}
           keyExtractor={(item) => item.key}
           showsVerticalScrollIndicator={false}
-          maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
+          // This list never prepends history. On Android, preserving the first
+          // visible item while also forcing scrollToEnd after send can cause the
+          // thread to oscillate when the keyboard and composer resize.
+          maintainVisibleContentPosition={maintainVisibleContentPosition}
           onScroll={handleConversationScroll}
           onScrollToIndexFailed={handleScrollToIndexFailed}
           onViewableItemsChanged={onViewableItemsChangedRef.current}
