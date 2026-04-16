@@ -133,6 +133,25 @@ type ActiveDeviceLink = {
   qrMode: DeviceLinkQrMode;
 };
 
+function compareGroupThreadMessagesByCreatedAt(
+  left: GroupThreadMessage,
+  right: GroupThreadMessage,
+) {
+  return (
+    new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime()
+  );
+}
+
+function mergeGroupThreadMessage(
+  messages: GroupThreadMessage[],
+  nextMessage: GroupThreadMessage,
+) {
+  return messages
+    .filter((entry) => entry.id !== nextMessage.id)
+    .concat(nextMessage)
+    .sort(compareGroupThreadMessagesByCreatedAt);
+}
+
 // ---------------------------------------------------------------------------
 // App – thin orchestrator
 // ---------------------------------------------------------------------------
@@ -954,14 +973,10 @@ export default function App() {
           createdAt: payload.createdAt,
         };
 
-        const mergedMessages = conversationMessages
-          .filter((entry) => entry.id !== nextMessage.id)
-          .concat(nextMessage)
-          .sort(
-            (left, right) =>
-              new Date(left.createdAt).getTime() -
-              new Date(right.createdAt).getTime(),
-          );
+        const mergedMessages = mergeGroupThreadMessage(
+          conversationMessages,
+          nextMessage,
+        );
 
         updatedMessages.set(envelope.conversationId, mergedMessages);
         receivedConversationIds.add(envelope.conversationId);
@@ -1699,11 +1714,7 @@ export default function App() {
                       if (prev.some((entry) => entry.id === message.id)) {
                         return prev;
                       }
-                      const next = [message, ...prev].sort(
-                        (a, b) =>
-                          new Date(b.createdAt).getTime() -
-                          new Date(a.createdAt).getTime(),
-                      );
+                      const next = mergeGroupThreadMessage(prev, message);
                       if (db) {
                         saveCachedGroupMessages(
                           db,
@@ -2617,7 +2628,10 @@ export default function App() {
         );
       }
 
-      const nextThreadMessages = [...threadMessages, createdMessage];
+      const nextThreadMessages = mergeGroupThreadMessage(
+        threadMessages,
+        createdMessage,
+      );
       setThreadMessages(nextThreadMessages);
       if (!overrideText) setMessageDraft("");
       setPendingAttachment(null);
