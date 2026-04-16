@@ -2,6 +2,22 @@
 
 Screenshots are captured automatically from CI on every successful build and published here by the [Publish Screenshot Gallery](https://github.com/jhwodchuck/EmberChamber/actions/workflows/publish-screenshots.yml) workflow.
 
+## Android · Phone
+
+_Pixel 6 · 1080 × 2400 · portrait_
+
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin:1.5rem 0">
+
+<img src="/screenshots/android/phone/01-phone-onboarding-top.png" alt="Android · Phone — 01 phone onboarding top" loading="lazy" style="width:100%;border-radius:6px;border:1px solid var(--vp-c-divider)">
+
+<img src="/screenshots/android/phone/02-phone-invite-expanded.png" alt="Android · Phone — 02 phone invite expanded" loading="lazy" style="width:100%;border-radius:6px;border:1px solid var(--vp-c-divider)">
+
+<img src="/screenshots/android/phone/03-phone-mid-form.png" alt="Android · Phone — 03 phone mid form" loading="lazy" style="width:100%;border-radius:6px;border:1px solid var(--vp-c-divider)">
+
+<img src="/screenshots/android/phone/04-phone-bottom-form.png" alt="Android · Phone — 04 phone bottom form" loading="lazy" style="width:100%;border-radius:6px;border:1px solid var(--vp-c-divider)">
+
+</div>
+
 ## Android · Tablet
 
 _Pixel Tablet · 1600 × 2560 · portrait_
