@@ -118,9 +118,14 @@ jobs:
 
       - name: Install automotive system image
         if: matrix.device_class == 'auto'
+        continue-on-error: true
         run: |
-          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager \
-            "system-images;android-33;android-automotive-playstore;x86_64"
+          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager \
+            --channel=0 \
+            "system-images;android-33;android-automotive-playstore;x86_64" || \
+          yes | sdkmanager \
+            --channel=0 \
+            "system-images;android-33;android-automotive-playstore;x86_64" || true
 
       - name: Capture emulator screenshots
         uses: reactivecircus/android-emulator-runner@v2
