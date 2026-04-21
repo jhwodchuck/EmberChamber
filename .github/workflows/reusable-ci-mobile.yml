@@ -116,39 +116,14 @@ jobs:
           fi
           echo "APK_PATH=$APK_PATH" >> "$GITHUB_ENV"
 
-      - name: Install automotive system image
-        id: aaos-install
-        if: matrix.device_class == 'auto'
-        continue-on-error: true
-        run: |
-          SDKMANAGER="${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager"
-          PACKAGE="system-images;android-33;android-automotive-playstore;x86_64"
-
-          # Pre-accept all SDK licenses so the install prompt doesn't block.
-          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
-
-          AAOS_INSTALLED=false
-          # Try channel 3 (canary) first — the automotive image is not in channel 0
-          # on GitHub-hosted ubuntu-22.04 runners.
-          if yes | "$SDKMANAGER" --channel=3 "$PACKAGE"; then
-            AAOS_INSTALLED=true
-          elif yes | "$SDKMANAGER" --channel=1 "$PACKAGE"; then
-            AAOS_INSTALLED=true
-          elif yes | "$SDKMANAGER" --channel=0 "$PACKAGE"; then
-            AAOS_INSTALLED=true
-          else
-            echo "::warning::AAOS system image unavailable on this runner; auto screenshots will be skipped"
-          fi
-          echo "installed=$AAOS_INSTALLED" >> "$GITHUB_OUTPUT"
-
       - name: Capture emulator screenshots
-        uses: reactivecircus/android-emulator-runner@v2
+        uses: reactivecircus/android-emulator-runner@v2.37.0
         continue-on-error: true
-        if: matrix.device_class != 'auto' || steps.aaos-install.outputs.installed == 'true'
         with:
           api-level: ${{ matrix.device_class == 'auto' && '33' || '30' }}
           arch: x86_64
-          target: ${{ matrix.device_class == 'auto' && 'android-automotive-playstore' || 'google_apis' }}
+          target: ${{ matrix.device_class == 'auto' && 'android-automotive' || 'google_apis' }}
+          channel: stable
           profile: ${{ matrix.avd_profile != '' && matrix.avd_profile || 'pixel_5' }}
           avd-name: ci-screenshot-avd-${{ matrix.device_class }}
           force-avd-creation: true
@@ -158,7 +133,7 @@ jobs:
           script: bash apps/mobile/scripts/run-emulator-screenshots.sh "$APK_PATH" "${{ matrix.device_class }}" "${{ matrix.wm_size }}" "${{ matrix.wm_density }}" "${{ matrix.orientation }}"
 
       - name: Upload Android screenshot artifacts
-        if: always() && (matrix.device_class != 'auto' || steps.aaos-install.outputs.installed == 'true')
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: emberchamber-android-screenshots-${{ matrix.device_class }}-${{ env.ARTIFACT_SUFFIX }}
