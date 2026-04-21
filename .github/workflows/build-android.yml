@@ -168,6 +168,7 @@ jobs:
         run: |
           npm run build --workspace=packages/protocol
           npm run build --workspace=packages/shared
+          npm run build --workspace=packages/ui
 
       - name: Validate Android release inputs
         if: inputs.validate_release_inputs
