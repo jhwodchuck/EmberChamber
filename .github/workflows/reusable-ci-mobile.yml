@@ -121,15 +121,23 @@ jobs:
         if: matrix.device_class == 'auto'
         continue-on-error: true
         run: |
+          SDKMANAGER="${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager"
+          PACKAGE="system-images;android-33;android-automotive-playstore;x86_64"
+
+          # Pre-accept all SDK licenses so the install prompt doesn't block.
+          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+
           AAOS_INSTALLED=false
-          if yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager \
-            --channel=0 \
-            "system-images;android-33;android-automotive-playstore;x86_64" 2>/dev/null; then
+          # Try channel 3 (canary) first — the automotive image is not in channel 0
+          # on GitHub-hosted ubuntu-22.04 runners.
+          if yes | "$SDKMANAGER" --channel=3 "$PACKAGE"; then
             AAOS_INSTALLED=true
-          elif yes | sdkmanager \
-            --channel=0 \
-            "system-images;android-33;android-automotive-playstore;x86_64" 2>/dev/null; then
+          elif yes | "$SDKMANAGER" --channel=1 "$PACKAGE"; then
             AAOS_INSTALLED=true
+          elif yes | "$SDKMANAGER" --channel=0 "$PACKAGE"; then
+            AAOS_INSTALLED=true
+          else
+            echo "::warning::AAOS system image unavailable on this runner; auto screenshots will be skipped"
           fi
           echo "installed=$AAOS_INSTALLED" >> "$GITHUB_OUTPUT"
 
