@@ -48,8 +48,9 @@ if [[ "$APK_INSTALLED" != "true" ]]; then
 fi
 
 # Exercise the compositor once so the first real screencap does not fail.
-adb shell screencap -p /sdcard/emberchamber-ci-warmup.png >/dev/null || true
-adb shell rm -f /sdcard/emberchamber-ci-warmup.png >/dev/null || true
+# Use /data/local/tmp — always writable on all Android images including AAOS.
+adb shell screencap -p /data/local/tmp/emberchamber-ci-warmup.png >/dev/null || true
+adb shell rm -f /data/local/tmp/emberchamber-ci-warmup.png >/dev/null || true
 
 if [[ "$DEVICE_CLASS" == "auto" ]]; then
   bash "$(dirname "$0")/capture-auto-screenshots.sh" \
