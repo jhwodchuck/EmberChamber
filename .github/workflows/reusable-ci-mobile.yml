@@ -117,19 +117,26 @@ jobs:
           echo "APK_PATH=$APK_PATH" >> "$GITHUB_ENV"
 
       - name: Install automotive system image
+        id: aaos-install
         if: matrix.device_class == 'auto'
         continue-on-error: true
         run: |
-          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager \
+          AAOS_INSTALLED=false
+          if yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager \
             --channel=0 \
-            "system-images;android-33;android-automotive-playstore;x86_64" || \
-          yes | sdkmanager \
+            "system-images;android-33;android-automotive-playstore;x86_64" 2>/dev/null; then
+            AAOS_INSTALLED=true
+          elif yes | sdkmanager \
             --channel=0 \
-            "system-images;android-33;android-automotive-playstore;x86_64" || true
+            "system-images;android-33;android-automotive-playstore;x86_64" 2>/dev/null; then
+            AAOS_INSTALLED=true
+          fi
+          echo "installed=$AAOS_INSTALLED" >> "$GITHUB_OUTPUT"
 
       - name: Capture emulator screenshots
         uses: reactivecircus/android-emulator-runner@v2
         continue-on-error: true
+        if: matrix.device_class != 'auto' || steps.aaos-install.outputs.installed == 'true'
         with:
           api-level: ${{ matrix.device_class == 'auto' && '33' || '30' }}
           arch: x86_64
