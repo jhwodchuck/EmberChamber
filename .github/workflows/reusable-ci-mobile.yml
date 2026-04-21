@@ -82,7 +82,7 @@ jobs:
             wm_size: 1080x2220
             wm_density: 440
           - device_class: tablet
-            avd_profile: medium_tablet
+            avd_profile: pixel_c
             orientation: portrait
             wm_size: 1600x2560
             wm_density: 320
@@ -150,7 +150,7 @@ jobs:
           script: bash apps/mobile/scripts/run-emulator-screenshots.sh "$APK_PATH" "${{ matrix.device_class }}" "${{ matrix.wm_size }}" "${{ matrix.wm_density }}" "${{ matrix.orientation }}"
 
       - name: Upload Android screenshot artifacts
-        if: always()
+        if: always() && (matrix.device_class != 'auto' || steps.aaos-install.outputs.installed == 'true')
         uses: actions/upload-artifact@v7
         with:
           name: emberchamber-android-screenshots-${{ matrix.device_class }}-${{ env.ARTIFACT_SUFFIX }}
