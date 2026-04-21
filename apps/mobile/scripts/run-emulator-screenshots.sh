@@ -10,7 +10,29 @@ WM_SIZE="${3:-1080x1920}"
 WM_DENSITY="${4:-420}"
 ORIENTATION="${5:-portrait}"
 
-if ! adb install -r "$APK_PATH"; then
+# Wait for the package manager to be fully ready.
+# boot_completed=1 is set before the package manager service is stable;
+# attempting adb install immediately produces "Broken pipe (32)".
+echo "Waiting for package manager to be ready..."
+for _pm_attempt in 1 2 3 4 5 6 7 8 9 10; do
+  if adb shell pm list packages 2>/dev/null | grep -q "^package:"; then
+    break
+  fi
+  sleep 5
+done
+
+# Retry the install — transient Broken pipe errors clear within a few seconds.
+APK_INSTALLED=false
+for _install_attempt in 1 2 3; do
+  if adb install -r "$APK_PATH"; then
+    APK_INSTALLED=true
+    break
+  fi
+  echo "Install attempt ${_install_attempt} failed, retrying in 5s..."
+  sleep 5
+done
+
+if [[ "$APK_INSTALLED" != "true" ]]; then
   echo "::warning::APK install failed for ${DEVICE_CLASS}, no screenshots will be captured"
   exit 0
 fi
