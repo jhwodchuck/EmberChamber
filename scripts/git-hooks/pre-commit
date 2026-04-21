@@ -20,4 +20,27 @@ if command -v cargo >/dev/null 2>&1; then
   fi
 fi
 
+# ── Mobile Expo dependency alignment ────────────────────────────────────────
+# Run Expo doctor when staged changes touch the mobile dependency manifests so
+# SDK patch drift fails locally instead of first surfacing in CI.
+if git diff --cached --name-only | grep -Eq '^(apps/mobile/package\.json|package-lock\.json)$'; then
+  if ! command -v npm >/dev/null 2>&1; then
+    echo ""
+    echo "  Mobile dependency check requires npm, but npm is not available."
+    echo "  Install Node/npm or commit with --no-verify if you intentionally"
+    echo "  want to bypass the local Expo doctor guard."
+    exit 1
+  fi
+
+  echo "pre-commit: checking Expo mobile dependency alignment…"
+  if ! npm run doctor --workspace=apps/mobile; then
+    echo ""
+    echo "  Expo doctor failed for apps/mobile."
+    echo "  Fix the dependency mismatch, re-stage package.json/package-lock.json,"
+    echo "  and commit again."
+    exit 1
+  fi
+  echo "pre-commit: Expo mobile dependency alignment OK"
+fi
+
 exit 0
