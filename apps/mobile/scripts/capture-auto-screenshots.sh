@@ -30,7 +30,9 @@ adb shell wm density "$WM_DENSITY" || true
 
 capture_png() {
   local target="$1"
-  local remote_path="/sdcard/emberchamber-auto-screencap.png"
+  # /sdcard is not writable on android-automotive (AAOS) — use /data/local/tmp
+  # which is always writable via adb on all Android system images.
+  local remote_path="/data/local/tmp/emberchamber-auto-screencap.png"
   local attempt
 
   for attempt in 1 2 3; do
@@ -73,8 +75,8 @@ PY
 }
 
 # Warm the compositor.
-adb shell screencap -p /sdcard/emberchamber-auto-warmup.png >/dev/null 2>&1 || true
-adb shell rm -f /sdcard/emberchamber-auto-warmup.png >/dev/null 2>&1 || true
+adb shell screencap -p /data/local/tmp/emberchamber-auto-warmup.png >/dev/null 2>&1 || true
+adb shell rm -f /data/local/tmp/emberchamber-auto-warmup.png >/dev/null 2>&1 || true
 
 # -------------------------------------------------------------------------
 # Launch the app in the AAOS car launcher.
