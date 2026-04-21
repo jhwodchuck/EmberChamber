@@ -12,11 +12,12 @@
     "doctor": "expo-doctor",
     "verify": "npm run doctor && npm run type-check",
     "prebuild": "npm run android:patch-build && expo prebuild --platform android --clean --no-install && npm run android:patch-release-config",
+    "prebuild:android:preserve-worktree": "node ./scripts/run-android-prebuild-preserving-worktree.js",
     "prebuild:ios": "expo prebuild --platform ios --clean --no-install",
     "build:android": "npm run android:patch-build && expo prebuild --platform android --no-install && npm run android:patch-release-config",
     "build:ios": "expo prebuild --platform ios --no-install",
     "verify:google-services": "node ./scripts/verify-google-services-file.js",
-    "verify:android": "npm run doctor && npm run type-check && npm run prebuild",
+    "verify:android": "npm run doctor && npm run type-check && npm run prebuild:android:preserve-worktree",
     "type-check": "npm --prefix ../../packages/protocol run build && npm --prefix ../../packages/shared run build && npm --prefix ../../packages/ui run build && tsc --noEmit"
   },
   "expo": {
