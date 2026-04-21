@@ -13,6 +13,7 @@
 - [`api/relay-http.md`](api/relay-http.md): active Cloudflare relay endpoint map
 - [`security/threat-model.md`](security/threat-model.md): current-vs-target security posture and claim discipline
 - [`product/personas.md`](product/personas.md): current beta personas and flows
+- [`product/ui-patterns.md`](product/ui-patterns.md): shared product-level shell, messaging, and design-token vocabulary for active clients
 - [`operator-playbook.md`](operator-playbook.md): operational guidance aligned with current tooling
 
 ## Transitional Docs
@@ -21,9 +22,6 @@
 
 ## Work Plans
 
-- [`plansforwork/2026-04-02-roadmap-phase0-phase1-implementation-plan.md`](plansforwork/2026-04-02-roadmap-phase0-phase1-implementation-plan.md): execution plan for the roadmap phase 0 and phase 1 repo pass
-- [`plansforwork/2026-04-02-roadmap-phase2-implementation-plan.md`](plansforwork/2026-04-02-roadmap-phase2-implementation-plan.md): execution plan for the first roadmap phase 2 relay and web slice
-- [`plansforwork/2026-04-02-ubuntu-copy-polish-plan.md`](plansforwork/2026-04-02-ubuntu-copy-polish-plan.md): Ubuntu copy, docs, and testing alignment plan
 - [`plansforwork/relay-hardening-and-relay-first-migration.md`](plansforwork/relay-hardening-and-relay-first-migration.md): relay hardening and relay-first migration program plan
 
 - [`plansforwork/2026-04-04-ui-surface-punch-list.md`](plansforwork/2026-04-04-ui-surface-punch-list.md): repo-ready UI punch list grouped by surface, component, and priority

@@ -71,12 +71,81 @@ export const colors = {
   },
 } as const;
 
+export const colorRoles = {
+  appBackground: colors.obsidian[950],
+  panel: colors.obsidian[900],
+  panelStrong: colors.obsidian[800],
+  surface: colors.glass.surface,
+  surfaceStrong: colors.glass.surfaceStrong,
+  surfaceSubtle: colors.glass.surfaceSubtle,
+  inputBackground: "#14181c",
+  inputBorder: colors.glass.border,
+  border: colors.glass.border,
+  borderStrong: colors.glass.borderStrong,
+  brandPrimary: colors.ember[500],
+  brandPrimaryPressed: colors.ember[600],
+  brandSoft: "rgba(234, 111, 63, 0.14)",
+  brandMuted: "rgba(234, 111, 63, 0.12)",
+  textPrimary: "#f5f7fa",
+  textSecondary: "#c8ced6",
+  textMuted: "#8d98a4",
+  textSoft: "#ffd9c9",
+  placeholder: "#707b86",
+  successBorder: colors.success.border,
+  successBackground: colors.success.background,
+  successText: colors.success.text,
+  warningBorder: colors.warning.border,
+  warningBackground: colors.warning.background,
+  warningText: colors.warning.text,
+  errorBorder: colors.error.border,
+  errorBackground: colors.error.background,
+  errorText: colors.error.text,
+  infoBorder: colors.info.border,
+  infoBackground: colors.info.background,
+  infoText: colors.info.text,
+} as const;
+
+export const textRoles = {
+  title: colorRoles.textPrimary,
+  body: colorRoles.textSecondary,
+  muted: colorRoles.textMuted,
+  accent: colorRoles.textSoft,
+  danger: colorRoles.errorText,
+} as const;
+
+export const borderRoles = {
+  subtle: colorRoles.border,
+  strong: colorRoles.borderStrong,
+  input: colorRoles.inputBorder,
+  success: colorRoles.successBorder,
+  warning: colorRoles.warningBorder,
+  error: colorRoles.errorBorder,
+  info: colorRoles.infoBorder,
+} as const;
+
 // ─── Shadows ─────────────────────────────────────────────────────────────────
 
 export const shadows = {
   glass: "0 28px 70px rgba(0, 0, 0, 0.34)",
   glowEmber: "0 16px 38px rgba(234, 111, 63, 0.28)",
   inset: "inset 0 1px 0 rgba(255, 255, 255, 0.1)",
+} as const;
+
+export const elevationRoles = {
+  panel: {
+    shadowColor: "#000000",
+    shadowOpacity: 0.16,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
+  },
+  brand: {
+    shadowColor: colorRoles.brandPrimary,
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
+  },
 } as const;
 
 // ─── Typography ──────────────────────────────────────────────────────────────
@@ -144,6 +213,11 @@ export const animation = {
   },
 } as const;
 
+export const motionRoles = {
+  duration: animation.duration,
+  easing: animation.easing,
+} as const;
+
 // ─── Border radius ────────────────────────────────────────────────────────────
 
 export const borderRadius = {
@@ -167,6 +241,13 @@ export const zIndex = {
   modal: 30,
   toast: 40,
   tooltip: 50,
+} as const;
+
+export const iconSizes = {
+  sm: 16,
+  md: 20,
+  lg: 24,
+  xl: 32,
 } as const;
 
 // ─── Trust state colours ─────────────────────────────────────────────────────

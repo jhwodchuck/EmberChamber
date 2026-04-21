@@ -1,13 +1,38 @@
 "use client";
 
 import type { CipherEnvelope } from "@emberchamber/protocol";
-import { Compass, LogOut, MessageSquare, PlusSquare, Search, Settings, ShieldCheck } from "lucide-react";
+import {
+  Compass,
+  LogOut,
+  MessageSquare,
+  PlusSquare,
+  Search,
+  Settings,
+  ShieldCheck,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { createContext, startTransition, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  createContext,
+  startTransition,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { clsx } from "clsx";
 import { Avatar } from "@/components/avatar";
-import { conversationDefaultTitle, conversationTypeLabel } from "@/lib/conversation-labels";
+import { ChatRail } from "@/components/chat-rail";
+import {
+  createConversationPreference,
+  estimateConversationUnreadCount,
+  readConversationPreferences,
+  updateConversationPreferenceMap,
+  writeConversationPreferences,
+  type ConversationPreference,
+} from "@/lib/conversation-preferences";
 import {
   createRelayMailboxWebSocket,
   ensureRelayAccessToken,
@@ -19,6 +44,7 @@ import {
   ensureWorkspaceReady,
   getConversationPreviews,
   ingestRelayEnvelopes,
+  listStoredConversationMessages,
 } from "@/lib/relay-workspace";
 import { authBootstrapEnabled, publicSignInCta } from "@/lib/site";
 import { useAuthStore } from "@/lib/store";
@@ -38,6 +64,8 @@ type CompanionShellContextValue = {
     avatarUrl?: string | null;
     updatedAt: string;
     unreadCount: number;
+    memberCount: number;
+    historyMode: "relay_hosted" | "device_encrypted";
     lastMessage?: { content?: string | null } | null;
   }>;
   channels: Array<{
@@ -87,6 +115,22 @@ const emptyState: CompanionShellContextValue = {
   refreshShellData: async () => undefined,
 };
 
+function getActiveConversationId(pathname: string) {
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments[0] !== "app") {
+    return null;
+  }
+
+  if (
+    (segments[1] === "chat" || segments[1] === "community") &&
+    segments[2]
+  ) {
+    return segments[2];
+  }
+
+  return null;
+}
+
 export function useCompanionShell() {
   const context = useContext(CompanionShellContext);
 
@@ -104,6 +148,9 @@ export function CompanionShell({ children }: { children: ReactNode }) {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [conversations, setConversations] = useState<CompanionShellContextValue["conversations"]>([]);
   const [conversationsState, setConversationsState] = useState<LoadState>({ status: "idle" });
+  const [conversationPreferences, setConversationPreferences] = useState<
+    Record<string, ConversationPreference>
+  >({});
   const [isConnected, setIsConnected] = useState(false);
   const [mailboxRevision, setMailboxRevision] = useState(0);
   const mailboxReconnectTimerRef = useRef<number | null>(null);
@@ -113,6 +160,7 @@ export function CompanionShell({ children }: { children: ReactNode }) {
   const user = useAuthStore((state) => state.user);
   const isLoadingUser = useAuthStore((state) => state.isLoading);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const activeConversationId = getActiveConversationId(pathname);
 
   useEffect(() => {
     const session = readRelaySession();
@@ -123,57 +171,166 @@ export function CompanionShell({ children }: { children: ReactNode }) {
     }
   }, [loadUser]);
 
-  async function refreshShellData(options: { syncWorkspace?: boolean } = {}) {
-    const { syncWorkspace = true } = options;
-    setConversationsState({ status: "loading" });
+  useEffect(() => {
+    setConversationPreferences(readConversationPreferences(user?.id));
+  }, [user?.id]);
 
-    try {
-      if (syncWorkspace) {
-        await ensureWorkspaceReady();
-      }
+  const refreshShellData = useCallback(
+    async (options: { syncWorkspace?: boolean } = {}) => {
+      const { syncWorkspace = true } = options;
+      setConversationsState({ status: "loading" });
 
-      const nextConversations = await relayConversationApi.list();
-      const previews = await getConversationPreviews(nextConversations.map((conversation) => conversation.id));
+      try {
+        if (syncWorkspace) {
+          await ensureWorkspaceReady();
+        }
 
-      startTransition(() => {
-        setConversations(
-          nextConversations.map((conversation) => {
-            const preview = previews[conversation.id];
-            return {
-              id: conversation.id,
-              type:
-                conversation.kind === "direct_message"
-                  ? "dm"
-                  : conversation.kind === "community"
-                    ? "community"
-                    : conversation.kind === "room"
-                      ? "room"
-                      : "group",
-              name: conversation.title,
-              href: conversationHref({ id: conversation.id, kind: conversation.kind }),
-              avatarUrl: null,
-              updatedAt: conversation.lastMessageAt ?? conversation.updatedAt,
-              unreadCount: 0,
-              lastMessage: preview?.text
-                ? { content: preview.text }
-                : preview?.attachment
-                  ? { content: preview.attachment.fileName }
-                  : null,
-            };
-          }),
+        const nextConversations = await relayConversationApi.list();
+        const storedPreferences = readConversationPreferences(user?.id);
+        const previews = await getConversationPreviews(
+          nextConversations.map((conversation) => conversation.id),
         );
-        setConversationsState({ status: "ready" });
+        const storedMessagesByConversation = Object.fromEntries(
+          await Promise.all(
+            nextConversations.map(async (conversation) => [
+              conversation.id,
+              conversation.historyMode === "device_encrypted"
+                ? await listStoredConversationMessages(conversation.id)
+                : [],
+            ]),
+          ),
+        );
+
+        startTransition(() => {
+          setConversationPreferences(storedPreferences);
+          setConversations(
+            nextConversations.map((conversation) => {
+              const preview = previews[conversation.id];
+              const preference =
+                storedPreferences[conversation.id] ??
+                createConversationPreference(conversation.id);
+              return {
+                id: conversation.id,
+                type:
+                  conversation.kind === "direct_message"
+                    ? "dm"
+                    : conversation.kind === "community"
+                      ? "community"
+                      : conversation.kind === "room"
+                        ? "room"
+                        : "group",
+                name: conversation.title,
+                href: conversationHref({
+                  id: conversation.id,
+                  kind: conversation.kind,
+                }),
+                avatarUrl: null,
+                updatedAt: conversation.lastMessageAt ?? conversation.updatedAt,
+                unreadCount: estimateConversationUnreadCount({
+                  accountId: user?.id,
+                  conversation,
+                  preference,
+                  storedMessages: storedMessagesByConversation[conversation.id],
+                }),
+                memberCount: conversation.memberCount,
+                historyMode: conversation.historyMode,
+                lastMessage: preview?.text
+                  ? { content: preview.text }
+                  : preview?.attachment
+                    ? { content: preview.attachment.fileName }
+                    : null,
+              };
+            }),
+          );
+          setConversationsState({ status: "ready" });
+        });
+      } catch (error) {
+        setConversationsState({
+          status: "error",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Unable to load relay conversations.",
+        });
+      }
+    },
+    [user?.id],
+  );
+
+  const commitConversationPreferences = useCallback(
+    (
+      updater: (
+        current: Record<string, ConversationPreference>,
+      ) => Record<string, ConversationPreference>,
+    ) => {
+      setConversationPreferences((current) => {
+        const next = updater(current);
+        writeConversationPreferences(user?.id, next);
+        return next;
       });
-    } catch (error) {
-      setConversationsState({
-        status: "error",
-        message: error instanceof Error ? error.message : "Unable to load relay conversations.",
+    },
+    [user?.id],
+  );
+
+  const markConversationRead = useCallback(
+    (conversationId: string) => {
+      commitConversationPreferences((current) =>
+        updateConversationPreferenceMap(current, conversationId, {
+          lastReadAt: new Date().toISOString(),
+        }),
+      );
+      setConversations((current) =>
+        current.map((conversation) =>
+          conversation.id === conversationId
+            ? { ...conversation, unreadCount: 0 }
+            : conversation,
+        ),
+      );
+    },
+    [commitConversationPreferences],
+  );
+
+  const toggleConversationPinned = useCallback(
+    (conversationId: string) => {
+      commitConversationPreferences((current) => {
+        const currentPreference =
+          current[conversationId] ?? createConversationPreference(conversationId);
+        return updateConversationPreferenceMap(current, conversationId, {
+          isPinned: !currentPreference.isPinned,
+        });
       });
-    }
-  }
+    },
+    [commitConversationPreferences],
+  );
+
+  const toggleConversationMuted = useCallback(
+    (conversationId: string) => {
+      commitConversationPreferences((current) => {
+        const currentPreference =
+          current[conversationId] ?? createConversationPreference(conversationId);
+        return updateConversationPreferenceMap(current, conversationId, {
+          isMuted: !currentPreference.isMuted,
+        });
+      });
+    },
+    [commitConversationPreferences],
+  );
+
+  const toggleConversationArchived = useCallback(
+    (conversationId: string) => {
+      commitConversationPreferences((current) => {
+        const currentPreference =
+          current[conversationId] ?? createConversationPreference(conversationId);
+        return updateConversationPreferenceMap(current, conversationId, {
+          isArchived: !currentPreference.isArchived,
+        });
+      });
+    },
+    [commitConversationPreferences],
+  );
 
   useEffect(() => {
-    if (!hasSession || !isAuthenticated) {
+    if (!hasSession || !isAuthenticated || !user?.id) {
       return;
     }
 
@@ -190,7 +347,15 @@ export function CompanionShell({ children }: { children: ReactNode }) {
       window.removeEventListener("focus", handleVisibilityRefresh);
       document.removeEventListener("visibilitychange", handleVisibilityRefresh);
     };
-  }, [hasSession, isAuthenticated]);
+  }, [hasSession, isAuthenticated, refreshShellData, user?.id]);
+
+  useEffect(() => {
+    if (!activeConversationId) {
+      return;
+    }
+
+    markConversationRead(activeConversationId);
+  }, [activeConversationId, markConversationRead]);
 
   useEffect(() => {
     if (!hasSession || !isAuthenticated) {
@@ -286,7 +451,7 @@ export function CompanionShell({ children }: { children: ReactNode }) {
       ws?.close();
       setIsConnected(false);
     };
-  }, [hasSession, isAuthenticated]);
+  }, [hasSession, isAuthenticated, refreshShellData]);
 
   async function handleSignOut() {
     setIsSigningOut(true);
@@ -486,50 +651,17 @@ export function CompanionShell({ children }: { children: ReactNode }) {
               </div>
             </div>
 
-            <div className="panel p-5">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">
-                  Recent Conversations
-                </p>
-                <button type="button" onClick={() => void refreshShellData()} className="text-xs text-brand-600">
-                  Refresh
-                </button>
-              </div>
-
-              <div className="mt-4 space-y-2">
-                {conversationsState.status === "loading" ? (
-                  <p className="text-sm text-[var(--text-secondary)]">Syncing relay conversations…</p>
-                ) : conversationsState.status === "error" ? (
-                  <p className="text-sm text-[var(--text-secondary)]">
-                    {conversationsState.message ?? "Unable to load relay conversations."}
-                  </p>
-                ) : conversations.length === 0 ? (
-                  <p className="text-sm text-[var(--text-secondary)]">
-                    No conversations yet. Start a DM, create a Group, or review an Invite.
-                  </p>
-                ) : (
-                  conversations.slice(0, 6).map((conversation) => (
-                    <Link
-                      key={conversation.id}
-                      href={conversation.href}
-                      className="block rounded-[1.2rem] border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-3 transition-colors hover:border-brand-500"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="truncate text-sm font-medium text-[var(--text-primary)]">
-                          {conversation.name ?? conversationDefaultTitle(conversation.type)}
-                        </p>
-                        <span className="text-[11px] uppercase tracking-[0.14em] text-[var(--text-secondary)]">
-                          {conversationTypeLabel(conversation.type)}
-                        </span>
-                      </div>
-                      <p className="mt-1 truncate text-xs text-[var(--text-secondary)]">
-                        {conversation.lastMessage?.content ?? "No local message preview yet"}
-                      </p>
-                    </Link>
-                  ))
-                )}
-              </div>
-            </div>
+            <ChatRail
+              conversations={conversations}
+              conversationsState={conversationsState}
+              activeConversationId={activeConversationId}
+              preferences={conversationPreferences}
+              onRefresh={refreshShellData}
+              onOpenConversation={markConversationRead}
+              onToggleConversationPinned={toggleConversationPinned}
+              onToggleConversationMuted={toggleConversationMuted}
+              onToggleConversationArchived={toggleConversationArchived}
+            />
           </aside>
 
           <main id="main-content" className="min-w-0">

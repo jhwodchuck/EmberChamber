@@ -1,31 +1,49 @@
 import { Platform, StyleSheet } from "react-native";
+import {
+  borderRadius as sharedBorderRadius,
+  colorRoles,
+  elevationRoles,
+  spacing as sharedSpacing,
+} from "@emberchamber/ui/tokens";
+
+function tokenToPx(value: string) {
+  if (value.endsWith("rem")) {
+    return Number.parseFloat(value) * 16;
+  }
+
+  if (value.endsWith("px")) {
+    return Number.parseFloat(value);
+  }
+
+  return Number.parseFloat(value);
+}
 
 const colors = {
-  background: "#101214",
-  panel: "#171a1d",
-  panelStrong: "#1b1f23",
-  surface: "#20252a",
-  surfaceStrong: "#262b31",
-  border: "rgba(255, 255, 255, 0.09)",
-  borderStrong: "rgba(234, 111, 63, 0.3)",
-  brand: "#ea6f3f",
-  brandPressed: "#d66034",
-  brandSoft: "rgba(234, 111, 63, 0.14)",
-  brandMuted: "rgba(234, 111, 63, 0.12)",
-  textPrimary: "#f5f7fa",
-  textSecondary: "#c8ced6",
-  textMuted: "#8d98a4",
-  textSoft: "#ffd9c9",
-  placeholder: "#707b86",
-  inputBackground: "#14181c",
-  inputBorder: "rgba(255, 255, 255, 0.09)",
-  successBorder: "rgba(124, 230, 191, 0.34)",
-  successBackground: "rgba(21, 67, 50, 0.44)",
-  warningBorder: "rgba(255, 210, 139, 0.36)",
-  warningBackground: "rgba(82, 56, 21, 0.44)",
-  errorBorder: "rgba(253, 164, 175, 0.34)",
-  errorBackground: "rgba(88, 29, 37, 0.44)",
-  errorText: "#fecdd3",
+  background: colorRoles.appBackground,
+  panel: colorRoles.panel,
+  panelStrong: colorRoles.panelStrong,
+  surface: colorRoles.surface,
+  surfaceStrong: colorRoles.surfaceStrong,
+  border: colorRoles.border,
+  borderStrong: colorRoles.borderStrong,
+  brand: colorRoles.brandPrimary,
+  brandPressed: colorRoles.brandPrimaryPressed,
+  brandSoft: colorRoles.brandSoft,
+  brandMuted: colorRoles.brandMuted,
+  textPrimary: colorRoles.textPrimary,
+  textSecondary: colorRoles.textSecondary,
+  textMuted: colorRoles.textMuted,
+  textSoft: colorRoles.textSoft,
+  placeholder: colorRoles.placeholder,
+  inputBackground: colorRoles.inputBackground,
+  inputBorder: colorRoles.inputBorder,
+  successBorder: colorRoles.successBorder,
+  successBackground: colorRoles.successBackground,
+  warningBorder: colorRoles.warningBorder,
+  warningBackground: colorRoles.warningBackground,
+  errorBorder: colorRoles.errorBorder,
+  errorBackground: colorRoles.errorBackground,
+  errorText: colorRoles.errorText,
 };
 
 const displayFontFamily = Platform.select({
@@ -35,19 +53,36 @@ const displayFontFamily = Platform.select({
 });
 
 const panelShadow = {
-  shadowColor: "#000000",
-  shadowOpacity: 0.16,
-  shadowRadius: 14,
-  shadowOffset: { width: 0, height: 8 },
-  elevation: 4,
+  ...elevationRoles.panel,
 } as const;
 
 const brandShadow = {
-  shadowColor: colors.brand,
-  shadowOpacity: 0.18,
-  shadowRadius: 12,
-  shadowOffset: { width: 0, height: 6 },
-  elevation: 3,
+  ...elevationRoles.brand,
+} as const;
+
+const radius = {
+  sm: tokenToPx(sharedBorderRadius.sm),
+  base: tokenToPx(sharedBorderRadius.base),
+  md: tokenToPx(sharedBorderRadius.md),
+  lg: tokenToPx(sharedBorderRadius.lg),
+  xl: tokenToPx(sharedBorderRadius.xl),
+  xxl: tokenToPx(sharedBorderRadius["2xl"]),
+  xxxl: tokenToPx(sharedBorderRadius["3xl"]),
+  full: tokenToPx(sharedBorderRadius.full),
+};
+
+const spacing = {
+  1: tokenToPx(sharedSpacing[1]),
+  2: tokenToPx(sharedSpacing[2]),
+  3: tokenToPx(sharedSpacing[3]),
+  4: tokenToPx(sharedSpacing[4]),
+  5: tokenToPx(sharedSpacing[5]),
+  6: tokenToPx(sharedSpacing[6]),
+  7: tokenToPx(sharedSpacing[7]),
+  8: tokenToPx(sharedSpacing[8]),
+  10: tokenToPx(sharedSpacing[10]),
+  12: tokenToPx(sharedSpacing[12]),
+  16: tokenToPx(sharedSpacing[16]),
 } as const;
 
 export const theme = {
@@ -74,7 +109,7 @@ export const styles = StyleSheet.create({
     right: -120,
     width: 280,
     height: 280,
-    borderRadius: 140,
+    borderRadius: radius.full,
     backgroundColor: "rgba(255, 173, 112, 0.08)",
   },
   backgroundOrbLeft: {
@@ -83,7 +118,7 @@ export const styles = StyleSheet.create({
     left: -150,
     width: 220,
     height: 220,
-    borderRadius: 110,
+    borderRadius: radius.full,
     backgroundColor: "rgba(234, 111, 63, 0.07)",
   },
   backgroundOrbRight: {
@@ -92,7 +127,7 @@ export const styles = StyleSheet.create({
     right: -150,
     width: 240,
     height: 240,
-    borderRadius: 120,
+    borderRadius: radius.full,
     backgroundColor: "rgba(255, 204, 156, 0.05)",
   },
   loadingScreen: {
@@ -100,7 +135,7 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: colors.background,
-    gap: 12,
+    gap: spacing[3],
   },
   loadingText: {
     color: colors.textSecondary,
@@ -113,15 +148,15 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingTop: 14,
     paddingBottom: 28,
-    gap: 14,
+    gap: spacing[3] + 2,
   },
   heroCard: {
-    borderRadius: 20,
+    borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.panelStrong,
     padding: 18,
-    gap: 12,
+    gap: spacing[3],
     overflow: "hidden",
   },
   heroGlow: {
@@ -130,18 +165,18 @@ export const styles = StyleSheet.create({
     right: -48,
     width: 180,
     height: 180,
-    borderRadius: 90,
+    borderRadius: radius.full,
     backgroundColor: "rgba(255, 183, 132, 0.08)",
   },
   brandRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: spacing[3],
   },
   brandMark: {
     width: 44,
     height: 44,
-    borderRadius: 14,
+    borderRadius: radius.lg,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.brand,
@@ -157,11 +192,11 @@ export const styles = StyleSheet.create({
   },
   brandCopy: {
     flex: 1,
-    gap: 4,
+    gap: spacing[1],
   },
   eyebrow: {
     alignSelf: "flex-start",
-    borderRadius: 999,
+    borderRadius: radius.full,
     borderWidth: 1,
     borderColor: colors.borderStrong,
     backgroundColor: colors.brandSoft,
@@ -196,10 +231,10 @@ export const styles = StyleSheet.create({
   heroSignalRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    gap: spacing[2],
   },
   heroSignalChip: {
-    borderRadius: 999,
+    borderRadius: radius.full,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
@@ -212,20 +247,20 @@ export const styles = StyleSheet.create({
     fontWeight: "600",
   },
   stepGrid: {
-    gap: 12,
+    gap: spacing[3],
   },
   stepCard: {
-    borderRadius: 16,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.panel,
     padding: 14,
-    gap: 10,
+    gap: spacing[2] + 2,
     ...panelShadow,
   },
   stepNumber: {
     alignSelf: "flex-start",
-    borderRadius: 999,
+    borderRadius: radius.full,
     borderWidth: 1,
     borderColor: colors.borderStrong,
     backgroundColor: colors.brandMuted,
@@ -249,12 +284,12 @@ export const styles = StyleSheet.create({
     lineHeight: 21,
   },
   card: {
-    borderRadius: 18,
+    borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.panel,
     padding: 16,
-    gap: 12,
+    gap: spacing[3],
     ...panelShadow,
   },
   sectionTitle: {
@@ -275,8 +310,8 @@ export const styles = StyleSheet.create({
   },
   checkboxCard: {
     flexDirection: "row",
-    gap: 12,
-    borderRadius: 16,
+    gap: spacing[3],
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.inputBorder,
     backgroundColor: colors.inputBackground,
@@ -285,7 +320,7 @@ export const styles = StyleSheet.create({
   checkboxBox: {
     width: 22,
     height: 22,
-    borderRadius: 7,
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.inputBorder,
     backgroundColor: "rgba(255, 255, 255, 0.02)",
@@ -304,7 +339,7 @@ export const styles = StyleSheet.create({
   },
   checkboxCopy: {
     flex: 1,
-    gap: 4,
+    gap: spacing[1],
   },
   label: {
     color: colors.textPrimary,
@@ -351,12 +386,12 @@ export const styles = StyleSheet.create({
     lineHeight: 18,
   },
   infoCard: {
-    borderRadius: 16,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
     padding: 14,
-    gap: 7,
+    gap: spacing[2] - 1,
   },
   infoTitle: {
     color: colors.textPrimary,
@@ -370,7 +405,7 @@ export const styles = StyleSheet.create({
   },
   primaryButton: {
     minHeight: 48,
-    borderRadius: 999,
+    borderRadius: radius.full,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.brand,
@@ -392,7 +427,7 @@ export const styles = StyleSheet.create({
   },
   secondaryButton: {
     minHeight: 46,
-    borderRadius: 999,
+    borderRadius: radius.full,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
@@ -411,7 +446,7 @@ export const styles = StyleSheet.create({
   },
   tertiaryButton: {
     alignSelf: "flex-start",
-    borderRadius: 999,
+    borderRadius: radius.full,
     borderWidth: 1,
     borderColor: colors.inputBorder,
     backgroundColor: colors.inputBackground,
@@ -425,7 +460,7 @@ export const styles = StyleSheet.create({
   },
   devButton: {
     marginTop: 10,
-    borderRadius: 999,
+    borderRadius: radius.full,
     borderWidth: 1,
     borderColor: colors.borderStrong,
     backgroundColor: colors.brandSoft,
@@ -443,7 +478,7 @@ export const styles = StyleSheet.create({
     lineHeight: 22,
   },
   statusCard: {
-    borderRadius: 16,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
@@ -475,28 +510,28 @@ export const styles = StyleSheet.create({
   metricRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
+    gap: spacing[3],
   },
   metricCard: {
     flex: 1,
     minWidth: 150,
-    borderRadius: 16,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
     padding: 12,
-    gap: 6,
+    gap: spacing[1] + 2,
   },
   sessionList: {
     gap: 10,
   },
   sessionRow: {
-    borderRadius: 16,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
     padding: 12,
-    gap: 6,
+    gap: spacing[1] + 2,
   },
   sessionRowTop: {
     flexDirection: "row",
@@ -511,7 +546,7 @@ export const styles = StyleSheet.create({
     fontWeight: "700",
   },
   sessionCurrentBadge: {
-    borderRadius: 999,
+    borderRadius: radius.full,
     borderWidth: 1,
     borderColor: colors.borderStrong,
     backgroundColor: colors.brandSoft,
@@ -531,34 +566,34 @@ export const styles = StyleSheet.create({
     lineHeight: 18,
   },
   deviceLinkCard: {
-    gap: 12,
+    gap: spacing[3],
   },
   qrScannerCard: {
-    borderRadius: 16,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
     padding: 12,
-    gap: 10,
+    gap: spacing[2] + 2,
   },
   qrScannerFrame: {
     width: "100%",
     aspectRatio: 1,
-    borderRadius: 20,
+    borderRadius: radius.xl,
     overflow: "hidden",
     backgroundColor: "#000000",
   },
   qrDisplayCard: {
     alignItems: "center",
-    gap: 10,
+    gap: spacing[2] + 2,
   },
   qrDisplaySurface: {
-    borderRadius: 20,
+    borderRadius: radius.xl,
     backgroundColor: "#ffffff",
-    padding: 16,
+    padding: spacing[4],
   },
   deviceLinkStatusCard: {
-    gap: 10,
+    gap: spacing[2] + 2,
   },
   metricLabel: {
     color: colors.textMuted,
@@ -580,10 +615,10 @@ export const styles = StyleSheet.create({
   segmentRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    gap: spacing[2],
   },
   segmentButton: {
-    borderRadius: 999,
+    borderRadius: radius.full,
     borderWidth: 1,
     borderColor: colors.inputBorder,
     backgroundColor: colors.inputBackground,
