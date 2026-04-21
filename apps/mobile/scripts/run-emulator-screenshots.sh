@@ -10,26 +10,36 @@ WM_SIZE="${3:-1080x1920}"
 WM_DENSITY="${4:-420}"
 ORIENTATION="${5:-portrait}"
 
-# Wait for the package manager to be fully ready.
-# boot_completed=1 is set before the package manager service is stable;
-# attempting adb install immediately produces "Broken pipe (32)".
-echo "Waiting for package manager to be ready..."
-for _pm_attempt in 1 2 3 4 5 6 7 8 9 10; do
-  if adb shell pm list packages 2>/dev/null | grep -q "^package:"; then
+# Wait for the 'cmd package' service to be ready.
+# 'adb install' uses 'cmd package install' (streamed install) internally.
+# On AAOS (android-automotive) this service registers in ServiceManager
+# much later than sys.boot_completed=1 — sometimes 4+ minutes after boot.
+# 'pm list packages' uses the PackageManager binder directly and becomes
+# ready earlier, so it cannot be used as a readiness gate here.
+echo "Waiting for cmd package service to be ready..."
+_pm_ready=false
+for _pm_attempt in $(seq 1 36); do
+  if adb shell cmd package list packages 2>/dev/null | grep -q "^package:"; then
+    _pm_ready=true
     break
   fi
-  sleep 5
+  sleep 10
 done
+if [[ "$_pm_ready" != "true" ]]; then
+  echo "::warning::cmd package service did not become ready for ${DEVICE_CLASS} (waited 360s), no screenshots will be captured"
+  exit 0
+fi
 
-# Retry the install — transient Broken pipe errors clear within a few seconds.
+# Retry the install — the service may briefly reject connections right after
+# it registers.
 APK_INSTALLED=false
-for _install_attempt in 1 2 3; do
+for _install_attempt in $(seq 1 6); do
   if adb install -r "$APK_PATH"; then
     APK_INSTALLED=true
     break
   fi
-  echo "Install attempt ${_install_attempt} failed, retrying in 5s..."
-  sleep 5
+  echo "Install attempt ${_install_attempt} failed, retrying in 20s..."
+  sleep 20
 done
 
 if [[ "$APK_INSTALLED" != "true" ]]; then
