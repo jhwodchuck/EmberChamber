@@ -1,35 +1,23 @@
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
-import * as Notifications from "expo-notifications";
 import { File as ExpoFile } from "expo-file-system";
 import * as DocumentPicker from "expo-document-picker";
 import * as Location from "expo-location";
-import * as ScreenCapture from "expo-screen-capture";
-import * as SecureStore from "expo-secure-store";
 import * as SQLite from "expo-sqlite";
 import * as SystemUI from "expo-system-ui";
 import { startTransition, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Keyboard,
-  KeyboardAvoidingView,
   Linking,
   Platform,
-  ScrollView,
-  Text,
-  View,
 } from "react-native";
-import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
-import type { EncryptedConversationPayload } from "@emberchamber/protocol";
 import {
   createDeviceLinkToken,
-  decryptConversationPayload,
   encodeDeviceLinkQrPayload,
   encryptAttachmentBytes,
   encryptConversationPayload,
   parseDeviceLinkQrPayload,
   relayOriginsMatch,
-  toPublicPrekeyBundle,
   type DeviceLinkQrMode,
   type DeviceLinkStartResponse,
   type DeviceLinkStatus,
@@ -52,7 +40,6 @@ import type {
   MeProfile,
   PendingAttachment,
   PrivacyDefaults,
-  RelayErrorResponse,
   SessionDescriptor,
 } from "./src/types";
 import type { ContextMenuAction } from "./src/components/MessageContextMenu";
@@ -65,14 +52,12 @@ import {
   relayUrl,
 } from "./src/constants";
 import {
-  createDeviceBundleScaffold,
   extractCompletionTokenFromUrl,
   isDefaultDisplayName,
   isLegacySuggestedDeviceLabel,
   isValidEmail,
   makeOpaqueToken,
   normalizeInviteReference,
-  getMobileDeviceModel,
   suggestMobileDeviceLabel,
 } from "./src/lib/utils";
 import {
@@ -81,51 +66,58 @@ import {
   loadCachedGroupMessages,
   loadCachedGroups,
   loadContactLabel,
-  loadRelayStateValue,
   loadPrivacyDefaults,
   persistVaultMediaRecord,
   saveContactLabel,
-  saveRelayStateValue,
   savePrivacyDefault,
   saveCachedGroupMessages,
   saveCachedGroups,
 } from "./src/lib/db";
 import {
   clearStoredSession,
-  loadStoredDeviceBundle,
   loadStoredSession,
-  saveStoredDeviceBundle,
   saveStoredSession,
 } from "./src/lib/session";
 import {
-  ensurePushRuntimeConfiguredAsync,
-  getNativeDevicePushRegistrationAsync,
-  getNotificationConversationId,
-  getNotificationReason,
-} from "./src/lib/push";
+  completeMagicLinkRequest,
+  requestRelaySessionRefresh,
+  startMagicLinkRequest,
+} from "./src/lib/authApi";
+import {
+  claimDeviceLinkRequest,
+  completeDeviceLinkRequest,
+  fetchDeviceLinkStatusRequest,
+} from "./src/lib/deviceLinkApi";
+import { previewGroupInviteRequest } from "./src/lib/inviteApi";
+import {
+  getRelayOrigin as getMobileRelayOrigin,
+  relayFetch as relayFetchRequest,
+} from "./src/lib/relayClient";
+import {
+  appSecurityCapability,
+  secureStorageCapability,
+} from "./src/lib/nativeCapabilities";
+import { clearNativePushToken } from "./src/lib/pushService";
 import { useConversationCatalog } from "./src/hooks/useConversationCatalog";
 import { usePersistedMainShellState } from "./src/hooks/usePersistedMainShellState";
 import { useSendMessage } from "./src/hooks/useSendMessage";
-import { styles, theme } from "./src/styles";
-import { OnboardingScreen } from "./src/screens/OnboardingScreen";
-import { ProfileSetupScreen } from "./src/screens/ProfileSetupScreen";
-import { MainScreen } from "./src/screens/MainScreen";
+import {
+  ensureDeviceBundleRegistered as ensureDeviceBundleRegisteredRequest,
+  listDeviceBundlesForAccount as listDeviceBundlesForAccountRequest,
+  refreshConversationThread as refreshConversationThreadRequest,
+  syncEncryptedMailbox as syncEncryptedMailboxRequest,
+} from "./src/features/conversations/conversationSync";
+import { useNotificationBridge } from "./src/features/notifications/useNotificationBridge";
+import { AppBootstrap } from "./src/app/AppBootstrap";
+import { AppProviders } from "./src/app/AppProviders";
+import { AppShell } from "./src/app/AppShell";
+import { theme } from "./src/styles";
 
 const onboardingHeroSignals = [
   "Invite-only onboarding",
   "Adults-only access",
   "Local-first history",
 ];
-
-const appConfig = require("./app.json") as {
-  expo?: {
-    version?: string;
-    android?: { versionCode?: number };
-    ios?: { buildNumber?: string };
-  };
-};
-
-const MAILBOX_CURSOR_STATE_KEY = "mailbox_cursor";
 
 type AuthMethod = "magic-link" | "device-link";
 
@@ -305,106 +297,26 @@ export default function App() {
 
   // ---- relay helpers (stay here because they close over setSession) ----
 
-  function buildRelayClientHeaders() {
-    const appVersion = appConfig.expo?.version?.trim() || "0.1.0";
-    const buildVersion =
-      Platform.OS === "android"
-        ? String(appConfig.expo?.android?.versionCode ?? "")
-        : String(appConfig.expo?.ios?.buildNumber ?? "");
-    const deviceModel = getMobileDeviceModel();
-
-    return {
-      "x-emberchamber-client-platform": Platform.OS,
-      "x-emberchamber-client-version": appVersion,
-      ...(buildVersion ? { "x-emberchamber-client-build": buildVersion } : {}),
-      ...(deviceModel ? { "x-emberchamber-device-model": deviceModel } : {}),
-    };
-  }
-
-  async function fetchJson<T>(
-    url: string,
-    init?: RequestInit,
-    timeoutMs = 15_000,
-  ): Promise<{ response: Response; body: T & RelayErrorResponse }> {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
-    try {
-      const headers = new Headers(init?.headers ?? {});
-      Object.entries(buildRelayClientHeaders()).forEach(([key, value]) => {
-        headers.set(key, value);
-      });
-
-      const response = await fetch(url, {
-        ...init,
-        headers,
-        signal: controller.signal,
-      });
-      const rawBody = await response.text();
-      let body = {} as T & RelayErrorResponse;
-
-      if (rawBody) {
-        try {
-          body = JSON.parse(rawBody) as T & RelayErrorResponse;
-        } catch {
-          body = { error: rawBody } as T & RelayErrorResponse;
-        }
-      }
-
-      return { response, body };
-    } catch (error) {
-      if (error instanceof Error && error.name === "AbortError") {
-        throw new Error(
-          "The relay took too long to respond. Check your connection and try again.",
-        );
-      }
-
-      throw error;
-    } finally {
-      clearTimeout(timeout);
-    }
-  }
-
   async function relayFetch<T>(
     currentSession: AuthSession,
     path: string,
     init?: RequestInit,
     allowRefresh = true,
   ): Promise<T> {
-    const headers = {
-      authorization: `Bearer ${currentSession.accessToken}`,
-      ...(init?.body ? { "content-type": "application/json" } : {}),
-      ...(init?.headers ?? {}),
-    };
-
-    const { response, body } = await fetchJson<T>(`${relayUrl}${path}`, {
-      ...init,
-      headers,
+    return relayFetchRequest<T>({
+      session: currentSession,
+      path,
+      init,
+      allowRefresh,
+      onRefreshSession: refreshRelaySession,
+      baseUrl: relayUrl,
     });
-    if (response.ok) {
-      return body;
-    }
-
-    if (response.status === 401 && allowRefresh) {
-      const refreshed = await refreshRelaySession(currentSession);
-      if (refreshed) {
-        return relayFetch<T>(refreshed, path, init, false);
-      }
-    }
-
-    throw new Error(body.error ?? `Relay request failed: ${response.status}`);
   }
 
   async function refreshRelaySession(currentSession: AuthSession) {
-    const { response, body } = await fetchJson<{
-      accessToken: string;
-      deviceId: string;
-      sessionId: string;
-    }>(`${relayUrl}/v1/auth/refresh`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ refreshToken: currentSession.refreshToken }),
-    });
+    const { response, body } = await requestRelaySessionRefresh(
+      currentSession.refreshToken,
+    );
 
     if (!response.ok || !("accessToken" in body)) {
       await clearStoredSession();
@@ -445,10 +357,6 @@ export default function App() {
     }
   }
 
-  function getRelayOrigin() {
-    return new URL(relayUrl).origin;
-  }
-
   function resetDeviceLinkState() {
     setDeviceLinkQrValue(null);
     setDeviceLinkStatus(null);
@@ -483,7 +391,7 @@ export default function App() {
       }
 
       const qrPayload = encodeDeviceLinkQrPayload({
-        relayOrigin: getRelayOrigin(),
+        relayOrigin: getMobileRelayOrigin(relayUrl),
         qrMode: "source_display",
         linkToken: response.qrPayload.trim(),
         requesterLabel,
@@ -495,7 +403,7 @@ export default function App() {
         parsed: parseDeviceLinkQrPayload(qrPayload),
         status: {
           linkId: response.linkId,
-          relayOrigin: getRelayOrigin(),
+          relayOrigin: getMobileRelayOrigin(relayUrl),
           qrMode: "source_display",
           state: "pending_claim",
           requesterLabel,
@@ -541,7 +449,10 @@ export default function App() {
 
     await Promise.all([
       saveStoredSession(nextSession),
-      SecureStore.setItemAsync(STORAGE_KEYS.deviceLabel, normalizedDeviceLabel),
+      secureStorageCapability.setItem(
+        STORAGE_KEYS.deviceLabel,
+        normalizedDeviceLabel,
+      ),
     ]);
 
     setSession(nextSession);
@@ -638,14 +549,14 @@ export default function App() {
       const normalizedDeviceLabel = deviceLabel.trim();
       const linkToken = createDeviceLinkToken();
       const qrPayload = encodeDeviceLinkQrPayload({
-        relayOrigin: getRelayOrigin(),
+        relayOrigin: getMobileRelayOrigin(relayUrl),
         qrMode: "target_display",
         linkToken,
         requesterLabel: normalizedDeviceLabel,
       });
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-      await SecureStore.setItemAsync(
+      await secureStorageCapability.setItem(
         STORAGE_KEYS.deviceLabel,
         normalizedDeviceLabel,
       );
@@ -653,7 +564,7 @@ export default function App() {
       setActiveDeviceLink({ linkToken, qrMode: "target_display" });
       setDeviceLinkQrValue(qrPayload);
       setDeviceLinkStatus({
-        relayOrigin: getRelayOrigin(),
+        relayOrigin: getMobileRelayOrigin(relayUrl),
         qrMode: "target_display",
         state: "waiting_for_source",
         requesterLabel: normalizedDeviceLabel,
@@ -678,7 +589,9 @@ export default function App() {
 
     try {
       const parsed = parseDeviceLinkQrPayload(qrPayload);
-      if (!relayOriginsMatch(getRelayOrigin(), parsed.relayOrigin)) {
+      if (
+        !relayOriginsMatch(getMobileRelayOrigin(relayUrl), parsed.relayOrigin)
+      ) {
         throw new Error("That QR belongs to a different relay environment.");
       }
 
@@ -719,22 +632,15 @@ export default function App() {
       }
 
       const normalizedDeviceLabel = deviceLabel.trim();
-      await SecureStore.setItemAsync(
+      await secureStorageCapability.setItem(
         STORAGE_KEYS.deviceLabel,
         normalizedDeviceLabel,
       );
 
-      const { response, body } = await fetchJson<DeviceLinkStatus>(
-        `${relayUrl}/v1/devices/link/claim`,
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            qrPayload,
-            deviceLabel: normalizedDeviceLabel,
-          }),
-        },
-      );
+      const { response, body } = await claimDeviceLinkRequest({
+        qrPayload,
+        deviceLabel: normalizedDeviceLabel,
+      });
       if (!response.ok) {
         throw new Error(
           body.error ?? "Unable to claim this device-link request.",
@@ -797,14 +703,10 @@ export default function App() {
     linkToken: string,
     qrMode: DeviceLinkQrMode,
   ) {
-    const { response, body } = await fetchJson<AuthSession>(
-      `${relayUrl}/v1/devices/link/complete`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ linkToken, qrMode }),
-      },
-    );
+    const { response, body } = await completeDeviceLinkRequest({
+      linkToken,
+      qrMode,
+    });
     if (!response.ok || !("accessToken" in body)) {
       throw new Error(body.error ?? "Unable to complete device linking.");
     }
@@ -813,293 +715,49 @@ export default function App() {
   }
 
   async function ensureDeviceBundleRegistered(currentSession: AuthSession) {
-    const localBundle =
-      (await loadStoredDeviceBundle(currentSession.deviceId)) ??
-      createDeviceBundleScaffold();
-    await saveStoredDeviceBundle(currentSession.deviceId, localBundle);
-
-    const existingBundles = await relayFetch<DeviceKeyBundle[]>(
-      currentSession,
-      `/v1/accounts/${currentSession.accountId}/device-bundles`,
-    );
-    deviceBundleDirectoryRef.current.set(
-      currentSession.accountId,
-      existingBundles,
-    );
-
-    if (
-      existingBundles.some(
-        (bundle) => bundle.deviceId === currentSession.deviceId,
-      ) &&
-      localBundle.privateKeyB64
-    ) {
-      return existingBundles;
-    }
-
-    await relayFetch<{ registered: boolean }>(
-      currentSession,
-      "/v1/devices/register",
-      {
-        method: "POST",
-        body: JSON.stringify(toPublicPrekeyBundle(localBundle)),
-      },
-    );
-
-    const confirmedBundles = await relayFetch<DeviceKeyBundle[]>(
-      currentSession,
-      `/v1/accounts/${currentSession.accountId}/device-bundles`,
-    );
-    deviceBundleDirectoryRef.current.set(
-      currentSession.accountId,
-      confirmedBundles,
-    );
-
-    if (
-      !confirmedBundles.some(
-        (bundle) => bundle.deviceId === currentSession.deviceId,
-      )
-    ) {
-      throw new Error(
-        "This phone's device identity did not register correctly.",
-      );
-    }
-
-    return confirmedBundles;
+    return ensureDeviceBundleRegisteredRequest({
+      session: currentSession,
+      relayFetch,
+      deviceBundleDirectory: deviceBundleDirectoryRef.current,
+    });
   }
 
   async function listDeviceBundlesForAccount(
     currentSession: AuthSession,
     accountId: string,
   ) {
-    const cached = deviceBundleDirectoryRef.current.get(accountId);
-    if (cached) {
-      return cached;
-    }
-
-    const bundles = await relayFetch<DeviceKeyBundle[]>(
-      currentSession,
-      `/v1/accounts/${accountId}/device-bundles`,
-    );
-    deviceBundleDirectoryRef.current.set(accountId, bundles);
-    return bundles;
-  }
-
-  async function loadStoredBundleOrThrow(currentSession: AuthSession) {
-    const bundle = await loadStoredDeviceBundle(currentSession.deviceId);
-    if (!bundle?.privateKeyB64) {
-      throw new Error("This device is missing its private message key.");
-    }
-
-    return bundle as DeviceKeyBundle["bundle"] & { privateKeyB64: string };
+    return listDeviceBundlesForAccountRequest({
+      session: currentSession,
+      accountId,
+      relayFetch,
+      deviceBundleDirectory: deviceBundleDirectoryRef.current,
+    });
   }
 
   async function syncEncryptedMailbox(currentSession: AuthSession) {
-    if (!db) {
-      return { receivedConversationIds: [] as string[] };
-    }
-
-    await ensureDeviceBundleRegistered(currentSession);
-    const localBundle = await loadStoredBundleOrThrow(currentSession);
-    const cursor = await loadRelayStateValue(db, MAILBOX_CURSOR_STATE_KEY);
-    const sync = await relayFetch<{
-      cursor: { lastSeenEnvelopeId?: string };
-      envelopes: Array<{
-        envelopeId: string;
-        conversationId: string;
-        senderAccountId: string;
-        senderDeviceId: string;
-        ciphertext: string;
-      }>;
-    }>(
-      currentSession,
-      `/v1/mailbox/sync?after=${encodeURIComponent(cursor ?? "")}&limit=${encodeURIComponent(String(100))}`,
-    );
-
-    const receivedConversationIds = new Set<string>();
-    const updatedMessages = new Map<string, GroupThreadMessage[]>();
-    const ackEnvelopeIds: string[] = [];
-
-    for (const envelope of sync.envelopes) {
-      try {
-        const senderBundles = await listDeviceBundlesForAccount(
-          currentSession,
-          envelope.senderAccountId,
-        );
-        const senderBundle = senderBundles.find(
-          (entry) => entry.deviceId === envelope.senderDeviceId,
-        );
-        if (!senderBundle) {
-          continue;
-        }
-
-        const payload =
-          decryptConversationPayload<EncryptedConversationPayload>(
-            envelope.ciphertext,
-            senderBundle.bundle.identityKeyB64,
-            localBundle.privateKeyB64,
-          );
-
-        if (payload.kind !== "ember_conversation_v1") {
-          continue;
-        }
-
-        const conversationMessages =
-          updatedMessages.get(envelope.conversationId) ??
-          (await loadCachedGroupMessages(db, envelope.conversationId));
-        const messageId = `${envelope.envelopeId}:${payload.clientMessageId}`;
-        const nextMessage: GroupThreadMessage = {
-          id: messageId,
-          conversationId: envelope.conversationId,
-          historyMode: "device_encrypted",
-          senderAccountId: envelope.senderAccountId,
-          senderDisplayName: payload.senderDisplayName,
-          kind: payload.attachment ? "media" : "text",
-          text: payload.text,
-          attachment: payload.attachment
-            ? {
-                ...payload.attachment,
-                downloadUrl: "",
-              }
-            : null,
-          createdAt: payload.createdAt,
-        };
-
-        const mergedMessages = mergeGroupThreadMessage(
-          conversationMessages,
-          nextMessage,
-        );
-
-        updatedMessages.set(envelope.conversationId, mergedMessages);
-        receivedConversationIds.add(envelope.conversationId);
-        ackEnvelopeIds.push(envelope.envelopeId);
-      } catch {
-        // Ignore envelopes that this device cannot open.
-      }
-    }
-
-    await Promise.all(
-      Array.from(updatedMessages.entries()).map(([conversationId, messages]) =>
-        saveCachedGroupMessages(db, conversationId, messages),
-      ),
-    );
-
-    if (updatedMessages.size > 0) {
-      refreshConversationCatalog();
-    }
-
-    if (sync.cursor.lastSeenEnvelopeId) {
-      await saveRelayStateValue(
-        db,
-        MAILBOX_CURSOR_STATE_KEY,
-        sync.cursor.lastSeenEnvelopeId,
-      );
-    }
-
-    if (ackEnvelopeIds.length > 0) {
-      await relayFetch<{ acknowledged: number }>(
-        currentSession,
-        "/v1/mailbox/ack",
-        {
-          method: "POST",
-          body: JSON.stringify({ envelopeIds: ackEnvelopeIds }),
-        },
-      );
-    }
-
-    return {
-      receivedConversationIds: Array.from(receivedConversationIds),
-    };
+    return syncEncryptedMailboxRequest({
+      db,
+      session: currentSession,
+      relayFetch,
+      deviceBundleDirectory: deviceBundleDirectoryRef.current,
+      refreshConversationCatalog,
+    });
   }
 
   async function refreshGroupThread(
     currentSession: AuthSession,
     conversationId: string,
   ) {
-    const targetGroup = groupsRef.current.find(
-      (group) => group.id === conversationId,
-    );
-    if (targetGroup?.historyMode === "device_encrypted") {
-      if (!db) {
-        setThreadMessages([]);
-        return;
-      }
-
-      await syncEncryptedMailbox(currentSession);
-      setThreadMessages(await loadCachedGroupMessages(db, conversationId));
-      return;
-    }
-
-    const messages = await relayFetch<GroupThreadMessage[]>(
-      currentSession,
-      `/v1/groups/${conversationId}/messages?limit=100`,
-    );
+    const messages = await refreshConversationThreadRequest({
+      db,
+      session: currentSession,
+      conversationId,
+      groups: groupsRef.current,
+      relayFetch,
+      deviceBundleDirectory: deviceBundleDirectoryRef.current,
+      refreshConversationCatalog,
+    });
     setThreadMessages(messages);
-
-    if (db) {
-      await saveCachedGroupMessages(db, conversationId, messages);
-      refreshConversationCatalog();
-    }
-
-    // Ack the latest message so other members' ✓✓ updates
-    const latest = messages[messages.length - 1];
-    if (latest) {
-      void relayFetch<{ acked: boolean }>(
-        currentSession,
-        `/v1/groups/${conversationId}/messages/ack`,
-        {
-          method: "POST",
-          body: JSON.stringify({ lastReadMessageCreatedAt: latest.createdAt }),
-        },
-      ).catch(() => undefined);
-    }
-  }
-
-  async function registerNativePushToken(currentSession: AuthSession) {
-    await ensurePushRuntimeConfiguredAsync();
-    const registration = await getNativeDevicePushRegistrationAsync();
-
-    if (!registration) {
-      try {
-        await relayFetch<{ cleared: boolean }>(
-          currentSession,
-          "/v1/devices/push-token",
-          {
-            method: "DELETE",
-          },
-        );
-      } catch {
-        // Ignore cleanup errors if push was never registered server-side.
-      }
-      return false;
-    }
-
-    await relayFetch<{ registered: boolean }>(
-      currentSession,
-      "/v1/devices/push-token",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          ...registration,
-          appId:
-            Platform.OS === "android"
-              ? "com.emberchamber.mobile"
-              : "com.emberchamber.mobile.ios",
-          pushEnvironment: "production",
-        }),
-      },
-    );
-
-    return true;
-  }
-
-  async function clearNativePushToken(currentSession: AuthSession) {
-    await relayFetch<{ cleared: boolean }>(
-      currentSession,
-      "/v1/devices/push-token",
-      {
-        method: "DELETE",
-      },
-    );
   }
 
   // ---- effects ----
@@ -1144,9 +802,10 @@ export default function App() {
 
     const poll = async () => {
       try {
-        const { response, body } = await fetchJson<DeviceLinkStatus>(
-          `${relayUrl}/v1/devices/link/status?token=${encodeURIComponent(activeDeviceLink.linkToken)}&qrMode=${encodeURIComponent(activeDeviceLink.qrMode)}`,
-        );
+        const { response, body } = await fetchDeviceLinkStatusRequest({
+          linkToken: activeDeviceLink.linkToken,
+          qrMode: activeDeviceLink.qrMode,
+        });
         if (!response.ok) {
           const awaitingSourceScan =
             !sessionRef.current &&
@@ -1248,9 +907,9 @@ export default function App() {
           savedSession,
           initialUrl,
         ] = await Promise.all([
-          SecureStore.getItemAsync(STORAGE_KEYS.email),
-          SecureStore.getItemAsync(STORAGE_KEYS.inviteToken),
-          SecureStore.getItemAsync(STORAGE_KEYS.deviceLabel),
+          secureStorageCapability.getItem(STORAGE_KEYS.email),
+          secureStorageCapability.getItem(STORAGE_KEYS.inviteToken),
+          secureStorageCapability.getItem(STORAGE_KEYS.deviceLabel),
           loadPrivacyDefaults(nextDb),
           countVaultItems(nextDb),
           loadStoredSession(),
@@ -1290,11 +949,11 @@ export default function App() {
 
   useEffect(() => {
     if (!privacyDefaults.secureAppSwitcher) {
-      void ScreenCapture.allowScreenCaptureAsync().catch(() => undefined);
+      void appSecurityCapability.allowScreenCapture().catch(() => undefined);
       return;
     }
 
-    void ScreenCapture.preventScreenCaptureAsync().catch(() => undefined);
+    void appSecurityCapability.preventScreenCapture().catch(() => undefined);
   }, [privacyDefaults.secureAppSwitcher]);
 
   useEffect(() => {
@@ -1303,134 +962,25 @@ export default function App() {
     );
   }, []);
 
-  useEffect(() => {
-    if (!session) {
-      return;
-    }
-
-    let cancelled = false;
-
-    const handleNotificationSelection = (
-      notification: Notifications.Notification,
-    ) => {
-      const reason = getNotificationReason(notification);
-      const conversationId = getNotificationConversationId(notification);
-      if (conversationId && reason === "relay_hosted_message") {
-        setSelectedConversationId(conversationId);
-        const currentSession = sessionRef.current;
-        if (currentSession) {
-          void refreshGroupThread(currentSession, conversationId).catch(
-            () => undefined,
-          );
-        }
+  useNotificationBridge({
+    session,
+    relayFetch,
+    sessionRef,
+    selectedConversationIdRef,
+    onSelectConversation: setSelectedConversationId,
+    onRefreshRelayHostedConversation: async (conversationId) => {
+      const currentSession = sessionRef.current;
+      if (!currentSession) {
         return;
       }
 
-      if (reason === "mailbox") {
-        const currentSession = sessionRef.current;
-        if (currentSession) {
-          void syncEncryptedMailbox(currentSession).catch(() => undefined);
-        }
-        if (conversationId) {
-          setSelectedConversationId(conversationId);
-        }
-        setSessionMessage({
-          tone: "info",
-          title: "New secure message",
-          body: "A secure conversation is waiting to sync on this device.",
-        });
-      }
-    };
-
-    let receivedSubscription: Notifications.EventSubscription | null = null;
-    let responseSubscription: Notifications.EventSubscription | null = null;
-    let pushTokenSubscription: Notifications.EventSubscription | null = null;
-
-    void (async () => {
-      try {
-        await registerNativePushToken(session);
-      } catch (error) {
-        if (!cancelled) {
-          console.warn("mobile_push_registration_failed", error);
-        }
-      }
-
-      if (cancelled) {
-        return;
-      }
-
-      receivedSubscription = Notifications.addNotificationReceivedListener(
-        (notification) => {
-          const conversationId = getNotificationConversationId(notification);
-          const reason = getNotificationReason(notification);
-          const currentSession = sessionRef.current;
-
-          if (
-            currentSession &&
-            reason === "relay_hosted_message" &&
-            conversationId &&
-            selectedConversationIdRef.current === conversationId
-          ) {
-            void refreshGroupThread(currentSession, conversationId).catch(
-              () => undefined,
-            );
-          } else if (currentSession && reason === "mailbox") {
-            void syncEncryptedMailbox(currentSession).catch(() => undefined);
-          }
-        },
-      );
-
-      responseSubscription =
-        Notifications.addNotificationResponseReceivedListener((response) => {
-          handleNotificationSelection(response.notification);
-        });
-
-      pushTokenSubscription = Notifications.addPushTokenListener((token) => {
-        const currentSession = sessionRef.current;
-        if (!currentSession || typeof token.data !== "string" || !token.data) {
-          return;
-        }
-
-        const provider =
-          token.type === "fcm" ? "fcm" : token.type === "apns" ? "apns" : null;
-        if (!provider) {
-          return;
-        }
-
-        void relayFetch<{ registered: boolean }>(
-          currentSession,
-          "/v1/devices/push-token",
-          {
-            method: "POST",
-            body: JSON.stringify({
-              provider,
-              platform: Platform.OS === "android" ? "android" : "ios",
-              token: token.data,
-              appId:
-                Platform.OS === "android"
-                  ? "com.emberchamber.mobile"
-                  : "com.emberchamber.mobile.ios",
-              pushEnvironment: "production",
-            }),
-          },
-        ).catch((error) => {
-          console.warn("mobile_push_token_refresh_failed", error);
-        });
-      });
-
-      const lastResponse = Notifications.getLastNotificationResponse();
-      if (lastResponse?.notification) {
-        handleNotificationSelection(lastResponse.notification);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      receivedSubscription?.remove();
-      responseSubscription?.remove();
-      pushTokenSubscription?.remove();
-    };
-  }, [session]);
+      await refreshGroupThread(currentSession, conversationId);
+    },
+    onSyncEncryptedMailbox: async (currentSession) => {
+      await syncEncryptedMailbox(currentSession);
+    },
+    onSessionMessage: setSessionMessage,
+  });
 
   useEffect(() => {
     if (!session) {
@@ -1615,58 +1165,55 @@ export default function App() {
 
       try {
         if (selectedGroupSummary?.historyMode === "device_encrypted") {
-          await syncEncryptedMailbox(session);
-          if (db && !cancelled) {
-            setThreadMessages(
-              await loadCachedGroupMessages(db, selectedConversationId),
-            );
+          const messages = await refreshConversationThreadRequest({
+            db,
+            session,
+            conversationId: selectedConversationId,
+            groups,
+            relayFetch,
+            deviceBundleDirectory: deviceBundleDirectoryRef.current,
+            refreshConversationCatalog,
+          });
+          if (!cancelled) {
+            setThreadMessages(messages);
           }
 
           if (!cancelled) {
             refreshTimer = setInterval(() => {
-              void syncEncryptedMailbox(session)
-                .then(async () => {
+              void refreshConversationThreadRequest({
+                db,
+                session,
+                conversationId: selectedConversationId,
+                groups,
+                relayFetch,
+                deviceBundleDirectory: deviceBundleDirectoryRef.current,
+                refreshConversationCatalog,
+              })
+                .then((messages) => {
                   if (
-                    !db ||
                     cancelled ||
                     selectedConversationIdRef.current !== selectedConversationId
                   ) {
                     return;
                   }
-                  setThreadMessages(
-                    await loadCachedGroupMessages(db, selectedConversationId),
-                  );
+                  setThreadMessages(messages);
                 })
                 .catch(() => undefined);
             }, 8000);
           }
         } else {
-          const messages = await relayFetch<GroupThreadMessage[]>(
+          const messages = await refreshConversationThreadRequest({
+            db,
             session,
-            `/v1/groups/${selectedConversationId}/messages?limit=100`,
-          );
+            conversationId: selectedConversationId,
+            groups,
+            relayFetch,
+            deviceBundleDirectory: deviceBundleDirectoryRef.current,
+            refreshConversationCatalog,
+          });
 
           if (!cancelled) {
             setThreadMessages(messages);
-          }
-
-          if (db) {
-            await saveCachedGroupMessages(db, selectedConversationId, messages);
-          }
-
-          // Ack so other members' ✓✓ updates
-          const latestOnLoad = messages[messages.length - 1];
-          if (latestOnLoad) {
-            void relayFetch<{ acked: boolean }>(
-              session,
-              `/v1/groups/${selectedConversationId}/messages/ack`,
-              {
-                method: "POST",
-                body: JSON.stringify({
-                  lastReadMessageCreatedAt: latestOnLoad.createdAt,
-                }),
-              },
-            ).catch(() => undefined);
           }
 
           if (!cancelled) {
@@ -1857,21 +1404,14 @@ export default function App() {
 
     setIsSending(true);
     try {
-      const { response, body } = await fetchJson<MagicLinkResponse>(
-        `${relayUrl}/v1/auth/start`,
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            email: email.trim(),
-            inviteToken: inviteToken.trim() || undefined,
-            groupId: bootstrapInvite?.groupId,
-            groupInviteToken: bootstrapInvite?.inviteToken,
-            deviceLabel: deviceLabel.trim(),
-            ageConfirmed18: true,
-          }),
-        },
-      );
+      const { response, body } = await startMagicLinkRequest({
+        email: email.trim(),
+        inviteToken: inviteToken.trim() || undefined,
+        groupId: bootstrapInvite?.groupId,
+        groupInviteToken: bootstrapInvite?.inviteToken,
+        deviceLabel: deviceLabel.trim(),
+        ageConfirmed18: true,
+      });
       if (!response.ok) {
         if (body.code === "INVITE_REQUIRED") {
           setInviteFieldVisible(true);
@@ -1895,9 +1435,15 @@ export default function App() {
       }
 
       await Promise.all([
-        SecureStore.setItemAsync(STORAGE_KEYS.email, email.trim()),
-        SecureStore.setItemAsync(STORAGE_KEYS.inviteToken, inviteToken.trim()),
-        SecureStore.setItemAsync(STORAGE_KEYS.deviceLabel, deviceLabel.trim()),
+        secureStorageCapability.setItem(STORAGE_KEYS.email, email.trim()),
+        secureStorageCapability.setItem(
+          STORAGE_KEYS.inviteToken,
+          inviteToken.trim(),
+        ),
+        secureStorageCapability.setItem(
+          STORAGE_KEYS.deviceLabel,
+          deviceLabel.trim(),
+        ),
       ]);
 
       setErrors({});
@@ -1929,17 +1475,10 @@ export default function App() {
     });
 
     try {
-      const { response, body } = await fetchJson<AuthSession>(
-        `${relayUrl}/v1/auth/complete`,
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            completionToken,
-            deviceLabel: deviceLabel.trim() || suggestMobileDeviceLabel(),
-          }),
-        },
-      );
+      const { response, body } = await completeMagicLinkRequest({
+        completionToken,
+        deviceLabel: deviceLabel.trim() || suggestMobileDeviceLabel(),
+      });
       if (!response.ok || !("accessToken" in body)) {
         throw new Error(body.error ?? "Unable to complete the magic link");
       }
@@ -1959,7 +1498,7 @@ export default function App() {
   async function signOut() {
     if (session) {
       try {
-        await clearNativePushToken(session);
+        await clearNativePushToken(session, relayFetch);
       } catch {
         // Ignore logout cleanup failures and clear the local session anyway.
       }
@@ -2029,8 +1568,9 @@ export default function App() {
     setIsPreviewingInvite(true);
     setInvitePreviewError(null);
     try {
-      const { response, body } = await fetchJson<GroupInvitePreview>(
-        `${relayUrl}/v1/groups/${normalized.groupId}/invites/${encodeURIComponent(normalized.inviteToken)}/preview`,
+      const { response, body } = await previewGroupInviteRequest(
+        normalized.groupId,
+        normalized.inviteToken,
       );
       if (!response.ok || !("group" in body)) {
         throw new Error(body.error ?? "Invite preview failed");
@@ -2785,253 +2325,169 @@ export default function App() {
 
   const showEntryChrome = !session || profileSetupActive;
   const heroSignals = !session ? onboardingHeroSignals : [];
-  const keyboardShellBehavior: "padding" | "height" | undefined =
-    Platform.OS === "ios"
-      ? "padding"
-      : androidKeyboardVisible
-        ? "height"
-        : undefined;
+  const onboardingProps = {
+    authMethod,
+    setAuthMethod,
+    email,
+    setEmail,
+    inviteToken,
+    setInviteToken,
+    deviceLabel,
+    setDeviceLabel,
+    ageConfirmed18,
+    setAgeConfirmed18,
+    inviteInput,
+    setInviteInput,
+    invitePreview,
+    invitePreviewError,
+    isPreviewingInvite,
+    inviteFieldVisible,
+    setInviteFieldVisible,
+    isSending,
+    isCompleting,
+    challenge,
+    errors,
+    setErrors,
+    formMessage,
+    sessionMessage,
+    onSubmit: () => void submitMagicLink(),
+    onCompleteMagicLink: (token: string) => void completeMagicLink(token),
+    onPreviewInvite: () => void previewInvite(),
+    deviceLinkQrValue,
+    deviceLinkStatus,
+    deviceLinkMessage,
+    isWorkingDeviceLink,
+    onShowDeviceLinkQr: () => void beginTargetDeviceLink(),
+    onScanDeviceLinkQr: (payload: string) => scanDeviceLinkQr(payload),
+    onResetDeviceLink: resetDeviceLinkState,
+  };
+  const profileSetupProps = {
+    sessionMessage,
+    profileSetupName,
+    setProfileSetupName,
+    profileSetupError,
+    setProfileSetupError,
+    isSubmittingProfile,
+    onSubmit: () => void submitProfileSetup(),
+  };
+  const mainScreenProps = {
+    session: session!,
+    profile,
+    contactCard,
+    groups,
+    conversationPreviews,
+    conversationPreferences,
+    unreadCounts: unreadConversationCounts,
+    inviteFocusToken,
+    selectedConversationId,
+    setSelectedConversationId,
+    selectedGroup: selectedGroup ?? null,
+    threadMessages,
+    inviteInput,
+    setInviteInput,
+    invitePreview,
+    invitePreviewError,
+    messageDraft,
+    setMessageDraft,
+    pendingAttachment,
+    setPendingAttachment,
+    isLoadingAccount,
+    isLoadingThread,
+    isPreviewingInvite,
+    isAcceptingInvite,
+    isPickingPhoto,
+    isSendingMessage,
+    deviceBundleReady,
+    deviceBundleCount,
+    deviceBundleError,
+    vaultCount,
+    privacyDefaults,
+    sessionMessage,
+    email,
+    deviceLabel,
+    deviceLinkQrValue,
+    deviceLinkStatus,
+    deviceLinkMessage,
+    isWorkingDeviceLink,
+    isApprovingDeviceLink,
+    sessions,
+    isLoadingSessions,
+    sessionsError,
+    onRefreshSessions: () => {
+      if (sessionRef.current) {
+        void refreshSignedInSessions(sessionRef.current);
+      }
+    },
+    editingMessageId,
+    isUploadingAvatar,
+    unreadIds: unreadConversationIds,
+    onSignOut: () => void signOut(),
+    onShowDeviceLinkQr: () => void beginSourceDeviceLink(),
+    onScanDeviceLinkQr: (payload: string) => scanDeviceLinkQr(payload),
+    onApproveDeviceLink: () => void approveDeviceLink(),
+    onResetDeviceLink: resetDeviceLinkState,
+    onPreviewInvite: () => void previewInvite(),
+    onAcceptInvite: () => void acceptInvite(),
+    onPickPhoto: () => void pickPhoto(),
+    onTakePhoto: () => void takePhoto(),
+    onPickFile: () => void pickFile(),
+    onPickLocation: (choice: LocationChoice) => void pickLocation(choice),
+    onSendRawText: (text: string) => void sendMessage(text),
+    onSendMessage: () => void sendMessage(),
+    onUpdatePrivacy: updatePrivacyDefaults,
+    onImageError: handleImageError,
+    onResolveAttachmentAccess: handleResolveAttachmentAccess,
+    onCancelEdit: () => {
+      setEditingMessageId(null);
+      setMessageDraft("");
+    },
+    onMessageAction: handleMessageAction,
+    onUpdateGroup: handleUpdateGroup,
+    onCreateInvite: handleCreateInvite,
+    onChangeAvatar: () => void handleChangeAvatar(),
+    onToggleConversationArchived: handleToggleConversationArchived,
+    onToggleConversationPinned: handleToggleConversationPinned,
+    onToggleConversationMuted: handleToggleConversationMuted,
+    groupMembers,
+    isLoadingMembers,
+    isOpeningDm,
+    onOpenMembers: () => void handleOpenMembers(),
+    onLoadMemberNote: handleLoadMemberNote,
+    onSaveMemberNote: handleSaveMemberNote,
+    onOpenDm: handleOpenDm,
+    onSendContactRequest: handleSendContactRequest,
+    initialShellState: mainShellState,
+    onPersistShellState: persistMainShellState,
+    restoredConversationAnchorId,
+    onPersistConversationAnchor: persistConversationAnchor,
+  };
 
   if (isBooting) {
     return (
-      <SafeAreaProvider>
-        <SafeAreaView
-          style={styles.loadingScreen}
-          edges={["top", "right", "bottom", "left"]}
-        >
-          <ActivityIndicator size="large" color={theme.colors.textSoft} />
-          <Text style={styles.loadingText}>
-            Preparing local device storage…
-          </Text>
-        </SafeAreaView>
-      </SafeAreaProvider>
+      <AppProviders
+        showEntryChrome={false}
+        androidKeyboardVisible={androidKeyboardVisible}
+      >
+        <AppBootstrap />
+      </AppProviders>
     );
   }
 
   return (
-    <SafeAreaProvider>
-      <SafeAreaView
-        style={styles.screen}
-        edges={["top", "right", "bottom", "left"]}
-      >
-        {showEntryChrome ? (
-          <>
-            <View pointerEvents="none" style={styles.backgroundOrbTop} />
-            <View pointerEvents="none" style={styles.backgroundOrbLeft} />
-            <View pointerEvents="none" style={styles.backgroundOrbRight} />
-          </>
-        ) : null}
-        <KeyboardAvoidingView
-          style={styles.keyboardShell}
-          // Android 14+ edge-to-edge keeps the activity at full height and
-          // exposes the IME as an inset instead of shrinking the window.
-          // Only enable height mode while the keyboard is visible so the shell
-          // snaps fully back once the IME closes.
-          behavior={keyboardShellBehavior}
-          enabled={Platform.OS === "ios" || androidKeyboardVisible}
-        >
-          {showEntryChrome ? (
-            <ScrollView
-              contentContainerStyle={styles.content}
-              showsVerticalScrollIndicator={false}
-            >
-              <View style={styles.heroCard}>
-                <View pointerEvents="none" style={styles.heroGlow} />
-                <View style={styles.brandRow}>
-                  <View style={styles.brandMark}>
-                    <Text style={styles.brandMarkText}>EC</Text>
-                  </View>
-                  <View style={styles.brandCopy}>
-                    <Text style={styles.eyebrow}>
-                      {!session ? "Android beta" : "Profile setup"}
-                    </Text>
-                    <Text style={styles.brandName}>EmberChamber</Text>
-                  </View>
-                </View>
-                <Text style={styles.title}>
-                  {!session
-                    ? "Get this phone into your chats fast"
-                    : "Choose the name your circles will see"}
-                </Text>
-                <Text style={styles.subtitle}>
-                  {!session
-                    ? "Keep onboarding focused on the next action only: name this phone, confirm adults-only access, and finish sign-in from your inbox or a trusted device."
-                    : "Pick the display name that should appear in trusted-circle conversations on this device."}
-                </Text>
-                {!session ? (
-                  <View style={styles.heroSignalRow}>
-                    {heroSignals.map((signal) => (
-                      <View key={signal} style={styles.heroSignalChip}>
-                        <Text style={styles.heroSignalText}>{signal}</Text>
-                      </View>
-                    ))}
-                  </View>
-                ) : null}
-              </View>
-
-              {!session ? (
-                <OnboardingScreen
-                  authMethod={authMethod}
-                  setAuthMethod={setAuthMethod}
-                  email={email}
-                  setEmail={setEmail}
-                  inviteToken={inviteToken}
-                  setInviteToken={setInviteToken}
-                  deviceLabel={deviceLabel}
-                  setDeviceLabel={setDeviceLabel}
-                  ageConfirmed18={ageConfirmed18}
-                  setAgeConfirmed18={setAgeConfirmed18}
-                  inviteInput={inviteInput}
-                  setInviteInput={setInviteInput}
-                  invitePreview={invitePreview}
-                  invitePreviewError={invitePreviewError}
-                  isPreviewingInvite={isPreviewingInvite}
-                  inviteFieldVisible={inviteFieldVisible}
-                  setInviteFieldVisible={setInviteFieldVisible}
-                  isSending={isSending}
-                  isCompleting={isCompleting}
-                  challenge={challenge}
-                  errors={errors}
-                  setErrors={setErrors}
-                  formMessage={formMessage}
-                  sessionMessage={sessionMessage}
-                  onSubmit={() => void submitMagicLink()}
-                  onCompleteMagicLink={(token) => void completeMagicLink(token)}
-                  onPreviewInvite={() => void previewInvite()}
-                  deviceLinkQrValue={deviceLinkQrValue}
-                  deviceLinkStatus={deviceLinkStatus}
-                  deviceLinkMessage={deviceLinkMessage}
-                  isWorkingDeviceLink={isWorkingDeviceLink}
-                  onShowDeviceLinkQr={() => void beginTargetDeviceLink()}
-                  onScanDeviceLinkQr={(payload) => scanDeviceLinkQr(payload)}
-                  onResetDeviceLink={resetDeviceLinkState}
-                />
-              ) : (
-                <ProfileSetupScreen
-                  sessionMessage={sessionMessage}
-                  profileSetupName={profileSetupName}
-                  setProfileSetupName={setProfileSetupName}
-                  profileSetupError={profileSetupError}
-                  setProfileSetupError={setProfileSetupError}
-                  isSubmittingProfile={isSubmittingProfile}
-                  onSubmit={() => void submitProfileSetup()}
-                />
-              )}
-
-              {!session ? (
-                <View style={styles.card}>
-                  <Text style={styles.sectionTitle}>Trust boundary</Text>
-                  {onboardingAssurances.map((item) => (
-                    <Text key={item} style={styles.bullet}>
-                      • {item}
-                    </Text>
-                  ))}
-                </View>
-              ) : null}
-            </ScrollView>
-          ) : !isMainShellReady ? (
-            <View style={styles.emptyState}>
-              <ActivityIndicator size="small" color={theme.colors.textSoft} />
-              <Text style={styles.emptyStateTitle}>Restoring workspace</Text>
-              <Text style={styles.emptyStateBody}>
-                Loading your last section and conversation on this device.
-              </Text>
-            </View>
-          ) : (
-            <MainScreen
-              session={session!}
-              profile={profile}
-              contactCard={contactCard}
-              groups={groups}
-              conversationPreviews={conversationPreviews}
-              conversationPreferences={conversationPreferences}
-              unreadCounts={unreadConversationCounts}
-              inviteFocusToken={inviteFocusToken}
-              selectedConversationId={selectedConversationId}
-              setSelectedConversationId={setSelectedConversationId}
-              selectedGroup={selectedGroup ?? null}
-              threadMessages={threadMessages}
-              inviteInput={inviteInput}
-              setInviteInput={setInviteInput}
-              invitePreview={invitePreview}
-              invitePreviewError={invitePreviewError}
-              messageDraft={messageDraft}
-              setMessageDraft={setMessageDraft}
-              pendingAttachment={pendingAttachment}
-              setPendingAttachment={setPendingAttachment}
-              isLoadingAccount={isLoadingAccount}
-              isLoadingThread={isLoadingThread}
-              isPreviewingInvite={isPreviewingInvite}
-              isAcceptingInvite={isAcceptingInvite}
-              isPickingPhoto={isPickingPhoto}
-              isSendingMessage={isSendingMessage}
-              deviceBundleReady={deviceBundleReady}
-              deviceBundleCount={deviceBundleCount}
-              deviceBundleError={deviceBundleError}
-              vaultCount={vaultCount}
-              privacyDefaults={privacyDefaults}
-              sessionMessage={sessionMessage}
-              email={email}
-              deviceLabel={deviceLabel}
-              deviceLinkQrValue={deviceLinkQrValue}
-              deviceLinkStatus={deviceLinkStatus}
-              deviceLinkMessage={deviceLinkMessage}
-              isWorkingDeviceLink={isWorkingDeviceLink}
-              isApprovingDeviceLink={isApprovingDeviceLink}
-              sessions={sessions}
-              isLoadingSessions={isLoadingSessions}
-              sessionsError={sessionsError}
-              onRefreshSessions={() => {
-                if (sessionRef.current) {
-                  void refreshSignedInSessions(sessionRef.current);
-                }
-              }}
-              editingMessageId={editingMessageId}
-              isUploadingAvatar={isUploadingAvatar}
-              unreadIds={unreadConversationIds}
-              onSignOut={() => void signOut()}
-              onShowDeviceLinkQr={() => void beginSourceDeviceLink()}
-              onScanDeviceLinkQr={(payload) => scanDeviceLinkQr(payload)}
-              onApproveDeviceLink={() => void approveDeviceLink()}
-              onResetDeviceLink={resetDeviceLinkState}
-              onPreviewInvite={() => void previewInvite()}
-              onAcceptInvite={() => void acceptInvite()}
-              onPickPhoto={() => void pickPhoto()}
-              onTakePhoto={() => void takePhoto()}
-              onPickFile={() => void pickFile()}
-              onPickLocation={(choice) => void pickLocation(choice)}
-              onSendRawText={(text) => void sendMessage(text)}
-              onSendMessage={() => void sendMessage()}
-              onUpdatePrivacy={updatePrivacyDefaults}
-              onImageError={handleImageError}
-              onResolveAttachmentAccess={handleResolveAttachmentAccess}
-              onCancelEdit={() => {
-                setEditingMessageId(null);
-                setMessageDraft("");
-              }}
-              onMessageAction={handleMessageAction}
-              onUpdateGroup={handleUpdateGroup}
-              onCreateInvite={handleCreateInvite}
-              onChangeAvatar={() => void handleChangeAvatar()}
-              onToggleConversationArchived={handleToggleConversationArchived}
-              onToggleConversationPinned={handleToggleConversationPinned}
-              onToggleConversationMuted={handleToggleConversationMuted}
-              groupMembers={groupMembers}
-              isLoadingMembers={isLoadingMembers}
-              isOpeningDm={isOpeningDm}
-              onOpenMembers={() => void handleOpenMembers()}
-              onLoadMemberNote={handleLoadMemberNote}
-              onSaveMemberNote={handleSaveMemberNote}
-              onOpenDm={handleOpenDm}
-              onSendContactRequest={handleSendContactRequest}
-              initialShellState={mainShellState}
-              onPersistShellState={persistMainShellState}
-              restoredConversationAnchorId={restoredConversationAnchorId}
-              onPersistConversationAnchor={persistConversationAnchor}
-            />
-          )}
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </SafeAreaProvider>
+    <AppProviders
+      showEntryChrome={showEntryChrome}
+      androidKeyboardVisible={androidKeyboardVisible}
+    >
+      <AppShell
+        showEntryChrome={showEntryChrome}
+        isMainShellReady={isMainShellReady}
+        isSignedIn={!!session}
+        heroSignals={heroSignals}
+        trustBoundaryItems={onboardingAssurances}
+        onboardingProps={onboardingProps}
+        profileSetupProps={profileSetupProps}
+        mainScreenProps={mainScreenProps}
+      />
+    </AppProviders>
   );
 }

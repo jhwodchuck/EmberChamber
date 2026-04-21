@@ -3793,8 +3793,8 @@
           state.relayUrl === DEFAULT_RELAY_URL
             ? createStatus(
                 "success",
-                "Using default relay",
-                "The saved relay override is cleared. New requests will use the hosted relay until you deliberately switch again or restart into the Ubuntu local lane.",
+                "Saved relay override cleared",
+                "The saved relay override is cleared. New requests will use the hosted relay until you type another endpoint or restart into the Ubuntu local lane.",
                 state.relayUrl,
               )
             : createStatus(
@@ -3806,24 +3806,13 @@
         render();
       }
 
-      function useDefaultRelay() {
+      function clearRelayOverride() {
         clearStoredRelayOverride();
         state.relayUrl = DEFAULT_RELAY_URL;
         state.settingsStatus = createStatus(
           "success",
-          "Using default relay",
+          "Saved relay override cleared",
           "This desktop cleared the saved override and is back on the hosted relay. Restart or sign out again when you want Ubuntu local auto-adoption to run.",
-          state.relayUrl,
-        );
-        render();
-      }
-
-      function useLocalRelayOverride() {
-        state.relayUrl = writeStoredRelayOverride(LOCAL_RELAY_URL);
-        state.settingsStatus = createStatus(
-          "success",
-          "Using local relay",
-          "This desktop saved an explicit localhost override for the Ubuntu test lane. Clear it when you want the hosted relay again.",
           state.relayUrl,
         );
         render();
@@ -4099,13 +4088,8 @@
           return;
         }
 
-        if (action === "use-default-relay") {
-          useDefaultRelay();
-          return;
-        }
-
-        if (action === "use-local-relay") {
-          useLocalRelayOverride();
+        if (action === "clear-relay-override") {
+          clearRelayOverride();
           return;
         }
 
@@ -4703,10 +4687,9 @@
                     <button class="ghost-button" type="button" data-action="check-relay" ${isBusy("check-relay") ? "disabled" : ""}>
                       ${isBusy("check-relay") ? "Checking relay..." : "Check relay"}
                     </button>
-                    <button class="ghost-button" type="button" data-action="use-default-relay">Use default relay</button>
-                    <button class="ghost-button" type="button" data-action="use-local-relay">Use local relay</button>
+                    <button class="ghost-button" type="button" data-action="clear-relay-override">Clear saved override</button>
                   </div>
-                  <div class="hint">If a local relay is already running on this Ubuntu box, the app adopts it automatically only when no explicit override is saved. Use the buttons here to switch between the hosted default and the local Ubuntu lane on purpose.</div>
+                  <div class="hint">Type and save a staging or localhost relay URL only when you need a manual override. If no explicit override is saved, the Ubuntu local lane can be adopted automatically on fresh local onboarding.</div>
                 </form>
               </section>
             </aside>
@@ -5976,9 +5959,9 @@
                   <button class="ghost-button" type="button" data-action="install-desktop-update" ${!state.desktopUpdate.available || isBusy("check-desktop-update") || isBusy("install-desktop-update") ? "disabled" : ""}>
                     ${isBusy("install-desktop-update") ? "Installing update..." : "Install update"}
                   </button>
-                  <button class="ghost-button" type="button" data-action="use-default-relay">Use default relay</button>
-                  <button class="ghost-button" type="button" data-action="use-local-relay">Use local relay</button>
+                  <button class="ghost-button" type="button" data-action="clear-relay-override">Clear saved override</button>
                 </div>
+                <div class="hint">Type and save a relay URL when you need a manual staging or localhost override. If no explicit override is saved, the Ubuntu local lane can be adopted automatically during fresh local onboarding.</div>
               </form>
             </div>
           </section>
