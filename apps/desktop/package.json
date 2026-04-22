@@ -1,6 +1,6 @@
 {
   "name": "@emberchamber/desktop",
-  "version": "0.1.0-beta.24",
+  "version": "0.1.0-beta.25",
   "private": true,
   "description": "EmberChamber native desktop shell for Windows, Linux, and macOS packaging",
   "scripts": {

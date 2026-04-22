@@ -6,22 +6,13 @@ import { styles } from "../styles";
 
 type AppProvidersProps = {
   showEntryChrome: boolean;
-  androidKeyboardVisible: boolean;
   children: ReactNode;
 };
 
 export function AppProviders({
   showEntryChrome,
-  androidKeyboardVisible,
   children,
 }: AppProvidersProps) {
-  const keyboardShellBehavior: "padding" | "height" | undefined =
-    Platform.OS === "ios"
-      ? "padding"
-      : androidKeyboardVisible
-        ? "height"
-        : undefined;
-
   return (
     <SafeAreaProvider>
       <SafeAreaView
@@ -37,8 +28,8 @@ export function AppProviders({
         ) : null}
         <KeyboardAvoidingView
           style={styles.keyboardShell}
-          behavior={keyboardShellBehavior}
-          enabled={Platform.OS === "ios" || androidKeyboardVisible}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          enabled={Platform.OS === "ios"}
         >
           {children}
         </KeyboardAvoidingView>

@@ -6,11 +6,7 @@ import * as Location from "expo-location";
 import * as SQLite from "expo-sqlite";
 import * as SystemUI from "expo-system-ui";
 import { startTransition, useEffect, useRef, useState } from "react";
-import {
-  Keyboard,
-  Linking,
-  Platform,
-} from "react-native";
+import { Linking, Platform } from "react-native";
 import {
   createDeviceLinkToken,
   encodeDeviceLinkQrPayload,
@@ -248,8 +244,6 @@ export default function App() {
   const [sessions, setSessions] = useState<SessionDescriptor[]>([]);
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
   const [sessionsError, setSessionsError] = useState<string | null>(null);
-  const [androidKeyboardVisible, setAndroidKeyboardVisible] = useState(false);
-
   const imageRefreshPendingRef = useRef(false);
   const groupsRef = useRef<GroupMembershipSummary[]>([]);
   const sessionRef = useRef<AuthSession | null>(null);
@@ -773,24 +767,6 @@ export default function App() {
   useEffect(() => {
     groupsRef.current = groups;
   }, [groups]);
-
-  useEffect(() => {
-    if (Platform.OS !== "android") {
-      return;
-    }
-
-    const showSubscription = Keyboard.addListener("keyboardDidShow", () => {
-      setAndroidKeyboardVisible(true);
-    });
-    const hideSubscription = Keyboard.addListener("keyboardDidHide", () => {
-      setAndroidKeyboardVisible(false);
-    });
-
-    return () => {
-      showSubscription.remove();
-      hideSubscription.remove();
-    };
-  }, []);
 
   useEffect(() => {
     if (!activeDeviceLink || completedDeviceLinkSessionId) {
@@ -2464,20 +2440,14 @@ export default function App() {
 
   if (isBooting) {
     return (
-      <AppProviders
-        showEntryChrome={false}
-        androidKeyboardVisible={androidKeyboardVisible}
-      >
+      <AppProviders showEntryChrome={false}>
         <AppBootstrap />
       </AppProviders>
     );
   }
 
   return (
-    <AppProviders
-      showEntryChrome={showEntryChrome}
-      androidKeyboardVisible={androidKeyboardVisible}
-    >
+    <AppProviders showEntryChrome={showEntryChrome}>
       <AppShell
         showEntryChrome={showEntryChrome}
         isMainShellReady={isMainShellReady}
