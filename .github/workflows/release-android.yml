@@ -71,7 +71,7 @@ jobs:
           echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Publish to GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.release_tag.outputs.tag_name }}
           prerelease: ${{ contains(github.ref_name, '-beta.') || contains(github.ref_name, '-rc.') || contains(inputs.ref, '-beta.') || contains(inputs.ref, '-rc.') }}
