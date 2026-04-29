@@ -1,5 +1,4 @@
 import jwt from "jsonwebtoken";
-import { v4 as uuidv4 } from "uuid";
 import crypto from "crypto";
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "change-me-in-production";
@@ -49,7 +48,7 @@ export function verifyRefreshToken(token: string): RefreshTokenPayload {
 }
 
 export function generateRefreshTokenString(): string {
-  return uuidv4() + "." + crypto.randomBytes(32).toString("hex");
+  return crypto.randomUUID() + "." + crypto.randomBytes(32).toString("hex");
 }
 
 export function generateInviteCode(): string {
