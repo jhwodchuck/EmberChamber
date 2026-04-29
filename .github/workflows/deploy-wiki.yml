@@ -46,7 +46,7 @@ jobs:
         run: pnpm --dir docs/wiki-site exec vitepress build .
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: docs/wiki-site/.vitepress/dist
 
