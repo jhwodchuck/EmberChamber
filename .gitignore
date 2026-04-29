@@ -13,6 +13,9 @@ src-tauri/gen/
 .expo/
 android/
 ios/
+# Wiki screenshot assets include Android captures under docs/wiki-site/public.
+!docs/wiki-site/public/screenshots/android/
+!docs/wiki-site/public/screenshots/android/**
 # Fastlane Play Store metadata lives inside an android/ path; un-ignore it.
 !apps/mobile/fastlane/metadata/android/
 # Android Auto: hand-written Kotlin sources and manifest resource are not generated.
