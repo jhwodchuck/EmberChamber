@@ -53,6 +53,8 @@
     "turbo": "^2.3.3"
   },
   "overrides": {
+    "@xmldom/xmldom": "0.8.13",
+    "postcss": "8.5.12",
     "vite": ">=7.3.2"
   }
 }

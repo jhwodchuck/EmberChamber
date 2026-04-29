@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import argon2 from "argon2";
 import { z } from "zod";
-import { v4 as uuidv4 } from "uuid";
+import crypto from "crypto";
 import { query, queryOne, withTransaction } from "../db/client";
 import {
   signAccessToken,
@@ -100,7 +100,7 @@ router.post("/register", async (req: Request, res: Response, next) => {
       const device = deviceRows[0];
 
       // Create session
-      const sessionId = uuidv4();
+      const sessionId = crypto.randomUUID();
       const refreshToken = generateRefreshTokenString();
       const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
@@ -191,7 +191,7 @@ router.post("/login", async (req: Request, res: Response, next) => {
       );
       const device = deviceRows[0];
 
-      const sessionId = uuidv4();
+      const sessionId = crypto.randomUUID();
       const refreshToken = generateRefreshTokenString();
       const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 

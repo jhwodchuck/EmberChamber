@@ -6,7 +6,7 @@ import {
   GetObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { v4 as uuidv4 } from "uuid";
+import crypto from "crypto";
 import path from "path";
 import { query } from "../db/client";
 import { authenticate, AuthRequest } from "../middleware/auth";
@@ -90,7 +90,7 @@ router.post(
       }
 
       const fileExt = path.extname(req.file.originalname).toLowerCase();
-      const storageKey = `uploads/${req.userId}/${uuidv4()}${fileExt}`;
+      const storageKey = `uploads/${req.userId}/${crypto.randomUUID()}${fileExt}`;
 
       const s3 = getS3Client();
 
