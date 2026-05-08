@@ -165,7 +165,7 @@ async function refreshRelaySession(): Promise<RelayStoredSession | null> {
       });
 
       const body = ((await response.json().catch(() => ({}))) ?? {}) as
-        | { accessToken: string; sessionId: string; deviceId: string }
+        | { accessToken: string; sessionId: string; deviceId: string; expiresAt?: string }
         | RelayErrorBody;
       if (!response.ok || !("accessToken" in body)) {
         clearRelaySession();
@@ -177,6 +177,7 @@ async function refreshRelaySession(): Promise<RelayStoredSession | null> {
         accessToken: body.accessToken,
         sessionId: body.sessionId,
         deviceId: body.deviceId,
+        expiresAt: body.expiresAt ?? current.expiresAt,
       };
       storeRelaySession(nextSession);
       return nextSession;

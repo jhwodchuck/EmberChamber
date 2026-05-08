@@ -323,6 +323,7 @@ export default function App() {
       accessToken: body.accessToken,
       deviceId: body.deviceId,
       sessionId: body.sessionId,
+      expiresAt: body.expiresAt ?? currentSession.expiresAt,
     };
 
     await saveStoredSession(nextSession);

@@ -12,7 +12,7 @@ endpoint map for the current Cloudflare Worker runtime, not a full OpenAPI file.
 
 - Access tokens are returned by `/v1/auth/complete` and sent as `Authorization: Bearer <token>`.
 - Refresh tokens are exchanged through `/v1/auth/refresh`.
-- Sessions currently last 30 days unless revoked.
+- Sessions use a 30-day sliding deadline: completing auth creates a 30-day session, and `/v1/auth/refresh` extends that deadline unless the session was revoked or already expired.
 - Magic-link challenges currently expire after 10 minutes.
 - Passkey endpoints exist, but the relay currently responds with `501`.
 
@@ -25,7 +25,7 @@ endpoint map for the current Cloudflare Worker runtime, not a full OpenAPI file.
 | `GET`  | `/auth/complete`                                           | Redirect helper                   | Redirects email-link clicks into the public web origin.                                      |
 | `POST` | `/v1/auth/start`                                           | Start magic-link auth             | Accepts email plus either a beta invite token or a qualifying group invite for new accounts. |
 | `POST` | `/v1/auth/complete`                                        | Finish magic-link auth            | Creates or resumes account, device, and session.                                             |
-| `POST` | `/v1/auth/refresh`                                         | Refresh access token              | Uses refresh token stored in the session row.                                                |
+| `POST` | `/v1/auth/refresh`                                         | Refresh access token              | Uses the refresh token stored in the session row and returns the extended `expiresAt`.        |
 | `POST` | `/v1/passkeys/register/options`                            | Passkey scaffold                  | Currently returns `501`.                                                                     |
 | `POST` | `/v1/passkeys/register/verify`                             | Passkey scaffold                  | Currently returns `501`.                                                                     |
 | `POST` | `/v1/passkeys/auth/options`                                | Passkey scaffold                  | Currently returns `501`.                                                                     |
