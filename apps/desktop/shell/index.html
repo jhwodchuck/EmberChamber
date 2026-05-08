@@ -2493,8 +2493,6 @@
 
         const body = (await response.json().catch(() => ({}))) || {};
         if (!response.ok || !body.accessToken) {
-          clearStoredSession();
-          await persistSecureStateNow();
           return null;
         }
 

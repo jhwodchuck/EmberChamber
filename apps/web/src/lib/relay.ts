@@ -168,7 +168,6 @@ async function refreshRelaySession(): Promise<RelayStoredSession | null> {
         | { accessToken: string; sessionId: string; deviceId: string; expiresAt?: string }
         | RelayErrorBody;
       if (!response.ok || !("accessToken" in body)) {
-        clearRelaySession();
         return null;
       }
 

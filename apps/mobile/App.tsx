@@ -313,8 +313,12 @@ export default function App() {
     );
 
     if (!response.ok || !("accessToken" in body)) {
-      await clearStoredSession();
-      setSession(null);
+      setSessionMessage({
+        tone: "warning",
+        title: "Session refresh failed",
+        body:
+          "This phone kept its saved session so it can retry refresh instead of losing the only recovery token.",
+      });
       return null;
     }
 

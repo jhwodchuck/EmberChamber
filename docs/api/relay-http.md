@@ -12,7 +12,7 @@ endpoint map for the current Cloudflare Worker runtime, not a full OpenAPI file.
 
 - Access tokens are returned by `/v1/auth/complete` and sent as `Authorization: Bearer <token>`.
 - Refresh tokens are exchanged through `/v1/auth/refresh`.
-- Sessions use a 30-day sliding deadline: completing auth creates a 30-day session, and `/v1/auth/refresh` extends that deadline unless the session was revoked or already expired.
+- Sessions use a 30-day sliding deadline: completing auth creates a 30-day session, and `/v1/auth/refresh` extends that deadline unless the session was revoked. As an incident recovery guard, a matching refresh token can also recover an unrevoked recently seen session that crossed the old fixed deadline.
 - Magic-link challenges currently expire after 10 minutes.
 - Passkey endpoints exist, but the relay currently responds with `501`.
 

@@ -388,6 +388,40 @@ describe("relay routes", () => {
     );
   });
 
+  it("recovers recently seen expired sessions when the refresh token still matches", async () => {
+    const alice = await bootstrapAccount(
+      "session-refresh-recovery@example.com",
+      "Alice Phone",
+    );
+    const expiredAt = new Date(Date.now() - 60 * 1000).toISOString();
+    const recentLastSeenAt = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    executeLocalSql(
+      `UPDATE sessions SET expires_at = '${expiredAt}', last_seen_at = '${recentLastSeenAt}' WHERE id = '${alice.sessionId}'`,
+    );
+
+    const refresh = await relayJson<{
+      accessToken: string;
+      sessionId: string;
+      deviceId: string;
+      expiresAt: string;
+    }>("/v1/auth/refresh", {
+      method: "POST",
+      headers: { "content-type": "application/json", ...defaultClientHeaders },
+      body: JSON.stringify({ refreshToken: alice.refreshToken }),
+    });
+
+    expect(refresh.sessionId).toBe(alice.sessionId);
+    expect(refresh.deviceId).toBe(alice.deviceId);
+    expect(new Date(refresh.expiresAt).getTime()).toBeGreaterThan(Date.now());
+
+    const sessions = await relayJson<Array<{ id: string }>>("/v1/sessions", {
+      headers: { authorization: `Bearer ${refresh.accessToken}` },
+    });
+    expect(sessions.some((session) => session.id === alice.sessionId)).toBe(
+      true,
+    );
+  });
+
   it("lists conversations and joined-space metadata search results", async () => {
     const alice = await bootstrapAccount("alice@example.com", "Alice browser");
     const bob = await bootstrapAccount("bob@example.com", "Bob browser");
