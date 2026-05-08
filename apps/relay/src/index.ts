@@ -99,9 +99,18 @@ const clientHeaderNames = {
 } as const;
 
 const sessionTtlMs = 30 * 24 * 60 * 60 * 1000;
+const sessionRefreshRecoveryWindowMs = 90 * 24 * 60 * 60 * 1000;
 
 function nextSessionExpiresAt() {
   return new Date(Date.now() + sessionTtlMs).toISOString();
+}
+
+function isSessionWithinRefreshRecoveryWindow(lastSeenAt: string) {
+  const lastSeenMs = Date.parse(lastSeenAt);
+  return (
+    Number.isFinite(lastSeenMs) &&
+    lastSeenMs >= Date.now() - sessionRefreshRecoveryWindowMs
+  );
 }
 
 const authStartSchema = z.object({
@@ -3030,10 +3039,11 @@ export default {
           account_id: string;
           device_id: string;
           expires_at: string;
+          last_seen_at: string;
           revoked_at: string | null;
         }>(
           env.DB,
-          `SELECT id, account_id, device_id, expires_at, revoked_at
+          `SELECT id, account_id, device_id, expires_at, last_seen_at, revoked_at
              FROM sessions
             WHERE refresh_token_hash = ?1`,
           refreshTokenHash,
@@ -3042,7 +3052,8 @@ export default {
         if (
           !session ||
           session.revoked_at ||
-          session.expires_at <= new Date().toISOString()
+          (session.expires_at <= new Date().toISOString() &&
+            !isSessionWithinRefreshRecoveryWindow(session.last_seen_at))
         ) {
           throw new HttpError(
             401,
