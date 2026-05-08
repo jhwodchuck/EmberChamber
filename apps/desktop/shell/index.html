@@ -4526,8 +4526,8 @@
 
                 <p class="section-intro" style="margin-top: 14px">
                   ${state.authForm.mode === "device-link"
-                    ? "Use a signed-in device to approve this desktop. Name it, show or scan a QR, then approve."
-                    : "Focus on the next action only: name this desktop, confirm adults-only access, and open the magic link from your inbox."}
+                    ? "Use QR only when another EmberChamber device is still signed in. If every session is gone, switch back to magic link."
+                    : "Use the account email to recover access when every signed-in device is gone. No password or device-link approval is required."}
                 </p>
 
                 ${renderStatus(state.authStatus)}
@@ -4551,11 +4551,11 @@
                 ${state.authForm.mode === "magic-link"
                   ? `<section class="status info" style="margin-top: 16px">
                        <h3>Next step</h3>
-                       <p>If you have a trusted group invite, paste it now. Otherwise the email path still gets this desktop signed in.</p>
+                       <p>Enter the same private email tied to your account. Returning users can recover with email alone.</p>
                      </section>`
                   : `<section class="status info" style="margin-top: 16px">
                        <h3>Use a trusted device</h3>
-                       <p>QR linking adds this desktop to an existing account. For a brand-new account, switch back to the magic-link path.</p>
+                       <p>QR linking adds this desktop only when another device can approve it. For all-devices-lost recovery, use magic link.</p>
                      </section>`
                 }
 
@@ -4619,7 +4619,7 @@
 
                         <section class="status info">
                           <h3>Fallback stays available</h3>
-                          <p>If the QR expires, the scanner is unavailable, or this is your first device on a new account, switch back to the magic-link path.</p>
+                          <p>If every signed-in device is gone, the QR path cannot approve anything. Switch back to magic link and use the account email.</p>
                         </section>
                       `
                   }
@@ -4660,7 +4660,7 @@
                     : `
                         <section class="status info" style="margin-top: 16px">
                           <h3>Email bootstrap still works here</h3>
-                          <p>If the camera is unavailable, the QR expires, or this desktop is your first device on a new account, switch back to the magic-link path above.</p>
+                          <p>If every signed-in device is gone, switch back to the magic-link path above and use the account email.</p>
                         </section>
                       `
                 }

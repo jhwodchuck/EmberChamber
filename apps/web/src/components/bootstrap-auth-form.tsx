@@ -372,7 +372,7 @@ export function BootstrapAuthForm({
         ? "This address is on the join-beta path now. Add an invite token to create a new account, or switch back to a different sign-in email."
         : mode === "join"
           ? "Confirm the invite and adults-only gate first, then name this browser so you can recognize it later and send the inbox link."
-          : "Use the email tied to your existing beta account. If no account is found, the form will stop and offer the join-beta path before anything new is created.";
+          : "Use the email tied to your existing beta account. This is the recovery path when every signed-in device is gone.";
   const canUseDeviceLink = mode === "signin";
   const requiresInviteToken =
     mode === "join" || inviteFieldVisible || isMissingAccountBranch;
@@ -428,7 +428,7 @@ export function BootstrapAuthForm({
                   Already signed in on another device?
                 </p>
                 <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
-                  Use QR device link instead of waiting on email.
+                  Use QR only when that other device still has a live session.
                 </p>
               </div>
               <button
@@ -454,7 +454,7 @@ export function BootstrapAuthForm({
             </p>
             <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
               Use this only when a trusted EmberChamber device is already signed
-              in.
+              in. If every session is gone, switch back to magic link.
             </p>
             <button
               type="button"
@@ -953,7 +953,7 @@ export function BootstrapAuthForm({
             <StatusCallout tone="info" title="Existing account only">
               QR linking adds this browser to an account that already has a
               signed-in device. It does not replace invite-only account creation
-              or first-device recovery.
+              or all-devices-lost recovery.
             </StatusCallout>
 
             <div>
@@ -986,9 +986,8 @@ export function BootstrapAuthForm({
             <DeviceLinkPanel signedIn={false} deviceLabel={deviceLabel} />
 
             <StatusCallout tone="info" title="Fallback stays available">
-              If the camera is unavailable, the QR expires, or this is your
-              first device on a new account, switch back to the magic-link path
-              above.
+              If every signed-in device is gone, the QR path cannot approve
+              anything. Switch back to magic link and use the account email.
             </StatusCallout>
           </div>
         )}

@@ -93,8 +93,8 @@ export function OnboardingScreen(props: OnboardingScreenProps) {
       </Text>
       <Text style={styles.sectionBody}>
         {authMethod === "device-link"
-          ? "Use a signed-in device to approve this phone. The steps stay short: name it, show or scan a QR, then approve."
-          : "Focus on the next action only: name this phone, confirm adults-only access, and open the magic link from your inbox."}
+          ? "Use QR only when another EmberChamber device is still signed in. If every session is gone, switch back to magic link."
+          : "Use the account email to recover access when every signed-in device is gone. No password or device-link approval is required."}
       </Text>
 
       <View style={styles.segmentRow}>
@@ -143,13 +143,13 @@ export function OnboardingScreen(props: OnboardingScreenProps) {
         <StatusCard
           tone="info"
           title="Next step"
-          body="If you have a trusted group invite, paste it now. Otherwise the email path still gets this phone signed in."
+          body="Enter the same private email tied to your account. Returning users can recover with email alone."
         />
       ) : (
         <StatusCard
           tone="info"
           title="Use a trusted device"
-          body="QR linking adds this phone to an existing account. For a brand-new account, switch back to the magic-link path."
+          body="QR linking adds this phone only when another device can approve it. For all-devices-lost recovery, use magic link."
         />
       )}
 

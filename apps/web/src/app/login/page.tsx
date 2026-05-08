@@ -43,12 +43,12 @@ export default async function LoginPage({
           description={
             prefersDeviceLink
               ? "Use a trusted EmberChamber phone or desktop client to approve this browser with a short-lived QR instead of waiting on email."
-              : "Most returning users only need the same private email, an adults-only confirmation, and a browser name they can recognize later."
+              : "If every device was signed out, use the same private email to recover access with a fresh magic link."
           }
           emphasis={
             prefersDeviceLink
               ? "Use this only when another EmberChamber device already has a live session. The trusted device approves this browser and the web client finishes sign-in here."
-              : "If this email does not match an existing beta account, the form will stop and switch you into a separate join-beta branch before anything new is created."
+              : "Returning accounts do not need a password or a device-link approval. If this email does not match an existing beta account, the form will stop before anything new is created."
           }
         />
 

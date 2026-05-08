@@ -353,6 +353,57 @@ describe("relay routes", () => {
     });
   });
 
+  it("allows all-devices-lost recovery with existing account email and no invite token", async () => {
+    const email = "all-devices-lost@example.com";
+    const alice = await bootstrapAccount(email, "Alice Phone");
+    executeLocalSql(
+      `UPDATE sessions SET revoked_at = '${new Date().toISOString()}' WHERE account_id = '${alice.accountId}'`,
+    );
+
+    const challenge = await relayJson<{
+      debugCompletionToken?: string;
+      inviteRequired: boolean;
+    }>("/v1/auth/start", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "cf-connecting-ip": testClientIp(`${email}-recovery`),
+        ...defaultClientHeaders,
+      },
+      body: JSON.stringify({
+        email,
+        deviceLabel: "Recovered browser",
+        ageConfirmed18: true,
+      }),
+    });
+
+    expect(challenge.inviteRequired).toBe(false);
+    expect(challenge.debugCompletionToken).toBeTruthy();
+
+    const recovered = await relayJson<RelaySession>("/v1/auth/complete", {
+      method: "POST",
+      headers: { "content-type": "application/json", ...defaultClientHeaders },
+      body: JSON.stringify({
+        completionToken: challenge.debugCompletionToken,
+        deviceLabel: "Recovered browser",
+      }),
+    });
+
+    expect(recovered.accountId).toBe(alice.accountId);
+    expect(recovered.sessionId).not.toBe(alice.sessionId);
+    expect(recovered.deviceId).not.toBe(alice.deviceId);
+
+    const sessions = await relayJson<Array<{ id: string; isCurrent: boolean }>>(
+      "/v1/sessions",
+      {
+        headers: authHeaders(recovered),
+      },
+    );
+    expect(sessions).toEqual([
+      expect.objectContaining({ id: recovered.sessionId, isCurrent: true }),
+    ]);
+  });
+
   it("extends the relay session deadline when refreshing access tokens", async () => {
     const alice = await bootstrapAccount(
       "session-refresh@example.com",
