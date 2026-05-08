@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -117,7 +117,7 @@ type SwipeableChatRowProps = {
   onToggleConversationMuted: (conversationId: string) => void;
 };
 
-function SwipeableChatRow({
+const SwipeableChatRow = memo(function SwipeableChatRow({
   item,
   isSelected,
   isOpen,
@@ -129,6 +129,7 @@ function SwipeableChatRow({
   onToggleConversationMuted,
 }: SwipeableChatRowProps) {
   const translateX = useRef(new Animated.Value(0)).current;
+
 
   useEffect(() => {
     Animated.spring(translateX, {
@@ -293,7 +294,7 @@ function SwipeableChatRow({
       </Animated.View>
     </View>
   );
-}
+});
 
 export type ChatListScreenProps = {
   profileName: string | null;
@@ -332,6 +333,40 @@ export function ChatListScreen({
     null,
   );
   const resumeItem = items[0] ?? null;
+
+  const flatListExtraData = useMemo(
+    () => ({ selectedConversationId, openConversationId }),
+    [selectedConversationId, openConversationId],
+  );
+
+  const handleScrollBeginDrag = useCallback(() => {
+    setOpenConversationId(null);
+  }, []);
+
+  const renderChatRow = useCallback(
+    ({ item }: { item: ChatListItem }) => (
+      <SwipeableChatRow
+        item={item}
+        isSelected={selectedConversationId === item.group.id}
+        isOpen={openConversationId === item.group.id}
+        isUnread={unreadIds.has(item.group.id)}
+        onSetOpen={setOpenConversationId}
+        onSelectConversation={onSelectConversation}
+        onToggleConversationArchived={onToggleConversationArchived}
+        onToggleConversationPinned={onToggleConversationPinned}
+        onToggleConversationMuted={onToggleConversationMuted}
+      />
+    ),
+    [
+      selectedConversationId,
+      openConversationId,
+      unreadIds,
+      onSelectConversation,
+      onToggleConversationArchived,
+      onToggleConversationPinned,
+      onToggleConversationMuted,
+    ],
+  );
 
   useEffect(() => {
     if (!items.some((item) => item.group.id === openConversationId)) {
@@ -446,24 +481,9 @@ export function ChatListScreen({
         maxToRenderPerBatch={16}
         windowSize={8}
         removeClippedSubviews
-        extraData={{
-          selectedConversationId,
-          openConversationId,
-        }}
-        onScrollBeginDrag={() => setOpenConversationId(null)}
-        renderItem={({ item }) => (
-          <SwipeableChatRow
-            item={item}
-            isSelected={selectedConversationId === item.group.id}
-            isOpen={openConversationId === item.group.id}
-            isUnread={unreadIds.has(item.group.id)}
-            onSetOpen={setOpenConversationId}
-            onSelectConversation={onSelectConversation}
-            onToggleConversationArchived={onToggleConversationArchived}
-            onToggleConversationPinned={onToggleConversationPinned}
-            onToggleConversationMuted={onToggleConversationMuted}
-          />
-        )}
+        extraData={flatListExtraData}
+        onScrollBeginDrag={handleScrollBeginDrag}
+        renderItem={renderChatRow}
         ListEmptyComponent={
           !isLoadingAccount ? (
             <View style={styles.emptyState}>
