@@ -22,6 +22,7 @@ type RelaySession = {
   deviceId: string;
   sessionId: string;
   refreshToken: string;
+  expiresAt: string;
 };
 
 const relaySecrets = {
@@ -350,6 +351,41 @@ describe("relay routes", () => {
       clientBuild: "1",
       deviceModel: "Google Pixel 8",
     });
+  });
+
+  it("extends the relay session deadline when refreshing access tokens", async () => {
+    const alice = await bootstrapAccount(
+      "session-refresh@example.com",
+      "Alice Desktop",
+    );
+    const expiringAt = new Date(Date.now() + 60 * 1000).toISOString();
+    executeLocalSql(
+      `UPDATE sessions SET expires_at = '${expiringAt}' WHERE id = '${alice.sessionId}'`,
+    );
+
+    const refresh = await relayJson<{
+      accessToken: string;
+      sessionId: string;
+      deviceId: string;
+      expiresAt: string;
+    }>("/v1/auth/refresh", {
+      method: "POST",
+      headers: { "content-type": "application/json", ...defaultClientHeaders },
+      body: JSON.stringify({ refreshToken: alice.refreshToken }),
+    });
+
+    expect(refresh.sessionId).toBe(alice.sessionId);
+    expect(refresh.deviceId).toBe(alice.deviceId);
+    expect(new Date(refresh.expiresAt).getTime()).toBeGreaterThan(
+      new Date(expiringAt).getTime() + 29 * 24 * 60 * 60 * 1000,
+    );
+
+    const sessions = await relayJson<Array<{ id: string }>>("/v1/sessions", {
+      headers: { authorization: `Bearer ${refresh.accessToken}` },
+    });
+    expect(sessions.some((session) => session.id === alice.sessionId)).toBe(
+      true,
+    );
   });
 
   it("lists conversations and joined-space metadata search results", async () => {

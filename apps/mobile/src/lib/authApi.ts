@@ -14,7 +14,8 @@ export type StartMagicLinkInput = {
 export type RefreshSessionResponse = Pick<
   AuthSession,
   "accessToken" | "deviceId" | "sessionId"
->;
+> &
+  Partial<Pick<AuthSession, "expiresAt">>;
 
 export function startMagicLinkRequest(input: StartMagicLinkInput) {
   return fetchRelayJson<MagicLinkResponse>(`${relayUrl}/v1/auth/start`, {

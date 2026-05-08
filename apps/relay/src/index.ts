@@ -98,6 +98,12 @@ const clientHeaderNames = {
   deviceModel: "x-emberchamber-device-model",
 } as const;
 
+const sessionTtlMs = 30 * 24 * 60 * 60 * 1000;
+
+function nextSessionExpiresAt() {
+  return new Date(Date.now() + sessionTtlMs).toISOString();
+}
+
 const authStartSchema = z.object({
   email: z.string().email(),
   inviteToken: z.string().min(3).max(128).optional(),
@@ -480,19 +486,22 @@ async function touchSession(
   env: Env,
   sessionId: string,
   clientMetadata: ClientMetadata,
+  expiresAt?: string | null,
 ) {
   const now = new Date().toISOString();
   await dbRun(
     env.DB,
     `UPDATE sessions
         SET last_seen_at = ?2,
-            client_platform = COALESCE(?3, client_platform),
-            client_version = COALESCE(?4, client_version),
-            client_build = COALESCE(?5, client_build),
-            device_model = COALESCE(?6, device_model)
+            expires_at = COALESCE(?3, expires_at),
+            client_platform = COALESCE(?4, client_platform),
+            client_version = COALESCE(?5, client_version),
+            client_build = COALESCE(?6, client_build),
+            device_model = COALESCE(?7, device_model)
       WHERE id = ?1`,
     sessionId,
     now,
+    expiresAt ?? null,
     clientMetadata.clientPlatform,
     clientMetadata.clientVersion,
     clientMetadata.clientBuild,
@@ -1632,9 +1641,7 @@ async function createSession(
   const sessionId = crypto.randomUUID();
   const refreshToken = `${crypto.randomUUID()}-${crypto.randomUUID()}`;
   const refreshTokenHash = await sha256Hex(`refresh:${refreshToken}`);
-  const expiresAt = new Date(
-    Date.now() + 30 * 24 * 60 * 60 * 1000,
-  ).toISOString();
+  const expiresAt = nextSessionExpiresAt();
 
   await dbRun(
     env.DB,
@@ -3052,12 +3059,20 @@ export default {
           },
           env.EMBERCHAMBER_ACCESS_TOKEN_SECRET,
         );
+        const expiresAt = nextSessionExpiresAt();
+        await touchSession(
+          env,
+          session.id,
+          parseClientMetadata(request),
+          expiresAt,
+        );
 
         return respond(
           json({
             accessToken,
             sessionId: session.id,
             deviceId: session.device_id,
+            expiresAt,
           }),
         );
       }

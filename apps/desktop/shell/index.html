@@ -2503,6 +2503,7 @@
           accessToken: body.accessToken,
           sessionId: body.sessionId,
           deviceId: body.deviceId,
+          expiresAt: body.expiresAt || state.session.expiresAt,
         };
         await persistSecureStateNow();
         return state.session;
