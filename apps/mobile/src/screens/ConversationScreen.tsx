@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import {
   FlatList,
@@ -294,6 +294,25 @@ export function ConversationScreen({
     () => buildConversationRows(threadMessages),
     [threadMessages],
   );
+
+  const renderMessageItem = useCallback(
+    ({ item }: { item: (typeof conversationRows)[number] }) =>
+      item.type === "date" ? (
+        <View style={styles.dateSeparator}>
+          <Text style={styles.dateSeparatorLabel}>{item.label}</Text>
+        </View>
+      ) : (
+        <MessageBubble
+          message={item.message}
+          isOwnMessage={item.message.senderAccountId === session.accountId}
+          onImageError={onImageError}
+          onResolveAttachmentAccess={onResolveAttachmentAccess}
+          onAction={onMessageAction}
+        />
+      ),
+    [session.accountId, onImageError, onResolveAttachmentAccess, onMessageAction],
+  );
+
   const maintainVisibleContentPosition =
     Platform.OS === "ios" ? { minIndexForVisible: 0 } : undefined;
   const firstMessageId = threadMessages[0]?.id ?? null;
@@ -621,6 +640,10 @@ export function ConversationScreen({
           onViewableItemsChanged={onViewableItemsChangedRef.current}
           scrollEventThrottle={16}
           viewabilityConfig={viewabilityConfigRef.current}
+          removeClippedSubviews
+          initialNumToRender={20}
+          maxToRenderPerBatch={8}
+          windowSize={5}
           // Android: scroll-to-bottom fires here (after native layout settles)
           // instead of in a requestAnimationFrame to prevent post-send flicker.
           onContentSizeChange={
@@ -633,23 +656,7 @@ export function ConversationScreen({
                 }
               : undefined
           }
-          renderItem={({ item }) =>
-            item.type === "date" ? (
-              <View style={styles.dateSeparator}>
-                <Text style={styles.dateSeparatorLabel}>{item.label}</Text>
-              </View>
-            ) : (
-              <MessageBubble
-                message={item.message}
-                isOwnMessage={
-                  item.message.senderAccountId === session.accountId
-                }
-                onImageError={onImageError}
-                onResolveAttachmentAccess={onResolveAttachmentAccess}
-                onAction={onMessageAction}
-              />
-            )
-          }
+          renderItem={renderMessageItem}
         />
       ) : (
         <View style={[styles.conversationMessages, styles.emptyState]}>

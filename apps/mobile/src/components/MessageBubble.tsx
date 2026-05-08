@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { memo, useEffect, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
   Clipboard,
@@ -142,7 +142,7 @@ function renderFormattedBlocks(
   });
 }
 
-export function MessageBubble({
+export const MessageBubble = memo(function MessageBubble({
   message,
   isOwnMessage,
   onImageError,
@@ -474,4 +474,4 @@ export function MessageBubble({
       ) : null}
     </>
   );
-}
+});
