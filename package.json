@@ -54,6 +54,7 @@
   },
   "overrides": {
     "@xmldom/xmldom": "0.8.13",
+    "expo-constants": "55.0.16",
     "postcss": "8.5.12",
     "vite": ">=7.3.2"
   }
