@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use emberchamber_domain::{AccountId, ConversationId};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 pub type GroupEpoch = u32;
 
@@ -360,5 +361,6 @@ pub struct GroupThreadMessage {
     pub attachment: Option<GroupThreadAttachment>,
     pub created_at: DateTime<Utc>,
     pub edited_at: Option<DateTime<Utc>>,
+    pub reactions: Option<HashMap<String, Vec<AccountId>>>,
     pub read_by_count: Option<u32>,
 }

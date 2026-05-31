@@ -40,12 +40,13 @@ export type MainScreenProps = {
   setSelectedConversationId: Dispatch<SetStateAction<string | null>>;
   selectedGroup: GroupMembershipSummary | null;
   threadMessages: GroupThreadMessage[];
+  typingNames: string[];
   inviteInput: string;
   setInviteInput: Dispatch<SetStateAction<string>>;
   invitePreview: GroupInvitePreview | null;
   invitePreviewError: string | null;
   messageDraft: string;
-  setMessageDraft: Dispatch<SetStateAction<string>>;
+  setMessageDraft: (nextDraft: string) => void;
   pendingAttachment: PendingAttachment | null;
   setPendingAttachment: Dispatch<SetStateAction<PendingAttachment | null>>;
   isLoadingAccount: boolean;
@@ -138,6 +139,7 @@ export function MainScreen(props: MainScreenProps) {
     setSelectedConversationId,
     selectedGroup,
     threadMessages,
+    typingNames,
     inviteInput,
     setInviteInput,
     invitePreview,
@@ -300,6 +302,10 @@ export function MainScreen(props: MainScreenProps) {
           return left.preference.isPinned ? -1 : 1;
         }
 
+        if (left.unreadCount !== right.unreadCount) {
+          return right.unreadCount - left.unreadCount;
+        }
+
         const leftTimestamp =
           left.latestMessage?.createdAt ?? left.group.updatedAt;
         const rightTimestamp =
@@ -346,6 +352,7 @@ export function MainScreen(props: MainScreenProps) {
       session={session}
       selectedGroup={selectedGroup}
       threadMessages={threadMessages}
+      typingNames={typingNames}
       messageDraft={messageDraft}
       setMessageDraft={setMessageDraft}
       pendingAttachment={pendingAttachment}

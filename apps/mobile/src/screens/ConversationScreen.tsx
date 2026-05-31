@@ -138,8 +138,9 @@ export type ConversationScreenProps = {
   session: AuthSession;
   selectedGroup: GroupMembershipSummary;
   threadMessages: GroupThreadMessage[];
+  typingNames: string[];
   messageDraft: string;
-  setMessageDraft: Dispatch<SetStateAction<string>>;
+  setMessageDraft: (nextDraft: string) => void;
   pendingAttachment: PendingAttachment | null;
   setPendingAttachment: Dispatch<SetStateAction<PendingAttachment | null>>;
   isLoadingThread: boolean;
@@ -180,6 +181,7 @@ export function ConversationScreen({
   session,
   selectedGroup,
   threadMessages,
+  typingNames,
   messageDraft,
   setMessageDraft,
   pendingAttachment,
@@ -624,40 +626,48 @@ export function ConversationScreen({
           </View>
         </View>
       ) : threadMessages.length ? (
-        <FlatList
-          ref={listRef}
-          style={styles.conversationMessages}
-          contentContainerStyle={styles.conversationMessagesContent}
-          data={conversationRows}
-          keyExtractor={(item) => item.key}
-          showsVerticalScrollIndicator={false}
-          // This list never prepends history. On Android, preserving the first
-          // visible item while also forcing scrollToEnd after send can cause the
-          // thread to oscillate when the keyboard and composer resize.
-          maintainVisibleContentPosition={maintainVisibleContentPosition}
-          onScroll={handleConversationScroll}
-          onScrollToIndexFailed={handleScrollToIndexFailed}
-          onViewableItemsChanged={onViewableItemsChangedRef.current}
-          scrollEventThrottle={16}
-          viewabilityConfig={viewabilityConfigRef.current}
-          removeClippedSubviews
-          initialNumToRender={20}
-          maxToRenderPerBatch={8}
-          windowSize={5}
-          // Android: scroll-to-bottom fires here (after native layout settles)
-          // instead of in a requestAnimationFrame to prevent post-send flicker.
-          onContentSizeChange={
-            Platform.OS === "android"
-              ? () => {
-                  if (pendingScrollToEndRef.current) {
-                    pendingScrollToEndRef.current = false;
-                    listRef.current?.scrollToEnd({ animated: false });
+        <View style={styles.conversationMessages}>
+          {typingNames.length ? (
+            <View style={styles.typingBanner}>
+              <Text style={styles.typingBannerText}>
+                {typingNames.join(", ")} {typingNames.length === 1 ? "is" : "are"} typing...
+              </Text>
+            </View>
+          ) : null}
+          <FlatList
+            ref={listRef}
+            contentContainerStyle={styles.conversationMessagesContent}
+            data={conversationRows}
+            keyExtractor={(item) => item.key}
+            showsVerticalScrollIndicator={false}
+            // This list never prepends history. On Android, preserving the first
+            // visible item while also forcing scrollToEnd after send can cause the
+            // thread to oscillate when the keyboard and composer resize.
+            maintainVisibleContentPosition={maintainVisibleContentPosition}
+            onScroll={handleConversationScroll}
+            onScrollToIndexFailed={handleScrollToIndexFailed}
+            onViewableItemsChanged={onViewableItemsChangedRef.current}
+            scrollEventThrottle={16}
+            viewabilityConfig={viewabilityConfigRef.current}
+            removeClippedSubviews
+            initialNumToRender={20}
+            maxToRenderPerBatch={8}
+            windowSize={5}
+            // Android: scroll-to-bottom fires here (after native layout settles)
+            // instead of in a requestAnimationFrame to prevent post-send flicker.
+            onContentSizeChange={
+              Platform.OS === "android"
+                ? () => {
+                    if (pendingScrollToEndRef.current) {
+                      pendingScrollToEndRef.current = false;
+                      listRef.current?.scrollToEnd({ animated: false });
+                    }
                   }
-                }
-              : undefined
-          }
-          renderItem={renderMessageItem}
-        />
+                : undefined
+            }
+            renderItem={renderMessageItem}
+          />
+        </View>
       ) : (
         <View style={[styles.conversationMessages, styles.emptyState]}>
           <Text style={styles.emptyStateTitle}>No messages yet</Text>
@@ -754,7 +764,7 @@ export function ConversationScreen({
             placeholderTextColor={theme.colors.placeholder}
             style={[styles.input, styles.composerInputDocked]}
             value={messageDraft}
-            onChangeText={setMessageDraft}
+            onChangeText={(nextDraft) => setMessageDraft(nextDraft)}
             selection={selectionOverride ?? undefined}
             onSelectionChange={handleDraftSelectionChange}
           />

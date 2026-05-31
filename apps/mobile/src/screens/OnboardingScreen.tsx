@@ -85,6 +85,7 @@ export function OnboardingScreen(props: OnboardingScreenProps) {
     onScanDeviceLinkQr,
     onResetDeviceLink,
   } = props;
+  const isMagicLink = authMethod === "magic-link";
 
   return (
     <View style={styles.card}>
@@ -136,10 +137,36 @@ export function OnboardingScreen(props: OnboardingScreenProps) {
         </Pressable>
       </View>
 
+      <View style={styles.onboardingStepRow}>
+        {(isMagicLink
+          ? [
+              ["1", "Access + 18+"],
+              ["2", "Inbox link"],
+              ["3", "Profile"],
+            ]
+          : [
+              ["1", "Name device"],
+              ["2", "Scan QR"],
+              ["3", "Approve"],
+            ]
+        ).map(([number, label], index) => (
+          <View
+            key={`${number}-${label}`}
+            style={[
+              styles.onboardingStep,
+              index === 0 ? styles.onboardingStepActive : null,
+            ]}
+          >
+            <Text style={styles.onboardingStepNumber}>{number}</Text>
+            <Text style={styles.onboardingStepLabel}>{label}</Text>
+          </View>
+        ))}
+      </View>
+
       {formMessage ? <StatusCard {...formMessage} /> : null}
       {sessionMessage ? <StatusCard {...sessionMessage} /> : null}
 
-      {authMethod === "magic-link" ? (
+      {isMagicLink ? (
         <StatusCard
           tone="info"
           title="Next step"
@@ -175,7 +202,7 @@ export function OnboardingScreen(props: OnboardingScreenProps) {
         ) : null}
       </View>
 
-      {authMethod === "magic-link" ? (
+      {isMagicLink ? (
         <>
           <View style={styles.fieldBlock}>
             <View style={styles.inlineLabelRow}>
@@ -220,7 +247,7 @@ export function OnboardingScreen(props: OnboardingScreenProps) {
               <Text style={styles.errorText}>{invitePreviewError}</Text>
             ) : null}
             {invitePreview ? (
-              <View style={styles.infoCard}>
+              <View style={styles.inviteReviewCard}>
                 <Text style={styles.infoTitle}>
                   {invitePreview.group.title}
                 </Text>
@@ -308,7 +335,7 @@ export function OnboardingScreen(props: OnboardingScreenProps) {
               ) : null}
             </View>
           ) : (
-            <View style={styles.infoCard}>
+            <View style={styles.inviteRevealCard}>
               <Text style={styles.infoTitle}>No beta token on hand?</Text>
               <Text style={styles.infoBody}>
                 Returning users can continue with email alone. Some new accounts
@@ -331,26 +358,33 @@ export function OnboardingScreen(props: OnboardingScreenProps) {
               }
             }}
             style={[
-              styles.checkboxCard,
+              styles.ageGateCard,
+              ageConfirmed18 ? styles.ageGateCardActive : null,
               errors.ageConfirmed18 ? styles.inputError : null,
             ]}
           >
-            <View
-              style={[
-                styles.checkboxBox,
-                ageConfirmed18 ? styles.checkboxBoxChecked : null,
-              ]}
-            >
-              <Text style={styles.checkboxMark}>
-                {ageConfirmed18 ? "✓" : ""}
-              </Text>
+            <View style={styles.ageGateBadge}>
+              <Text style={styles.ageGateBadgeText}>18+</Text>
             </View>
             <View style={styles.checkboxCopy}>
-              <Text style={styles.label}>
-                I confirm I am at least 18 years old
-              </Text>
+              <View style={styles.ageGateHeader}>
+                <Text style={styles.label}>
+                  I confirm I am at least 18 years old
+                </Text>
+                <View
+                  style={[
+                    styles.checkboxBox,
+                    ageConfirmed18 ? styles.checkboxBoxChecked : null,
+                  ]}
+                >
+                  <Text style={styles.checkboxMark}>
+                    {ageConfirmed18 ? "✓" : ""}
+                  </Text>
+                </View>
+              </View>
               <Text style={styles.helper}>
-                Adults-only access is a permanent product rule.
+                Adults-only access is a permanent product rule and a condition
+                of this beta.
               </Text>
               {errors.ageConfirmed18 ? (
                 <Text style={styles.errorText}>{errors.ageConfirmed18}</Text>
@@ -407,7 +441,7 @@ export function OnboardingScreen(props: OnboardingScreenProps) {
         </>
       )}
 
-      {authMethod === "magic-link" && challenge ? (
+      {isMagicLink && challenge ? (
         <StatusCard
           tone="success"
           title="Check your inbox"

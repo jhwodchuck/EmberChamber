@@ -8,12 +8,16 @@ import * as SystemUI from "expo-system-ui";
 import { startTransition, useEffect, useRef, useState } from "react";
 import { Linking, Platform } from "react-native";
 import {
+  applyConversationTypingEvent,
   createDeviceLinkToken,
   encodeDeviceLinkQrPayload,
   encryptAttachmentBytes,
   encryptConversationPayload,
   parseDeviceLinkQrPayload,
+  pruneConversationTypingIndicators,
   relayOriginsMatch,
+  type ConversationSocketEvent,
+  type ConversationTypingIndicatorMap,
   type DeviceLinkQrMode,
   type DeviceLinkStartResponse,
   type DeviceLinkStatus,
@@ -196,6 +200,8 @@ export default function App() {
   const [threadMessages, setThreadMessages] = useState<GroupThreadMessage[]>(
     [],
   );
+  const [typingIndicators, setTypingIndicators] =
+    useState<ConversationTypingIndicatorMap>({});
   const [invitePreview, setInvitePreview] = useState<GroupInvitePreview | null>(
     null,
   );
@@ -249,6 +255,10 @@ export default function App() {
   const sessionRef = useRef<AuthSession | null>(null);
   const selectedConversationIdRef = useRef<string | null>(null);
   const deviceBundleDirectoryRef = useRef(new Map<string, DeviceKeyBundle[]>());
+  const typingStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const lastTypingPublishAtRef = useRef(0);
 
   const selectedGroup =
     groups.find((group) => group.id === selectedConversationId) ??
@@ -770,6 +780,25 @@ export default function App() {
   }, [selectedConversationId]);
 
   useEffect(() => {
+    const intervalId = setInterval(() => {
+      setTypingIndicators((current) => pruneConversationTypingIndicators(current));
+    }, 1000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (typingStopTimerRef.current) {
+        clearTimeout(typingStopTimerRef.current);
+        typingStopTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     groupsRef.current = groups;
   }, [groups]);
 
@@ -1124,6 +1153,7 @@ export default function App() {
     if (!session || !selectedConversationId) {
       setThreadMessages([]);
       setGroupMembers([]);
+      setTypingIndicators({});
       return;
     }
 
@@ -1131,6 +1161,7 @@ export default function App() {
       groups.find((group) => group.id === selectedConversationId) ?? null;
     let cancelled = false;
     setIsLoadingThread(true);
+    setTypingIndicators({});
     let ws: WebSocket | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let refreshTimer: ReturnType<typeof setInterval> | null = null;
@@ -1226,37 +1257,76 @@ export default function App() {
                 );
                 ws.onmessage = (event) => {
                   try {
-                    const message = JSON.parse(
-                      event.data,
-                    ) as GroupThreadMessage;
-                    setThreadMessages((prev) => {
-                      if (prev.some((entry) => entry.id === message.id)) {
-                        return prev;
+                    const payload = JSON.parse(event.data) as ConversationSocketEvent;
+                    const eventType = payload.type ?? "message";
+
+                    if (eventType === "message") {
+                      const message = payload as GroupThreadMessage;
+                      setThreadMessages((prev) => {
+                        if (prev.some((entry) => entry.id === message.id)) {
+                          return prev;
+                        }
+                        const next = mergeGroupThreadMessage(prev, message);
+                        if (db) {
+                          saveCachedGroupMessages(
+                            db,
+                            selectedConversationId,
+                            next,
+                          ).catch(() => {});
+                        }
+                        return next;
+                      });
+                      if (
+                        selectedConversationIdRef.current ===
+                        selectedConversationId
+                      ) {
+                        void relayFetch<{ acked: boolean }>(
+                          socketSession,
+                          `/v1/conversations/${selectedConversationId}/messages/ack`,
+                          {
+                            method: "POST",
+                            body: JSON.stringify({
+                              lastReadMessageCreatedAt: message.createdAt,
+                            }),
+                          },
+                        ).catch(() => undefined);
                       }
-                      const next = mergeGroupThreadMessage(prev, message);
-                      if (db) {
-                        saveCachedGroupMessages(
-                          db,
-                          selectedConversationId,
-                          next,
-                        ).catch(() => {});
-                      }
-                      return next;
-                    });
-                    if (
-                      selectedConversationIdRef.current ===
-                      selectedConversationId
+                    } else if (eventType === "message_edited") {
+                      const { messageId, text, editedAt } = payload;
+                      setThreadMessages((prev) =>
+                        prev.map((message) =>
+                          message.id === messageId
+                            ? { ...message, text, editedAt }
+                            : message,
+                        ),
+                      );
+                    } else if (eventType === "message_deleted") {
+                      const { messageId, deletedAt } = payload;
+                      setThreadMessages((prev) =>
+                        prev.map((message) =>
+                          message.id === messageId
+                            ? { ...message, deletedAt }
+                            : message,
+                        ),
+                      );
+                    } else if (eventType === "message_reaction") {
+                      const { messageId, reactions } = payload;
+                      setThreadMessages((prev) =>
+                        prev.map((message) =>
+                          message.id === messageId
+                            ? { ...message, reactions }
+                            : message,
+                        ),
+                      );
+                    } else if (
+                      eventType === "typing_start" ||
+                      eventType === "typing_stop"
                     ) {
-                      void relayFetch<{ acked: boolean }>(
-                        socketSession,
-                        `/v1/groups/${selectedConversationId}/messages/ack`,
-                        {
-                          method: "POST",
-                          body: JSON.stringify({
-                            lastReadMessageCreatedAt: message.createdAt,
-                          }),
-                        },
-                      ).catch(() => undefined);
+                      setTypingIndicators((current) =>
+                        applyConversationTypingEvent(current, payload, {
+                          selfAccountId: sessionRef.current?.accountId,
+                        }),
+                      );
                     }
                   } catch {
                     // Ignore unparseable messages
@@ -1322,6 +1392,69 @@ export default function App() {
       }
     };
   }, [db, groups, session, selectedConversationId]);
+
+  const publishTypingState = useCallback(
+    (draftText: string) => {
+      const activeSession = sessionRef.current;
+      const activeConversationId = selectedConversationIdRef.current;
+      const activeGroup = groupsRef.current.find(
+        (group) => group.id === activeConversationId,
+      );
+      if (
+        !activeSession ||
+        !activeConversationId ||
+        activeGroup?.historyMode !== "relay_hosted"
+      ) {
+        return;
+      }
+
+      const isTyping = draftText.trim().length > 0;
+      const now = Date.now();
+
+      if (isTyping) {
+        if (now - lastTypingPublishAtRef.current > 1200) {
+          lastTypingPublishAtRef.current = now;
+          void relayFetch<{ published: boolean }>(
+            activeSession,
+            `/v1/conversations/${activeConversationId}/typing/start`,
+            { method: "POST" },
+          ).catch(() => undefined);
+        }
+
+        if (typingStopTimerRef.current) {
+          clearTimeout(typingStopTimerRef.current);
+        }
+        typingStopTimerRef.current = setTimeout(() => {
+          const timerSession = sessionRef.current;
+          const timerConversationId = selectedConversationIdRef.current;
+          if (!timerSession || !timerConversationId) {
+            return;
+          }
+          void relayFetch<{ published: boolean }>(
+            timerSession,
+            `/v1/conversations/${timerConversationId}/typing/stop`,
+            { method: "POST" },
+          ).catch(() => undefined);
+        }, 2200);
+      } else {
+        if (typingStopTimerRef.current) {
+          clearTimeout(typingStopTimerRef.current);
+          typingStopTimerRef.current = null;
+        }
+        void relayFetch<{ published: boolean }>(
+          activeSession,
+          `/v1/conversations/${activeConversationId}/typing/stop`,
+          { method: "POST" },
+        ).catch(() => undefined);
+      }
+    },
+    [relayFetch],
+  );
+
+  function handleMessageDraftChange(nextDraft: string) {
+    setMessageDraft(nextDraft);
+    publishTypingState(nextDraft);
+  }
 
   // ---- handlers ----
 
@@ -2364,12 +2497,15 @@ export default function App() {
     setSelectedConversationId,
     selectedGroup: selectedGroup ?? null,
     threadMessages,
+    typingNames: Object.values(
+      pruneConversationTypingIndicators(typingIndicators),
+    ).map((entry) => entry.displayName),
     inviteInput,
     setInviteInput,
     invitePreview,
     invitePreviewError,
     messageDraft,
-    setMessageDraft,
+    setMessageDraft: handleMessageDraftChange,
     pendingAttachment,
     setPendingAttachment,
     isLoadingAccount,

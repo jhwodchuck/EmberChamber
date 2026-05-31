@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { ActivityIndicator, Image, Pressable, Text, View } from "react-native";
 import type { DeviceLinkStatus } from "@emberchamber/protocol";
 import type {
@@ -74,6 +75,7 @@ export function SettingsScreen({
   onChangeAvatar,
   onSignOut,
 }: SettingsScreenProps) {
+  const [diagnosticsExpanded, setDiagnosticsExpanded] = useState(false);
   const initials = profile?.displayName
     ? profile.displayName
         .trim()
@@ -147,27 +149,11 @@ export function SettingsScreen({
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Devices</Text>
-        <View style={styles.metricRow}>
-          <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Registration</Text>
-            <Text style={styles.metricValueText}>
-              {deviceBundleReady ? "Synced" : "Pending"}
-            </Text>
-            <Text style={styles.helper}>
-              {deviceBundleCount} visible bundle
-              {deviceBundleCount === 1 ? "" : "s"} on the relay.
-            </Text>
-          </View>
-          <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Vault</Text>
-            <Text style={styles.metricValue}>{vaultCount}</Text>
-          </View>
-        </View>
-        {deviceBundleError ? (
-          <Text style={styles.errorText}>{deviceBundleError}</Text>
-        ) : null}
-
+        <Text style={styles.sectionTitle}>Device linking</Text>
+        <Text style={styles.sectionBody}>
+          Add this phone from a trusted session, or show this phone's QR when
+          another signed-in device needs approval.
+        </Text>
         <DeviceLinkCard
           signedIn
           deviceLabel={deviceLabel}
@@ -184,68 +170,117 @@ export function SettingsScreen({
       </View>
 
       <View style={styles.card}>
-        <View style={styles.inlineLabelRow}>
-          <Text style={styles.sectionTitle}>Signed-in sessions</Text>
-          <Pressable onPress={onRefreshSessions}>
-            <Text style={styles.inlineAction}>Refresh</Text>
-          </Pressable>
-        </View>
-
-        {isLoadingSessions && !sessions.length ? (
-          <View style={styles.inlineLoadingRow}>
-            <ActivityIndicator size="small" color={theme.colors.textSoft} />
-            <Text style={styles.helper}>Loading active sessions…</Text>
+        <Pressable
+          onPress={() => setDiagnosticsExpanded((current) => !current)}
+          style={styles.diagnosticsToggle}
+        >
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text style={styles.sectionTitle}>Debug + diagnostics</Text>
+            <Text style={styles.sectionBody}>
+              Relay registration, vault counts, sessions, and contact token.
+            </Text>
           </View>
-        ) : sessions.length ? (
-          <View style={styles.sessionList}>
-            {sessions.map((item) => (
-              <View key={item.id} style={styles.sessionRow}>
-                <View style={styles.sessionRowTop}>
-                  <Text style={styles.sessionRowTitle}>{item.deviceLabel}</Text>
-                  {item.isCurrent ? (
-                    <View style={styles.sessionCurrentBadge}>
-                      <Text style={styles.sessionCurrentBadgeLabel}>
-                        Current
-                      </Text>
-                    </View>
-                  ) : null}
-                </View>
-                <Text style={styles.sessionRowMeta}>
-                  {describeSessionVersion(item)}
+          <Text style={styles.diagnosticsToggleLabel}>
+            {diagnosticsExpanded ? "Hide" : "Show"}
+          </Text>
+        </Pressable>
+
+        {diagnosticsExpanded ? (
+          <>
+            <View style={styles.metricRow}>
+              <View style={styles.metricCard}>
+                <Text style={styles.metricLabel}>Registration</Text>
+                <Text style={styles.metricValueText}>
+                  {deviceBundleReady ? "Synced" : "Pending"}
                 </Text>
-                <Text style={styles.sessionRowMeta}>
-                  {item.deviceModel ?? "Device model unavailable"}
-                </Text>
-                <Text style={styles.sessionRowMeta}>
-                  Seen {formatSessionTimestamp(item.lastSeenAt)} · Signed in{" "}
-                  {formatSessionTimestamp(item.createdAt)}
+                <Text style={styles.helper}>
+                  {deviceBundleCount} visible bundle
+                  {deviceBundleCount === 1 ? "" : "s"} on the relay.
                 </Text>
               </View>
-            ))}
-          </View>
+              <View style={styles.metricCard}>
+                <Text style={styles.metricLabel}>Vault</Text>
+                <Text style={styles.metricValue}>{vaultCount}</Text>
+              </View>
+            </View>
+            {deviceBundleError ? (
+              <Text style={styles.errorText}>{deviceBundleError}</Text>
+            ) : null}
+
+            <View style={styles.inlineLabelRow}>
+              <Text style={styles.label}>Signed-in sessions</Text>
+              <Pressable onPress={onRefreshSessions}>
+                <Text style={styles.inlineAction}>Refresh</Text>
+              </Pressable>
+            </View>
+
+            {isLoadingSessions && !sessions.length ? (
+              <View style={styles.inlineLoadingRow}>
+                <ActivityIndicator size="small" color={theme.colors.textSoft} />
+                <Text style={styles.helper}>Loading active sessions…</Text>
+              </View>
+            ) : sessions.length ? (
+              <View style={styles.sessionList}>
+                {sessions.map((item) => (
+                  <View key={item.id} style={styles.sessionRow}>
+                    <View style={styles.sessionRowTop}>
+                      <Text style={styles.sessionRowTitle}>
+                        {item.deviceLabel}
+                      </Text>
+                      {item.isCurrent ? (
+                        <View style={styles.sessionCurrentBadge}>
+                          <Text style={styles.sessionCurrentBadgeLabel}>
+                            Current
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    <Text style={styles.sessionRowMeta}>
+                      {describeSessionVersion(item)}
+                    </Text>
+                    <Text style={styles.sessionRowMeta}>
+                      {item.deviceModel ?? "Device model unavailable"}
+                    </Text>
+                    <Text style={styles.sessionRowMeta}>
+                      Seen {formatSessionTimestamp(item.lastSeenAt)} · Signed in{" "}
+                      {formatSessionTimestamp(item.createdAt)}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Text style={styles.helper}>
+                Only this device session is visible right now.
+              </Text>
+            )}
+
+            {sessionsError ? (
+              <Text style={styles.errorText}>{sessionsError}</Text>
+            ) : null}
+
+            {contactCard ? (
+              <View style={styles.infoCard}>
+                <Text style={styles.infoTitle}>Contact token</Text>
+                <Text style={styles.infoBody}>
+                  Keep this handy for later QR or copy flows without crowding
+                  the main messenger view.
+                </Text>
+                <Text selectable style={styles.codeText}>
+                  {contactCard.cardToken}
+                </Text>
+              </View>
+            ) : null}
+          </>
         ) : (
-          <Text style={styles.helper}>
-            Only this device session is visible right now.
-          </Text>
+          <View style={styles.infoCard}>
+            <Text style={styles.infoTitle}>Diagnostics are tucked away</Text>
+            <Text style={styles.infoBody}>
+              Your chat home stays conversation-first. Open this section only
+              when you need relay, vault, or session details.
+            </Text>
+          </View>
         )}
-
-        {sessionsError ? (
-          <Text style={styles.errorText}>{sessionsError}</Text>
-        ) : null}
       </View>
-
-      {contactCard ? (
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Contact token</Text>
-          <Text style={styles.sectionBody}>
-            Keep this handy for later QR or copy flows without crowding the main
-            messenger view.
-          </Text>
-          <Text selectable style={styles.codeText}>
-            {contactCard.cardToken}
-          </Text>
-        </View>
-      ) : null}
 
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Privacy</Text>

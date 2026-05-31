@@ -5,6 +5,7 @@ import type {
   ContentClass,
   PrekeyBundle,
   ProtectionProfile,
+  ReplyMetaPayload,
   RetentionMode,
 } from "./index";
 
@@ -41,6 +42,7 @@ export type EncryptedConversationPayload = {
   senderDisplayName: string;
   text?: string | null;
   attachment?: EncryptedConversationAttachment | null;
+  replyTo?: ReplyMetaPayload | null;
   createdAt: string;
   clientMessageId: string;
 };

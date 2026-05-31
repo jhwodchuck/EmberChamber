@@ -245,26 +245,32 @@ export const trustFacts = [
 export const faqItems = [
   {
     question: "Is EmberChamber pure peer to peer?",
+    summary: "No. It uses a narrow hosted relay for delivery and metadata.",
     answer:
       "No. Phones need reliable delivery when they are offline, so EmberChamber uses a hosted relay for metadata, delivery, and attachment storage. The privacy goal is to keep that role narrow, not to pretend the relay does nothing.",
   },
   {
     question: "Do I need a phone number or Google account?",
+    summary: "No. Beta access uses invite-only email bootstrap.",
     answer:
       "No. The beta uses invite-only email bootstrap. Your email handles identity and session recovery — it doesn't link your account to Google, Apple, or a carrier.",
   },
   {
     question: "Is EmberChamber adults-only?",
+    summary: "Yes. The beta has a self-attested 18+ access gate.",
     answer:
       "Yes. Beta access is limited to adults 18 and over, with a self-attested age gate during onboarding. This is not a platform for minors.",
   },
   {
     question: "Will group chats be encrypted?",
+    summary:
+      "New groups use device-encrypted history; legacy paths are still called out.",
     answer:
       "New groups in the active beta runtime are created with device-encrypted history. Legacy relay-hosted group and room history still exists in compatibility paths, and attachment encryption is not yet uniform across every client.",
   },
   {
     question: "Who is this beta for?",
+    summary: "Adults who want a private space for an invite-gated circle.",
     answer:
       "Adults who want a genuine private space for their trusted circle — people who are tired of messaging apps that treat their conversation history as an asset.",
   },

@@ -397,6 +397,18 @@ export interface GroupMember {
   messageCount: number;
 }
 
+export interface ReplyMeta {
+  messageId: string;
+  text: string | null;
+  senderDisplayName: string;
+}
+
+export interface ReplyMetaPayload {
+  clientMessageId: string;
+  text: string | null;
+  senderDisplayName: string;
+}
+
 export interface GroupThreadMessage {
   id: string;
   conversationId: ConversationId;
@@ -421,7 +433,122 @@ export interface GroupThreadMessage {
   } | null;
   createdAt: string;
   editedAt?: string | null;
+  deletedAt?: string | null;
+  replyTo?: ReplyMeta | null;
+  reactions?: Record<string, string[]>;
   readByCount?: number;
+}
+
+export interface ConversationSocketMessageEvent extends GroupThreadMessage {
+  type: "message";
+}
+
+export interface ConversationSocketEditEvent {
+  type: "message_edited";
+  conversationId: string;
+  messageId: string;
+  text: string;
+  editedAt: string;
+}
+
+export interface ConversationSocketDeleteEvent {
+  type: "message_deleted";
+  conversationId: string;
+  messageId: string;
+  deletedAt: string;
+}
+
+export interface ConversationSocketReadReceiptEvent {
+  type: "read_receipt";
+  conversationId: string;
+  accountId: string;
+  lastReadAt: string;
+}
+
+export interface ConversationSocketTypingStartEvent {
+  type: "typing_start";
+  conversationId: string;
+  accountId: string;
+  displayName: string;
+  timestamp: string;
+}
+
+export interface ConversationSocketTypingStopEvent {
+  type: "typing_stop";
+  conversationId: string;
+  accountId: string;
+  timestamp: string;
+}
+
+export interface ConversationSocketReactionEvent {
+  type: "message_reaction";
+  conversationId: string;
+  messageId: string;
+  reactions: Record<string, string[]>;
+  updatedAt: string;
+}
+
+export type ConversationSocketEvent =
+  | ConversationSocketMessageEvent
+  | ConversationSocketEditEvent
+  | ConversationSocketDeleteEvent
+  | ConversationSocketReadReceiptEvent
+  | ConversationSocketTypingStartEvent
+  | ConversationSocketTypingStopEvent
+  | ConversationSocketReactionEvent;
+
+export interface ConversationTypingIndicator {
+  accountId: string;
+  displayName: string;
+  expiresAtMs: number;
+}
+
+export type ConversationTypingIndicatorMap = Record<
+  string,
+  ConversationTypingIndicator
+>;
+
+export function applyConversationTypingEvent(
+  current: ConversationTypingIndicatorMap,
+  event: ConversationSocketTypingStartEvent | ConversationSocketTypingStopEvent,
+  options: {
+    selfAccountId?: string | null;
+    expiryMs?: number;
+    nowMs?: number;
+  } = {},
+): ConversationTypingIndicatorMap {
+  const selfAccountId = options.selfAccountId ?? null;
+  if (event.accountId === selfAccountId) {
+    return current;
+  }
+
+  const next = { ...current };
+  if (event.type === "typing_stop") {
+    delete next[event.accountId];
+    return next;
+  }
+
+  const nowMs = options.nowMs ?? Date.now();
+  const expiryMs = options.expiryMs ?? 4500;
+  next[event.accountId] = {
+    accountId: event.accountId,
+    displayName: event.displayName,
+    expiresAtMs: nowMs + expiryMs,
+  };
+  return next;
+}
+
+export function pruneConversationTypingIndicators(
+  current: ConversationTypingIndicatorMap,
+  nowMs = Date.now(),
+): ConversationTypingIndicatorMap {
+  const next: ConversationTypingIndicatorMap = {};
+  for (const indicator of Object.values(current)) {
+    if (indicator.expiresAtMs > nowMs) {
+      next[indicator.accountId] = indicator;
+    }
+  }
+  return next;
 }
 
 export interface MeProfile {
