@@ -32,7 +32,9 @@ export type SettingsScreenProps = {
   sessions: SessionDescriptor[];
   isLoadingSessions: boolean;
   sessionsError: string | null;
+  isRevokingSession: string | null;
   onRefreshSessions: () => void;
+  onRevokeSession: (sessionId: string) => void;
   isUploadingAvatar: boolean;
   onShowDeviceLinkQr: () => void;
   onScanDeviceLinkQr: (payload: string) => void | Promise<void>;
@@ -65,7 +67,9 @@ export function SettingsScreen({
   sessions,
   isLoadingSessions,
   sessionsError,
+  isRevokingSession,
   onRefreshSessions,
+  onRevokeSession,
   isUploadingAvatar,
   onShowDeviceLinkQr,
   onScanDeviceLinkQr,
@@ -245,6 +249,25 @@ export function SettingsScreen({
                       Seen {formatSessionTimestamp(item.lastSeenAt)} · Signed in{" "}
                       {formatSessionTimestamp(item.createdAt)}
                     </Text>
+                    {!item.isCurrent ? (
+                      <Pressable
+                        onPress={() => onRevokeSession(item.id)}
+                        disabled={isRevokingSession !== null}
+                      >
+                        <Text
+                          style={[
+                            styles.inlineAction,
+                            isRevokingSession === item.id
+                              ? styles.errorText
+                              : null,
+                          ]}
+                        >
+                          {isRevokingSession === item.id
+                            ? "Revoking…"
+                            : "Revoke"}
+                        </Text>
+                      </Pressable>
+                    ) : null}
                   </View>
                 ))}
               </View>

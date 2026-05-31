@@ -250,6 +250,9 @@ export default function App() {
   const [sessions, setSessions] = useState<SessionDescriptor[]>([]);
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
   const [sessionsError, setSessionsError] = useState<string | null>(null);
+  const [isRevokingSession, setIsRevokingSession] = useState<string | null>(
+    null,
+  );
   const imageRefreshPendingRef = useRef(false);
   const groupsRef = useRef<GroupMembershipSummary[]>([]);
   const sessionRef = useRef<AuthSession | null>(null);
@@ -363,6 +366,29 @@ export default function App() {
       );
     } finally {
       setIsLoadingSessions(false);
+    }
+  }
+
+  async function revokeSignedInSession(sessionId: string) {
+    const currentSession = sessionRef.current;
+    if (!currentSession) return;
+
+    setIsRevokingSession(sessionId);
+    try {
+      await relayFetch<{ revoked: boolean; sessionId: string }>(
+        currentSession,
+        `/v1/sessions/${sessionId}`,
+        { method: "DELETE" },
+      );
+      await refreshSignedInSessions(currentSession);
+    } catch (error) {
+      setSessionsError(
+        error instanceof Error
+          ? error.message
+          : "Unable to revoke that session.",
+      );
+    } finally {
+      setIsRevokingSession(null);
     }
   }
 
@@ -2530,11 +2556,14 @@ export default function App() {
     sessions,
     isLoadingSessions,
     sessionsError,
+    isRevokingSession,
     onRefreshSessions: () => {
       if (sessionRef.current) {
         void refreshSignedInSessions(sessionRef.current);
       }
     },
+    onRevokeSession: (sessionId: string) =>
+      void revokeSignedInSession(sessionId),
     editingMessageId,
     isUploadingAvatar,
     unreadIds: unreadConversationIds,

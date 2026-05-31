@@ -71,7 +71,9 @@ export type MainScreenProps = {
   sessions: SessionDescriptor[];
   isLoadingSessions: boolean;
   sessionsError: string | null;
+  isRevokingSession: string | null;
   onRefreshSessions: () => void;
+  onRevokeSession: (sessionId: string) => void;
   onSignOut: () => void;
   onShowDeviceLinkQr: () => void;
   onScanDeviceLinkQr: (payload: string) => void | Promise<void>;
@@ -170,7 +172,9 @@ export function MainScreen(props: MainScreenProps) {
     sessions,
     isLoadingSessions,
     sessionsError,
+    isRevokingSession,
     onRefreshSessions,
+    onRevokeSession,
     onSignOut,
     onShowDeviceLinkQr,
     onScanDeviceLinkQr,
@@ -443,7 +447,9 @@ export function MainScreen(props: MainScreenProps) {
         sessions={sessions}
         isLoadingSessions={isLoadingSessions}
         sessionsError={sessionsError}
+        isRevokingSession={isRevokingSession}
         onRefreshSessions={onRefreshSessions}
+        onRevokeSession={onRevokeSession}
         isUploadingAvatar={isUploadingAvatar}
         onShowDeviceLinkQr={onShowDeviceLinkQr}
         onScanDeviceLinkQr={onScanDeviceLinkQr}
