@@ -361,6 +361,7 @@ pub struct GroupThreadMessage {
     pub attachment: Option<GroupThreadAttachment>,
     pub created_at: DateTime<Utc>,
     pub edited_at: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub reactions: Option<HashMap<String, Vec<AccountId>>>,
     pub read_by_count: Option<u32>,
 }

@@ -467,9 +467,8 @@ export default function ChatPage() {
         ws.onmessage = (event) => {
           try {
             const payload = JSON.parse(event.data) as ConversationSocketEvent;
-            const eventType = payload.type ?? "message";
 
-            if (eventType === "message") {
+            if (payload.type === "message") {
               const message = payload as GroupThreadMessage;
               setGroupMessages((current) => {
                 if (current.some((entry) => entry.id === message.id)) {
@@ -483,7 +482,7 @@ export default function ChatPage() {
                 indexRelayConversationMessages(conversation.id, next);
                 return next;
               });
-            } else if (eventType === "message_edited") {
+            } else if (payload.type === "message_edited") {
               const { messageId, text, editedAt } = payload;
               setGroupMessages((current) =>
                 {
@@ -494,7 +493,7 @@ export default function ChatPage() {
                   return next;
                 },
               );
-            } else if (eventType === "message_deleted") {
+            } else if (payload.type === "message_deleted") {
               const { messageId, deletedAt } = payload;
               setGroupMessages((current) =>
                 {
@@ -505,22 +504,16 @@ export default function ChatPage() {
                   return next;
                 },
               );
-            } else if (eventType === "read_receipt") {
+            } else if (payload.type === "read_receipt") {
               // Read receipts don't require local state changes in the viewer
-            } else if (eventType === "message_reaction") {
+            } else if (payload.type === "message_reaction") {
               const { messageId, reactions } = payload;
               setGroupMessages((current) =>
                 current.map((msg) =>
                   msg.id === messageId ? { ...msg, reactions } : msg,
                 ),
               );
-            } else if (eventType === "typing_start") {
-              setTypingIndicators((current) =>
-                applyConversationTypingEvent(current, payload, {
-                  selfAccountId: user?.id,
-                }),
-              );
-            } else if (eventType === "typing_stop") {
+            } else if (payload.type === "typing_start" || payload.type === "typing_stop") {
               setTypingIndicators((current) =>
                 applyConversationTypingEvent(current, payload, {
                   selfAccountId: user?.id,
