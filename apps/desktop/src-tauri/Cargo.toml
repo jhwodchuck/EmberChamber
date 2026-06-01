@@ -26,7 +26,7 @@ url = "2"
 webbrowser = "1.0"
 
 [target.'cfg(target_os = "linux")'.dependencies]
-keyring = { version = "3.6.2", default-features = false, features = ["async-secret-service", "crypto-rust", "tokio"] }
+keyring = { version = "4.0.0", default-features = false, features = ["async-secret-service", "crypto-rust", "tokio"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 keyring = { version = "3.6.2", default-features = false, features = ["windows-native"] }
