@@ -441,18 +441,67 @@ export const relayConversationApi = {
       `/v1/communities/${communityId}/members/${accountId}/remove`,
       { method: "POST" },
     ),
-  listMessages: (conversationId: string, limit = 50) =>
+  listMessages: (
+    conversationId: string,
+    limit = 50,
+    options?: { focusMessageId?: string },
+  ) =>
     relayFetch<GroupThreadMessage[]>(
-      `/v1/conversations/${conversationId}/messages?limit=${encodeURIComponent(String(limit))}`,
+      `/v1/conversations/${conversationId}/messages?limit=${encodeURIComponent(String(limit))}${
+        options?.focusMessageId
+          ? `&focusMessageId=${encodeURIComponent(options.focusMessageId)}`
+          : ""
+      }`,
+    ),
+  ackMessages: (conversationId: string, lastReadMessageCreatedAt: string) =>
+    relayFetch<{ acked: boolean }>(
+      `/v1/conversations/${conversationId}/messages/ack`,
+      {
+        method: "POST",
+        body: JSON.stringify({ lastReadMessageCreatedAt }),
+      },
     ),
   sendMessage: (
     conversationId: string,
-    data: { text?: string; attachmentId?: string; clientMessageId?: string },
+    data: { text?: string; attachmentId?: string; clientMessageId?: string; replyToMessageId?: string },
   ) =>
     relayFetch<GroupThreadMessage>(`/v1/conversations/${conversationId}/messages`, {
       method: "POST",
       body: JSON.stringify(data),
     }),
+  editMessage: (conversationId: string, messageId: string, text: string) =>
+    relayFetch<{ updated: boolean; messageId: string; text: string; editedAt: string }>(
+      `/v1/groups/${conversationId}/messages/${messageId}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ text }),
+      },
+    ),
+  deleteMessage: (conversationId: string, messageId: string) =>
+    relayFetch<{ deleted: boolean; messageId: string; deletedAt: string }>(
+      `/v1/groups/${conversationId}/messages/${messageId}`,
+      { method: "DELETE" },
+    ),
+  toggleReaction: (conversationId: string, messageId: string, emoji: string) =>
+    relayFetch<{
+      updated: boolean;
+      messageId: string;
+      reactions: Record<string, string[]>;
+      updatedAt: string;
+    }>(`/v1/conversations/${conversationId}/messages/${messageId}/reactions`, {
+      method: "POST",
+      body: JSON.stringify({ emoji }),
+    }),
+  publishTypingStart: (conversationId: string) =>
+    relayFetch<{ published: boolean }>(
+      `/v1/conversations/${conversationId}/typing/start`,
+      { method: "POST" },
+    ),
+  publishTypingStop: (conversationId: string) =>
+    relayFetch<{ published: boolean }>(
+      `/v1/conversations/${conversationId}/typing/stop`,
+      { method: "POST" },
+    ),
   createInvite: (
     conversationId: string,
     data: {

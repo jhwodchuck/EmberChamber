@@ -351,6 +351,7 @@ export function useSendMessage({
               throw new Error("That photo exceeds the 20 MB beta attachment limit.");
             }
 
+            const encrypted = encryptAttachmentBytes(fileBytes);
             const ticket = await relayFetch<AttachmentTicket>(
               session,
               "/v1/attachments/ticket",
@@ -359,7 +360,13 @@ export function useSendMessage({
                 body: JSON.stringify({
                   fileName: pendingAttachment.fileName,
                   mimeType: pendingAttachment.mimeType,
-                  byteLength: fileBytes.byteLength,
+                  encryptionMode: "device_encrypted",
+                  ciphertextByteLength: encrypted.ciphertext.byteLength,
+                  ciphertextSha256B64: encrypted.ciphertextSha256B64,
+                  plaintextByteLength: encrypted.plaintext.byteLength,
+                  plaintextSha256B64: encrypted.plaintextSha256B64,
+                  fileKeyB64: encrypted.fileKeyB64,
+                  fileIvB64: encrypted.fileIvB64,
                   conversationId: selectedGroup.id,
                   conversationEpoch: selectedGroup.epoch,
                   contentClass: getContentClass(pendingAttachment.mimeType),
@@ -373,11 +380,8 @@ export function useSendMessage({
 
             await uploadAttachmentBytes(
               ticket.uploadUrl,
-              pendingAttachment.mimeType,
-              fileBytes.buffer.slice(
-                fileBytes.byteOffset,
-                fileBytes.byteOffset + fileBytes.byteLength,
-              ),
+              "application/octet-stream",
+              encrypted.ciphertext,
             );
 
             attachmentId = ticket.attachmentId;

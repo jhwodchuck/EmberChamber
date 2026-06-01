@@ -1169,6 +1169,7 @@
         groups: [],
         groupInvites: {},
         threadMessages: [],
+        typingIndicators: {},
         deviceBundle: null,
         mailboxCursor: "",
         revealedMessages: {},
@@ -1235,8 +1236,12 @@
       const deviceBundleDirectoryCache = new Map();
       let mailboxSocket = null;
       let mailboxReconnectTimer = 0;
+      let conversationSocket = null;
+      let conversationSocketReconnectTimer = 0;
       let deviceLinkPollTimer = 0;
       let deviceLinkScannerControls = null;
+      let typingStopTimer = 0;
+      let lastTypingPublishAt = 0;
 
       function readLocalText(key) {
         return globalThis.localStorage?.getItem(key) || "";
@@ -2265,6 +2270,140 @@
         }
       }
 
+      function stopConversationSocket() {
+        if (conversationSocketReconnectTimer) {
+          globalThis.clearTimeout(conversationSocketReconnectTimer);
+          conversationSocketReconnectTimer = 0;
+        }
+
+        if (conversationSocket) {
+          try {
+            conversationSocket.close();
+          } catch {
+            // Ignore socket close failures.
+          }
+          conversationSocket = null;
+        }
+      }
+
+      function applyTypingSocketEvent(payload) {
+        if (!payload?.accountId || payload.accountId === state.me?.id) {
+          return;
+        }
+
+        if (payload.type === "typing_stop") {
+          if (state.typingIndicators[payload.accountId]) {
+            delete state.typingIndicators[payload.accountId];
+            render();
+          }
+          return;
+        }
+
+        state.typingIndicators[payload.accountId] = {
+          displayName: payload.displayName || "Member",
+          expiresAtMs: Date.now() + 4500,
+        };
+        const accountId = payload.accountId;
+        globalThis.setTimeout(() => {
+          const active = state.typingIndicators[accountId];
+          if (active && active.expiresAtMs <= Date.now()) {
+            delete state.typingIndicators[accountId];
+            render();
+          }
+        }, 4600);
+        render();
+      }
+
+      async function connectConversationSocket(conversationId, refreshBeforeConnect = false) {
+        stopConversationSocket();
+
+        try {
+          const activeSession = state.session;
+          const activeGroup = currentGroup();
+          if (!activeSession?.accessToken || !activeGroup || activeGroup.historyMode !== "relay_hosted") {
+            return;
+          }
+
+          const socketSession = refreshBeforeConnect ? await refreshRelaySession() : activeSession;
+          if (!socketSession?.accessToken || state.activeGroupId !== conversationId) {
+            return;
+          }
+
+          const wsUrl = `${state.relayUrl.replace(/^http/, "ws")}/v1/conversations/${conversationId}/ws?token=${encodeURIComponent(
+            socketSession.accessToken
+          )}`;
+          conversationSocket = new WebSocket(wsUrl);
+          conversationSocket.onmessage = (event) => {
+            try {
+              const payload = JSON.parse(event.data || "{}");
+              const eventType = payload.type || "message";
+
+              if (eventType === "message") {
+                if (!payload?.id) {
+                  return;
+                }
+                const nextMessages = state.threadMessages
+                  .filter((entry) => entry.id !== payload.id)
+                  .concat(payload)
+                  .sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime());
+                state.threadMessages = nextMessages;
+                writeCachedThreadMessages(conversationId, nextMessages);
+              } else if (eventType === "message_edited") {
+                state.threadMessages = state.threadMessages.map((message) =>
+                  message.id === payload.messageId
+                    ? { ...message, text: payload.text, editedAt: payload.editedAt }
+                    : message
+                );
+              } else if (eventType === "message_deleted") {
+                state.threadMessages = state.threadMessages.map((message) =>
+                  message.id === payload.messageId
+                    ? { ...message, deletedAt: payload.deletedAt }
+                    : message
+                );
+              } else if (eventType === "message_reaction") {
+                state.threadMessages = state.threadMessages.map((message) =>
+                  message.id === payload.messageId
+                    ? { ...message, reactions: payload.reactions || {} }
+                    : message
+                );
+              } else if (eventType === "typing_start" || eventType === "typing_stop") {
+                applyTypingSocketEvent(payload);
+                return;
+              }
+
+              render();
+            } catch {
+              // Ignore malformed payloads.
+            }
+          };
+          conversationSocket.onclose = () => {
+            conversationSocket = null;
+            if (!state.session || state.activeGroupId !== conversationId) {
+              return;
+            }
+            conversationSocketReconnectTimer = globalThis.setTimeout(() => {
+              conversationSocketReconnectTimer = 0;
+              void connectConversationSocket(conversationId, true);
+            }, 1500);
+          };
+          conversationSocket.onerror = () => {
+            try {
+              conversationSocket?.close();
+            } catch {
+              // Ignore close failures.
+            }
+          };
+        } catch {
+          if (!state.session || state.activeGroupId !== conversationId) {
+            return;
+          }
+          conversationSocketReconnectTimer = globalThis.setTimeout(() => {
+            conversationSocketReconnectTimer = 0;
+            void connectConversationSocket(conversationId, true);
+          }, 1500);
+        }
+      }
+
       async function connectMailboxSocket(refreshBeforeConnect = false) {
         stopMailboxSocket();
 
@@ -2632,6 +2771,7 @@
 
       function resetWorkspaceState() {
         stopMailboxSocket();
+        stopConversationSocket();
         deviceBundleDirectoryCache.clear();
         state.me = null;
         state.privacy = null;
@@ -2670,6 +2810,8 @@
         }
 
         state.activeGroupId = groupId;
+        stopConversationSocket();
+        state.typingIndicators = {};
         state.isLoadingThread = true;
         state.threadMessages = [];
         state.revealedMessages = {};
@@ -2688,6 +2830,7 @@
             state.threadMessages = readCachedThreadMessages(groupId);
           } else {
             state.threadMessages = await relayFetch(`/v1/groups/${groupId}/messages?limit=80`);
+            await connectConversationSocket(groupId);
           }
           state.revealedMessages = {};
           clearThreadAttachmentMedia();

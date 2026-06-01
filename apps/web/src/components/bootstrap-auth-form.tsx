@@ -64,12 +64,11 @@ export function BootstrapAuthForm({
   continueTo?: string | null;
   initialEntryMethod?: BootstrapEntryMethod;
 }) {
-  const [entryMethod, setEntryMethod] =
-    useState<BootstrapEntryMethod>(
-      mode === "signin" && initialEntryMethod === "device-link"
-        ? "device-link"
-        : "magic-link",
-    );
+  const [entryMethod, setEntryMethod] = useState<BootstrapEntryMethod>(
+    mode === "signin" && initialEntryMethod === "device-link"
+      ? "device-link"
+      : "magic-link",
+  );
   const [magicLinkStep, setMagicLinkStep] = useState<MagicLinkStep>(1);
   const [email, setEmail] = useState("");
   const [inviteToken, setInviteToken] = useState("");
@@ -747,37 +746,44 @@ export function BootstrapAuthForm({
                     </div>
                   )}
 
-                  <div className="rounded-[1.2rem] border border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-4">
+                  <div className="rounded-[1.25rem] border border-brand-500/25 bg-brand-500/[0.06] px-4 py-4">
                     <label
                       htmlFor={`${mode}-age-confirmed`}
-                      className="flex items-start gap-3"
+                      className="flex items-start gap-4"
                     >
-                      <input
-                        id={`${mode}-age-confirmed`}
-                        name="ageConfirmed18"
-                        ref={ageConfirmed18Ref}
-                        type="checkbox"
-                        checked={ageConfirmed18}
-                        onChange={(event) => {
-                          setAgeConfirmed18(event.target.checked);
-                          if (errors.ageConfirmed18) {
-                            setErrors((current) => ({
-                              ...current,
-                              ageConfirmed18: undefined,
-                            }));
-                          }
-                        }}
-                        className="mt-1 h-4 w-4 rounded border-[var(--border)] text-brand-600"
-                        aria-invalid={errors.ageConfirmed18 ? "true" : "false"}
-                        aria-describedby={
-                          errors.ageConfirmed18
-                            ? `${mode}-age-confirmed-error`
-                            : `${mode}-age-confirmed-hint`
-                        }
-                      />
-                      <span>
-                        <span className="block text-sm font-medium text-[var(--text-primary)]">
-                          I confirm I am at least 18 years old
+                      <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border border-brand-500/30 bg-brand-500/10 text-sm font-semibold text-brand-600">
+                        18+
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-start justify-between gap-3">
+                          <span className="block text-sm font-medium text-[var(--text-primary)]">
+                            I confirm I am at least 18 years old
+                          </span>
+                          <input
+                            id={`${mode}-age-confirmed`}
+                            name="ageConfirmed18"
+                            ref={ageConfirmed18Ref}
+                            type="checkbox"
+                            checked={ageConfirmed18}
+                            onChange={(event) => {
+                              setAgeConfirmed18(event.target.checked);
+                              if (errors.ageConfirmed18) {
+                                setErrors((current) => ({
+                                  ...current,
+                                  ageConfirmed18: undefined,
+                                }));
+                              }
+                            }}
+                            className="mt-0.5 h-4 w-4 rounded border-[var(--border)] text-brand-600"
+                            aria-invalid={
+                              errors.ageConfirmed18 ? "true" : "false"
+                            }
+                            aria-describedby={
+                              errors.ageConfirmed18
+                                ? `${mode}-age-confirmed-error`
+                                : `${mode}-age-confirmed-hint`
+                            }
+                          />
                         </span>
                         <span
                           id={`${mode}-age-confirmed-hint`}

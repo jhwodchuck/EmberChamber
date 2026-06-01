@@ -2,7 +2,7 @@ name: CI - Rust Core and Protocol
 
 on:
   push:
-    branches: [main]
+    branches: [main, "copilot/**"]
     paths:
       - "crates/**"
       - "Cargo.toml"

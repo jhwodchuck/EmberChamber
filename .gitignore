@@ -59,6 +59,7 @@ __pycache__/
 
 # Rust / Cargo
 Cargo.lock
+!/Cargo.lock
 **/*.rs.bk
 
 # Docker volumes

@@ -89,6 +89,10 @@ export function useNotificationBridge({
       }
 
       if (reason === "mailbox") {
+        // Skip toast if the user is already in the target conversation
+        if (conversationId && selectedConversationIdRef.current === conversationId) {
+          return;
+        }
         const currentSession = sessionRef.current;
         if (currentSession) {
           void syncEncryptedMailbox(currentSession).catch(() => undefined);

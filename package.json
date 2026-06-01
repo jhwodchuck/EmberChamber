@@ -15,6 +15,8 @@
     "prepare": "bash scripts/install-git-hooks.sh",
     "bootstrap": "bash scripts/bootstrap-dev.sh",
     "check:repo-contracts": "node scripts/check-repo-contracts.mjs",
+    "audit:high": "npm audit --audit-level=high",
+    "audit:moderate": "npm audit --audit-level=moderate",
     "council:review": "bash llm_council/scripts/orchestrate_review.sh",
     "council:route": "python3 -B llm_council/scripts/route_reviewers.py",
     "council:changed-files": "bash llm_council/scripts/collect_changed_files.sh",
@@ -43,19 +45,21 @@
     "test:legacy": "npm run test --workspace=apps/api",
     "lint": "npm run lint --workspace=apps/web && npm run lint --workspace=apps/relay",
     "type-check": "npm run type-check --workspace=packages/protocol && npm run type-check --workspace=apps/relay && npm run type-check --workspace=apps/web && cargo check -p emberchamber-core -p emberchamber-relay-protocol",
-    "verify:all": "npm run check:repo-contracts && npm test --workspace=packages/protocol && npm run build --workspace=apps/relay && npm test --workspace=apps/relay && npm run lint --workspace=apps/web && npm run build --workspace=apps/web && npm run type-check --workspace=apps/mobile && cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml && cargo test -p emberchamber-core -p emberchamber-relay-protocol",
+    "verify:all": "npm run check:repo-contracts && npm run audit:high && npm test --workspace=packages/protocol && npm run build --workspace=apps/relay && npm test --workspace=apps/relay && npm run lint --workspace=apps/web && npm run build --workspace=apps/web && npm run type-check --workspace=apps/mobile && cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml && cargo test -p emberchamber-core -p emberchamber-relay-protocol",
     "format": "prettier --write \"{*.md,*.json,apps/**/*.{ts,tsx,md,json},packages/**/*.{ts,tsx,md,json},docs/**/*.{ts,tsx,md,json},llm_council/**/*.{ts,tsx,md,json},infra/**/*.{ts,tsx,md,json},services/**/*.{ts,tsx,md,json},tools/**/*.{ts,tsx,md,json}}\" --ignore-path .prettierignore"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
-    "next": "^16.2.4",
+    "next": "^16.2.6",
     "prettier": "^3.3.3",
-    "turbo": "^2.3.3"
+    "turbo": "^2.9.16"
   },
   "overrides": {
     "@xmldom/xmldom": "0.8.13",
+    "expo": "55.0.26",
     "expo-constants": "55.0.16",
     "postcss": "8.5.12",
+    "qs": "6.15.2",
     "vite": ">=7.3.2"
   }
 }

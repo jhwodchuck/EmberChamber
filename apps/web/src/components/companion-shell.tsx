@@ -1,6 +1,6 @@
 "use client";
 
-import type { CipherEnvelope } from "@emberchamber/protocol";
+import type { CipherEnvelope, GroupThreadMessage } from "@emberchamber/protocol";
 import {
   Compass,
   LogOut,
@@ -46,6 +46,11 @@ import {
   ingestRelayEnvelopes,
   listStoredConversationMessages,
 } from "@/lib/relay-workspace";
+import {
+  getIndexedConversationPreview,
+  indexEncryptedConversationMessages,
+  indexRelayConversationMessages,
+} from "@/lib/message-search-index";
 import { authBootstrapEnabled, publicSignInCta } from "@/lib/site";
 import { useAuthStore } from "@/lib/store";
 import { calcReconnectDelayMs } from "@/lib/backoff";
@@ -92,7 +97,9 @@ type MailboxLiveEvent =
       envelope: CipherEnvelope;
     };
 
-const CompanionShellContext = createContext<CompanionShellContextValue | null>(null);
+const CompanionShellContext = createContext<CompanionShellContextValue | null>(
+  null,
+);
 
 const primaryLinks = [
   { href: "/app", label: "Overview", icon: Compass },
@@ -121,10 +128,7 @@ function getActiveConversationId(pathname: string) {
     return null;
   }
 
-  if (
-    (segments[1] === "chat" || segments[1] === "community") &&
-    segments[2]
-  ) {
+  if ((segments[1] === "chat" || segments[1] === "community") && segments[2]) {
     return segments[2];
   }
 
@@ -146,8 +150,12 @@ export function CompanionShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [hasSession, setHasSession] = useState<boolean | null>(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const [conversations, setConversations] = useState<CompanionShellContextValue["conversations"]>([]);
-  const [conversationsState, setConversationsState] = useState<LoadState>({ status: "idle" });
+  const [conversations, setConversations] = useState<
+    CompanionShellContextValue["conversations"]
+  >([]);
+  const [conversationsState, setConversationsState] = useState<LoadState>({
+    status: "idle",
+  });
   const [conversationPreferences, setConversationPreferences] = useState<
     Record<string, ConversationPreference>
   >({});
@@ -155,6 +163,7 @@ export function CompanionShell({ children }: { children: ReactNode }) {
   const [mailboxRevision, setMailboxRevision] = useState(0);
   const mailboxReconnectTimerRef = useRef<number | null>(null);
   const mailboxReconnectAttemptRef = useRef(0);
+  const notificationPermissionRef = useRef<NotificationPermission | null>(null);
   const loadUser = useAuthStore((state) => state.loadUser);
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
@@ -190,6 +199,25 @@ export function CompanionShell({ children }: { children: ReactNode }) {
         const previews = await getConversationPreviews(
           nextConversations.map((conversation) => conversation.id),
         );
+        const relayMessagesByConversation = Object.fromEntries(
+          await Promise.all(
+            nextConversations.map(async (conversation) => {
+              if (conversation.historyMode !== "relay_hosted") {
+                return [conversation.id, [] as GroupThreadMessage[]] as const;
+              }
+
+              try {
+                const messages = await relayConversationApi.listMessages(
+                  conversation.id,
+                  40,
+                );
+                return [conversation.id, messages] as const;
+              } catch {
+                return [conversation.id, [] as GroupThreadMessage[]] as const;
+              }
+            }),
+          ),
+        );
         const storedMessagesByConversation = Object.fromEntries(
           await Promise.all(
             nextConversations.map(async (conversation) => [
@@ -206,9 +234,38 @@ export function CompanionShell({ children }: { children: ReactNode }) {
           setConversations(
             nextConversations.map((conversation) => {
               const preview = previews[conversation.id];
+              const relayMessages = relayMessagesByConversation[conversation.id] ?? [];
               const preference =
                 storedPreferences[conversation.id] ??
                 createConversationPreference(conversation.id);
+
+              if (conversation.historyMode === "device_encrypted") {
+                void indexEncryptedConversationMessages(
+                  conversation.id,
+                  storedMessagesByConversation[conversation.id],
+                );
+              } else {
+                void indexRelayConversationMessages(conversation.id, relayMessages);
+              }
+
+              const relayUnreadCount =
+                conversation.historyMode === "relay_hosted" && user?.id
+                  ? relayMessages.filter((message) => {
+                      if (message.senderAccountId === user.id || message.deletedAt) {
+                        return false;
+                      }
+                      if (!preference.lastReadAt) {
+                        return true;
+                      }
+                      return message.createdAt > preference.lastReadAt;
+                    }).length
+                  : 0;
+
+              const relayLast = relayMessages[relayMessages.length - 1] ?? null;
+              const previewTextFromIndex = getIndexedConversationPreview(
+                conversation.id,
+              );
+
               return {
                 id: conversation.id,
                 type:
@@ -226,19 +283,30 @@ export function CompanionShell({ children }: { children: ReactNode }) {
                 }),
                 avatarUrl: null,
                 updatedAt: conversation.lastMessageAt ?? conversation.updatedAt,
-                unreadCount: estimateConversationUnreadCount({
-                  accountId: user?.id,
-                  conversation,
-                  preference,
-                  storedMessages: storedMessagesByConversation[conversation.id],
-                }),
+                unreadCount:
+                  conversation.historyMode === "relay_hosted"
+                    ? relayUnreadCount
+                    : estimateConversationUnreadCount({
+                        accountId: user?.id,
+                        conversation,
+                        preference,
+                        storedMessages: storedMessagesByConversation[conversation.id],
+                      }),
                 memberCount: conversation.memberCount,
                 historyMode: conversation.historyMode,
-                lastMessage: preview?.text
-                  ? { content: preview.text }
-                  : preview?.attachment
-                    ? { content: preview.attachment.fileName }
-                    : null,
+                lastMessage:
+                  relayLast?.text || relayLast?.attachment?.fileName
+                    ? {
+                        content:
+                          relayLast.text ?? relayLast.attachment?.fileName ?? null,
+                      }
+                    : preview?.text
+                      ? { content: preview.text }
+                      : preview?.attachment
+                        ? { content: preview.attachment.fileName }
+                        : previewTextFromIndex
+                          ? { content: previewTextFromIndex }
+                          : null,
               };
             }),
           );
@@ -294,7 +362,8 @@ export function CompanionShell({ children }: { children: ReactNode }) {
     (conversationId: string) => {
       commitConversationPreferences((current) => {
         const currentPreference =
-          current[conversationId] ?? createConversationPreference(conversationId);
+          current[conversationId] ??
+          createConversationPreference(conversationId);
         return updateConversationPreferenceMap(current, conversationId, {
           isPinned: !currentPreference.isPinned,
         });
@@ -307,7 +376,8 @@ export function CompanionShell({ children }: { children: ReactNode }) {
     (conversationId: string) => {
       commitConversationPreferences((current) => {
         const currentPreference =
-          current[conversationId] ?? createConversationPreference(conversationId);
+          current[conversationId] ??
+          createConversationPreference(conversationId);
         return updateConversationPreferenceMap(current, conversationId, {
           isMuted: !currentPreference.isMuted,
         });
@@ -320,7 +390,8 @@ export function CompanionShell({ children }: { children: ReactNode }) {
     (conversationId: string) => {
       commitConversationPreferences((current) => {
         const currentPreference =
-          current[conversationId] ?? createConversationPreference(conversationId);
+          current[conversationId] ??
+          createConversationPreference(conversationId);
         return updateConversationPreferenceMap(current, conversationId, {
           isArchived: !currentPreference.isArchived,
         });
@@ -356,6 +427,20 @@ export function CompanionShell({ children }: { children: ReactNode }) {
 
     markConversationRead(activeConversationId);
   }, [activeConversationId, markConversationRead]);
+
+  // Request notification permission once the user is authenticated
+  useEffect(() => {
+    if (!isAuthenticated || typeof Notification === "undefined") {
+      return;
+    }
+    if (Notification.permission === "default") {
+      void Notification.requestPermission().then((perm) => {
+        notificationPermissionRef.current = perm;
+      });
+    } else {
+      notificationPermissionRef.current = Notification.permission;
+    }
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (!hasSession || !isAuthenticated) {
@@ -420,6 +505,22 @@ export function CompanionShell({ children }: { children: ReactNode }) {
               if (result.receivedConversationIds.length) {
                 setMailboxRevision((current) => current + 1);
                 void refreshShellData({ syncWorkspace: false });
+
+                // Fire a web notification if the window is not focused and permission is granted
+                if (
+                  document.visibilityState !== "visible" &&
+                  typeof Notification !== "undefined" &&
+                  (notificationPermissionRef.current ?? Notification.permission) === "granted"
+                ) {
+                  const notification = new Notification("EmberChamber", {
+                    body: "You have a new message",
+                    icon: "/favicon.ico",
+                    tag: `mailbox-${result.receivedConversationIds[0] ?? "new"}`,
+                  });
+                  notification.onclick = () => {
+                    window.focus();
+                  };
+                }
               }
             } catch {
               // Ignore malformed live events and keep the socket alive.
@@ -517,16 +618,27 @@ export function CompanionShell({ children }: { children: ReactNode }) {
                   : "Approve this browser from a phone or desktop client that already has a live EmberChamber session."}
               </p>
             </Link>
-            <Link href="/register" className="card transition-colors hover:border-brand-500">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">Join the Beta</p>
+            <Link
+              href="/register"
+              className="card transition-colors hover:border-brand-500"
+            >
+              <p className="text-sm font-semibold text-[var(--text-primary)]">
+                Join the Beta
+              </p>
               <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
                 Use invite-only onboarding for a new beta account.
               </p>
             </Link>
-            <Link href="/support" className="card transition-colors hover:border-brand-500">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">Get Support</p>
+            <Link
+              href="/support"
+              className="card transition-colors hover:border-brand-500"
+            >
+              <p className="text-sm font-semibold text-[var(--text-primary)]">
+                Get Support
+              </p>
               <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                Open the support guide if the inbox or redirect flow looks wrong.
+                Open the support guide if the inbox or redirect flow looks
+                wrong.
               </p>
             </Link>
           </div>
@@ -541,7 +653,9 @@ export function CompanionShell({ children }: { children: ReactNode }) {
         <header className="border-b border-[var(--border)] bg-[color:var(--bg-overlay)]/85 px-6 py-4 backdrop-blur-xl">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-600">Web Workspace</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-600">
+                Web Workspace
+              </p>
               <h1 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
                 EmberChamber web app
               </h1>
@@ -556,13 +670,19 @@ export function CompanionShell({ children }: { children: ReactNode }) {
                     : "border-amber-200 bg-amber-50 text-amber-700",
                 )}
                 aria-live="polite"
-                aria-label={isConnected ? "Relay link: live" : "Relay link: reconnecting"}
+                aria-label={
+                  isConnected ? "Relay link: live" : "Relay link: reconnecting"
+                }
               >
                 {isConnected ? "Live relay link" : "Reconnecting"}
               </div>
               <div className="hidden text-right sm:block">
-                <p className="text-sm font-medium text-[var(--text-primary)]">{contextValue.userName}</p>
-                <p className="text-xs text-[var(--text-secondary)]">Signed in relay session</p>
+                <p className="text-sm font-medium text-[var(--text-primary)]">
+                  {contextValue.userName}
+                </p>
+                <p className="text-xs text-[var(--text-secondary)]">
+                  Signed in relay session
+                </p>
               </div>
               <button
                 type="button"
@@ -596,7 +716,9 @@ export function CompanionShell({ children }: { children: ReactNode }) {
                 {primaryLinks.map((item) => {
                   const Icon = item.icon;
                   const isActive =
-                    pathname === item.href || (item.href !== "/app" && pathname.startsWith(`${item.href}/`));
+                    pathname === item.href ||
+                    (item.href !== "/app" &&
+                      pathname.startsWith(`${item.href}/`));
 
                   return (
                     <Link
@@ -617,10 +739,27 @@ export function CompanionShell({ children }: { children: ReactNode }) {
               </nav>
             </div>
 
-            <div className="panel p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">
-                Workspace Status
-              </p>
+            <ChatRail
+              conversations={conversations}
+              conversationsState={conversationsState}
+              activeConversationId={activeConversationId}
+              preferences={conversationPreferences}
+              onRefresh={refreshShellData}
+              onOpenConversation={markConversationRead}
+              onToggleConversationPinned={toggleConversationPinned}
+              onToggleConversationMuted={toggleConversationMuted}
+              onToggleConversationArchived={toggleConversationArchived}
+            />
+
+            <details className="panel p-5">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+                <span className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">
+                  Workspace status
+                </span>
+                <span className="text-sm font-medium text-[var(--text-secondary)]">
+                  {isConnected ? "Live" : "Reconnecting"}
+                </span>
+              </summary>
               <div className="mt-4 grid gap-3">
                 <div className="rounded-[1.2rem] border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-3">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-600">
@@ -649,19 +788,7 @@ export function CompanionShell({ children }: { children: ReactNode }) {
                   </p>
                 </div>
               </div>
-            </div>
-
-            <ChatRail
-              conversations={conversations}
-              conversationsState={conversationsState}
-              activeConversationId={activeConversationId}
-              preferences={conversationPreferences}
-              onRefresh={refreshShellData}
-              onOpenConversation={markConversationRead}
-              onToggleConversationPinned={toggleConversationPinned}
-              onToggleConversationMuted={toggleConversationMuted}
-              onToggleConversationArchived={toggleConversationArchived}
-            />
+            </details>
           </aside>
 
           <main id="main-content" className="min-w-0">

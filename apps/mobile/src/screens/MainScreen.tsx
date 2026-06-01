@@ -40,12 +40,13 @@ export type MainScreenProps = {
   setSelectedConversationId: Dispatch<SetStateAction<string | null>>;
   selectedGroup: GroupMembershipSummary | null;
   threadMessages: GroupThreadMessage[];
+  typingNames: string[];
   inviteInput: string;
   setInviteInput: Dispatch<SetStateAction<string>>;
   invitePreview: GroupInvitePreview | null;
   invitePreviewError: string | null;
   messageDraft: string;
-  setMessageDraft: Dispatch<SetStateAction<string>>;
+  setMessageDraft: (nextDraft: string) => void;
   pendingAttachment: PendingAttachment | null;
   setPendingAttachment: Dispatch<SetStateAction<PendingAttachment | null>>;
   isLoadingAccount: boolean;
@@ -70,7 +71,9 @@ export type MainScreenProps = {
   sessions: SessionDescriptor[];
   isLoadingSessions: boolean;
   sessionsError: string | null;
+  isRevokingSession: string | null;
   onRefreshSessions: () => void;
+  onRevokeSession: (sessionId: string) => void;
   onSignOut: () => void;
   onShowDeviceLinkQr: () => void;
   onScanDeviceLinkQr: (payload: string) => void | Promise<void>;
@@ -138,6 +141,7 @@ export function MainScreen(props: MainScreenProps) {
     setSelectedConversationId,
     selectedGroup,
     threadMessages,
+    typingNames,
     inviteInput,
     setInviteInput,
     invitePreview,
@@ -168,7 +172,9 @@ export function MainScreen(props: MainScreenProps) {
     sessions,
     isLoadingSessions,
     sessionsError,
+    isRevokingSession,
     onRefreshSessions,
+    onRevokeSession,
     onSignOut,
     onShowDeviceLinkQr,
     onScanDeviceLinkQr,
@@ -300,6 +306,10 @@ export function MainScreen(props: MainScreenProps) {
           return left.preference.isPinned ? -1 : 1;
         }
 
+        if (left.unreadCount !== right.unreadCount) {
+          return right.unreadCount - left.unreadCount;
+        }
+
         const leftTimestamp =
           left.latestMessage?.createdAt ?? left.group.updatedAt;
         const rightTimestamp =
@@ -346,6 +356,7 @@ export function MainScreen(props: MainScreenProps) {
       session={session}
       selectedGroup={selectedGroup}
       threadMessages={threadMessages}
+      typingNames={typingNames}
       messageDraft={messageDraft}
       setMessageDraft={setMessageDraft}
       pendingAttachment={pendingAttachment}
@@ -436,7 +447,9 @@ export function MainScreen(props: MainScreenProps) {
         sessions={sessions}
         isLoadingSessions={isLoadingSessions}
         sessionsError={sessionsError}
+        isRevokingSession={isRevokingSession}
         onRefreshSessions={onRefreshSessions}
+        onRevokeSession={onRevokeSession}
         isUploadingAvatar={isUploadingAvatar}
         onShowDeviceLinkQr={onShowDeviceLinkQr}
         onScanDeviceLinkQr={onScanDeviceLinkQr}

@@ -179,8 +179,8 @@ for (const entry of repoMapEntries) {
 
 ensure(exists("apps/web/src/app/app/new-community/page.tsx"), "apps/web community creation route is missing.");
 ensure(exists("apps/web/src/app/app/community/[id]/page.tsx"), "apps/web community detail route is missing.");
-ensureIncludes("apps/relay/src/index.ts", '"/v1/communities"', "the relay /v1/communities route.");
-ensureIncludes("apps/relay/src/index.ts", "async queue(", "the relay queue consumer.");
+ensureIncludes("apps/relay/src/handlers/conversations.ts", '"/v1/communities"', "the relay /v1/communities route.");
+ensureIncludes("apps/relay/src/handlers/queue.ts", "async function consumeQueue", "the relay queue consumer.");
 
 ensureIncludes("AGENTS.md", "npm run check:repo-contracts", "`npm run check:repo-contracts` guidance");
 ensureIncludes("CONTRIBUTING.md", "npm run check:repo-contracts", "`npm run check:repo-contracts` guidance");

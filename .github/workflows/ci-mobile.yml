@@ -2,7 +2,7 @@ name: CI - Mobile
 
 on:
   push:
-    branches: [main]
+    branches: [main, "copilot/**"]
     paths:
       - "apps/mobile/**"
       - "packages/protocol/**"
