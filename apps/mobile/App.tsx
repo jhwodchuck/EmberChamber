@@ -5,7 +5,7 @@ import * as DocumentPicker from "expo-document-picker";
 import * as Location from "expo-location";
 import * as SQLite from "expo-sqlite";
 import * as SystemUI from "expo-system-ui";
-import { startTransition, useEffect, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import { Linking, Platform } from "react-native";
 import {
   applyConversationTypingEvent,
@@ -1284,9 +1284,8 @@ export default function App() {
                 ws.onmessage = (event) => {
                   try {
                     const payload = JSON.parse(event.data) as ConversationSocketEvent;
-                    const eventType = payload.type ?? "message";
 
-                    if (eventType === "message") {
+                    if (payload.type === "message") {
                       const message = payload as GroupThreadMessage;
                       setThreadMessages((prev) => {
                         if (prev.some((entry) => entry.id === message.id)) {
@@ -1317,7 +1316,7 @@ export default function App() {
                           },
                         ).catch(() => undefined);
                       }
-                    } else if (eventType === "message_edited") {
+                    } else if (payload.type === "message_edited") {
                       const { messageId, text, editedAt } = payload;
                       setThreadMessages((prev) =>
                         prev.map((message) =>
@@ -1326,7 +1325,7 @@ export default function App() {
                             : message,
                         ),
                       );
-                    } else if (eventType === "message_deleted") {
+                    } else if (payload.type === "message_deleted") {
                       const { messageId, deletedAt } = payload;
                       setThreadMessages((prev) =>
                         prev.map((message) =>
@@ -1335,7 +1334,7 @@ export default function App() {
                             : message,
                         ),
                       );
-                    } else if (eventType === "message_reaction") {
+                    } else if (payload.type === "message_reaction") {
                       const { messageId, reactions } = payload;
                       setThreadMessages((prev) =>
                         prev.map((message) =>
@@ -1345,8 +1344,8 @@ export default function App() {
                         ),
                       );
                     } else if (
-                      eventType === "typing_start" ||
-                      eventType === "typing_stop"
+                      payload.type === "typing_start" ||
+                      payload.type === "typing_stop"
                     ) {
                       setTypingIndicators((current) =>
                         applyConversationTypingEvent(current, payload, {
