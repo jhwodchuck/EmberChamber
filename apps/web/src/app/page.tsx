@@ -347,23 +347,32 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-3">
             {faqItems.map((item) => (
-              <div key={item.question} className="card p-6">
-                <div className="flex items-start gap-3">
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 text-brand-400">
+              <details
+                key={item.question}
+                className="group rounded-[1.35rem] border border-white/8 bg-white/[0.035] px-5 py-4"
+              >
+                <summary className="flex cursor-pointer list-none items-start gap-3">
+                  <div className="mt-0.5 rounded-xl border border-white/10 bg-white/[0.05] p-2 text-brand-400">
                     <Sparkles aria-hidden="true" className="h-4 w-4" />
                   </div>
-                  <div className="min-w-0">
-                    <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-base font-semibold text-[var(--text-primary)]">
                       {item.question}
                     </h3>
-                    <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">
-                      {item.answer}
+                    <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
+                      {item.summary}
                     </p>
                   </div>
-                </div>
-              </div>
+                  <span className="mt-1 text-lg leading-none text-[#b9968f] transition-transform group-open:rotate-45">
+                    +
+                  </span>
+                </summary>
+                <p className="mt-4 border-t border-white/8 pt-4 text-sm leading-7 text-[var(--text-secondary)]">
+                  {item.answer}
+                </p>
+              </details>
             ))}
           </div>
         </div>

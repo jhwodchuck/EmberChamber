@@ -88,6 +88,8 @@ export type GroupThreadMessage = {
   } | null;
   createdAt: string;
   editedAt?: string | null;
+  deletedAt?: string | null;
+  reactions?: Record<string, string[]>;
   readByCount?: number;
 };
 

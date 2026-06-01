@@ -32,6 +32,7 @@ const relaySecrets = {
   EMBERCHAMBER_REFRESH_TOKEN_SECRET: "test-refresh-token-secret",
   EMBERCHAMBER_ATTACHMENT_TOKEN_SECRET: "test-attachment-token-secret",
   EMBERCHAMBER_PUSH_TOKEN_SECRET: "test-push-token-secret",
+  EMBERCHAMBER_ADMIN_SECRET: "test-admin-secret",
 };
 
 const defaultClientHeaders = {
@@ -471,6 +472,54 @@ describe("relay routes", () => {
     expect(sessions.some((session) => session.id === alice.sessionId)).toBe(
       true,
     );
+  });
+
+  it("lets operators revoke all account sessions and push tokens", async () => {
+    const alice = await bootstrapAccount(
+      "operator-revoke@example.com",
+      "Alice Phone",
+    );
+    await registerPushToken(alice);
+
+    const forbidden = await relayFetch("/v1/admin/revoke-account-sessions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ accountId: alice.accountId }),
+    });
+    expect(forbidden.status).toBe(403);
+
+    const revoke = await relayFetch("/v1/admin/revoke-account-sessions", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${relaySecrets.EMBERCHAMBER_ADMIN_SECRET}`,
+      },
+      body: JSON.stringify({
+        accountId: alice.accountId,
+        reason: "lost trusted device",
+      }),
+    });
+    expect(revoke.status).toBe(200);
+    const revokeBody = (await revoke.json()) as {
+      revoked: boolean;
+      sessionsRevoked: number;
+      pushTokensInvalidated: number;
+    };
+    expect(revokeBody.revoked).toBe(true);
+    expect(revokeBody.sessionsRevoked).toBe(1);
+    expect(revokeBody.pushTokensInvalidated).toBe(1);
+
+    const refresh = await relayFetch("/v1/auth/refresh", {
+      method: "POST",
+      headers: { "content-type": "application/json", ...defaultClientHeaders },
+      body: JSON.stringify({ refreshToken: alice.refreshToken }),
+    });
+    expect(refresh.status).toBe(401);
+
+    const me = await relayFetch("/v1/me", {
+      headers: authHeaders(alice),
+    });
+    expect(me.status).toBe(401);
   });
 
   it("lists conversations and joined-space metadata search results", async () => {

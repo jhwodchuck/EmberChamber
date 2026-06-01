@@ -7,6 +7,7 @@ import {
   CheckSquare,
   Code2,
   EyeOff,
+  Image as ImageIcon,
   Italic,
   Link2,
   MapPin,
@@ -14,15 +15,20 @@ import {
   Quote,
   SendHorizontal,
   ShieldCheck,
+  SmilePlus,
   Strikethrough,
   Users,
   X,
 } from "lucide-react";
-import type {
-  ConversationDetail,
-  ConversationInviteDescriptor,
-  ConversationMemberSummary,
-  GroupThreadMessage,
+import {
+  applyConversationTypingEvent,
+  pruneConversationTypingIndicators,
+  type ConversationTypingIndicatorMap,
+  type ConversationSocketEvent,
+  type ConversationDetail,
+  type ConversationInviteDescriptor,
+  type ConversationMemberSummary,
+  type GroupThreadMessage,
 } from "@emberchamber/protocol";
 import NextImage from "next/image";
 import Link from "next/link";
@@ -61,13 +67,17 @@ import {
 } from "@/lib/relay-workspace";
 import { useAuthStore } from "@/lib/store";
 import { calcReconnectDelayMs } from "@/lib/backoff";
+import {
+  indexEncryptedConversationMessages,
+  indexRelayConversationMessages,
+} from "@/lib/message-search-index";
 
 type ConversationLoadError = {
   title: string;
   message: string;
 };
 
-type SidePanel = "people" | "invite" | null;
+type SidePanel = "people" | "invite" | "gallery" | null;
 
 type ThreadAttachment =
   | NonNullable<StoredDmMessage["attachment"]>
@@ -89,6 +99,14 @@ type ThreadMessage = {
 type ConversationRow =
   | { type: "date"; key: string; label: string }
   | { type: "message"; key: string; message: ThreadMessage };
+
+type MessageReaction = {
+  emoji: string;
+  count: number;
+  userReacted: boolean;
+};
+
+const REACTION_EMOJI = ["👍", "❤️", "😂", "🔥", "🎉", "😮"] as const;
 
 const composerActions: Array<{
   id: DraftFormatAction;
@@ -271,29 +289,44 @@ export default function ChatPage() {
   const [selectionOverride, setSelectionOverride] =
     useState<DraftSelection | null>(null);
   const [isLocating, setIsLocating] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<GroupThreadMessage | null>(null);
+  const [editingMessage, setEditingMessage] = useState<GroupThreadMessage | null>(null);
+  const [typingIndicators, setTypingIndicators] =
+    useState<ConversationTypingIndicatorMap>({});
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(
+    null,
+  );
+  const typingStopTimerRef = useRef<number | null>(null);
+  const lastTypingPublishAtRef = useRef(0);
   const messageListRef = useRef<HTMLDivElement | null>(null);
   const messageInputRef = useRef<HTMLTextAreaElement | null>(null);
 
-  const loadRelayHostedMessages = useCallback(async (conversationId: string) => {
-    try {
-      const messages = await relayConversationApi.listMessages(conversationId, 80);
-      setGroupMessages(
-        messages
-          .slice()
-          .sort(
-            (left, right) =>
-              new Date(left.createdAt).getTime() -
-              new Date(right.createdAt).getTime(),
-          ),
-      );
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to load conversation messages",
-      );
-    }
-  }, []);
+  const loadRelayHostedMessages = useCallback(
+    async (conversationId: string, focusMessageId?: string) => {
+      try {
+        const messages = await relayConversationApi.listMessages(conversationId, 80, {
+          focusMessageId,
+        });
+        indexRelayConversationMessages(conversationId, messages);
+        setGroupMessages(
+          messages
+            .slice()
+            .sort(
+              (left, right) =>
+                new Date(left.createdAt).getTime() -
+                new Date(right.createdAt).getTime(),
+            ),
+        );
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to load conversation messages",
+        );
+      }
+    },
+    [],
+  );
 
   const loadEncryptedConversationMessages = useCallback(
     async (
@@ -307,7 +340,9 @@ export default function ChatPage() {
           await ensureWorkspaceReady();
         }
 
-        setDmMessages(await listStoredConversationMessages(conversationId));
+        const nextMessages = await listStoredConversationMessages(conversationId);
+        indexEncryptedConversationMessages(conversationId, nextMessages);
+        setDmMessages(nextMessages);
       } catch (error) {
         toast.error(
           error instanceof Error
@@ -404,7 +439,11 @@ export default function ChatPage() {
     let reconnectTimer: number | null = null;
     let reconnectAttempt = 0;
 
-    void loadRelayHostedMessages(conversation.id);
+    const focusMessageId =
+      typeof window !== "undefined"
+        ? window.location.hash.match(/^#message-([0-9a-f-]{36})$/i)?.[1]
+        : undefined;
+    void loadRelayHostedMessages(conversation.id, focusMessageId);
 
     const clearReconnectTimer = () => {
       if (reconnectTimer !== null) {
@@ -427,18 +466,60 @@ export default function ChatPage() {
         };
         ws.onmessage = (event) => {
           try {
-            const message = JSON.parse(event.data) as GroupThreadMessage;
-            setGroupMessages((current) => {
-              if (current.some((entry) => entry.id === message.id)) {
-                return current;
-              }
+            const payload = JSON.parse(event.data) as ConversationSocketEvent;
 
-              return [...current, message].sort(
-                (left, right) =>
-                  new Date(left.createdAt).getTime() -
-                  new Date(right.createdAt).getTime(),
+            if (payload.type === "message") {
+              const message = payload as GroupThreadMessage;
+              setGroupMessages((current) => {
+                if (current.some((entry) => entry.id === message.id)) {
+                  return current;
+                }
+                const next = [...current, message].sort(
+                  (left, right) =>
+                    new Date(left.createdAt).getTime() -
+                    new Date(right.createdAt).getTime(),
+                );
+                indexRelayConversationMessages(conversation.id, next);
+                return next;
+              });
+            } else if (payload.type === "message_edited") {
+              const { messageId, text, editedAt } = payload;
+              setGroupMessages((current) =>
+                {
+                  const next = current.map((msg) =>
+                  msg.id === messageId ? { ...msg, text, editedAt } : msg,
+                  );
+                  indexRelayConversationMessages(conversation.id, next);
+                  return next;
+                },
               );
-            });
+            } else if (payload.type === "message_deleted") {
+              const { messageId, deletedAt } = payload;
+              setGroupMessages((current) =>
+                {
+                  const next = current.map((msg) =>
+                  msg.id === messageId ? { ...msg, deletedAt } : msg,
+                  );
+                  indexRelayConversationMessages(conversation.id, next);
+                  return next;
+                },
+              );
+            } else if (payload.type === "read_receipt") {
+              // Read receipts don't require local state changes in the viewer
+            } else if (payload.type === "message_reaction") {
+              const { messageId, reactions } = payload;
+              setGroupMessages((current) =>
+                current.map((msg) =>
+                  msg.id === messageId ? { ...msg, reactions } : msg,
+                ),
+              );
+            } else if (payload.type === "typing_start" || payload.type === "typing_stop") {
+              setTypingIndicators((current) =>
+                applyConversationTypingEvent(current, payload, {
+                  selfAccountId: user?.id,
+                }),
+              );
+            }
           } catch {
             // Ignore malformed websocket payloads.
           }
@@ -479,7 +560,7 @@ export default function ChatPage() {
       clearReconnectTimer();
       ws?.close();
     };
-  }, [conversation, loadRelayHostedMessages, router]);
+  }, [conversation, loadRelayHostedMessages, router, user?.id]);
 
   useEffect(() => {
     if (!conversation || conversation.historyMode !== "device_encrypted") {
@@ -504,6 +585,24 @@ export default function ChatPage() {
   }, [conversation, mailboxRevision, loadEncryptedConversationMessages]);
 
   useEffect(() => {
+    if (!conversation || conversation.historyMode !== "relay_hosted") {
+      return;
+    }
+
+    const lastMessage = groupMessages[groupMessages.length - 1];
+    if (!lastMessage) {
+      return;
+    }
+
+    void relayConversationApi.ackMessages(
+      conversation.id,
+      lastMessage.createdAt,
+    ).catch(() => {
+      // Read receipts should never block opening the conversation.
+    });
+  }, [conversation, groupMessages]);
+
+  useEffect(() => {
     if (!selectionOverride) {
       return;
     }
@@ -519,6 +618,112 @@ export default function ChatPage() {
 
     return () => window.cancelAnimationFrame(frame);
   }, [selectionOverride]);
+
+  useEffect(() => {
+    return () => {
+      if (typingStopTimerRef.current !== null) {
+        window.clearTimeout(typingStopTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setTypingIndicators((current) =>
+        pruneConversationTypingIndicators(current),
+      );
+    }, 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (conversation?.historyMode === "relay_hosted") {
+        void relayConversationApi.publishTypingStop(conversation.id).catch(
+          () => {},
+        );
+      }
+    };
+  }, [conversation?.id, conversation?.historyMode]);
+
+  const publishTypingState = useCallback(
+    (isTyping: boolean) => {
+      if (!conversation || conversation.historyMode !== "relay_hosted") {
+        return;
+      }
+
+      const now = Date.now();
+      if (isTyping) {
+        if (now - lastTypingPublishAtRef.current > 1200) {
+          lastTypingPublishAtRef.current = now;
+          void relayConversationApi.publishTypingStart(conversation.id).catch(
+            () => {},
+          );
+        }
+
+        if (typingStopTimerRef.current !== null) {
+          window.clearTimeout(typingStopTimerRef.current);
+        }
+
+        typingStopTimerRef.current = window.setTimeout(() => {
+          void relayConversationApi.publishTypingStop(conversation.id).catch(
+            () => {},
+          );
+        }, 2200);
+      } else {
+        if (typingStopTimerRef.current !== null) {
+          window.clearTimeout(typingStopTimerRef.current);
+          typingStopTimerRef.current = null;
+        }
+        void relayConversationApi.publishTypingStop(conversation.id).catch(
+          () => {},
+        );
+      }
+    },
+    [conversation],
+  );
+
+  function getMessageReactions(messageId: string): MessageReaction[] {
+    const reactions =
+      groupMessages.find((message) => message.id === messageId)?.reactions ?? {};
+    return Object.entries(reactions)
+      .map(([emoji, accountIds]) => ({
+        emoji,
+        count: accountIds.length,
+        userReacted: accountIds.includes(user?.id ?? ""),
+      }))
+      .sort((left, right) => right.count - left.count);
+  }
+
+  async function toggleReaction(messageId: string, emoji: string) {
+    if (!conversation || conversation.historyMode !== "relay_hosted") {
+      return;
+    }
+
+    try {
+      const response = await relayConversationApi.toggleReaction(
+        conversation.id,
+        messageId,
+        emoji,
+      );
+      setGroupMessages((current) =>
+        current.map((message) =>
+          message.id === messageId
+            ? { ...message, reactions: response.reactions }
+            : message,
+        ),
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to update message reaction",
+      );
+    }
+  }
 
   const threadMessages = useMemo<ThreadMessage[]>(() => {
     if (!conversation) {
@@ -566,11 +771,33 @@ export default function ChatPage() {
     () => buildConversationRows(threadMessages),
     [threadMessages],
   );
+  const galleryItems = useMemo(
+    () =>
+      threadMessages
+        .filter((message) => message.attachment)
+        .map((message) => ({
+          id: message.id,
+          senderDisplayName: message.senderDisplayName,
+          createdAt: message.createdAt,
+          attachment: message.attachment as NonNullable<ThreadMessage["attachment"]>,
+        }))
+        .reverse(),
+    [threadMessages],
+  );
+  const typingNames = Object.values(
+    pruneConversationTypingIndicators(typingIndicators),
+  ).map((entry) => entry.displayName);
   const lastThreadMessageId =
     threadMessages[threadMessages.length - 1]?.id ?? null;
 
   useEffect(() => {
     if (!threadMessages.length) {
+      return;
+    }
+
+    const hasAnchorHash =
+      typeof window !== "undefined" && /^#message-/.test(window.location.hash);
+    if (hasAnchorHash) {
       return;
     }
 
@@ -588,6 +815,39 @@ export default function ChatPage() {
 
     return () => window.cancelAnimationFrame(frame);
   }, [lastThreadMessageId, threadMessages.length]);
+
+  useEffect(() => {
+    if (!conversation || !threadRows.length || typeof window === "undefined") {
+      return;
+    }
+
+    const hashMatch = window.location.hash.match(/^#message-([0-9a-f-]{36})$/i);
+    if (!hashMatch) {
+      return;
+    }
+
+    const messageId = hashMatch[1];
+    const element = document.getElementById(`message-${messageId}`);
+    if (!element) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
+      setHighlightedMessageId(messageId);
+    });
+
+    const timeoutId = window.setTimeout(() => {
+      setHighlightedMessageId((current) =>
+        current === messageId ? null : current,
+      );
+    }, 4000);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timeoutId);
+    };
+  }, [conversation, threadRows]);
 
   const peer =
     conversation?.kind === "direct_message"
@@ -799,6 +1059,35 @@ export default function ChatPage() {
     );
   }
 
+  function handleStartEdit(message: GroupThreadMessage) {
+    setEditingMessage(message);
+    setReplyingTo(null);
+    setContent(message.text ?? "");
+  }
+
+  function handleCancelEdit() {
+    setEditingMessage(null);
+    setContent("");
+  }
+
+  async function handleDeleteMessage(message: GroupThreadMessage) {
+    if (!conversation) return;
+    try {
+      await relayConversationApi.deleteMessage(conversation.id, message.id);
+      setGroupMessages((current) =>
+        {
+          const next = current.map((msg) =>
+          msg.id === message.id ? { ...msg, deletedAt: new Date().toISOString() } : msg,
+          );
+          indexRelayConversationMessages(conversation.id, next);
+          return next;
+        },
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete message");
+    }
+  }
+
   async function handleSend(event?: React.FormEvent) {
     event?.preventDefault();
     if (!conversation || conversation.kind === "community") {
@@ -826,17 +1115,30 @@ export default function ChatPage() {
         const attachmentId = selectedFile
           ? await uploadRelayAttachment(selectedFile)
           : undefined;
-        await relayConversationApi.sendMessage(conversation.id, {
-          text: trimmedContent || undefined,
-          attachmentId,
-          clientMessageId: crypto.randomUUID(),
-        });
-        await loadRelayHostedMessages(conversation.id);
+        if (editingMessage) {
+          await relayConversationApi.editMessage(
+            conversation.id,
+            editingMessage.id,
+            trimmedContent,
+          );
+          setEditingMessage(null);
+          await loadRelayHostedMessages(conversation.id);
+        } else {
+          await relayConversationApi.sendMessage(conversation.id, {
+            text: trimmedContent || undefined,
+            attachmentId,
+            clientMessageId: crypto.randomUUID(),
+            replyToMessageId: replyingTo?.id,
+          });
+          setReplyingTo(null);
+          await loadRelayHostedMessages(conversation.id);
+        }
       }
 
       setContent("");
       setSelectedFile(null);
       setDraftSelection({ start: 0, end: 0 });
+      publishTypingState(false);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to send the message",
@@ -1013,6 +1315,21 @@ export default function ChatPage() {
                 Invite
               </button>
             ) : null}
+            <button
+              type="button"
+              onClick={() =>
+                setSidePanel((current) =>
+                  current === "gallery" ? null : "gallery",
+                )
+              }
+              className={clsx(
+                "btn-ghost",
+                sidePanel === "gallery" && "border-brand-500/50 text-brand-600",
+              )}
+            >
+              <ImageIcon className="h-4 w-4" aria-hidden="true" />
+              Media
+            </button>
           </div>
         </div>
       </header>
@@ -1046,7 +1363,13 @@ export default function ChatPage() {
                 </div>
               </div>
             ) : (
-              threadRows.map((row) =>
+              <>
+                {typingNames.length > 0 ? (
+                  <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2 text-xs text-[var(--text-secondary)]">
+                    {typingNames.join(", ")} {typingNames.length === 1 ? "is" : "are"} typing...
+                  </div>
+                ) : null}
+                {threadRows.map((row) =>
                 row.type === "date" ? (
                   <div
                     key={row.key}
@@ -1059,11 +1382,26 @@ export default function ChatPage() {
                 ) : (
                   <div
                     key={row.key}
+                    id={`message-${row.message.id}`}
                     className={clsx(
-                      "flex",
+                      "group flex items-end gap-1 scroll-mt-20 rounded-xl px-1 py-1 transition-colors",
+                      highlightedMessageId === row.message.id &&
+                        "bg-brand-500/[0.10] ring-1 ring-brand-500/45",
                       row.message.isOwn ? "justify-end" : "justify-start",
                     )}
                   >
+                    {/* Hover action menu (shown on group hover) */}
+                    {!row.message.isOwn && (
+                      <div className="mb-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                        <button
+                          type="button"
+                          onClick={() => setReplyingTo(row.message as unknown as GroupThreadMessage)}
+                          className="rounded-full border border-[var(--border)] bg-[var(--bg-secondary)] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)] transition-colors hover:text-brand-600"
+                        >
+                          Reply
+                        </button>
+                      </div>
+                    )}
                     <div
                       className={clsx(
                         "max-w-[min(82%,46rem)] rounded-[1.55rem] border px-4 py-3 shadow-[0_10px_24px_rgba(32,19,18,0.06)]",
@@ -1088,13 +1426,70 @@ export default function ChatPage() {
                             {row.message.deliveryLabel}
                           </span>
                         ) : null}
+                        {(row.message as unknown as GroupThreadMessage).editedAt ? (
+                          <span className="text-[11px] italic text-[var(--text-secondary)]">edited</span>
+                        ) : null}
+                        {row.message.isOwn && (row.message as unknown as GroupThreadMessage).readByCount ? (
+                          <span className="text-[11px] text-brand-600">✓✓</span>
+                        ) : null}
                       </div>
 
-                      {row.message.text ? (
+                      {/* Reply quote */}
+                      {(row.message as unknown as GroupThreadMessage).replyTo ? (
+                        <div className="mb-2 rounded-xl border-l-2 border-brand-500 bg-[var(--bg-primary)] px-3 py-2">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-600">
+                            {(row.message as unknown as GroupThreadMessage).replyTo!.senderDisplayName}
+                          </p>
+                          <p className="mt-0.5 line-clamp-2 text-xs text-[var(--text-secondary)]">
+                            {(row.message as unknown as GroupThreadMessage).replyTo!.text ?? "Attachment"}
+                          </p>
+                        </div>
+                      ) : null}
+
+                      {(row.message as unknown as GroupThreadMessage).deletedAt ? (
+                        <p className="mt-1 text-sm italic text-[var(--text-secondary)]">
+                          [Message deleted]
+                        </p>
+                      ) : row.message.text ? (
                         <FormattedMessage text={row.message.text} />
                       ) : null}
 
-                      {row.message.attachment ? (
+                      {!(row.message as unknown as GroupThreadMessage).deletedAt ? (
+                        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                          {getMessageReactions(row.message.id).map((reaction) => (
+                            <button
+                              key={`${row.message.id}-${reaction.emoji}`}
+                              type="button"
+                              onClick={() => toggleReaction(row.message.id, reaction.emoji)}
+                              className={clsx(
+                                "rounded-full border px-2 py-0.5 text-xs",
+                                reaction.userReacted
+                                  ? "border-brand-500/50 bg-brand-500/10"
+                                  : "border-[var(--border)] bg-[var(--bg-primary)]",
+                              )}
+                            >
+                              {reaction.emoji} {reaction.count}
+                            </button>
+                          ))}
+
+                          <div className="flex items-center gap-1">
+                            {REACTION_EMOJI.map((emoji) => (
+                              <button
+                                key={`${row.message.id}-quick-${emoji}`}
+                                type="button"
+                                onClick={() => toggleReaction(row.message.id, emoji)}
+                                className="rounded-full border border-[var(--border)] bg-[var(--bg-primary)] px-1.5 py-0.5 text-xs hover:border-brand-500"
+                                aria-label={`React with ${emoji}`}
+                              >
+                                {emoji}
+                              </button>
+                            ))}
+                            <SmilePlus className="h-3.5 w-3.5 text-[var(--text-secondary)]" aria-hidden="true" />
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {!(row.message as unknown as GroupThreadMessage).deletedAt && row.message.attachment ? (
                         <button
                           type="button"
                           onClick={() => void handleDownloadAttachment(row.message)}
@@ -1117,9 +1512,29 @@ export default function ChatPage() {
                         </button>
                       ) : null}
                     </div>
+                    {/* Own message hover actions */}
+                    {row.message.isOwn && !(row.message as unknown as GroupThreadMessage).deletedAt && (
+                      <div className="mb-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                        <button
+                          type="button"
+                          onClick={() => handleStartEdit(row.message as unknown as GroupThreadMessage)}
+                          className="rounded-full border border-[var(--border)] bg-[var(--bg-secondary)] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)] transition-colors hover:text-brand-600"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleDeleteMessage(row.message as unknown as GroupThreadMessage)}
+                          className="rounded-full border border-[var(--border)] bg-[var(--bg-secondary)] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)] transition-colors hover:text-red-500"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ),
-              )
+                )}
+              </>
             )}
           </div>
 
@@ -1127,6 +1542,43 @@ export default function ChatPage() {
             onSubmit={handleSend}
             className="border-t border-[var(--border)] bg-[var(--bg-primary)] px-4 py-4 sm:px-6"
           >
+            {/* Reply preview banner */}
+            {replyingTo ? (
+              <div className="mb-2 flex items-start justify-between rounded-xl border-l-2 border-brand-500 bg-[var(--bg-secondary)] px-3 py-2">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-600">
+                    Replying to {replyingTo.senderDisplayName}
+                  </p>
+                  <p className="mt-0.5 line-clamp-1 text-xs text-[var(--text-secondary)]">
+                    {replyingTo.text ?? "Attachment"}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setReplyingTo(null)}
+                  className="ml-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  aria-label="Cancel reply"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : null}
+            {/* Edit mode banner */}
+            {editingMessage ? (
+              <div className="mb-2 flex items-center justify-between rounded-xl border-l-2 border-amber-500 bg-[var(--bg-secondary)] px-3 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-600">
+                  Editing message
+                </p>
+                <button
+                  type="button"
+                  onClick={handleCancelEdit}
+                  className="ml-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  aria-label="Cancel edit"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : null}
             <div className="space-y-3">
               <div className="flex flex-wrap gap-2">
                 {composerActions.map((action) => {
@@ -1219,7 +1671,9 @@ export default function ChatPage() {
                 ref={messageInputRef}
                 value={content}
                 onChange={(event) => {
-                  setContent(event.target.value);
+                  const nextValue = event.target.value;
+                  setContent(nextValue);
+                  publishTypingState(nextValue.trim().length > 0);
                   syncDraftSelectionFromInput();
                 }}
                 onClick={syncDraftSelectionFromInput}
@@ -1392,6 +1846,83 @@ export default function ChatPage() {
                     ) : null}
                   </div>
                 ) : null}
+              </div>
+            ) : sidePanel === "gallery" ? (
+              <div className="flex h-full flex-col p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">
+                      Media
+                    </p>
+                    <h3 className="mt-2 text-lg font-semibold text-[var(--text-primary)]">
+                      Conversation gallery
+                    </h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSidePanel(null)}
+                    className="rounded-full border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-brand-500 hover:text-brand-600"
+                    aria-label="Close gallery panel"
+                  >
+                    <X className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </div>
+
+                {galleryItems.length === 0 ? (
+                  <div className="mt-4 rounded-[1.35rem] border border-dashed border-[var(--border)] bg-[var(--bg-primary)] px-4 py-5 text-sm text-[var(--text-secondary)]">
+                    No attachments have been shared in this conversation yet.
+                  </div>
+                ) : (
+                  <div className="mt-4 grid grid-cols-1 gap-3 overflow-y-auto pr-1 sm:grid-cols-2">
+                    {galleryItems.map((item) => (
+                      <div
+                        key={`gallery-${item.id}`}
+                        className="rounded-[1.2rem] border border-[var(--border)] bg-[var(--bg-primary)] p-3"
+                      >
+                        {item.attachment.mimeType?.startsWith("image/") &&
+                        item.attachment.downloadUrl ? (
+                          <NextImage
+                            src={item.attachment.downloadUrl}
+                            alt={item.attachment.fileName}
+                            width={640}
+                            height={420}
+                            className="h-32 w-full rounded-xl object-cover"
+                            unoptimized
+                          />
+                        ) : (
+                          <div className="flex h-32 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] text-xs text-[var(--text-secondary)]">
+                            {item.attachment.mimeType || "attachment"}
+                          </div>
+                        )}
+
+                        <p className="mt-2 truncate text-sm font-semibold text-[var(--text-primary)]">
+                          {item.attachment.fileName}
+                        </p>
+                        <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                          {item.senderDisplayName} · {formatMessageTime(item.createdAt)}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void handleDownloadAttachment({
+                              id: item.id,
+                              senderAccountId: "",
+                              senderDisplayName: item.senderDisplayName,
+                              text: null,
+                              attachment: item.attachment,
+                              createdAt: item.createdAt,
+                              kind: "media",
+                              isOwn: false,
+                            })
+                          }
+                          className="mt-2 w-full rounded-full border border-[var(--border)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)] hover:border-brand-500 hover:text-brand-600"
+                        >
+                          Download
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex h-full flex-col p-4">

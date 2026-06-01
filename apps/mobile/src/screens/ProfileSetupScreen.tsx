@@ -29,6 +29,15 @@ export function ProfileSetupScreen(props: ProfileSetupScreenProps) {
     <>
       {sessionMessage ? <StatusCard {...sessionMessage} /> : null}
 
+      <View style={styles.handoffCard}>
+        <Text style={styles.handoffEyebrow}>Email link accepted</Text>
+        <Text style={styles.handoffTitle}>Your first session is ready.</Text>
+        <Text style={styles.handoffBody}>
+          Finish the profile name now; chats, invites, and settings open
+          immediately after this step.
+        </Text>
+      </View>
+
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Almost there</Text>
         <Text style={styles.sectionBody}>

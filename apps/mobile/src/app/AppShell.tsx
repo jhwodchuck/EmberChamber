@@ -1,4 +1,11 @@
-import { ActivityIndicator, ScrollView, Text, View } from "react-native";
+import { useState } from "react";
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 import type { OnboardingScreenProps } from "../screens/OnboardingScreen";
 import { OnboardingScreen } from "../screens/OnboardingScreen";
 import type { ProfileSetupScreenProps } from "../screens/ProfileSetupScreen";
@@ -27,6 +34,8 @@ export function AppShell({
   profileSetupProps,
   mainScreenProps,
 }: AppShellProps) {
+  const [trustBoundaryExpanded, setTrustBoundaryExpanded] = useState(false);
+
   if (showEntryChrome) {
     return (
       <ScrollView
@@ -75,12 +84,30 @@ export function AppShell({
 
         {!isSignedIn ? (
           <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Trust boundary</Text>
-            {trustBoundaryItems.map((item) => (
-              <Text key={item} style={styles.bullet}>
-                • {item}
+            <Pressable
+              onPress={() => setTrustBoundaryExpanded((current) => !current)}
+              style={styles.disclosureHeader}
+            >
+              <View style={{ flex: 1, gap: 4 }}>
+                <Text style={styles.sectionTitle}>Trust boundary</Text>
+                <Text style={styles.sectionBody}>
+                  Short version: invite-only, adults-only, device-held privacy
+                  boundaries.
+                </Text>
+              </View>
+              <Text style={styles.inlineAction}>
+                {trustBoundaryExpanded ? "Hide" : "Learn more"}
               </Text>
-            ))}
+            </Pressable>
+            {trustBoundaryExpanded ? (
+              <View style={styles.disclosureBody}>
+                {trustBoundaryItems.map((item) => (
+                  <Text key={item} style={styles.bullet}>
+                    • {item}
+                  </Text>
+                ))}
+              </View>
+            ) : null}
           </View>
         ) : null}
       </ScrollView>

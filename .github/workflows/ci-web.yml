@@ -2,7 +2,7 @@ name: CI - Relay and Companion Apps
 
 on:
   push:
-    branches: [main]
+    branches: [main, "copilot/**"]
     paths:
       - "apps/relay/**"
       - "apps/web/**"
@@ -58,6 +58,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
+
+      - name: Audit high and critical npm vulnerabilities
+        run: npm run audit:high
 
       - name: Build protocol package
         run: npm run build --workspace=packages/protocol

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
@@ -10,10 +10,11 @@ import { StatusCallout } from "@/components/status-callout";
 import { conversationDefaultTitle, conversationTypeLabel } from "@/lib/conversation-labels";
 import { relayConversationApi } from "@/lib/relay";
 import { conversationHref } from "@/lib/conversation-routes";
+import { searchIndexedMessages } from "@/lib/message-search-index";
 
-type SearchTab = "all" | "conversations" | "accounts";
+type SearchTab = "all" | "conversations" | "accounts" | "messages";
 
-const searchTabs: SearchTab[] = ["all", "conversations", "accounts"];
+const searchTabs: SearchTab[] = ["all", "conversations", "accounts", "messages"];
 
 export default function SearchPage() {
   const router = useRouter();
@@ -28,6 +29,18 @@ export default function SearchPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<SearchTab>("all");
+  const [localMessageResults, setLocalMessageResults] = useState<
+    Array<{
+      conversationId: string;
+      messageId: string;
+      text: string;
+      senderDisplayName: string;
+      createdAt: string;
+    }>
+  >([]);
+  const [conversationNames, setConversationNames] = useState<
+    Record<string, string>
+  >({});
 
   async function handleSearch(nextQuery: string) {
     setQuery(nextQuery);
@@ -38,12 +51,27 @@ export default function SearchPage() {
         conversations: [],
         accounts: [],
       });
+      setLocalMessageResults([]);
       return;
     }
 
     setIsSearching(true);
     try {
-      setResults(await relayConversationApi.search(nextQuery.trim(), scopedCommunityId));
+      const [relayResults, conversations] = await Promise.all([
+        relayConversationApi.search(nextQuery.trim(), scopedCommunityId),
+        relayConversationApi.list(),
+      ]);
+
+      setResults(relayResults);
+      setConversationNames(
+        Object.fromEntries(
+          conversations.map((conversation) => [
+            conversation.id,
+            conversation.title ?? conversationDefaultTitle(conversation.kind),
+          ]),
+        ),
+      );
+      setLocalMessageResults(searchIndexedMessages(nextQuery.trim(), { limit: 160 }));
     } catch (error) {
       setSearchError(
         error instanceof Error ? error.message : "Search failed — the relay may be temporarily unavailable.",
@@ -65,6 +93,11 @@ export default function SearchPage() {
 
   const showConversations = activeTab === "all" || activeTab === "conversations";
   const showAccounts = activeTab === "all" || activeTab === "accounts";
+  const showMessages = activeTab === "all" || activeTab === "messages";
+  const messageResults = useMemo(
+    () => localMessageResults.slice(0, 80),
+    [localMessageResults],
+  );
 
   return (
     <div className="mx-auto flex h-full max-w-3xl flex-col p-6">
@@ -111,7 +144,6 @@ export default function SearchPage() {
             key={tab}
             type="button"
             role="tab"
-            aria-selected={activeTab === tab}
             onClick={() => setActiveTab(tab)}
             className={`px-3 py-2 text-sm font-medium capitalize transition-colors ${
               activeTab === tab
@@ -189,11 +221,44 @@ export default function SearchPage() {
             </div>
           ) : null}
 
+          {showMessages && messageResults.length > 0 ? (
+            <div>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
+                Message bodies (client-side)
+              </h3>
+              <div className="space-y-2">
+                {messageResults.map((message) => (
+                  <Link
+                    key={`${message.conversationId}:${message.messageId}`}
+                    href={`/app/chat/${message.conversationId}#message-${message.messageId}`}
+                    className="block card transition-colors hover:bg-[var(--bg-primary)]"
+                  >
+                    <div className="mb-1 flex items-center justify-between gap-3">
+                      <span className="text-sm font-medium text-[var(--text-primary)]">
+                        {conversationNames[message.conversationId] ?? "Conversation"}
+                      </span>
+                      <span className="text-xs uppercase tracking-[0.14em] text-[var(--text-secondary)]">
+                        {new Date(message.createdAt).toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-600">
+                      {message.senderDisplayName}
+                    </p>
+                    <p className="mt-1 line-clamp-2 text-sm text-[var(--text-secondary)]">
+                      {message.text}
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           {query.trim().length >= 2 &&
           !isSearching &&
           !searchError &&
           results.conversations.length === 0 &&
-          results.accounts.length === 0 ? (
+          results.accounts.length === 0 &&
+          messageResults.length === 0 ? (
             <p className="py-8 text-center text-[var(--text-secondary)]">
               No joined conversation metadata matched &quot;{query}&quot;.
             </p>

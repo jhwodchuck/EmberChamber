@@ -9,6 +9,7 @@ import {
   Users,
 } from "lucide-react";
 import Link from "next/link";
+import { Avatar } from "@/components/avatar";
 import { useCompanionShell } from "@/components/companion-shell";
 import { StatusCallout } from "@/components/status-callout";
 import {
@@ -97,10 +98,19 @@ export default function AppHome() {
               </p>
               <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-lg font-semibold text-[var(--text-primary)]">
-                    {resumeConversation.name ??
-                      conversationDefaultTitle(resumeConversation.type)}
-                  </p>
+                  <div className="flex items-center gap-3">
+                    <Avatar
+                      name={
+                        resumeConversation.name ??
+                        conversationDefaultTitle(resumeConversation.type)
+                      }
+                      size="sm"
+                    />
+                    <p className="text-lg font-semibold text-[var(--text-primary)]">
+                      {resumeConversation.name ??
+                        conversationDefaultTitle(resumeConversation.type)}
+                    </p>
+                  </div>
                   <p className="mt-2 text-sm text-[var(--text-secondary)]">
                     {resumeConversation.lastMessage?.content ??
                       "No local preview yet"}
@@ -109,6 +119,13 @@ export default function AppHome() {
                 <span className="rounded-full border border-[var(--border)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-600">
                   {conversationTypeLabel(resumeConversation.type)}
                 </span>
+                {resumeConversation.unreadCount > 0 ? (
+                  <span className="rounded-full bg-brand-500 px-2 py-0.5 text-[10px] font-semibold text-white">
+                    {resumeConversation.unreadCount > 99
+                      ? "99+"
+                      : resumeConversation.unreadCount}
+                  </span>
+                ) : null}
               </div>
             </Link>
           ) : null}
@@ -183,10 +200,17 @@ export default function AppHome() {
                 <Link
                   key={conversation.id}
                   href={conversation.href}
-                  className="block rounded-[1.45rem] border border-[var(--border)] bg-[var(--bg-secondary)] px-5 py-4 transition-[border-color,transform] hover:-translate-y-0.5 hover:border-brand-500"
+                  className="block rounded-[1.45rem] border border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-4 transition-[border-color,transform] hover:-translate-y-0.5 hover:border-brand-500"
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
+                  <div className="flex items-start gap-3">
+                    <Avatar
+                      name={
+                        conversation.name ??
+                        conversationDefaultTitle(conversation.type)
+                      }
+                      size="sm"
+                    />
+                    <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="truncate text-base font-semibold text-[var(--text-primary)]">
                           {conversation.name ??
@@ -195,10 +219,23 @@ export default function AppHome() {
                         <span className="rounded-full border border-[var(--border)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-600">
                           {conversationTypeLabel(conversation.type)}
                         </span>
+                        {conversation.unreadCount > 0 ? (
+                          <span className="rounded-full bg-brand-500 px-2 py-0.5 text-[10px] font-semibold text-white">
+                            {conversation.unreadCount > 99
+                              ? "99+"
+                              : conversation.unreadCount}
+                          </span>
+                        ) : null}
                       </div>
                       <p className="mt-2 truncate text-sm text-[var(--text-secondary)]">
                         {conversation.lastMessage?.content ??
                           "No local preview yet"}
+                      </p>
+                      <p className="mt-2 text-[11px] uppercase tracking-[0.14em] text-[var(--text-secondary)]">
+                        {conversation.memberCount} members ·{" "}
+                        {conversation.historyMode === "device_encrypted"
+                          ? "Local-first"
+                          : "Relay-hosted"}
                       </p>
                     </div>
                     <p className="text-xs font-medium uppercase tracking-[0.16em] text-[var(--text-secondary)]">

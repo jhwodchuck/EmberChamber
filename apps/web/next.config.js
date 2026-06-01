@@ -104,11 +104,6 @@ const nextConfig = {
   // Keep standalone output available for containerised deployment paths without
   // changing the default web build used by local dev and CI.
   output: process.env.NEXT_OUTPUT === "standalone" ? "standalone" : undefined,
-  eslint: {
-    // Lint runs as a dedicated CI step; avoid Next.js build-time lint plugin
-    // incompatibilities in workspace installs from blocking production builds.
-    ignoreDuringBuilds: true,
-  },
 
   async headers() {
     return [

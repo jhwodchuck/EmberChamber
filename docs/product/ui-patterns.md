@@ -48,6 +48,27 @@ Surface guidance:
 
 ## Messaging Patterns
 
+### Current cross-surface alignment notes
+
+Status: updated 2026-05-19 from the UI surface punch-list pass.
+
+Reference surfaces:
+
+- mobile chat home: `apps/mobile/src/screens/ChatListScreen.tsx`
+- mobile settings diagnostics: `apps/mobile/src/screens/SettingsScreen.tsx`
+- mobile onboarding: `apps/mobile/src/screens/OnboardingScreen.tsx`
+- web workspace overview: `apps/web/src/app/app/page.tsx`
+- web chat rail: `apps/web/src/components/chat-rail.tsx`
+- public homepage proof/FAQ: `apps/web/src/app/page.tsx`
+
+Applied decisions:
+
+- Conversation resumption is the first signed-in action on mobile and web. Use a single dominant resume target, then recent rows with avatar, preview, timestamp, unread, and type/privacy metadata.
+- Diagnostics are secondary. Relay link, vault counts, session rows, and contact tokens belong behind a debug or status disclosure, not above conversation continuation.
+- Invite and onboarding flows use staged cards: access or invite context first, adults-only affirmation as a deliberate 18+ step, then device/profile handoff.
+- Trust copy stays short by default. Longer privacy and relay explanations belong in expandable sections, accordions, or the trust-and-safety route.
+- Attachment chips, invite-preview cards, and trust/status badges use the same semantic token family across mobile and web: brand-soft surfaces for active state, bordered panel surfaces for neutral state, and warning/error/success roles only when the user needs an action outcome.
+
 ### Status banner
 
 - use semantic tones: `info`, `success`, `warning`, `error`

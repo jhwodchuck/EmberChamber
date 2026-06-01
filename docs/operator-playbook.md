@@ -67,15 +67,19 @@ allow any future updates to the app under the same package name.
 | Property       | Value                                               |
 | -------------- | --------------------------------------------------- |
 | Keystore file  | `apps/mobile/secrets/emberchamber-release.keystore` |
-| Store password | `ember-release-store`                               |
-| Key alias      | `emberchamber`                                      |
-| Key password   | same as store password (`ember-release-store`)      |
+| Store password | Stored only in `ANDROID_STORE_PASSWORD`             |
+| Key alias      | Stored only in `ANDROID_KEY_ALIAS`                  |
+| Key password   | Stored only in `ANDROID_KEY_PASSWORD`               |
 
 The keystore file is gitignored and must never be committed to the repo. The credentials are
 stored as GitHub Actions secrets (`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEY_ALIAS`,
 `ANDROID_STORE_PASSWORD`, `ANDROID_KEY_PASSWORD`, `ANDROID_GOOGLE_SERVICES_JSON`) so the CI
 workflows can sign builds and include the Firebase Android app config without exposing the raw
 files.
+
+Rotate any release-signing password that has appeared in docs, chat, logs, or shell history
+before the next Play Store release. Treat documented signing values as compromised even if the
+keystore file itself was never committed.
 
 **Back up the keystore.** Copy `apps/mobile/secrets/emberchamber-release.keystore` to a
 secure location outside the repo (password manager, encrypted cloud backup). If it is lost
@@ -87,9 +91,9 @@ To re-register the secrets after a machine reset:
 cd apps/relay  # or root — just needs wrangler/gh auth
 base64 -w 0 apps/mobile/secrets/emberchamber-release.keystore \
   | gh secret set ANDROID_KEYSTORE_BASE64
-gh secret set ANDROID_KEY_ALIAS    --body "emberchamber"
-gh secret set ANDROID_STORE_PASSWORD --body "ember-release-store"
-gh secret set ANDROID_KEY_PASSWORD   --body "ember-release-store"
+gh secret set ANDROID_KEY_ALIAS
+gh secret set ANDROID_STORE_PASSWORD
+gh secret set ANDROID_KEY_PASSWORD
 gh secret set ANDROID_GOOGLE_SERVICES_JSON < apps/mobile/secrets/google-services.json
 ```
 

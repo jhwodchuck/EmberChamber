@@ -1,0 +1,19 @@
+# Local development secrets for apps/relay.
+# Copy this file to .dev.vars and fill in the values before running `wrangler dev`.
+# .dev.vars is gitignored. Never commit actual secrets.
+#
+# Production and staging secrets are set via:
+#   wrangler secret put EMBERCHAMBER_PUSH_TOKEN_SECRET --env production
+#   wrangler secret put EMBERCHAMBER_FCM_SERVICE_ACCOUNT_JSON --env production
+# See docs/android-fcm-setup.md for the full setup procedure.
+
+# Required for Android push delivery. Encrypts stored device push tokens in D1.
+# Generate a random value with: openssl rand -base64 32
+EMBERCHAMBER_PUSH_TOKEN_SECRET=replace-with-output-of-openssl-rand-base64-32
+
+# Required to send real FCM push notifications from a local relay instance.
+# Paste the full contents of the Firebase service account JSON (single-line).
+# Optional for local dev if you do not need to test real Android push delivery.
+# See docs/android-fcm-setup.md for which service account to use and how to
+# grant it the Firebase Cloud Messaging API Admin role.
+EMBERCHAMBER_FCM_SERVICE_ACCOUNT_JSON=

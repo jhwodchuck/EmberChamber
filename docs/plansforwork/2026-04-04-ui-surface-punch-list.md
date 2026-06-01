@@ -16,18 +16,24 @@ Input: cross-surface UX audit converted into implementation-oriented backlog.
 Status key: `[ ]` not started, `[~]` in progress, `[x]` done.
 
 - [x] Convert UX audit into repo-mapped punch list (this document).
-- [~] Ship mobile messenger-first signed-in home slice (`MainScreen`, `ChatListScreen`, `ConversationScreen`).
+- [x] Ship mobile messenger-first signed-in home slice (`MainScreen`, `ChatListScreen`, `ConversationScreen`).
   - 2026-04-04 progress: added a top-of-list “Resume thread” card and first-chat empty-state CTA in `ChatListScreen`.
-- [~] Ship marketing hero/product-preview/CTA hierarchy slice (`apps/web` public homepage).
+  - 2026-05-19 completed: unread conversations now sort above read recents after pinned rows, Settings keeps diagnostics behind a collapsed “Debug + diagnostics” panel, and device linking remains accessible without returning instrumentation to the chat home.
+- [x] Ship marketing hero/product-preview/CTA hierarchy slice (`apps/web` public homepage).
   - 2026-04-04 progress: reduced hero CTA sprawl (primary + secondary), moved tertiary links into lightweight text links, and increased preview framing.
-- [~] Ship authenticated workspace conversation-first hierarchy slice (`/app`, `/app/chat/[id]`).
+  - 2026-05-19 completed: FAQ converted to concise accordions with one-line summaries, preserving the earlier CTA/product-preview hierarchy.
+- [x] Ship authenticated workspace conversation-first hierarchy slice (`/app`, `/app/chat/[id]`).
   - 2026-04-04 progress: added a “Resume thread” hero card on `/app`, reduced dashboard-like stats blocks, and softened chat trust-copy density.
-- [~] Ship invite-review and onboarding premium-flow slice (mobile + web).
+  - 2026-05-19 completed: `/app` recent rows now use avatar/type/unread/member/history metadata, and the sidebar status panel is demoted below the conversation rail as a disclosure.
+- [x] Ship invite-review and onboarding premium-flow slice (mobile + web).
   - 2026-04-04 progress: pending implementation.
-- [~] Ship cross-surface token/component alignment slice and publish shared UI-spec notes.
+  - 2026-05-19 completed: mobile onboarding gained staged flow cards, deliberate 18+ affirmation styling, invite-preview/reveal cards, and a profile handoff success card; web onboarding and invite review gained matching staged 18+/invite-review treatment.
+- [x] Ship cross-surface token/component alignment slice and publish shared UI-spec notes.
   - 2026-04-04 progress: aligned “resume thread” pattern language and attachment-chip treatment between mobile and web.
-- [~] Run per-slice verification commands and attach screenshots for perceptible UI changes.
+  - 2026-05-19 completed: updated `docs/product/ui-patterns.md` with the current cross-surface alignment notes and reference files.
+- [x] Run per-slice verification commands and attach screenshots for perceptible UI changes.
   - 2026-04-04 progress: command checks executed; screenshot capture blocked because browser screenshot tooling is unavailable in this runtime.
+  - 2026-05-19 completed: `npm run type-check --workspace=apps/mobile`, `npm run lint --workspace=apps/web`, `npm run build --workspace=apps/web`, `cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml`, and `npm run check:repo-contracts` passed. Browser screenshots captured in `output/playwright/ui-punch-list-homepage.png`, `output/playwright/ui-punch-list-start.png`, `output/playwright/ui-punch-list-app.png`, and `output/playwright/ui-punch-list-invite-review.png`; `adb devices` showed no attached Android device for mobile screenshots.
 
 ## P0 — Fastest Lift in Perceived Product Quality
 
