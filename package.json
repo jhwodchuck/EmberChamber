@@ -61,5 +61,8 @@
     "postcss": "8.5.12",
     "qs": "6.15.2",
     "vite": ">=7.3.2"
+  },
+  "dependencies": {
+    "@rolldown/binding-win32-x64-msvc": "^1.1.0"
   }
 }

@@ -4,28 +4,41 @@ import { styles } from "../styles";
 export type ContextMenuAction =
   | { kind: "copy" }
   | { kind: "edit" }
-  | { kind: "delete" }
+  | { kind: "reply" }
+  | { kind: "react"; emoji: string }
+  | { kind: "delete_for_everyone" }
+  | { kind: "delete_local" }
   | { kind: "view" };
+
+const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢"];
 
 type MessageContextMenuProps = {
   visible: boolean;
-  isOwnMessage: boolean;
   hasText: boolean;
   isImage?: boolean;
+  canReply?: boolean;
+  canReact?: boolean;
+  canEdit?: boolean;
+  canDeleteForEveryone?: boolean;
+  canDeleteLocal?: boolean;
   onAction: (action: ContextMenuAction) => void;
   onClose: () => void;
 };
 
 export function MessageContextMenu({
   visible,
-  isOwnMessage,
   hasText,
   isImage,
+  canReply,
+  canReact,
+  canEdit,
+  canDeleteForEveryone,
+  canDeleteLocal,
   onAction,
   onClose,
 }: MessageContextMenuProps) {
   // Track whether we have rendered at least one item (for divider placement)
-  let itemCount = 0;
+  let itemCount = canReact ? 1 : 0;
 
   function Item({
     label,
@@ -73,6 +86,27 @@ export function MessageContextMenu({
         <Pressable style={styles.contextMenuSheet}>
           <View style={styles.contextMenuDrag} />
 
+          {canReact ? (
+            <View style={styles.contextReactionRow}>
+              {QUICK_REACTIONS.map((emoji) => (
+                <Pressable
+                  key={emoji}
+                  style={styles.contextReactionButton}
+                  onPress={() => {
+                    onClose();
+                    onAction({ kind: "react", emoji });
+                  }}
+                >
+                  <Text style={styles.contextReactionLabel}>{emoji}</Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
+
+          {canReply ? (
+            <Item label="Reply" action={{ kind: "reply" }} />
+          ) : null}
+
           {isImage ? (
             <Item label="View image" action={{ kind: "view" }} />
           ) : null}
@@ -81,15 +115,23 @@ export function MessageContextMenu({
             <Item label="Copy text" action={{ kind: "copy" }} />
           ) : null}
 
-          {isOwnMessage && !isImage ? (
+          {canEdit ? (
             <Item label="Edit message" action={{ kind: "edit" }} />
           ) : null}
 
-          {isOwnMessage ? (
+          {canDeleteForEveryone ? (
             <Item
-              label="Delete (locally)"
+              label="Delete for everyone"
               destructive
-              action={{ kind: "delete" }}
+              action={{ kind: "delete_for_everyone" }}
+            />
+          ) : null}
+
+          {canDeleteLocal ? (
+            <Item
+              label="Remove from this device"
+              destructive
+              action={{ kind: "delete_local" }}
             />
           ) : null}
         </Pressable>

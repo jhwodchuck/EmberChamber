@@ -40,9 +40,14 @@ export type EncryptedConversationPayload = {
   conversationKind: "direct_message" | "group" | "room";
   historyMode: "device_encrypted";
   senderDisplayName: string;
+  messageType?: "message" | "reaction" | "delete";
   text?: string | null;
   attachment?: EncryptedConversationAttachment | null;
   replyTo?: ReplyMetaPayload | null;
+  targetClientMessageId?: string;
+  emoji?: string;
+  reactionAction?: "toggle";
+  deletedAt?: string;
   createdAt: string;
   clientMessageId: string;
 };

@@ -581,3 +581,4 @@ export interface SessionDescriptor {
 
 export * from "./e2ee";
 export * from "./device-link";
+export * from "./double-ratchet";

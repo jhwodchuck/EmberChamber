@@ -1,8 +1,16 @@
 import { File as ExpoFile } from "expo-file-system";
 import { useCallback, useState } from "react";
 import * as SQLite from "expo-sqlite";
-import { encryptAttachmentBytes, encryptConversationPayload } from "@emberchamber/protocol";
-import type { EncryptedConversationPayload } from "@emberchamber/protocol";
+import {
+  encryptAttachmentBytes,
+  encryptConversationPayload,
+  SenderKeySession,
+  DoubleRatchetSession,
+  computeX3dhAlice,
+  encodeBytes,
+} from "@emberchamber/protocol";
+import type { EncryptedConversationPayload, SenderKeyState, ReplyMetaPayload } from "@emberchamber/protocol";
+import nacl from "tweetnacl";
 import type {
   AttachmentTicket,
   AuthSession,
@@ -23,6 +31,10 @@ import {
   countVaultItems,
   persistVaultMediaRecord,
   saveCachedGroupMessages,
+  loadGroupSenderKey,
+  saveGroupSenderKey,
+  loadDoubleRatchetSession,
+  saveDoubleRatchetSession,
 } from "../lib/db";
 import { loadStoredDeviceBundle } from "../lib/session";
 
@@ -87,6 +99,7 @@ type UseSendMessageArgs = {
   messageDraft: string;
   pendingAttachment: PendingAttachment | null;
   editingMessageId: string | null;
+  replyingToMessage: GroupThreadMessage | null;
   threadMessages: GroupThreadMessage[];
   profile: MeProfile | null;
   deviceLabel: string;
@@ -108,6 +121,7 @@ type UseSendMessageArgs = {
   setMessageDraft: (draft: string) => void;
   setPendingAttachment: (attachment: PendingAttachment | null) => void;
   setEditingMessageId: (id: string | null) => void;
+  setReplyingToMessage: (message: GroupThreadMessage | null) => void;
   setSessionMessage: (message: FormMessage | null) => void;
   setVaultCount: (count: number) => void;
   refreshConversationCatalog: () => void;
@@ -119,6 +133,7 @@ export function useSendMessage({
   messageDraft,
   pendingAttachment,
   editingMessageId,
+  replyingToMessage,
   threadMessages,
   profile,
   deviceLabel,
@@ -129,6 +144,7 @@ export function useSendMessage({
   setMessageDraft,
   setPendingAttachment,
   setEditingMessageId,
+  setReplyingToMessage,
   setSessionMessage,
   setVaultCount,
   refreshConversationCatalog,
@@ -277,6 +293,16 @@ export function useSendMessage({
             attachmentIds.push(ticket.attachmentId);
           }
 
+          const replyTo: ReplyMetaPayload | null = replyingToMessage
+            ? {
+                clientMessageId: replyingToMessage.id.includes(":")
+                  ? replyingToMessage.id.split(":")[1]
+                  : replyingToMessage.id,
+                text: replyingToMessage.text || null,
+                senderDisplayName: replyingToMessage.senderDisplayName,
+              }
+            : null;
+
           const createdAt = new Date().toISOString();
           const clientMessageId = makeOpaqueToken();
           const senderDisplayName = profile?.displayName ?? deviceLabel;
@@ -287,7 +313,9 @@ export function useSendMessage({
             conversationKind: "group",
             historyMode: "device_encrypted",
             senderDisplayName,
+            messageType: "message",
             text: trimmedText || undefined,
+            replyTo,
             attachment: attachment
               ? {
                   id: attachment.id,
@@ -307,24 +335,163 @@ export function useSendMessage({
             clientMessageId,
           };
 
+          if (!db) {
+            throw new Error("Local database is not open.");
+          }
+
+          // Retrieve or generate our own Sender Key for the group.
+          const savedKeyJson = await loadGroupSenderKey(db, selectedGroup.id, session.deviceId);
+          let senderKeySession: SenderKeySession;
+          let mustDistribute = false;
+          let targetRecipientDevicesToDistribute: DeviceKeyBundle[] = [];
+
+          if (savedKeyJson) {
+            const state = JSON.parse(savedKeyJson) as SenderKeyState;
+            senderKeySession = new SenderKeySession(state);
+
+            // Check if membership has changed (Forward Secrecy check)
+            const previouslyShared = state.sharedWithDeviceIds || [];
+            const currentRecipientDeviceIds = recipientDevices.map((d) => d.deviceId);
+            const isAnyRemoved = previouslyShared.some((id) => !currentRecipientDeviceIds.includes(id));
+
+            if (isAnyRemoved) {
+              // Rotate key: generate new session
+              senderKeySession = SenderKeySession.create(selectedGroup.id, session.deviceId);
+              mustDistribute = true;
+              targetRecipientDevicesToDistribute = recipientDevices;
+            } else {
+              // Just check if we need to distribute to new devices
+              const missingDevices = recipientDevices.filter((d) => !previouslyShared.includes(d.deviceId));
+              if (missingDevices.length > 0) {
+                mustDistribute = true;
+                targetRecipientDevicesToDistribute = missingDevices;
+              }
+            }
+          } else {
+            // First time sending in this group
+            senderKeySession = SenderKeySession.create(selectedGroup.id, session.deviceId);
+            mustDistribute = true;
+            targetRecipientDevicesToDistribute = recipientDevices;
+          }
+
+          if (mustDistribute && targetRecipientDevicesToDistribute.length > 0) {
+            const envelopesToDistribute: Array<{
+              recipientDeviceId: string;
+              ciphertext: string;
+            }> = [];
+
+            for (const bundle of targetRecipientDevicesToDistribute) {
+              const savedSessionJson = await loadDoubleRatchetSession(db, bundle.deviceId);
+              let drSession: DoubleRatchetSession;
+              let ephemeralKeyB64: string | undefined = undefined;
+
+              if (savedSessionJson) {
+                const state = JSON.parse(savedSessionJson);
+                drSession = new DoubleRatchetSession(state);
+              } else {
+                const ephemeralKeyPair = nacl.box.keyPair();
+                ephemeralKeyB64 = encodeBytes(ephemeralKeyPair.publicKey);
+
+                const sharedMasterKey = computeX3dhAlice({
+                  ourIdentityPrivateB64: localBundle.privateKeyB64,
+                  ourEphemeralPrivateB64: encodeBytes(ephemeralKeyPair.secretKey),
+                  peerIdentityPublicB64: bundle.bundle.identityKeyB64,
+                  peerSignedPrekeyPublicB64: bundle.bundle.signedPrekeyB64,
+                  peerOneTimePrekeyPublicB64: bundle.bundle.oneTimePrekeysB64?.[0] || null,
+                });
+
+                drSession = DoubleRatchetSession.initAlice({
+                  peerDeviceId: bundle.deviceId,
+                  sharedMasterKey,
+                  peerDhPublicKeyB64: bundle.bundle.signedPrekeyB64,
+                });
+              }
+
+              const distMessage = senderKeySession.makeDistributionMessage();
+              const distPayloadBytes = new TextEncoder().encode(JSON.stringify(distMessage));
+              const encryptedDr = drSession.encrypt(distPayloadBytes);
+
+              await saveDoubleRatchetSession(db, bundle.deviceId, JSON.stringify(drSession.getState()));
+
+              const drEnvelope = {
+                version: 2,
+                ephemeralKeyB64,
+                ciphertextB64: encodeBytes(encryptedDr.ciphertext),
+                dhPubB64: encodeBytes(encryptedDr.dhPub),
+                n: encryptedDr.n,
+                pn: encryptedDr.pn,
+              };
+
+              envelopesToDistribute.push({
+                recipientDeviceId: bundle.deviceId,
+                ciphertext: encodeBytes(new TextEncoder().encode(JSON.stringify(drEnvelope))),
+              });
+            }
+
+            // Send distribution envelopes via batch
+            await relayFetch<{ acceptedEnvelopeIds: string[] }>(
+              session,
+              "/v1/messages/batch",
+              {
+                method: "POST",
+                body: JSON.stringify({
+                  conversationId: selectedGroup.id,
+                  epoch: selectedGroup.epoch,
+                  envelopes: envelopesToDistribute.map((item) => ({
+                    recipientDeviceId: item.recipientDeviceId,
+                    ciphertext: item.ciphertext,
+                    clientMessageId: makeOpaqueToken(),
+                    attachmentIds: [],
+                  })),
+                }),
+              },
+            );
+
+            // Update sharedWithDeviceIds list
+            const currentShared = senderKeySession.getState().sharedWithDeviceIds || [];
+            const newShared = Array.from(new Set([
+              ...currentShared,
+              ...targetRecipientDevicesToDistribute.map((d) => d.deviceId),
+            ]));
+            senderKeySession.getState().sharedWithDeviceIds = newShared;
+          }
+
+          // Encrypt conversation payload using our Sender Key
+          const payloadBytes = new TextEncoder().encode(JSON.stringify(payload));
+          const encryptedGroup = senderKeySession.encrypt(payloadBytes);
+
+          // Save the updated Sender Key state
+          await saveGroupSenderKey(
+            db,
+            selectedGroup.id,
+            session.deviceId,
+            JSON.stringify(senderKeySession.getState()),
+          );
+
+          // Build Version 3 envelope
+          const groupEnvelope = {
+            version: 3,
+            groupId: selectedGroup.id,
+            senderDeviceId: session.deviceId,
+            iteration: encryptedGroup.iteration,
+            ciphertextB64: encodeBytes(encryptedGroup.ciphertext),
+            signatureB64: encodeBytes(encryptedGroup.signature),
+          };
+
+          const outerCiphertext = encodeBytes(new TextEncoder().encode(JSON.stringify(groupEnvelope)));
+
+          // Send the group message ciphertext via the new POST /v1/messages/group endpoint
           await relayFetch<{ acceptedEnvelopeIds: string[] }>(
             session,
-            "/v1/messages/batch",
+            "/v1/messages/group",
             {
               method: "POST",
               body: JSON.stringify({
                 conversationId: selectedGroup.id,
                 epoch: selectedGroup.epoch,
-                envelopes: recipientDevices.map((bundle) => ({
-                  recipientDeviceId: bundle.deviceId,
-                  ciphertext: encryptConversationPayload(
-                    payload,
-                    bundle.bundle.identityKeyB64,
-                    localBundle.privateKeyB64,
-                  ),
-                  clientMessageId,
-                  attachmentIds,
-                })),
+                ciphertext: outerCiphertext,
+                clientMessageId,
+                attachmentIds,
               }),
             },
           );
@@ -339,6 +506,13 @@ export function useSendMessage({
             text: trimmedText || undefined,
             attachment,
             createdAt,
+            replyTo: replyingToMessage
+              ? {
+                  messageId: replyingToMessage.id,
+                  text: replyingToMessage.text || null,
+                  senderDisplayName: replyingToMessage.senderDisplayName,
+                }
+              : null,
           };
         } else {
           let attachmentId: string | undefined;
@@ -405,6 +579,7 @@ export function useSendMessage({
         setThreadMessages(nextThreadMessages);
         if (!overrideText) setMessageDraft("");
         setPendingAttachment(null);
+        setReplyingToMessage(null);
 
         if (db) {
           await saveCachedGroupMessages(db, selectedGroup.id, nextThreadMessages);
@@ -443,11 +618,13 @@ export function useSendMessage({
       profile,
       refreshConversationCatalog,
       relayFetch,
+      replyingToMessage,
       selectedGroup,
       session,
       setEditingMessageId,
       setMessageDraft,
       setPendingAttachment,
+      setReplyingToMessage,
       setSessionMessage,
       setThreadMessages,
       setVaultCount,
@@ -455,5 +632,219 @@ export function useSendMessage({
     ],
   );
 
-  return { sendMessage, isSendingMessage };
+  const sendEncryptedControlMessage = useCallback(
+    async (args: {
+      messageType: "reaction" | "delete";
+      targetClientMessageId: string;
+      emoji?: string;
+      deletedAt?: string;
+    }) => {
+      if (!session || !selectedGroup || !db) {
+        throw new Error("Missing session, group, or database for control message.");
+      }
+
+      const localBundle = await loadStoredBundleOrThrow(session);
+      const conversation = await relayFetch<{
+        id: string;
+        kind: "group";
+        epoch: number;
+        memberAccountIds: string[];
+        members: Array<{ accountId: string }>;
+      }>(session, `/v1/conversations/${selectedGroup.id}`);
+
+      const bundleLists = await Promise.all(
+        Array.from(new Set(conversation.memberAccountIds)).map(
+          async (accountId) => ({
+            accountId,
+            bundles: await listDeviceBundlesForAccount(session, accountId),
+          }),
+        ),
+      );
+      const recipientDevices = bundleLists
+        .flatMap((entry) => entry.bundles)
+        .filter((bundle) => bundle.deviceId !== session.deviceId);
+
+      if (recipientDevices.length === 0) {
+        return;
+      }
+
+      const clientMessageId = makeOpaqueToken();
+      const senderDisplayName = profile?.displayName ?? deviceLabel;
+      const createdAt = new Date().toISOString();
+
+      const payload: EncryptedConversationPayload = {
+        version: 1,
+        kind: "ember_conversation_v1",
+        conversationId: selectedGroup.id,
+        conversationKind: "group",
+        historyMode: "device_encrypted",
+        senderDisplayName,
+        messageType: args.messageType,
+        targetClientMessageId: args.targetClientMessageId,
+        emoji: args.emoji,
+        reactionAction: args.messageType === "reaction" ? "toggle" : undefined,
+        deletedAt: args.deletedAt,
+        createdAt,
+        clientMessageId,
+      };
+
+      const savedKeyJson = await loadGroupSenderKey(db, selectedGroup.id, session.deviceId);
+      let senderKeySession: SenderKeySession;
+      let mustDistribute = false;
+      let targetRecipientDevicesToDistribute: DeviceKeyBundle[] = [];
+
+      if (savedKeyJson) {
+        const state = JSON.parse(savedKeyJson) as SenderKeyState;
+        senderKeySession = new SenderKeySession(state);
+
+        const previouslyShared = state.sharedWithDeviceIds || [];
+        const currentRecipientDeviceIds = recipientDevices.map((d) => d.deviceId);
+        const isAnyRemoved = previouslyShared.some((id) => !currentRecipientDeviceIds.includes(id));
+
+        if (isAnyRemoved) {
+          senderKeySession = SenderKeySession.create(selectedGroup.id, session.deviceId);
+          mustDistribute = true;
+          targetRecipientDevicesToDistribute = recipientDevices;
+        } else {
+          const missingDevices = recipientDevices.filter((d) => !previouslyShared.includes(d.deviceId));
+          if (missingDevices.length > 0) {
+            mustDistribute = true;
+            targetRecipientDevicesToDistribute = missingDevices;
+          }
+        }
+      } else {
+        senderKeySession = SenderKeySession.create(selectedGroup.id, session.deviceId);
+        mustDistribute = true;
+        targetRecipientDevicesToDistribute = recipientDevices;
+      }
+
+      if (mustDistribute && targetRecipientDevicesToDistribute.length > 0) {
+        const envelopesToDistribute: Array<{
+          recipientDeviceId: string;
+          ciphertext: string;
+        }> = [];
+
+        for (const bundle of targetRecipientDevicesToDistribute) {
+          const savedSessionJson = await loadDoubleRatchetSession(db, bundle.deviceId);
+          let drSession: DoubleRatchetSession;
+          let ephemeralKeyB64: string | undefined = undefined;
+
+          if (savedSessionJson) {
+            const state = JSON.parse(savedSessionJson);
+            drSession = new DoubleRatchetSession(state);
+          } else {
+            const ephemeralKeyPair = nacl.box.keyPair();
+            ephemeralKeyB64 = encodeBytes(ephemeralKeyPair.publicKey);
+
+            const sharedMasterKey = computeX3dhAlice({
+              ourIdentityPrivateB64: localBundle.privateKeyB64,
+              ourEphemeralPrivateB64: encodeBytes(ephemeralKeyPair.secretKey),
+              peerIdentityPublicB64: bundle.bundle.identityKeyB64,
+              peerSignedPrekeyPublicB64: bundle.bundle.signedPrekeyB64,
+              peerOneTimePrekeyPublicB64: bundle.bundle.oneTimePrekeysB64?.[0] || null,
+            });
+
+            drSession = DoubleRatchetSession.initAlice({
+              peerDeviceId: bundle.deviceId,
+              sharedMasterKey,
+              peerDhPublicKeyB64: bundle.bundle.signedPrekeyB64,
+            });
+          }
+
+          const distMessage = senderKeySession.makeDistributionMessage();
+          const distPayloadBytes = new TextEncoder().encode(JSON.stringify(distMessage));
+          const encryptedDr = drSession.encrypt(distPayloadBytes);
+
+          await saveDoubleRatchetSession(db, bundle.deviceId, JSON.stringify(drSession.getState()));
+
+          const drEnvelope = {
+            version: 2,
+            ephemeralKeyB64,
+            ciphertextB64: encodeBytes(encryptedDr.ciphertext),
+            dhPubB64: encodeBytes(encryptedDr.dhPub),
+            n: encryptedDr.n,
+            pn: encryptedDr.pn,
+          };
+
+          envelopesToDistribute.push({
+            recipientDeviceId: bundle.deviceId,
+            ciphertext: encodeBytes(new TextEncoder().encode(JSON.stringify(drEnvelope))),
+          });
+        }
+
+        await relayFetch<{ acceptedEnvelopeIds: string[] }>(
+          session,
+          "/v1/messages/batch",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              conversationId: selectedGroup.id,
+              epoch: selectedGroup.epoch,
+              envelopes: envelopesToDistribute.map((item) => ({
+                recipientDeviceId: item.recipientDeviceId,
+                ciphertext: item.ciphertext,
+                clientMessageId: makeOpaqueToken(),
+                attachmentIds: [],
+              })),
+            }),
+          },
+        );
+
+        const currentShared = senderKeySession.getState().sharedWithDeviceIds || [];
+        const newShared = Array.from(new Set([
+          ...currentShared,
+          ...targetRecipientDevicesToDistribute.map((d) => d.deviceId),
+        ]));
+        senderKeySession.getState().sharedWithDeviceIds = newShared;
+      }
+
+      const payloadBytes = new TextEncoder().encode(JSON.stringify(payload));
+      const encryptedGroup = senderKeySession.encrypt(payloadBytes);
+
+      await saveGroupSenderKey(
+        db,
+        selectedGroup.id,
+        session.deviceId,
+        JSON.stringify(senderKeySession.getState()),
+      );
+
+      const groupEnvelope = {
+        version: 3,
+        groupId: selectedGroup.id,
+        senderDeviceId: session.deviceId,
+        iteration: encryptedGroup.iteration,
+        ciphertextB64: encodeBytes(encryptedGroup.ciphertext),
+        signatureB64: encodeBytes(encryptedGroup.signature),
+      };
+
+      const outerCiphertext = encodeBytes(new TextEncoder().encode(JSON.stringify(groupEnvelope)));
+
+      await relayFetch<{ acceptedEnvelopeIds: string[] }>(
+        session,
+        "/v1/messages/group",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            conversationId: selectedGroup.id,
+            epoch: selectedGroup.epoch,
+            ciphertext: outerCiphertext,
+            clientMessageId,
+            attachmentIds: [],
+          }),
+        },
+      );
+    },
+    [
+      db,
+      deviceLabel,
+      listDeviceBundlesForAccount,
+      loadStoredBundleOrThrow,
+      profile,
+      relayFetch,
+      selectedGroup,
+      session,
+    ],
+  );
+
+  return { sendMessage, sendEncryptedControlMessage, isSendingMessage };
 }

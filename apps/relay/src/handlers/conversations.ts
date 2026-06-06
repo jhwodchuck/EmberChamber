@@ -1607,6 +1607,14 @@ export async function handle(
       deletedAt,
       messageId,
     );
+    await dbRun(
+      env.DB,
+      `UPDATE conversation_messages
+          SET reply_to_text = 'Message deleted'
+        WHERE conversation_id = ?1 AND reply_to_message_id = ?2`,
+      conversationId,
+      messageId,
+    );
 
     const delDoId = env.GROUP_COORDINATOR.idFromName(conversationId);
     const delStub = env.GROUP_COORDINATOR.get(delDoId);

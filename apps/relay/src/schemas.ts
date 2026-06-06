@@ -243,3 +243,11 @@ export const adminRevokeSessionsSchema = z.object({
 export const contactCardSchema = z.object({
   cardToken: z.string().min(8),
 });
+
+export const messageGroupSchema = z.object({
+  conversationId: z.string().uuid(),
+  epoch: z.number().int().min(1),
+  ciphertext: z.string().min(16),
+  clientMessageId: z.string().min(8),
+  attachmentIds: z.array(z.string()).default([]),
+});

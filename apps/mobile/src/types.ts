@@ -64,8 +64,15 @@ export type GroupMember = {
   messageCount: number;
 };
 
+export type ReplyMeta = {
+  messageId: string;
+  text: string | null;
+  senderDisplayName: string;
+};
+
 export type GroupThreadMessage = {
   id: string;
+  clientMessageId?: string | null;
   conversationId: string;
   historyMode: "relay_hosted" | "device_encrypted";
   senderAccountId: string;
@@ -89,6 +96,7 @@ export type GroupThreadMessage = {
   createdAt: string;
   editedAt?: string | null;
   deletedAt?: string | null;
+  replyTo?: ReplyMeta | null;
   reactions?: Record<string, string[]>;
   readByCount?: number;
 };

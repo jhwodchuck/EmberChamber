@@ -142,15 +142,22 @@ function renderFormattedBlocks(
   });
 }
 
+function describeReplyText(replyTo: NonNullable<GroupThreadMessage["replyTo"]>) {
+  const text = replyTo.text?.trim();
+  return text || "Attachment";
+}
+
 export const MessageBubble = memo(function MessageBubble({
   message,
   isOwnMessage,
+  selfAccountId,
   onImageError,
   onAction,
   onResolveAttachmentAccess,
 }: {
   message: GroupThreadMessage;
   isOwnMessage: boolean;
+  selfAccountId: string;
   onImageError?: (messageId: string) => void;
   onAction?: (messageId: string, action: ContextMenuAction) => void;
   onResolveAttachmentAccess?: (
@@ -209,12 +216,18 @@ export const MessageBubble = memo(function MessageBubble({
     );
   }
 
-  const hasText = Boolean(message.text?.trim());
+  const isDeleted = Boolean(message.deletedAt);
+  const hasText = !isDeleted && Boolean(message.text?.trim());
   const formattedBlocks = hasText
     ? parseFormattedMessage(message.text ?? "")
     : [];
-  const attachment = message.attachment;
+  const attachment = isDeleted ? null : message.attachment;
   const isImage = attachment?.contentClass === "image";
+  const reactionEntries = isDeleted
+    ? []
+    : Object.entries(message.reactions ?? {}).filter(
+        ([, accountIds]) => accountIds.length > 0,
+      );
   const sharedLocation =
     hasText && !attachment ? parseSharedLocation(message.text!) : null;
   const resolveAttachmentAccess =
@@ -277,7 +290,11 @@ export const MessageBubble = memo(function MessageBubble({
   return (
     <>
       <Pressable
-        onLongPress={() => setMenuVisible(true)}
+        onLongPress={() => {
+          if (!isDeleted) {
+            setMenuVisible(true);
+          }
+        }}
         delayLongPress={300}
         style={[styles.messageRow, isOwnMessage ? styles.messageRowOwn : null]}
       >
@@ -294,13 +311,35 @@ export const MessageBubble = memo(function MessageBubble({
               hour: "numeric",
               minute: "2-digit",
             })}
-            {message.editedAt ? "  · edited" : ""}
+            {message.deletedAt
+              ? "  · deleted"
+              : message.editedAt
+                ? "  · edited"
+                : ""}
             {isOwnMessage
               ? (message.readByCount ?? 0) >= 1
                 ? "  ✓✓"
                 : "  ✓"
               : ""}
           </Text>
+
+          {isDeleted ? (
+            <Text style={styles.messageDeletedText}>Message deleted</Text>
+          ) : null}
+
+          {!isDeleted && message.replyTo ? (
+            <View style={styles.messageReplyPreview}>
+              <View style={styles.messageReplyAccent} />
+              <View style={styles.messageReplyCopy}>
+                <Text style={styles.messageReplySender} numberOfLines={1}>
+                  {message.replyTo.senderDisplayName || "Message"}
+                </Text>
+                <Text style={styles.messageReplyText} numberOfLines={2}>
+                  {describeReplyText(message.replyTo)}
+                </Text>
+              </View>
+            </View>
+          ) : null}
 
           {sharedLocation ? (
             <Pressable
@@ -443,14 +482,50 @@ export const MessageBubble = memo(function MessageBubble({
               {attachment.fileName} · {formatBytes(attachment.byteLength)}
             </Text>
           ) : null}
+
+          {reactionEntries.length ? (
+            <View style={styles.messageReactionRow}>
+              {reactionEntries.map(([emoji, accountIds]) => {
+                const isActive = accountIds.includes(selfAccountId);
+                return (
+                  <Pressable
+                    key={emoji}
+                    style={[
+                      styles.messageReactionChip,
+                      isActive ? styles.messageReactionChipActive : null,
+                    ]}
+                    onPress={() =>
+                      onAction?.(message.id, { kind: "react", emoji })
+                    }
+                  >
+                    <Text style={styles.messageReactionText}>
+                      {emoji} {accountIds.length}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : null}
         </View>
       </Pressable>
 
       <MessageContextMenu
         visible={menuVisible}
-        isOwnMessage={isOwnMessage}
         hasText={hasText}
         isImage={isImage}
+        canReply={!isDeleted}
+        canReact={!isDeleted}
+        canEdit={
+          !isDeleted &&
+          isOwnMessage &&
+          hasText &&
+          !isImage &&
+          message.historyMode === "relay_hosted"
+        }
+        canDeleteForEveryone={
+          !isDeleted && isOwnMessage
+        }
+        canDeleteLocal={!isDeleted}
         onClose={() => setMenuVisible(false)}
         onAction={(action) => {
           if (action.kind === "copy" && message.text) {

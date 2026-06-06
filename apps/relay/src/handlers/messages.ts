@@ -4,7 +4,7 @@ import {
   requireAccessTokenSession,
   parseClientMetadata,
 } from "../middleware/auth";
-import { mailboxAckSchema, messageBatchSchema } from "../schemas";
+import { mailboxAckSchema, messageBatchSchema, messageGroupSchema } from "../schemas";
 import { dbAll, dbFirst, dbRun } from "../lib/d1";
 import { HttpError, json, readJson } from "../lib/http";
 import { scheduleCleanup } from "../services/cleanup";
@@ -209,6 +209,171 @@ export async function handle(
       },
       { status: 202 },
     );
+  }
+
+  if (request.method === "POST" && pathname === "/v1/messages/group") {
+    const auth = await requireAuth(request, env);
+    const body = messageGroupSchema.parse(await readJson(request));
+    const conversation = await dbFirst<{
+      kind: "direct_message" | "group";
+      epoch: number;
+    }>(
+      env.DB,
+      "SELECT kind, epoch FROM conversations WHERE id = ?1",
+      body.conversationId,
+    );
+
+    if (!conversation) {
+      throw new HttpError(404, "Conversation not found", "CONVERSATION_NOT_FOUND");
+    }
+
+    const membership = await dbFirst<{ account_id: string }>(
+      env.DB,
+      `SELECT account_id
+         FROM conversation_members
+        WHERE conversation_id = ?1 AND account_id = ?2 AND removed_at IS NULL`,
+      body.conversationId,
+      auth.accountId,
+    );
+
+    if (!membership) {
+      throw new HttpError(403, "Not a member of this conversation", "FORBIDDEN");
+    }
+
+    if (conversation.epoch !== body.epoch) {
+      throw new HttpError(409, "Conversation epoch changed", "STALE_EPOCH");
+    }
+
+    const devices = await dbAll<{ id: string; account_id: string }>(
+      env.DB,
+      "SELECT id, account_id FROM devices WHERE revoked_at IS NULL",
+    );
+    const deviceMap = new Map(devices.map((device) => [device.id, device]));
+    const memberRows = await dbAll<{ account_id: string }>(
+      env.DB,
+      "SELECT account_id FROM conversation_members WHERE conversation_id = ?1 AND removed_at IS NULL",
+      body.conversationId,
+    );
+    const memberSet = new Set(memberRows.map((row) => row.account_id));
+
+    const recipientDevices = devices.filter(
+      (device) => memberSet.has(device.account_id) && device.id !== auth.deviceId
+    );
+
+    const accepted: string[] = [];
+    const acceptedPushRecipients = new Set<string>();
+
+    for (const recipient of recipientDevices) {
+      const blocked = await dbFirst<{ account_id: string }>(
+        env.DB,
+        `SELECT account_id
+           FROM blocks
+          WHERE account_id = ?1 AND blocked_account_id = ?2`,
+        recipient.account_id,
+        auth.accountId,
+      );
+      if (blocked) {
+        continue;
+      }
+
+      const existingEnvelope = await dbFirst<{ envelope_id: string }>(
+        env.DB,
+        `SELECT envelope_id
+           FROM mailbox_dedup
+          WHERE conversation_id = ?1
+            AND sender_device_id = ?2
+            AND recipient_device_id = ?3
+            AND client_message_id = ?4
+            AND expires_at > ?5`,
+        body.conversationId,
+        auth.deviceId,
+        recipient.id,
+        body.clientMessageId,
+        new Date().toISOString(),
+      );
+
+      if (existingEnvelope) {
+        accepted.push(existingEnvelope.envelope_id);
+        continue;
+      }
+
+      const envelope: CipherEnvelope = {
+        envelopeId: crypto.randomUUID(),
+        conversationId: body.conversationId,
+        epoch: body.epoch,
+        senderAccountId: auth.accountId,
+        senderDeviceId: auth.deviceId,
+        recipientDeviceId: recipient.id,
+        ciphertext: body.ciphertext,
+        attachmentIds: body.attachmentIds,
+        clientMessageId: body.clientMessageId,
+        createdAt: new Date().toISOString(),
+        expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      };
+
+      const enqueueResult = await enqueueEnvelope(env, envelope);
+      if (!enqueueResult.queued) {
+        continue;
+      }
+
+      await dbRun(
+        env.DB,
+        `INSERT INTO mailbox_dedup (
+           conversation_id,
+           sender_device_id,
+           recipient_device_id,
+           client_message_id,
+           envelope_id,
+           created_at,
+           expires_at
+         )
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
+        body.conversationId,
+        auth.deviceId,
+        recipient.id,
+        body.clientMessageId,
+        envelope.envelopeId,
+        envelope.createdAt,
+        envelope.expiresAt,
+      );
+      accepted.push(envelope.envelopeId);
+      acceptedPushRecipients.add(recipient.id);
+    }
+
+    if (accepted.length > 0) {
+      const sender = await dbFirst<{ display_name: string }>(
+        env.DB,
+        "SELECT display_name FROM accounts WHERE id = ?1",
+        auth.accountId,
+      );
+      await updateConversationActivity(env, body.conversationId, {
+        at: new Date().toISOString(),
+        kind: "mailbox",
+      });
+      await scheduleCleanup(env, "message_batch");
+      await Promise.all(
+        Array.from(acceptedPushRecipients).map((deviceId) =>
+          queuePushWake(env, {
+            targetDeviceId: deviceId,
+            reason: "mailbox",
+            conversationId: body.conversationId,
+            senderDisplayName:
+              sender?.display_name ??
+              conversationTitleForAccount(auth.accountId),
+            historyMode: "device_encrypted",
+            messageKind: "mailbox",
+          }).catch((error) => {
+            console.error("push_queue_enqueue_failed", {
+              deviceId,
+              conversationId: body.conversationId,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }),
+        ),
+      );
+    }
+
+    return json({ acceptedEnvelopeIds: accepted });
   }
 
   if (request.method === "GET" && pathname === "/v1/mailbox/sync") {
