@@ -68,6 +68,10 @@ function previewText(
     return message.text ?? "Update";
   }
 
+  if (message.deletedAt) {
+    return "Message deleted";
+  }
+
   const sharedLocation = message.text
     ? parseSharedLocation(message.text)
     : null;

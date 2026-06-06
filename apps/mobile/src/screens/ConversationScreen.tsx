@@ -134,6 +134,32 @@ function describePendingAttachment(attachment: PendingAttachment) {
   };
 }
 
+function describeReplyTarget(message: GroupThreadMessage) {
+  if (message.deletedAt) {
+    return "Message deleted";
+  }
+
+  const text = message.text?.trim();
+  if (text) {
+    return text;
+  }
+
+  if (!message.attachment) {
+    return "Message";
+  }
+
+  switch (message.attachment.contentClass) {
+    case "image":
+      return "Photo";
+    case "video":
+      return "Video";
+    case "audio":
+      return "Audio";
+    default:
+      return message.attachment.fileName || "Attachment";
+  }
+}
+
 export type ConversationScreenProps = {
   session: AuthSession;
   selectedGroup: GroupMembershipSummary;
@@ -147,7 +173,9 @@ export type ConversationScreenProps = {
   isPickingPhoto: boolean;
   isSendingMessage: boolean;
   editingMessageId: string | null;
+  replyingToMessage: GroupThreadMessage | null;
   onCancelEdit: () => void;
+  onCancelReply: () => void;
   onTakePhoto: () => void;
   onPickPhoto: () => void;
   onPickFile: () => void;
@@ -190,7 +218,9 @@ export function ConversationScreen({
   isPickingPhoto,
   isSendingMessage,
   editingMessageId,
+  replyingToMessage,
   onCancelEdit,
+  onCancelReply,
   onTakePhoto,
   onPickPhoto,
   onPickFile,
@@ -307,6 +337,7 @@ export function ConversationScreen({
         <MessageBubble
           message={item.message}
           isOwnMessage={item.message.senderAccountId === session.accountId}
+          selfAccountId={session.accountId}
           onImageError={onImageError}
           onResolveAttachmentAccess={onResolveAttachmentAccess}
           onAction={onMessageAction}
@@ -689,6 +720,26 @@ export function ConversationScreen({
           </View>
         ) : null}
 
+        {replyingToMessage && !editingMessageId ? (
+          <View style={styles.replyComposerBanner}>
+            <View style={styles.replyComposerAccent} />
+            <View style={styles.replyComposerCopy}>
+              <Text style={styles.replyComposerTitle} numberOfLines={1}>
+                Replying to{" "}
+                {replyingToMessage.senderAccountId === session.accountId
+                  ? "You"
+                  : replyingToMessage.senderDisplayName}
+              </Text>
+              <Text style={styles.replyComposerText} numberOfLines={1}>
+                {describeReplyTarget(replyingToMessage)}
+              </Text>
+            </View>
+            <Pressable onPress={onCancelReply}>
+              <Text style={styles.inlineAction}>Cancel</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
         {pendingAttachment && !editingMessageId ? (
           <View style={styles.pendingAttachmentCard}>
             <View style={styles.pendingAttachmentHeader}>
@@ -760,7 +811,13 @@ export function ConversationScreen({
             multiline
             autoCorrect
             spellCheck
-            placeholder={editingMessageId ? "Edit message…" : "Message…"}
+            placeholder={
+              editingMessageId
+                ? "Edit message..."
+                : replyingToMessage
+                  ? "Reply..."
+                  : "Message..."
+            }
             placeholderTextColor={theme.colors.placeholder}
             style={[styles.input, styles.composerInputDocked]}
             value={messageDraft}

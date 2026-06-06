@@ -914,6 +914,63 @@ export const styles = StyleSheet.create({
   formattedMessage: {
     gap: 8,
   },
+  messageDeletedText: {
+    color: colors.textMuted,
+    fontSize: 14,
+    fontStyle: "italic",
+    lineHeight: 20,
+  },
+  messageReplyPreview: {
+    flexDirection: "row",
+    gap: 8,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  messageReplyAccent: {
+    width: 3,
+    borderRadius: 2,
+    backgroundColor: colors.brand,
+  },
+  messageReplyCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  messageReplySender: {
+    color: colors.textSoft,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  messageReplyText: {
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  messageReactionRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    paddingTop: 2,
+  },
+  messageReactionChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+  },
+  messageReactionChipActive: {
+    borderColor: colors.brand,
+    backgroundColor: "rgba(250,204,21,0.16)",
+  },
+  messageReactionText: {
+    color: colors.textPrimary,
+    fontSize: 12,
+    fontWeight: "700",
+  },
   inlineBold: {
     fontWeight: "700",
   },
@@ -1565,6 +1622,27 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.border,
     marginBottom: 12,
   },
+  contextReactionRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+    gap: 8,
+  },
+  contextReactionButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  contextReactionLabel: {
+    fontSize: 22,
+    lineHeight: 26,
+  },
   contextMenuItem: {
     paddingHorizontal: 24,
     paddingVertical: 16,
@@ -1657,6 +1735,38 @@ export const styles = StyleSheet.create({
     color: colors.textSoft,
     fontSize: 13,
     fontWeight: "600",
+  },
+  replyComposerBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+  },
+  replyComposerAccent: {
+    width: 3,
+    alignSelf: "stretch",
+    borderRadius: 2,
+    backgroundColor: colors.brand,
+  },
+  replyComposerCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  replyComposerTitle: {
+    color: colors.textSoft,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  replyComposerText: {
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 16,
   },
 
   // ---- group settings modal ----

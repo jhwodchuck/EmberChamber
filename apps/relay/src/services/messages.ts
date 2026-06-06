@@ -347,10 +347,13 @@ export async function createRelayHostedConversationMessage(
       `SELECT m.body_text, a.display_name AS sender_display_name
          FROM conversation_messages m
          JOIN accounts a ON a.id = m.sender_account_id
-        WHERE m.id = ?1 AND m.conversation_id = ?2`,
+        WHERE m.id = ?1 AND m.conversation_id = ?2 AND m.deleted_at IS NULL`,
       input.replyToMessageId,
       input.conversationId,
     ) ?? null;
+    if (!replyTarget) {
+      throw new HttpError(404, "Reply target not found", "REPLY_TARGET_NOT_FOUND");
+    }
   }
 
   const created = await appendConversationMessage(env, {

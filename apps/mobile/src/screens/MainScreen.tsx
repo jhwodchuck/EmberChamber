@@ -99,7 +99,9 @@ export type MainScreenProps = {
     attachment: NonNullable<GroupThreadMessage["attachment"]>,
   ) => Promise<NonNullable<GroupThreadMessage["attachment"]> | null>;
   editingMessageId: string | null;
+  replyingToMessage: GroupThreadMessage | null;
   onCancelEdit: () => void;
+  onCancelReply: () => void;
   onMessageAction: (messageId: string, action: ContextMenuAction) => void;
   onUpdateGroup: (title: string, sensitiveMedia: boolean) => Promise<void>;
   onCreateInvite: () => Promise<GroupInviteRecord | null>;
@@ -192,7 +194,9 @@ export function MainScreen(props: MainScreenProps) {
     onImageError,
     onResolveAttachmentAccess,
     editingMessageId,
+    replyingToMessage,
     onCancelEdit,
+    onCancelReply,
     onMessageAction,
     onUpdateGroup,
     onCreateInvite,
@@ -365,7 +369,9 @@ export function MainScreen(props: MainScreenProps) {
       isPickingPhoto={isPickingPhoto}
       isSendingMessage={isSendingMessage}
       editingMessageId={editingMessageId}
+      replyingToMessage={replyingToMessage}
       onCancelEdit={onCancelEdit}
+      onCancelReply={onCancelReply}
       onTakePhoto={onTakePhoto}
       onPickPhoto={onPickPhoto}
       onPickFile={onPickFile}

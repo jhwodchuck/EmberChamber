@@ -61,6 +61,10 @@ import {
   suggestMobileDeviceLabel,
 } from "./src/lib/utils";
 import {
+  groupThreadMessageMatchesId,
+  groupThreadMessageStableId,
+} from "./src/lib/messageIdentity";
+import {
   bootstrapLocalStore,
   countVaultItems,
   loadCachedGroupMessages,
@@ -143,6 +147,67 @@ function mergeGroupThreadMessage(
     .filter((entry) => entry.id !== nextMessage.id)
     .concat(nextMessage)
     .sort(compareGroupThreadMessagesByCreatedAt);
+}
+
+function markGroupThreadMessageDeleted(
+  messages: GroupThreadMessage[],
+  messageId: string,
+  deletedAt: string,
+) {
+  return messages.map((message) => {
+    let nextMessage = message;
+
+    if (groupThreadMessageMatchesId(message, messageId)) {
+      nextMessage = {
+        ...message,
+        text: null,
+        attachment: null,
+        reactions: {},
+        deletedAt,
+      };
+    }
+
+    if (nextMessage.replyTo?.messageId === messageId) {
+      nextMessage = {
+        ...nextMessage,
+        replyTo: {
+          ...nextMessage.replyTo,
+          text: "Message deleted",
+        },
+      };
+    }
+
+    return nextMessage;
+  });
+}
+
+function toggleGroupThreadMessageReaction(
+  messages: GroupThreadMessage[],
+  messageId: string,
+  emoji: string,
+  accountId: string,
+) {
+  return messages.map((message) => {
+    if (!groupThreadMessageMatchesId(message, messageId)) {
+      return message;
+    }
+
+    const reactions = { ...(message.reactions ?? {}) };
+    const current = new Set(reactions[emoji] ?? []);
+    if (current.has(accountId)) {
+      current.delete(accountId);
+    } else {
+      current.add(accountId);
+    }
+
+    if (current.size > 0) {
+      reactions[emoji] = Array.from(current).sort();
+    } else {
+      delete reactions[emoji];
+    }
+
+    return { ...message, reactions };
+  });
 }
 
 async function uploadAttachmentBytes(
@@ -243,6 +308,8 @@ export default function App() {
   const [completedDeviceLinkSessionId, setCompletedDeviceLinkSessionId] =
     useState<string | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [replyingToMessage, setReplyingToMessage] =
+    useState<GroupThreadMessage | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
   const [isLoadingMembers, setIsLoadingMembers] = useState(false);
@@ -806,6 +873,21 @@ export default function App() {
   }, [selectedConversationId]);
 
   useEffect(() => {
+    setReplyingToMessage(null);
+  }, [selectedConversationId]);
+
+  useEffect(() => {
+    if (
+      replyingToMessage &&
+      threadMessages.some(
+        (message) => message.id === replyingToMessage.id && message.deletedAt,
+      )
+    ) {
+      setReplyingToMessage(null);
+    }
+  }, [replyingToMessage, threadMessages]);
+
+  useEffect(() => {
     const intervalId = setInterval(() => {
       setTypingIndicators((current) => pruneConversationTypingIndicators(current));
     }, 1000);
@@ -1318,31 +1400,64 @@ export default function App() {
                       }
                     } else if (payload.type === "message_edited") {
                       const { messageId, text, editedAt } = payload;
-                      setThreadMessages((prev) =>
-                        prev.map((message) =>
-                          message.id === messageId
-                            ? { ...message, text, editedAt }
-                            : message,
-                        ),
-                      );
+                      setThreadMessages((prev) => {
+                        let changed = false;
+                        const next = prev.map((message) => {
+                          if (message.id !== messageId) {
+                            return message;
+                          }
+                          changed = true;
+                          return { ...message, text, editedAt };
+                        });
+                        if (changed && db) {
+                          saveCachedGroupMessages(
+                            db,
+                            selectedConversationId,
+                            next,
+                          ).catch(() => {});
+                          refreshConversationCatalog();
+                        }
+                        return changed ? next : prev;
+                      });
                     } else if (payload.type === "message_deleted") {
                       const { messageId, deletedAt } = payload;
-                      setThreadMessages((prev) =>
-                        prev.map((message) =>
-                          message.id === messageId
-                            ? { ...message, deletedAt }
-                            : message,
-                        ),
-                      );
+                      setThreadMessages((prev) => {
+                        const next = markGroupThreadMessageDeleted(
+                          prev,
+                          messageId,
+                          deletedAt,
+                        );
+                        if (db) {
+                          saveCachedGroupMessages(
+                            db,
+                            selectedConversationId,
+                            next,
+                          ).catch(() => {});
+                          refreshConversationCatalog();
+                        }
+                        return next;
+                      });
                     } else if (payload.type === "message_reaction") {
                       const { messageId, reactions } = payload;
-                      setThreadMessages((prev) =>
-                        prev.map((message) =>
-                          message.id === messageId
-                            ? { ...message, reactions }
-                            : message,
-                        ),
-                      );
+                      setThreadMessages((prev) => {
+                        let changed = false;
+                        const next = prev.map((message) => {
+                          if (message.id !== messageId) {
+                            return message;
+                          }
+                          changed = true;
+                          return { ...message, reactions };
+                        });
+                        if (changed && db) {
+                          saveCachedGroupMessages(
+                            db,
+                            selectedConversationId,
+                            next,
+                          ).catch(() => {});
+                          refreshConversationCatalog();
+                        }
+                        return changed ? next : prev;
+                      });
                     } else if (
                       payload.type === "typing_start" ||
                       payload.type === "typing_stop"
@@ -2030,12 +2145,14 @@ export default function App() {
     }
   }
 
-  const { sendMessage, isSendingMessage } = useSendMessage({
+  const { sendMessage, sendEncryptedControlMessage, isSendingMessage } =
+    useSendMessage({
     session,
     selectedGroup,
     messageDraft,
     pendingAttachment,
     editingMessageId,
+    replyingToMessage,
     threadMessages,
     profile,
     deviceLabel,
@@ -2046,6 +2163,7 @@ export default function App() {
     setMessageDraft,
     setPendingAttachment,
     setEditingMessageId,
+    setReplyingToMessage,
     setSessionMessage,
     setVaultCount,
     refreshConversationCatalog,
@@ -2150,17 +2268,225 @@ export default function App() {
     return nextAttachment;
   }
 
-  function handleMessageAction(messageId: string, action: ContextMenuAction) {
-    if (action.kind === "edit") {
-      const msg = threadMessages.find((m) => m.id === messageId);
-      if (msg?.text) {
-        setMessageDraft(msg.text);
-        setEditingMessageId(messageId);
-      }
-    } else if (action.kind === "delete") {
-      setThreadMessages((prev) => prev.filter((m) => m.id !== messageId));
+  function cacheThreadMessages(
+    conversationId: string,
+    messages: GroupThreadMessage[],
+  ) {
+    if (!db) {
+      return;
     }
-    // "copy" is handled inside MessageBubble via Clipboard
+
+    void saveCachedGroupMessages(db, conversationId, messages)
+      .then(() => refreshConversationCatalog())
+      .catch(() => undefined);
+  }
+
+  function updateThreadMessagesAndCache(
+    conversationId: string,
+    updater: (messages: GroupThreadMessage[]) => GroupThreadMessage[],
+  ) {
+    setThreadMessages((prev) => {
+      const next = updater(prev);
+      if (next !== prev) {
+        cacheThreadMessages(conversationId, next);
+      }
+      return next;
+    });
+  }
+
+  async function toggleMessageReaction(messageId: string, emoji: string) {
+    if (!session || !selectedGroup) {
+      return;
+    }
+
+    if (selectedGroup.historyMode !== "relay_hosted") {
+      const target = threadMessages.find((message) => message.id === messageId);
+      const targetClientMessageId = target
+        ? groupThreadMessageStableId(target)
+        : messageId;
+
+      try {
+        await sendEncryptedControlMessage({
+          messageType: "reaction",
+          targetClientMessageId,
+          emoji,
+        });
+        updateThreadMessagesAndCache(selectedGroup.id, (messages) =>
+          toggleGroupThreadMessageReaction(
+            messages,
+            targetClientMessageId,
+            emoji,
+            session.accountId,
+          ),
+        );
+      } catch (error) {
+        setSessionMessage({
+          tone: "error",
+          title: "Reaction failed",
+          body:
+            error instanceof Error
+              ? error.message
+              : "Unable to update that reaction.",
+        });
+      }
+      return;
+    }
+
+    try {
+      const result = await relayFetch<{
+        updated: boolean;
+        messageId: string;
+        reactions: Record<string, string[]>;
+        updatedAt: string;
+      }>(
+        session,
+        `/v1/groups/${selectedGroup.id}/messages/${messageId}/reactions`,
+        {
+          method: "POST",
+          body: JSON.stringify({ emoji }),
+        },
+      );
+      updateThreadMessagesAndCache(selectedGroup.id, (messages) =>
+        messages.map((message) =>
+          message.id === result.messageId
+            ? { ...message, reactions: result.reactions }
+            : message,
+        ),
+      );
+    } catch (error) {
+      setSessionMessage({
+        tone: "error",
+        title: "Reaction failed",
+        body:
+          error instanceof Error
+            ? error.message
+            : "Unable to update that reaction.",
+      });
+    }
+  }
+
+  async function deleteMessageForEveryone(messageId: string) {
+    if (!session || !selectedGroup) {
+      return;
+    }
+
+    if (selectedGroup.historyMode !== "relay_hosted") {
+      const target = threadMessages.find((message) => message.id === messageId);
+      if (!target || target.senderAccountId !== session.accountId) {
+        return;
+      }
+
+      const targetClientMessageId = groupThreadMessageStableId(target);
+      const deletedAt = new Date().toISOString();
+
+      try {
+        await sendEncryptedControlMessage({
+          messageType: "delete",
+          targetClientMessageId,
+          deletedAt,
+        });
+        if (replyingToMessage?.id === target.id) {
+          setReplyingToMessage(null);
+        }
+        updateThreadMessagesAndCache(selectedGroup.id, (messages) =>
+          markGroupThreadMessageDeleted(
+            messages,
+            targetClientMessageId,
+            deletedAt,
+          ),
+        );
+      } catch (error) {
+        setSessionMessage({
+          tone: "error",
+          title: "Delete failed",
+          body:
+            error instanceof Error
+              ? error.message
+              : "Unable to delete that message for everyone.",
+        });
+      }
+      return;
+    }
+
+    try {
+      const result = await relayFetch<{
+        deleted: boolean;
+        messageId: string;
+        deletedAt: string;
+      }>(session, `/v1/groups/${selectedGroup.id}/messages/${messageId}`, {
+        method: "DELETE",
+      });
+      if (replyingToMessage?.id === result.messageId) {
+        setReplyingToMessage(null);
+      }
+      updateThreadMessagesAndCache(selectedGroup.id, (messages) =>
+        markGroupThreadMessageDeleted(
+          messages,
+          result.messageId,
+          result.deletedAt,
+        ),
+      );
+    } catch (error) {
+      setSessionMessage({
+        tone: "error",
+        title: "Delete failed",
+        body:
+          error instanceof Error
+            ? error.message
+            : "Unable to delete that message for everyone.",
+      });
+    }
+  }
+
+  function deleteMessageLocally(messageId: string) {
+    const message = threadMessages.find((entry) => entry.id === messageId);
+    const conversationId = message?.conversationId ?? selectedConversationId;
+    if (!conversationId) {
+      return;
+    }
+
+    if (replyingToMessage?.id === messageId) {
+      setReplyingToMessage(null);
+    }
+    updateThreadMessagesAndCache(conversationId, (messages) =>
+      messages.filter((entry) => entry.id !== messageId),
+    );
+  }
+
+  function handleMessageAction(messageId: string, action: ContextMenuAction) {
+    const msg = threadMessages.find((m) => m.id === messageId);
+
+    switch (action.kind) {
+      case "reply":
+        if (msg && !msg.deletedAt) {
+          setReplyingToMessage(msg);
+          setEditingMessageId(null);
+        }
+        break;
+      case "react":
+        void toggleMessageReaction(messageId, action.emoji);
+        break;
+      case "edit":
+        if (
+          msg?.text &&
+          !msg.deletedAt &&
+          selectedGroup?.historyMode === "relay_hosted"
+        ) {
+          setReplyingToMessage(null);
+          setMessageDraft(msg.text);
+          setEditingMessageId(messageId);
+        }
+        break;
+      case "delete_for_everyone":
+        void deleteMessageForEveryone(messageId);
+        break;
+      case "delete_local":
+        deleteMessageLocally(messageId);
+        break;
+      case "copy":
+      case "view":
+        break;
+    }
   }
 
   function handleToggleConversationArchived(conversationId: string) {
@@ -2564,6 +2890,7 @@ export default function App() {
     onRevokeSession: (sessionId: string) =>
       void revokeSignedInSession(sessionId),
     editingMessageId,
+    replyingToMessage,
     isUploadingAvatar,
     unreadIds: unreadConversationIds,
     onSignOut: () => void signOut(),
@@ -2586,6 +2913,7 @@ export default function App() {
       setEditingMessageId(null);
       setMessageDraft("");
     },
+    onCancelReply: () => setReplyingToMessage(null),
     onMessageAction: handleMessageAction,
     onUpdateGroup: handleUpdateGroup,
     onCreateInvite: handleCreateInvite,

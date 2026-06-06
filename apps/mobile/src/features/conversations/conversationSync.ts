@@ -2,7 +2,13 @@ import type { EncryptedConversationPayload } from "@emberchamber/protocol";
 import {
   decryptConversationPayload,
   toPublicPrekeyBundle,
+  DoubleRatchetSession,
+  computeX3dhBob,
+  encodeBytes,
+  decodeBytes,
+  SenderKeySession,
 } from "@emberchamber/protocol";
+import type { SenderKeyDistributionMessage } from "@emberchamber/protocol";
 import * as SQLite from "expo-sqlite";
 import {
   createDeviceBundleScaffold,
@@ -12,6 +18,10 @@ import {
   loadRelayStateValue,
   saveCachedGroupMessages,
   saveRelayStateValue,
+  loadDoubleRatchetSession,
+  saveDoubleRatchetSession,
+  loadGroupSenderKey,
+  saveGroupSenderKey,
 } from "../../lib/db";
 import {
   loadStoredDeviceBundle,
@@ -183,14 +193,121 @@ export async function syncEncryptedMailbox(args: {
         continue;
       }
 
-      const payload =
-        decryptConversationPayload<EncryptedConversationPayload>(
+      let payload: EncryptedConversationPayload | null = null;
+      let isDoubleRatchet = false;
+      let isGroupSenderKey = false;
+
+      try {
+        const decodedOuter = new TextDecoder().decode(decodeBytes(envelope.ciphertext));
+        if (decodedOuter.startsWith("{")) {
+          const outerPayload = JSON.parse(decodedOuter);
+          if (outerPayload && outerPayload.version === 2) {
+            isDoubleRatchet = true;
+
+            const savedSessionJson = await loadDoubleRatchetSession(db, envelope.senderDeviceId);
+            let drSession: DoubleRatchetSession;
+
+            if (savedSessionJson) {
+              const state = JSON.parse(savedSessionJson);
+              drSession = new DoubleRatchetSession(state);
+            } else {
+              if (!outerPayload.ephemeralKeyB64) {
+                throw new Error("Missing ephemeral key for Double Ratchet initialization");
+              }
+
+              const sharedMasterKey = computeX3dhBob({
+                ourIdentityPrivateB64: localBundle.privateKeyB64,
+                ourSignedPrekeyPrivateB64: localBundle.privateKeyB64,
+                peerIdentityPublicB64: senderBundle.bundle.identityKeyB64,
+                peerEphemeralPublicB64: outerPayload.ephemeralKeyB64,
+              });
+
+              drSession = DoubleRatchetSession.initBob({
+                peerDeviceId: envelope.senderDeviceId,
+                sharedMasterKey,
+                ourSignedPrekeyKeyPair: {
+                  publicKey: decodeBytes(localBundle.signedPrekeyB64),
+                  secretKey: decodeBytes(localBundle.privateKeyB64),
+                },
+              });
+            }
+
+            const decryptedBytes = drSession.decrypt({
+              ciphertext: decodeBytes(outerPayload.ciphertextB64),
+              dhPubB64: outerPayload.dhPubB64,
+              n: outerPayload.n,
+              pn: outerPayload.pn,
+            });
+
+            await saveDoubleRatchetSession(
+              db,
+              envelope.senderDeviceId,
+              JSON.stringify(drSession.getState()),
+            );
+
+            payload = JSON.parse(new TextDecoder().decode(decryptedBytes)) as EncryptedConversationPayload;
+
+            if (payload && (payload as any).kind === "ember_sender_key_distribution_v1") {
+              const skdm = payload as unknown as SenderKeyDistributionMessage;
+              const senderKeyState = {
+                groupId: skdm.groupId,
+                senderDeviceId: skdm.senderDeviceId,
+                iteration: skdm.iteration,
+                chainKeyB64: skdm.chainKeyB64,
+                signaturePublicKeyB64: skdm.signaturePublicKeyB64,
+                skippedMessageKeys: {},
+              };
+              await saveGroupSenderKey(
+                db,
+                skdm.groupId,
+                skdm.senderDeviceId,
+                JSON.stringify(senderKeyState)
+              );
+              ackEnvelopeIds.push(envelope.envelopeId);
+              continue;
+            }
+          } else if (outerPayload && outerPayload.version === 3) {
+            isGroupSenderKey = true;
+
+            const savedKeyJson = await loadGroupSenderKey(db, envelope.conversationId, envelope.senderDeviceId);
+            if (!savedKeyJson) {
+              throw new Error(`No Sender Key session found for group ${envelope.conversationId} from device ${envelope.senderDeviceId}`);
+            }
+
+            const state = JSON.parse(savedKeyJson);
+            const senderKeySession = new SenderKeySession(state);
+
+            const decryptedBytes = senderKeySession.decrypt({
+              ciphertext: decodeBytes(outerPayload.ciphertextB64),
+              iteration: outerPayload.iteration,
+              signature: decodeBytes(outerPayload.signatureB64),
+            });
+
+            await saveGroupSenderKey(
+              db,
+              envelope.conversationId,
+              envelope.senderDeviceId,
+              JSON.stringify(senderKeySession.getState())
+            );
+
+            payload = JSON.parse(new TextDecoder().decode(decryptedBytes)) as EncryptedConversationPayload;
+          }
+        }
+      } catch (err) {
+        if (isDoubleRatchet || isGroupSenderKey) {
+          throw err;
+        }
+      }
+
+      if (!isDoubleRatchet && !isGroupSenderKey) {
+        payload = decryptConversationPayload<EncryptedConversationPayload>(
           envelope.ciphertext,
           senderBundle.bundle.identityKeyB64,
           localBundle.privateKeyB64,
         );
+      }
 
-      if (payload.kind !== "ember_conversation_v1") {
+      if (!payload || payload.kind !== "ember_conversation_v1") {
         continue;
       }
 

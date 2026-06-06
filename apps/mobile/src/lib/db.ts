@@ -1,4 +1,8 @@
 import * as SQLite from "expo-sqlite";
+import * as FileSystem from "expo-file-system/legacy";
+import nacl from "tweetnacl";
+import { encodeBytes } from "@emberchamber/protocol";
+import { secureStorageCapability } from "./nativeCapabilities";
 import type {
   ConversationPreference,
   GroupMembershipSummary,
@@ -9,14 +13,59 @@ import type {
 import { defaultPrivacyDefaults } from "../constants";
 
 const MAX_CACHED_GROUP_MESSAGES = 500;
+const SECURE_STORE_DB_KEY = "emberchamber.sqlite.cipher-key.v1";
+
+async function getOrCreateDatabaseKey(): Promise<string> {
+  let keyB64 = await secureStorageCapability.getItem(SECURE_STORE_DB_KEY);
+  if (!keyB64) {
+    const randomKey = nacl.randomBytes(32);
+    keyB64 = encodeBytes(randomKey);
+    await secureStorageCapability.setItem(SECURE_STORE_DB_KEY, keyB64);
+  }
+  return keyB64;
+}
 
 export async function bootstrapLocalStore() {
-  const db = await SQLite.openDatabaseAsync("emberchamber.db");
+  const dbKey = await getOrCreateDatabaseKey();
+  let db = await SQLite.openDatabaseAsync("emberchamber.db");
+
+  try {
+    await db.execAsync(`PRAGMA key = '${dbKey}';`);
+    await db.execAsync("SELECT count(*) FROM sqlite_master;");
+  } catch (err) {
+    await db.closeAsync();
+    await SQLite.deleteDatabaseAsync("emberchamber.db");
+
+    const dbDir = FileSystem.documentDirectory + "SQLite/";
+    try {
+      await FileSystem.deleteAsync(dbDir + "emberchamber.db", { idempotent: true });
+      await FileSystem.deleteAsync(dbDir + "emberchamber.db-wal", { idempotent: true });
+      await FileSystem.deleteAsync(dbDir + "emberchamber.db-shm", { idempotent: true });
+    } catch (fsErr) {
+      // Ignore filesystem cleanup errors
+    }
+
+    db = await SQLite.openDatabaseAsync("emberchamber.db");
+    await db.execAsync(`PRAGMA key = '${dbKey}';`);
+  }
+
   await db.execAsync(`
     PRAGMA journal_mode = WAL;
     CREATE TABLE IF NOT EXISTS relay_state (
       key TEXT PRIMARY KEY NOT NULL,
       value TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS double_ratchet_sessions (
+      peer_device_id TEXT PRIMARY KEY NOT NULL,
+      session_state_json TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS group_sender_keys (
+      group_id TEXT NOT NULL,
+      sender_device_id TEXT NOT NULL,
+      sender_key_state_json TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (group_id, sender_device_id)
     );
     CREATE TABLE IF NOT EXISTS conversations (
       id TEXT PRIMARY KEY NOT NULL,
@@ -453,5 +502,65 @@ export async function saveCachedGroupMessages(
         )`,
     conversationId,
     MAX_CACHED_GROUP_MESSAGES,
+  );
+}
+
+export async function loadDoubleRatchetSession(
+  db: SQLite.SQLiteDatabase,
+  peerDeviceId: string,
+): Promise<string | null> {
+  const row = await db.getFirstAsync<{ session_state_json: string }>(
+    "SELECT session_state_json FROM double_ratchet_sessions WHERE peer_device_id = ?",
+    peerDeviceId,
+  );
+  return row?.session_state_json ?? null;
+}
+
+export async function saveDoubleRatchetSession(
+  db: SQLite.SQLiteDatabase,
+  peerDeviceId: string,
+  sessionStateJson: string,
+) {
+  await db.runAsync(
+    `INSERT INTO double_ratchet_sessions (peer_device_id, session_state_json, updated_at)
+     VALUES (?, ?, ?)
+     ON CONFLICT(peer_device_id) DO UPDATE SET
+       session_state_json = excluded.session_state_json,
+       updated_at = excluded.updated_at`,
+    peerDeviceId,
+    sessionStateJson,
+    new Date().toISOString(),
+  );
+}
+
+export async function loadGroupSenderKey(
+  db: SQLite.SQLiteDatabase,
+  groupId: string,
+  senderDeviceId: string,
+): Promise<string | null> {
+  const row = await db.getFirstAsync<{ sender_key_state_json: string }>(
+    "SELECT sender_key_state_json FROM group_sender_keys WHERE group_id = ? AND sender_device_id = ?",
+    groupId,
+    senderDeviceId,
+  );
+  return row?.sender_key_state_json ?? null;
+}
+
+export async function saveGroupSenderKey(
+  db: SQLite.SQLiteDatabase,
+  groupId: string,
+  senderDeviceId: string,
+  senderKeyStateJson: string,
+) {
+  await db.runAsync(
+    `INSERT INTO group_sender_keys (group_id, sender_device_id, sender_key_state_json, updated_at)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(group_id, sender_device_id) DO UPDATE SET
+       sender_key_state_json = excluded.sender_key_state_json,
+       updated_at = excluded.updated_at`,
+    groupId,
+    senderDeviceId,
+    senderKeyStateJson,
+    new Date().toISOString(),
   );
 }
