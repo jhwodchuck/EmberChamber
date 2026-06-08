@@ -119,7 +119,7 @@ jobs:
           esac
 
       - name: Install dependencies
-        run: npm ci --no-audit --no-fund
+        run: npm install --no-audit --no-fund
 
       - name: Assert Firebase Android app config is configured
         if: inputs.require_google_services
