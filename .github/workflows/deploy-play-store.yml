@@ -314,7 +314,7 @@ jobs:
             "changes_not_sent_for_review:$PLAY_CHANGES_NOT_SENT_FOR_REVIEW"
           )
 
-          if [ -n "$PLAY_ROLLOUT" ]; then
+          if [ "$PLAY_RELEASE_STATUS" = "inProgress" ] && [ -n "$PLAY_ROLLOUT" ]; then
             cmd+=("rollout:$PLAY_ROLLOUT")
           fi
 
