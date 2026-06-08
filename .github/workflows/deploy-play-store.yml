@@ -233,8 +233,10 @@ jobs:
         with:
           ruby-version: "3.3"
 
-      - name: Install fastlane
-        run: gem install fastlane --no-document
+      - name: Install fastlane and ruby api client
+        run: |
+          gem install fastlane --no-document
+          gem install google-apis-androidpublisher_v3 googleauth --no-document
 
       - name: Write Google Play service account key
         env:
