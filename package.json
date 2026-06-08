@@ -62,7 +62,7 @@
     "qs": "6.15.2",
     "vite": ">=7.3.2"
   },
-  "dependencies": {
+  "optionalDependencies": {
     "@rolldown/binding-win32-x64-msvc": "^1.1.0"
   }
 }
