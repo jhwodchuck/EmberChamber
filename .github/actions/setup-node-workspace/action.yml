@@ -1,7 +1,7 @@
 name: Setup Node workspace
 description: >
   Installs the correct Node.js version with the npm cache wired to
-  package-lock.json, then runs `npm ci --no-audit --no-fund` to install all
+  package-lock.json, then runs `npm install --no-audit --no-fund` to install all
   workspace dependencies.  Use this as the first step in any job that needs
   the Node ecosystem.
 
@@ -22,4 +22,4 @@ runs:
 
     - name: Install dependencies
       shell: bash
-      run: npm ci --no-audit --no-fund
+      run: npm install --no-audit --no-fund
