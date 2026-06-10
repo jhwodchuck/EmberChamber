@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { Pressable, Text, View, useWindowDimensions } from "react-native";
 import type {
@@ -336,6 +336,17 @@ export function MainScreen(props: MainScreenProps) {
     setChatView("conversation");
   }
 
+  const handleConversationAnchorChange = useCallback(
+    (messageId: string | null) => {
+      if (!selectedGroup?.id) {
+        return;
+      }
+
+      onPersistConversationAnchor(selectedGroup.id, messageId);
+    },
+    [onPersistConversationAnchor, selectedGroup?.id],
+  );
+
   const chatListPane = (
     <ChatListScreen
       profileName={profile?.displayName ?? null}
@@ -381,9 +392,7 @@ export function MainScreen(props: MainScreenProps) {
       onBack={() => setChatView("list")}
       showBackButton={!isWideChatsLayout}
       restoredAnchorMessageId={restoredConversationAnchorId}
-      onAnchorMessageChange={(messageId) =>
-        onPersistConversationAnchor(selectedGroup.id, messageId)
-      }
+      onAnchorMessageChange={handleConversationAnchorChange}
       onImageError={onImageError}
       onResolveAttachmentAccess={onResolveAttachmentAccess}
       onMessageAction={onMessageAction}

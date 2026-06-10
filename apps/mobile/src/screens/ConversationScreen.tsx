@@ -48,6 +48,7 @@ import {
 } from "../lib/messageDraftFormatting";
 
 const AUTO_SCROLL_THRESHOLD = 96;
+const ANCHOR_REPORT_DELAY_MS = 400;
 
 type ConversationRow =
   | { type: "date"; key: string; label: string }
@@ -295,10 +296,42 @@ export function ConversationScreen({
   });
   const appliedRestoreConversationIdRef = useRef<string | null>(null);
   const lastReportedAnchorIdRef = useRef<string | null>(null);
+  const pendingAnchorReportIdRef = useRef<string | null>(null);
+  const anchorReportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const anchorChangeHandlerRef = useRef<typeof onAnchorMessageChange>(
     onAnchorMessageChange,
   );
-  const viewabilityConfigRef = useRef({ itemVisiblePercentThreshold: 60 });
+  const viewabilityConfigRef = useRef({
+    itemVisiblePercentThreshold: 60,
+    minimumViewTime: 250,
+  });
+  function clearPendingAnchorReport() {
+    if (anchorReportTimerRef.current) {
+      clearTimeout(anchorReportTimerRef.current);
+      anchorReportTimerRef.current = null;
+    }
+
+    pendingAnchorReportIdRef.current = null;
+  }
+
+  function flushPendingAnchorReport() {
+    const nextAnchorId = pendingAnchorReportIdRef.current;
+    clearPendingAnchorReport();
+
+    if (!nextAnchorId) {
+      return;
+    }
+
+    if (lastReportedAnchorIdRef.current === nextAnchorId) {
+      return;
+    }
+
+    lastReportedAnchorIdRef.current = nextAnchorId;
+    anchorChangeHandlerRef.current?.(nextAnchorId);
+  }
+
   const onViewableItemsChangedRef = useRef(
     ({
       viewableItems,
@@ -313,12 +346,22 @@ export function ConversationScreen({
           ? firstVisibleMessage.item.message.id
           : null;
 
-      if (lastReportedAnchorIdRef.current === nextAnchorId) {
+      if (
+        lastReportedAnchorIdRef.current === nextAnchorId ||
+        pendingAnchorReportIdRef.current === nextAnchorId
+      ) {
         return;
       }
 
-      lastReportedAnchorIdRef.current = nextAnchorId;
-      anchorChangeHandlerRef.current?.(nextAnchorId);
+      pendingAnchorReportIdRef.current = nextAnchorId;
+      if (anchorReportTimerRef.current) {
+        clearTimeout(anchorReportTimerRef.current);
+      }
+
+      anchorReportTimerRef.current = setTimeout(
+        flushPendingAnchorReport,
+        ANCHOR_REPORT_DELAY_MS,
+      );
     },
   );
 
@@ -369,7 +412,15 @@ export function ConversationScreen({
   useEffect(() => {
     appliedRestoreConversationIdRef.current = null;
     lastReportedAnchorIdRef.current = null;
+    clearPendingAnchorReport();
   }, [selectedGroup.id]);
+
+  useEffect(
+    () => () => {
+      flushPendingAnchorReport();
+    },
+    [],
+  );
 
   useEffect(() => {
     setFormattingMenuOpen(false);
@@ -467,28 +518,40 @@ export function ConversationScreen({
     selectedGroup.id,
   ]);
 
-  function handleConversationScroll(
+  const handleConversationScroll = useCallback((
     event: NativeSyntheticEvent<NativeScrollEvent>,
-  ) {
+  ) => {
     const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
     const distanceFromBottom =
       contentSize.height - (contentOffset.y + layoutMeasurement.height);
     shouldAutoScrollRef.current = distanceFromBottom <= AUTO_SCROLL_THRESHOLD;
-  }
+  }, []);
 
-  function handleScrollToIndexFailed({
-    averageItemLength,
-    index,
-  }: {
-    averageItemLength: number;
-    index: number;
-  }) {
-    const estimatedOffset = Math.max(0, averageItemLength * index);
-    listRef.current?.scrollToOffset({
-      offset: estimatedOffset,
-      animated: false,
-    });
-  }
+  const handleScrollToIndexFailed = useCallback(
+    ({
+      averageItemLength,
+      index,
+    }: {
+      averageItemLength: number;
+      index: number;
+    }) => {
+      const estimatedOffset = Math.max(0, averageItemLength * index);
+      listRef.current?.scrollToOffset({
+        offset: estimatedOffset,
+        animated: false,
+      });
+    },
+    [],
+  );
+
+  const handleConversationContentSizeChange = useCallback(() => {
+    if (!pendingScrollToEndRef.current) {
+      return;
+    }
+
+    pendingScrollToEndRef.current = false;
+    listRef.current?.scrollToEnd({ animated: false });
+  }, []);
 
   function handleDraftSelectionChange(
     event: NativeSyntheticEvent<TextInputSelectionChangeEventData>,
@@ -680,22 +743,18 @@ export function ConversationScreen({
             onScroll={handleConversationScroll}
             onScrollToIndexFailed={handleScrollToIndexFailed}
             onViewableItemsChanged={onViewableItemsChangedRef.current}
-            scrollEventThrottle={16}
+            scrollEventThrottle={48}
             viewabilityConfig={viewabilityConfigRef.current}
             removeClippedSubviews
             initialNumToRender={20}
-            maxToRenderPerBatch={8}
-            windowSize={5}
+            maxToRenderPerBatch={12}
+            updateCellsBatchingPeriod={16}
+            windowSize={9}
             // Android: scroll-to-bottom fires here (after native layout settles)
             // instead of in a requestAnimationFrame to prevent post-send flicker.
             onContentSizeChange={
               Platform.OS === "android"
-                ? () => {
-                    if (pendingScrollToEndRef.current) {
-                      pendingScrollToEndRef.current = false;
-                      listRef.current?.scrollToEnd({ animated: false });
-                    }
-                  }
+                ? handleConversationContentSizeChange
                 : undefined
             }
             renderItem={renderMessageItem}

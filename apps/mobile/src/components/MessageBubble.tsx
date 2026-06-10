@@ -1,4 +1,11 @@
-import { memo, useEffect, useState, type ReactNode } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   ActivityIndicator,
   Clipboard,
@@ -147,6 +154,73 @@ function describeReplyText(replyTo: NonNullable<GroupThreadMessage["replyTo"]>) 
   return text || "Attachment";
 }
 
+const FORMATTED_MESSAGE_CACHE_LIMIT = 300;
+const MESSAGE_TIME_CACHE_LIMIT = 500;
+const LOCATION_HINT_PATTERN = /(^|\n)\s*📍|https?:\/\/|°\s*[NS]\s*,/i;
+const formattedMessageCache = new Map<string, FormattedBlockNode[]>();
+const messageTimeCache = new Map<string, string>();
+
+function rememberCachedValue<T>(
+  cache: Map<string, T>,
+  limit: number,
+  key: string,
+  value: T,
+) {
+  cache.set(key, value);
+
+  if (cache.size > limit) {
+    const oldestKey = cache.keys().next().value;
+    if (oldestKey) {
+      cache.delete(oldestKey);
+    }
+  }
+
+  return value;
+}
+
+function getFormattedMessageBlocks(text: string) {
+  const cached = formattedMessageCache.get(text);
+  if (cached) {
+    formattedMessageCache.delete(text);
+    formattedMessageCache.set(text, cached);
+    return cached;
+  }
+
+  return rememberCachedValue(
+    formattedMessageCache,
+    FORMATTED_MESSAGE_CACHE_LIMIT,
+    text,
+    parseFormattedMessage(text),
+  );
+}
+
+function getMessageTimeLabel(createdAt: string) {
+  const cached = messageTimeCache.get(createdAt);
+  if (cached) {
+    messageTimeCache.delete(createdAt);
+    messageTimeCache.set(createdAt, cached);
+    return cached;
+  }
+
+  return rememberCachedValue(
+    messageTimeCache,
+    MESSAGE_TIME_CACHE_LIMIT,
+    createdAt,
+    new Date(createdAt).toLocaleTimeString([], {
+      hour: "numeric",
+      minute: "2-digit",
+    }),
+  );
+}
+
+function maybeParseSharedLocation(text: string) {
+  if (!LOCATION_HINT_PATTERN.test(text)) {
+    return null;
+  }
+
+  return parseSharedLocation(text);
+}
+
 export const MessageBubble = memo(function MessageBubble({
   message,
   isOwnMessage,
@@ -171,19 +245,20 @@ export const MessageBubble = memo(function MessageBubble({
     Record<string, true>
   >({});
 
-  async function handleOpenUrl(url: string) {
+  const handleOpenUrl = useCallback(async (url: string) => {
     try {
       await Linking.openURL(url);
     } catch {
       // Ignore browser-launch failures and leave the message visible.
     }
-  }
+  }, []);
 
-  function isSpoilerRevealed(spoilerId: string) {
-    return Boolean(revealedSpoilers[spoilerId]);
-  }
+  const isSpoilerRevealed = useCallback(
+    (spoilerId: string) => Boolean(revealedSpoilers[spoilerId]),
+    [revealedSpoilers],
+  );
 
-  function handleRevealSpoiler(spoilerId: string) {
+  const handleRevealSpoiler = useCallback((spoilerId: string) => {
     setRevealedSpoilers((current) => {
       if (current[spoilerId]) {
         return current;
@@ -194,20 +269,30 @@ export const MessageBubble = memo(function MessageBubble({
         [spoilerId]: true,
       };
     });
-  }
+  }, []);
 
-  const inlineRenderOptions = {
-    onOpenUrl: handleOpenUrl,
-    isSpoilerRevealed,
-    onRevealSpoiler: handleRevealSpoiler,
-  };
+  const inlineRenderOptions = useMemo(
+    () => ({
+      onOpenUrl: handleOpenUrl,
+      isSpoilerRevealed,
+      onRevealSpoiler: handleRevealSpoiler,
+    }),
+    [handleOpenUrl, handleRevealSpoiler, isSpoilerRevealed],
+  );
+  const systemFormattedBlocks = useMemo(
+    () =>
+      message.kind === "system_notice"
+        ? getFormattedMessageBlocks(message.text ?? "System notice")
+        : [],
+    [message.kind, message.text],
+  );
 
   if (message.kind === "system_notice") {
     return (
       <View style={styles.systemMessageCard}>
         <View style={styles.formattedMessage}>
           {renderFormattedBlocks(
-            parseFormattedMessage(message.text ?? "System notice"),
+            systemFormattedBlocks,
             "system",
             inlineRenderOptions,
           )}
@@ -218,22 +303,36 @@ export const MessageBubble = memo(function MessageBubble({
 
   const isDeleted = Boolean(message.deletedAt);
   const hasText = !isDeleted && Boolean(message.text?.trim());
-  const formattedBlocks = hasText
-    ? parseFormattedMessage(message.text ?? "")
-    : [];
+  const formattedBlocks = useMemo(
+    () => (hasText ? getFormattedMessageBlocks(message.text ?? "") : []),
+    [hasText, message.text],
+  );
+  const messageTimeLabel = useMemo(
+    () => getMessageTimeLabel(message.createdAt),
+    [message.createdAt],
+  );
   const attachment = isDeleted ? null : message.attachment;
   const isImage = attachment?.contentClass === "image";
-  const reactionEntries = isDeleted
-    ? []
-    : Object.entries(message.reactions ?? {}).filter(
-        ([, accountIds]) => accountIds.length > 0,
-      );
-  const sharedLocation =
-    hasText && !attachment ? parseSharedLocation(message.text!) : null;
-  const resolveAttachmentAccess =
-    attachment && onResolveAttachmentAccess
-      ? () => onResolveAttachmentAccess(message.id, attachment)
-      : undefined;
+  const reactionEntries = useMemo(
+    () =>
+      isDeleted
+        ? []
+        : Object.entries(message.reactions ?? {}).filter(
+            ([, accountIds]) => accountIds.length > 0,
+          ),
+    [isDeleted, message.reactions],
+  );
+  const sharedLocation = useMemo(
+    () => (hasText && !attachment ? maybeParseSharedLocation(message.text!) : null),
+    [attachment, hasText, message.text],
+  );
+  const resolveAttachmentAccess = useMemo(
+    () =>
+      attachment && onResolveAttachmentAccess
+        ? () => onResolveAttachmentAccess(message.id, attachment)
+        : undefined,
+    [attachment, message.id, onResolveAttachmentAccess],
+  );
   const attachmentManager = useAttachmentManager(
     attachment ?? null,
     resolveAttachmentAccess,
@@ -271,11 +370,11 @@ export const MessageBubble = memo(function MessageBubble({
     shouldAutoloadEncryptedImagePreview,
   ]);
 
-  async function handleOpenAttachment() {
+  const handleOpenAttachment = useCallback(async () => {
     await attachmentManager.openExternally();
-  }
+  }, [attachmentManager]);
 
-  async function handleOpenLocation() {
+  const handleOpenLocation = useCallback(async () => {
     if (!sharedLocation) {
       return;
     }
@@ -285,7 +384,7 @@ export const MessageBubble = memo(function MessageBubble({
     } catch {
       // Ignore map-launch failures and leave the card visible.
     }
-  }
+  }, [sharedLocation]);
 
   return (
     <>
@@ -307,10 +406,7 @@ export const MessageBubble = memo(function MessageBubble({
           <Text style={styles.messageMeta}>
             {isOwnMessage ? "You" : message.senderDisplayName}
             {" · "}
-            {new Date(message.createdAt).toLocaleTimeString([], {
-              hour: "numeric",
-              minute: "2-digit",
-            })}
+            {messageTimeLabel}
             {message.deletedAt
               ? "  · deleted"
               : message.editedAt
