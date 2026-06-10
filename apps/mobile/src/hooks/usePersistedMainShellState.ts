@@ -1,5 +1,5 @@
 import * as SQLite from "expo-sqlite";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { AuthSession } from "../types";
 import { loadRelayStateValue, saveRelayStateValue } from "../lib/db";
 import {
@@ -12,6 +12,8 @@ import {
   sanitizeMainShellState,
   type PersistedMainShellState,
 } from "../lib/mainShell";
+
+const CONVERSATION_ANCHOR_SAVE_DELAY_MS = 800;
 
 type UsePersistedMainShellStateArgs = {
   db: SQLite.SQLiteDatabase | null;
@@ -33,6 +35,12 @@ export function usePersistedMainShellState({
   const [restoredConversationAnchorId, setRestoredConversationAnchorId] =
     useState<string | null>(null);
   const [isMainShellReady, setIsMainShellReady] = useState(false);
+  const pendingConversationAnchorRef = useRef<{
+    conversationId: string;
+    messageId: string | null;
+  } | null>(null);
+  const conversationAnchorSaveTimerRef =
+    useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const persistMainShellState = useCallback(
     (nextState: PersistedMainShellState) => {
@@ -63,11 +71,26 @@ export function usePersistedMainShellState({
     [db, isMainShellReady, session],
   );
 
-  const persistConversationAnchor = useCallback(
-    (conversationId: string, messageId: string | null) => {
-      if (selectedConversationId === conversationId) {
-        setRestoredConversationAnchorId(messageId);
-      }
+  const flushPendingConversationAnchor = useCallback(() => {
+    const pending = pendingConversationAnchorRef.current;
+    pendingConversationAnchorRef.current = null;
+
+    if (conversationAnchorSaveTimerRef.current) {
+      clearTimeout(conversationAnchorSaveTimerRef.current);
+      conversationAnchorSaveTimerRef.current = null;
+    }
+
+    if (!pending) {
+      return;
+    }
+
+    const { conversationId, messageId } = pending;
+
+    if (selectedConversationId === conversationId) {
+      setRestoredConversationAnchorId((current) =>
+        current === messageId ? current : messageId,
+      );
+    }
 
       if (!db || !session) {
         return;
@@ -80,6 +103,29 @@ export function usePersistedMainShellState({
       ).catch(() => undefined);
     },
     [db, selectedConversationId, session],
+  );
+
+  const persistConversationAnchor = useCallback(
+    (conversationId: string, messageId: string | null) => {
+      pendingConversationAnchorRef.current = { conversationId, messageId };
+
+      if (conversationAnchorSaveTimerRef.current) {
+        clearTimeout(conversationAnchorSaveTimerRef.current);
+      }
+
+      conversationAnchorSaveTimerRef.current = setTimeout(
+        flushPendingConversationAnchor,
+        CONVERSATION_ANCHOR_SAVE_DELAY_MS,
+      );
+    },
+    [flushPendingConversationAnchor],
+  );
+
+  useEffect(
+    () => () => {
+      flushPendingConversationAnchor();
+    },
+    [flushPendingConversationAnchor],
   );
 
   useEffect(() => {

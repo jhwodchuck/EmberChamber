@@ -20,8 +20,15 @@ export function useAttachmentManager(
   const [attemptCount, setAttemptCount] = useState(0);
   const [lastResolvedAt, setLastResolvedAt] = useState<string | null>(null);
   const lastActionRef = useRef<AttachmentAction | null>(null);
+  const currentAttachmentIdRef = useRef<string | null>(attachment?.id ?? null);
 
   useEffect(() => {
+    const nextAttachmentId = attachment?.id ?? null;
+    if (currentAttachmentIdRef.current === nextAttachmentId) {
+      return;
+    }
+
+    currentAttachmentIdRef.current = nextAttachmentId;
     setStatus("idle");
     setError(null);
     setResolvedUri(null);
