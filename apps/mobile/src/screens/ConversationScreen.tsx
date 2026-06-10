@@ -293,7 +293,7 @@ export function ConversationScreen({
     firstMessageId: null,
     lastMessageId: null,
   });
-  const appliedRestoreSignatureRef = useRef<string | null>(null);
+  const appliedRestoreConversationIdRef = useRef<string | null>(null);
   const lastReportedAnchorIdRef = useRef<string | null>(null);
   const anchorChangeHandlerRef = useRef<typeof onAnchorMessageChange>(
     onAnchorMessageChange,
@@ -367,7 +367,7 @@ export function ConversationScreen({
   }, [onAnchorMessageChange]);
 
   useEffect(() => {
-    appliedRestoreSignatureRef.current = null;
+    appliedRestoreConversationIdRef.current = null;
     lastReportedAnchorIdRef.current = null;
   }, [selectedGroup.id]);
 
@@ -445,12 +445,14 @@ export function ConversationScreen({
       return;
     }
 
-    const restoreSignature = `${selectedGroup.id}:${restoredAnchorMessageId}`;
-    if (appliedRestoreSignatureRef.current === restoreSignature) {
+    // `onViewableItemsChanged` persists the visible anchor as the user scrolls.
+    // Treating each new anchor prop as a fresh restore target makes Android
+    // FlatList fight the gesture and bounce, so restoration is one-shot.
+    if (appliedRestoreConversationIdRef.current === selectedGroup.id) {
       return;
     }
 
-    appliedRestoreSignatureRef.current = restoreSignature;
+    appliedRestoreConversationIdRef.current = selectedGroup.id;
     requestAnimationFrame(() => {
       listRef.current?.scrollToIndex({
         index: restoredAnchorIndex,
