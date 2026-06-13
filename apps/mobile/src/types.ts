@@ -207,6 +207,7 @@ export type PrivacyDefaults = {
   autoDownloadSensitiveMedia: boolean;
   allowSensitiveExport: boolean;
   secureAppSwitcher: boolean;
+  oledDark: boolean;
 };
 
 export type ConversationPreference = {

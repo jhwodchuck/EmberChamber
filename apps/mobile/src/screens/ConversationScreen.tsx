@@ -3,7 +3,6 @@ import type { Dispatch, SetStateAction } from "react";
 import {
   FlatList,
   Image,
-  KeyboardAvoidingView,
   Modal,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -15,6 +14,20 @@ import {
   type ViewToken,
   View,
 } from "react-native";
+// Drop-in for RN's KeyboardAvoidingView, but keyboard-frame-accurate and active
+// on Android (RN's KAV is effectively inert there). Driven by the root
+// KeyboardProvider wired in AppProviders. Requires adjustResize on Android —
+// see app.json `softwareKeyboardLayoutMode: "resize"`.
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import Animated, {
+  FadeIn,
+  FadeOut,
+  LinearTransition,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 import type {
   AuthSession,
   GroupInviteRecord,
@@ -26,6 +39,7 @@ import type {
 import { styles, theme } from "../styles";
 import { formatBytes } from "../lib/utils";
 import { MessageBubble } from "../components/MessageBubble";
+import { Shimmer } from "../components/Shimmer";
 import type { ContextMenuAction } from "../components/MessageContextMenu";
 import { MemberRosterModal } from "../components/MemberRosterModal";
 import { MemberProfileSheet } from "../components/MemberProfileSheet";
@@ -46,13 +60,27 @@ import {
   type DraftSelection,
   type DraftFormatAction,
 } from "../lib/messageDraftFormatting";
+import { haptics } from "../lib/haptics";
+import { durations, springs, timings } from "../lib/motion";
+import { TypingDots } from "../components/TypingDots";
+import { conversationScreenStyles } from "./conversationScreen.styles";
 
 const AUTO_SCROLL_THRESHOLD = 96;
 const ANCHOR_REPORT_DELAY_MS = 400;
+const SCROLL_TO_END_REVEAL_DISTANCE = 240;
+// Grouped run break: messages from the same sender within this window collapse
+// into a single visual run (shared avatar, no repeated sender name).
+const GROUP_GAP_MS = 5 * 60 * 1000;
 
 type ConversationRow =
   | { type: "date"; key: string; label: string }
-  | { type: "message"; key: string; message: GroupThreadMessage };
+  | {
+      type: "message";
+      key: string;
+      message: GroupThreadMessage;
+      isFirstInGroup: boolean;
+      isLastInGroup: boolean;
+    };
 
 function formatConversationDate(value: string) {
   const parsed = new Date(value);
@@ -67,16 +95,51 @@ function formatConversationDate(value: string) {
   });
 }
 
+type MessageRow = Extract<ConversationRow, { type: "message" }>;
+
+// A run continues when the same sender posts again within GROUP_GAP_MS with no
+// date separator between. System notices never group. The "first/last" flags let
+// the bubble render the avatar + sender name only at the run's edges.
+function startsNewGroup(
+  current: GroupThreadMessage,
+  previous: GroupThreadMessage | null,
+  dateBreak: boolean,
+): boolean {
+  if (dateBreak || !previous) {
+    return true;
+  }
+
+  if (
+    current.kind === "system_notice" ||
+    previous.kind === "system_notice"
+  ) {
+    return true;
+  }
+
+  if (current.senderAccountId !== previous.senderAccountId) {
+    return true;
+  }
+
+  const gap =
+    new Date(current.createdAt).getTime() -
+    new Date(previous.createdAt).getTime();
+
+  return !(gap >= 0 && gap <= GROUP_GAP_MS);
+}
+
 function buildConversationRows(
   messages: GroupThreadMessage[],
 ): ConversationRow[] {
   const rows: ConversationRow[] = [];
+  const messageRows: MessageRow[] = [];
   let activeDate = "";
+  let previousMessage: GroupThreadMessage | null = null;
 
   for (const message of messages) {
     const messageDate = message.createdAt.slice(0, 10);
+    const dateBreak = messageDate !== activeDate;
 
-    if (messageDate !== activeDate) {
+    if (dateBreak) {
       activeDate = messageDate;
       rows.push({
         type: "date",
@@ -85,11 +148,34 @@ function buildConversationRows(
       });
     }
 
-    rows.push({
+    const isFirstInGroup = startsNewGroup(message, previousMessage, dateBreak);
+
+    // Resolve the previous message's run boundary now that we know whether this
+    // message continues it: a new group means the prior message closed its run;
+    // a continuation means the prior message is no longer the run's last.
+    const lastRow = messageRows[messageRows.length - 1];
+    if (lastRow) {
+      lastRow.isLastInGroup = isFirstInGroup;
+    }
+
+    const row: MessageRow = {
       type: "message",
       key: message.id,
       message,
-    });
+      isFirstInGroup,
+      // Provisional; corrected when the next message (or end of list) resolves.
+      isLastInGroup: true,
+    };
+
+    rows.push(row);
+    messageRows.push(row);
+    previousMessage = message;
+  }
+
+  // The final message of the thread always closes its run.
+  const finalRow = messageRows[messageRows.length - 1];
+  if (finalRow) {
+    finalRow.isLastInGroup = true;
   }
 
   return rows;
@@ -280,6 +366,7 @@ export function ConversationScreen({
   // `selection` prop races Android's native cursor placement and causes the
   // first typed character to jump to the end of the input.
   const [selectionOverride, setSelectionOverride] = useState<DraftSelection | null>(null);
+  const [showScrollToEnd, setShowScrollToEnd] = useState(false);
   const listRef = useRef<FlatList<ConversationRow>>(null);
   const messageInputRef = useRef<TextInput>(null);
   const shouldAutoScrollRef = useRef(true);
@@ -370,23 +457,78 @@ export function ConversationScreen({
     [threadMessages],
   );
 
+  // Jump-to-bottom FAB reveal: spring the scale, fade the opacity. Kept on a
+  // single shared value so show/hide stay in lockstep.
+  const scrollToEndProgress = useSharedValue(0);
+  useEffect(() => {
+    scrollToEndProgress.value = showScrollToEnd
+      ? withSpring(1, springs.snappy)
+      : withTiming(0, timings.fast);
+  }, [scrollToEndProgress, showScrollToEnd]);
+
+  const scrollToEndFabStyle = useAnimatedStyle(() => ({
+    opacity: scrollToEndProgress.value,
+    transform: [{ scale: 0.6 + scrollToEndProgress.value * 0.4 }],
+  }));
+
+  // Send control: `sendEnabled` springs the circle between its disabled
+  // (dimmed, slightly shrunk) and enabled (full, popped) states, while
+  // `sendPress` adds a quick press-bounce on tap. They multiply into one scale.
+  const sendEnabled = !sendDisabled;
+  const sendEnabledProgress = useSharedValue(sendEnabled ? 1 : 0);
+  const sendPressProgress = useSharedValue(0);
+  useEffect(() => {
+    sendEnabledProgress.value = withSpring(
+      sendEnabled ? 1 : 0,
+      springs.snappy,
+    );
+  }, [sendEnabled, sendEnabledProgress]);
+
+  const sendCircleStyle = useAnimatedStyle(() => {
+    const baseScale = 0.85 + sendEnabledProgress.value * 0.15;
+    const pressScale = 1 - sendPressProgress.value * 0.16;
+    return {
+      opacity: 0.45 + sendEnabledProgress.value * 0.55,
+      transform: [{ scale: baseScale * pressScale }],
+    };
+  });
+
   const renderMessageItem = useCallback(
-    ({ item }: { item: (typeof conversationRows)[number] }) =>
-      item.type === "date" ? (
-        <View style={styles.dateSeparator}>
-          <Text style={styles.dateSeparatorLabel}>{item.label}</Text>
-        </View>
-      ) : (
+    ({ item }: { item: (typeof conversationRows)[number] }) => {
+      if (item.type === "date") {
+        return (
+          <View style={styles.dateSeparator}>
+            <Text style={styles.dateSeparatorLabel}>{item.label}</Text>
+          </View>
+        );
+      }
+
+      const { message } = item;
+      const isGroupThread = selectedGroup.memberCap > 2;
+      const isOwn = message.senderAccountId === session.accountId;
+
+      return (
         <MessageBubble
-          message={item.message}
-          isOwnMessage={item.message.senderAccountId === session.accountId}
+          message={message}
+          isOwnMessage={isOwn}
           selfAccountId={session.accountId}
+          isFirstInGroup={item.isFirstInGroup}
+          isLastInGroup={item.isLastInGroup}
+          showSenderName={item.isFirstInGroup && !isOwn && isGroupThread}
+          showAvatar={isGroupThread && !isOwn}
           onImageError={onImageError}
           onResolveAttachmentAccess={onResolveAttachmentAccess}
           onAction={onMessageAction}
         />
-      ),
-    [session.accountId, onImageError, onResolveAttachmentAccess, onMessageAction],
+      );
+    },
+    [
+      selectedGroup.memberCap,
+      session.accountId,
+      onImageError,
+      onResolveAttachmentAccess,
+      onMessageAction,
+    ],
   );
 
   const maintainVisibleContentPosition =
@@ -525,7 +667,25 @@ export function ConversationScreen({
     const distanceFromBottom =
       contentSize.height - (contentOffset.y + layoutMeasurement.height);
     shouldAutoScrollRef.current = distanceFromBottom <= AUTO_SCROLL_THRESHOLD;
+    setShowScrollToEnd((current) => {
+      const next = distanceFromBottom > SCROLL_TO_END_REVEAL_DISTANCE;
+      return next === current ? current : next;
+    });
   }, []);
+
+  const handleScrollToEnd = useCallback(() => {
+    haptics.selection();
+    listRef.current?.scrollToEnd({ animated: true });
+  }, []);
+
+  const handleSendPress = useCallback(() => {
+    haptics.light();
+    // Quick press-bounce: dip the scale, then spring back.
+    sendPressProgress.value = withTiming(1, timings.fast, () => {
+      sendPressProgress.value = withSpring(0, springs.snappy);
+    });
+    onSendMessage();
+  }, [onSendMessage, sendPressProgress]);
 
   const handleScrollToIndexFailed = useCallback(
     ({
@@ -663,11 +823,11 @@ export function ConversationScreen({
   return (
     <KeyboardAvoidingView
       style={styles.conversationShell}
-      // iOS: "padding" keeps the composer above the keyboard.
-      // Android: the app-level shell handles IME avoidance. On recent
-      // edge-to-edge Android builds the activity remains full height even with
-      // adjustResize, so keeping this local KAV inert avoids double movement.
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      // keyboard-controller's KAV reads the real IME frame and works on both
+      // platforms (RN's is inert on Android), so "padding" is enabled on both:
+      // the docked composer stays pinned above the keyboard while the message
+      // list keeps its full height and stays scrollable as the keyboard opens.
+      behavior="padding"
       keyboardVerticalOffset={0}
     >
       <View style={styles.conversationTopBar}>
@@ -716,18 +876,49 @@ export function ConversationScreen({
           style={[styles.conversationMessages, styles.conversationLoadingState]}
         >
           <View style={styles.threadList}>
-            <View style={styles.skeletonBubble} />
-            <View style={[styles.skeletonBubble, styles.skeletonBubbleSoft]} />
-            <View style={[styles.skeletonBubble, styles.skeletonBubbleFaint]} />
+            <Shimmer
+              width="58%"
+              height={52}
+              borderRadius={18}
+              style={{ alignSelf: "flex-start" }}
+            />
+            <Shimmer
+              width="44%"
+              height={38}
+              borderRadius={18}
+              style={{ alignSelf: "flex-end" }}
+            />
+            <Shimmer
+              width="68%"
+              height={64}
+              borderRadius={18}
+              style={{ alignSelf: "flex-start" }}
+            />
+            <Shimmer
+              width="36%"
+              height={36}
+              borderRadius={18}
+              style={{ alignSelf: "flex-end" }}
+            />
+            <Shimmer
+              width="50%"
+              height={44}
+              borderRadius={18}
+              style={{ alignSelf: "flex-start" }}
+            />
           </View>
         </View>
       ) : threadMessages.length ? (
         <View style={styles.conversationMessages}>
           {typingNames.length ? (
             <View style={styles.typingBanner}>
-              <Text style={styles.typingBannerText}>
-                {typingNames.join(", ")} {typingNames.length === 1 ? "is" : "are"} typing...
-              </Text>
+              <View style={conversationScreenStyles.typingBannerRow}>
+                <TypingDots />
+                <Text style={styles.typingBannerText}>
+                  {typingNames.join(", ")}{" "}
+                  {typingNames.length === 1 ? "is" : "are"} typing...
+                </Text>
+              </View>
             </View>
           ) : null}
           <FlatList
@@ -759,6 +950,22 @@ export function ConversationScreen({
             }
             renderItem={renderMessageItem}
           />
+          <Animated.View
+            pointerEvents={showScrollToEnd ? "auto" : "none"}
+            style={[
+              conversationScreenStyles.scrollToEndFab,
+              scrollToEndFabStyle,
+            ]}
+          >
+            <Pressable
+              accessibilityLabel="Jump to latest messages"
+              hitSlop={8}
+              onPress={handleScrollToEnd}
+              style={conversationScreenStyles.scrollToEndFabPressable}
+            >
+              <Text style={conversationScreenStyles.scrollToEndFabIcon}>↓</Text>
+            </Pressable>
+          </Animated.View>
         </View>
       ) : (
         <View style={[styles.conversationMessages, styles.emptyState]}>
@@ -771,18 +978,31 @@ export function ConversationScreen({
         </View>
       )}
 
-      <View style={styles.conversationComposer}>
+      <Animated.View
+        style={styles.conversationComposer}
+        layout={LinearTransition.duration(durations.fast)}
+      >
         {editingMessageId ? (
-          <View style={styles.editModeBanner}>
+          <Animated.View
+            style={styles.editModeBanner}
+            entering={FadeIn.duration(durations.fast)}
+            exiting={FadeOut.duration(durations.fast)}
+            layout={LinearTransition.duration(durations.fast)}
+          >
             <Text style={styles.editModeBannerText}>Editing message</Text>
             <Pressable onPress={onCancelEdit}>
               <Text style={styles.inlineAction}>Cancel</Text>
             </Pressable>
-          </View>
+          </Animated.View>
         ) : null}
 
         {replyingToMessage && !editingMessageId ? (
-          <View style={styles.replyComposerBanner}>
+          <Animated.View
+            style={styles.replyComposerBanner}
+            entering={FadeIn.duration(durations.fast)}
+            exiting={FadeOut.duration(durations.fast)}
+            layout={LinearTransition.duration(durations.fast)}
+          >
             <View style={styles.replyComposerAccent} />
             <View style={styles.replyComposerCopy}>
               <Text style={styles.replyComposerTitle} numberOfLines={1}>
@@ -798,11 +1018,16 @@ export function ConversationScreen({
             <Pressable onPress={onCancelReply}>
               <Text style={styles.inlineAction}>Cancel</Text>
             </Pressable>
-          </View>
+          </Animated.View>
         ) : null}
 
         {pendingAttachment && !editingMessageId ? (
-          <View style={styles.pendingAttachmentCard}>
+          <Animated.View
+            style={styles.pendingAttachmentCard}
+            entering={FadeIn.duration(durations.fast)}
+            exiting={FadeOut.duration(durations.fast)}
+            layout={LinearTransition.duration(durations.fast)}
+          >
             <View style={styles.pendingAttachmentHeader}>
               <Text style={styles.infoTitle}>
                 {pendingAttachmentView?.title ?? "Attachment ready"}
@@ -840,7 +1065,7 @@ export function ConversationScreen({
               {pendingAttachment.fileName} ·{" "}
               {formatBytes(pendingAttachment.byteLength || 0)}
             </Text>
-          </View>
+          </Animated.View>
         ) : null}
 
         <View style={styles.composerDock}>
@@ -887,20 +1112,19 @@ export function ConversationScreen({
             onSelectionChange={handleDraftSelectionChange}
           />
 
-          <Pressable
-            style={[
-              styles.composerSendCircle,
-              sendDisabled ? styles.composerSendCircleDisabled : null,
-            ]}
-            onPress={onSendMessage}
-            disabled={sendDisabled}
-          >
-            <Text style={styles.composerSendIcon}>
-              {isSendingMessage ? "…" : editingMessageId ? "✓" : "↑"}
-            </Text>
-          </Pressable>
+          <Animated.View style={sendCircleStyle}>
+            <Pressable
+              style={styles.composerSendCircle}
+              onPress={handleSendPress}
+              disabled={sendDisabled}
+            >
+              <Text style={styles.composerSendIcon}>
+                {isSendingMessage ? "…" : editingMessageId ? "✓" : "↑"}
+              </Text>
+            </Pressable>
+          </Animated.View>
         </View>
-      </View>
+      </Animated.View>
 
       <FormattingMenuSheet
         visible={formattingMenuOpen}

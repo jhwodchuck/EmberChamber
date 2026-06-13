@@ -369,6 +369,14 @@ export function SettingsScreen({
             )
           }
         />
+        <ToggleRow
+          title="OLED dark background"
+          description="Use a true-black background to save power and cut glow on OLED screens."
+          value={privacyDefaults.oledDark}
+          onPress={() =>
+            onUpdatePrivacy("oledDark", !privacyDefaults.oledDark)
+          }
+        />
       </View>
 
       <Pressable style={styles.secondaryButton} onPress={onSignOut}>
