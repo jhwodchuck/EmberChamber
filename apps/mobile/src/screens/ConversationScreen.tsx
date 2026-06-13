@@ -467,6 +467,28 @@ export function ConversationScreen({
     transform: [{ scale: 0.6 + scrollToEndProgress.value * 0.4 }],
   }));
 
+  // Send control: `sendEnabled` springs the circle between its disabled
+  // (dimmed, slightly shrunk) and enabled (full, popped) states, while
+  // `sendPress` adds a quick press-bounce on tap. They multiply into one scale.
+  const sendEnabled = !sendDisabled;
+  const sendEnabledProgress = useSharedValue(sendEnabled ? 1 : 0);
+  const sendPressProgress = useSharedValue(0);
+  useEffect(() => {
+    sendEnabledProgress.value = withSpring(
+      sendEnabled ? 1 : 0,
+      springs.snappy,
+    );
+  }, [sendEnabled, sendEnabledProgress]);
+
+  const sendCircleStyle = useAnimatedStyle(() => {
+    const baseScale = 0.85 + sendEnabledProgress.value * 0.15;
+    const pressScale = 1 - sendPressProgress.value * 0.16;
+    return {
+      opacity: 0.45 + sendEnabledProgress.value * 0.55,
+      transform: [{ scale: baseScale * pressScale }],
+    };
+  });
+
   const renderMessageItem = useCallback(
     ({ item }: { item: (typeof conversationRows)[number] }) => {
       if (item.type === "date") {
@@ -651,6 +673,15 @@ export function ConversationScreen({
     haptics.selection();
     listRef.current?.scrollToEnd({ animated: true });
   }, []);
+
+  const handleSendPress = useCallback(() => {
+    haptics.light();
+    // Quick press-bounce: dip the scale, then spring back.
+    sendPressProgress.value = withTiming(1, timings.fast, () => {
+      sendPressProgress.value = withSpring(0, springs.snappy);
+    });
+    onSendMessage();
+  }, [onSendMessage, sendPressProgress]);
 
   const handleScrollToIndexFailed = useCallback(
     ({
@@ -1032,18 +1063,17 @@ export function ConversationScreen({
             onSelectionChange={handleDraftSelectionChange}
           />
 
-          <Pressable
-            style={[
-              styles.composerSendCircle,
-              sendDisabled ? styles.composerSendCircleDisabled : null,
-            ]}
-            onPress={onSendMessage}
-            disabled={sendDisabled}
-          >
-            <Text style={styles.composerSendIcon}>
-              {isSendingMessage ? "…" : editingMessageId ? "✓" : "↑"}
-            </Text>
-          </Pressable>
+          <Animated.View style={sendCircleStyle}>
+            <Pressable
+              style={styles.composerSendCircle}
+              onPress={handleSendPress}
+              disabled={sendDisabled}
+            >
+              <Text style={styles.composerSendIcon}>
+                {isSendingMessage ? "…" : editingMessageId ? "✓" : "↑"}
+              </Text>
+            </Pressable>
+          </Animated.View>
         </View>
       </View>
 
