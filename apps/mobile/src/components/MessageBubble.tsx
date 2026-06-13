@@ -15,9 +15,14 @@ import {
   Text,
   View,
 } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
+  Extrapolation,
+  interpolate,
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  withSpring,
   withTiming,
 } from "react-native-reanimated";
 import {
@@ -29,8 +34,13 @@ import type { GroupThreadMessage } from "../types";
 import { formatBytes, parseSharedLocation } from "../lib/utils";
 import { styles, theme } from "../styles";
 import { avatarColor, avatarInitial } from "../lib/avatarColor";
-import { timings } from "../lib/motion";
-import { bubbleStyles } from "./messageBubble.styles";
+import { haptics } from "../lib/haptics";
+import { springs, timings } from "../lib/motion";
+import {
+  bubbleStyles,
+  REPLY_MAX_TRAVEL,
+  REPLY_THRESHOLD,
+} from "./messageBubble.styles";
 import { ImageViewerModal } from "./ImageViewerModal";
 import {
   MessageContextMenu,
@@ -428,23 +438,121 @@ export const MessageBubble = memo(function MessageBubble({
     }
   }, [sharedLocation]);
 
+  // Swipe-to-reply: own messages swipe left, incoming swipe right. The bubble
+  // tracks the finger up to a soft cap, fires a single threshold haptic, and on
+  // release past the threshold dispatches the same reply action the menu uses.
+  const canSwipeReply = !isDeleted && Boolean(onAction);
+  const swipeDirection = isOwnMessage ? -1 : 1; // px sign of a valid reply drag
+  const translateX = useSharedValue(0);
+  const swipeArmed = useSharedValue(false);
+
+  const openMenu = useCallback(() => {
+    if (!isDeleted) {
+      haptics.medium();
+      setMenuVisible(true);
+    }
+  }, [isDeleted]);
+
+  const dispatchReply = useCallback(() => {
+    onAction?.(message.id, { kind: "reply" });
+  }, [message.id, onAction]);
+
+  const swipeGesture = useMemo(() => {
+    const longPress = Gesture.LongPress()
+      .minDuration(300)
+      .maxDistance(12)
+      .onStart(() => {
+        runOnJS(openMenu)();
+      });
+
+    const pan = Gesture.Pan()
+      // Only claim the gesture once the drag is clearly horizontal in the reply
+      // direction, so taps on links/images/reactions and vertical scrolling all
+      // still pass through untouched.
+      .activeOffsetX(isOwnMessage ? -12 : 12)
+      .failOffsetX(isOwnMessage ? 16 : -16)
+      .failOffsetY([-12, 12])
+      .enabled(canSwipeReply)
+      .onUpdate((event) => {
+        // Resist drags away from the reply direction; cap the travel softly.
+        const raw = event.translationX * swipeDirection;
+        const clamped = Math.max(0, Math.min(raw, REPLY_MAX_TRAVEL));
+        translateX.value = clamped * swipeDirection;
+        const crossed = clamped >= REPLY_THRESHOLD;
+        if (crossed && !swipeArmed.value) {
+          swipeArmed.value = true;
+          runOnJS(haptics.light)();
+        } else if (!crossed && swipeArmed.value) {
+          swipeArmed.value = false;
+        }
+      })
+      .onEnd(() => {
+        if (Math.abs(translateX.value) >= REPLY_THRESHOLD) {
+          runOnJS(dispatchReply)();
+        }
+        translateX.value = withSpring(0, springs.gentle);
+        swipeArmed.value = false;
+      });
+
+    return Gesture.Simultaneous(longPress, pan);
+  }, [
+    canSwipeReply,
+    dispatchReply,
+    isOwnMessage,
+    openMenu,
+    swipeArmed,
+    swipeDirection,
+    translateX,
+  ]);
+
+  const bubbleSwipeStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
+
+  const replyHintStyle = useAnimatedStyle(() => {
+    const progress = interpolate(
+      Math.abs(translateX.value),
+      [0, REPLY_THRESHOLD],
+      [0, 1],
+      Extrapolation.CLAMP,
+    );
+    return {
+      opacity: progress,
+      transform: [{ scale: 0.6 + progress * 0.4 }],
+    };
+  });
+
   return (
     <>
-      <Pressable
-        onLongPress={() => {
-          if (!isDeleted) {
-            setMenuVisible(true);
-          }
-        }}
-        delayLongPress={300}
-        style={[
-          bubbleStyles.row,
-          isOwnMessage && bubbleStyles.rowOwn,
-          isFirstInGroup
-            ? bubbleStyles.rowFirstInGroup
-            : bubbleStyles.rowGrouped,
-        ]}
-      >
+      <GestureDetector gesture={swipeGesture}>
+        <View
+          style={[
+            bubbleStyles.swipeContainer,
+            isFirstInGroup
+              ? bubbleStyles.rowFirstInGroup
+              : bubbleStyles.rowGrouped,
+          ]}
+        >
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              bubbleStyles.replyHint,
+              isOwnMessage
+                ? bubbleStyles.replyHintOwn
+                : bubbleStyles.replyHintIncoming,
+              replyHintStyle,
+            ]}
+          >
+            <Text style={bubbleStyles.replyHintIcon}>↩︎</Text>
+          </Animated.View>
+
+          <Animated.View
+            style={[
+              bubbleStyles.row,
+              isOwnMessage && bubbleStyles.rowOwn,
+              bubbleSwipeStyle,
+            ]}
+          >
         {showAvatar && !isOwnMessage ? (
           <View style={bubbleStyles.gutter}>
             {isLastInGroup ? (
@@ -682,8 +790,10 @@ export const MessageBubble = memo(function MessageBubble({
               <ReadTicks read={(message.readByCount ?? 0) >= 1} />
             ) : null}
           </View>
+            </View>
+          </Animated.View>
         </View>
-      </Pressable>
+      </GestureDetector>
 
       <MessageContextMenu
         visible={menuVisible}
