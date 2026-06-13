@@ -11,7 +11,7 @@
     "android": {
       "package": "com.emberchamber.mobile",
       "versionCode": 6,
-      "softwareKeyboardLayoutMode": "pan",
+      "softwareKeyboardLayoutMode": "resize",
       "blockedPermissions": ["android.permission.RECORD_AUDIO"],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
