@@ -8,17 +8,24 @@ import {
 } from "react";
 import {
   ActivityIndicator,
-  Clipboard,
   Image,
   Linking,
   Pressable,
   Text,
   View,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
+  Extrapolation,
+  interpolate,
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  withSequence,
+  withSpring,
   withTiming,
+  ZoomIn,
 } from "react-native-reanimated";
 import {
   parseFormattedMessage,
@@ -29,8 +36,13 @@ import type { GroupThreadMessage } from "../types";
 import { formatBytes, parseSharedLocation } from "../lib/utils";
 import { styles, theme } from "../styles";
 import { avatarColor, avatarInitial } from "../lib/avatarColor";
-import { timings } from "../lib/motion";
-import { bubbleStyles } from "./messageBubble.styles";
+import { haptics } from "../lib/haptics";
+import { springs, timings } from "../lib/motion";
+import {
+  bubbleStyles,
+  REPLY_MAX_TRAVEL,
+  REPLY_THRESHOLD,
+} from "./messageBubble.styles";
 import { ImageViewerModal } from "./ImageViewerModal";
 import {
   MessageContextMenu,
@@ -61,6 +73,63 @@ const ReadTicks = memo(function ReadTicks({ read }: { read: boolean }) {
         ✓
       </Animated.Text>
     </View>
+  );
+});
+
+// A single reaction chip that pops in with a bouncy spring on first appearance,
+// re-pops whenever its count changes (someone toggled it), and gives a quick
+// scale bounce + light haptic the moment it is tapped — before the toggle round
+// trip — so the gesture feels instant.
+const ReactionChip = memo(function ReactionChip({
+  emoji,
+  count,
+  isActive,
+  onToggle,
+}: {
+  emoji: string;
+  count: number;
+  isActive: boolean;
+  onToggle: () => void;
+}) {
+  const scale = useSharedValue(1);
+
+  useEffect(() => {
+    // Re-pop when the count changes so toggles feel alive even after first mount.
+    scale.value = withSequence(
+      withTiming(1.18, timings.fast),
+      withSpring(1, springs.bouncy),
+    );
+  }, [count, scale]);
+
+  const handlePress = useCallback(() => {
+    haptics.light();
+    scale.value = withSequence(
+      withTiming(0.86, timings.fast),
+      withSpring(1, springs.bouncy),
+    );
+    onToggle();
+  }, [onToggle, scale]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Animated.View entering={ZoomIn.springify().damping(12).stiffness(320)}>
+      <Pressable onPress={handlePress}>
+        <Animated.View
+          style={[
+            styles.messageReactionChip,
+            isActive ? styles.messageReactionChipActive : null,
+            animatedStyle,
+          ]}
+        >
+          <Text style={styles.messageReactionText}>
+            {emoji} {count}
+          </Text>
+        </Animated.View>
+      </Pressable>
+    </Animated.View>
   );
 });
 
@@ -428,23 +497,122 @@ export const MessageBubble = memo(function MessageBubble({
     }
   }, [sharedLocation]);
 
+  // Swipe-to-reply: own messages swipe left, incoming swipe right. The bubble
+  // tracks the finger up to a soft cap, fires a single threshold haptic, and on
+  // release past the threshold dispatches the same reply action the menu uses.
+  const canSwipeReply = !isDeleted && Boolean(onAction);
+  const swipeDirection = isOwnMessage ? -1 : 1; // px sign of a valid reply drag
+  const translateX = useSharedValue(0);
+  const swipeArmed = useSharedValue(false);
+
+  const openMenu = useCallback(() => {
+    if (!isDeleted) {
+      // The open haptic + entrance animation are owned by MessageContextMenu so
+      // it fires once regardless of how the menu was triggered.
+      setMenuVisible(true);
+    }
+  }, [isDeleted]);
+
+  const dispatchReply = useCallback(() => {
+    onAction?.(message.id, { kind: "reply" });
+  }, [message.id, onAction]);
+
+  const swipeGesture = useMemo(() => {
+    const longPress = Gesture.LongPress()
+      .minDuration(300)
+      .maxDistance(12)
+      .onStart(() => {
+        runOnJS(openMenu)();
+      });
+
+    const pan = Gesture.Pan()
+      // Only claim the gesture once the drag is clearly horizontal in the reply
+      // direction, so taps on links/images/reactions and vertical scrolling all
+      // still pass through untouched.
+      .activeOffsetX(isOwnMessage ? -12 : 12)
+      .failOffsetX(isOwnMessage ? 16 : -16)
+      .failOffsetY([-12, 12])
+      .enabled(canSwipeReply)
+      .onUpdate((event) => {
+        // Resist drags away from the reply direction; cap the travel softly.
+        const raw = event.translationX * swipeDirection;
+        const clamped = Math.max(0, Math.min(raw, REPLY_MAX_TRAVEL));
+        translateX.value = clamped * swipeDirection;
+        const crossed = clamped >= REPLY_THRESHOLD;
+        if (crossed && !swipeArmed.value) {
+          swipeArmed.value = true;
+          runOnJS(haptics.light)();
+        } else if (!crossed && swipeArmed.value) {
+          swipeArmed.value = false;
+        }
+      })
+      .onEnd(() => {
+        if (Math.abs(translateX.value) >= REPLY_THRESHOLD) {
+          runOnJS(dispatchReply)();
+        }
+        translateX.value = withSpring(0, springs.gentle);
+        swipeArmed.value = false;
+      });
+
+    return Gesture.Simultaneous(longPress, pan);
+  }, [
+    canSwipeReply,
+    dispatchReply,
+    isOwnMessage,
+    openMenu,
+    swipeArmed,
+    swipeDirection,
+    translateX,
+  ]);
+
+  const bubbleSwipeStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
+
+  const replyHintStyle = useAnimatedStyle(() => {
+    const progress = interpolate(
+      Math.abs(translateX.value),
+      [0, REPLY_THRESHOLD],
+      [0, 1],
+      Extrapolation.CLAMP,
+    );
+    return {
+      opacity: progress,
+      transform: [{ scale: 0.6 + progress * 0.4 }],
+    };
+  });
+
   return (
     <>
-      <Pressable
-        onLongPress={() => {
-          if (!isDeleted) {
-            setMenuVisible(true);
-          }
-        }}
-        delayLongPress={300}
-        style={[
-          bubbleStyles.row,
-          isOwnMessage && bubbleStyles.rowOwn,
-          isFirstInGroup
-            ? bubbleStyles.rowFirstInGroup
-            : bubbleStyles.rowGrouped,
-        ]}
-      >
+      <GestureDetector gesture={swipeGesture}>
+        <View
+          style={[
+            bubbleStyles.swipeContainer,
+            isFirstInGroup
+              ? bubbleStyles.rowFirstInGroup
+              : bubbleStyles.rowGrouped,
+          ]}
+        >
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              bubbleStyles.replyHint,
+              isOwnMessage
+                ? bubbleStyles.replyHintOwn
+                : bubbleStyles.replyHintIncoming,
+              replyHintStyle,
+            ]}
+          >
+            <Text style={bubbleStyles.replyHintIcon}>↩︎</Text>
+          </Animated.View>
+
+          <Animated.View
+            style={[
+              bubbleStyles.row,
+              isOwnMessage && bubbleStyles.rowOwn,
+              bubbleSwipeStyle,
+            ]}
+          >
         {showAvatar && !isOwnMessage ? (
           <View style={bubbleStyles.gutter}>
             {isLastInGroup ? (
@@ -646,25 +814,17 @@ export const MessageBubble = memo(function MessageBubble({
 
           {reactionEntries.length ? (
             <View style={styles.messageReactionRow}>
-              {reactionEntries.map(([emoji, accountIds]) => {
-                const isActive = accountIds.includes(selfAccountId);
-                return (
-                  <Pressable
-                    key={emoji}
-                    style={[
-                      styles.messageReactionChip,
-                      isActive ? styles.messageReactionChipActive : null,
-                    ]}
-                    onPress={() =>
-                      onAction?.(message.id, { kind: "react", emoji })
-                    }
-                  >
-                    <Text style={styles.messageReactionText}>
-                      {emoji} {accountIds.length}
-                    </Text>
-                  </Pressable>
-                );
-              })}
+              {reactionEntries.map(([emoji, accountIds]) => (
+                <ReactionChip
+                  key={emoji}
+                  emoji={emoji}
+                  count={accountIds.length}
+                  isActive={accountIds.includes(selfAccountId)}
+                  onToggle={() =>
+                    onAction?.(message.id, { kind: "react", emoji })
+                  }
+                />
+              ))}
             </View>
           ) : null}
 
@@ -682,8 +842,10 @@ export const MessageBubble = memo(function MessageBubble({
               <ReadTicks read={(message.readByCount ?? 0) >= 1} />
             ) : null}
           </View>
+            </View>
+          </Animated.View>
         </View>
-      </Pressable>
+      </GestureDetector>
 
       <MessageContextMenu
         visible={menuVisible}
@@ -705,7 +867,7 @@ export const MessageBubble = memo(function MessageBubble({
         onClose={() => setMenuVisible(false)}
         onAction={(action) => {
           if (action.kind === "copy" && message.text) {
-            Clipboard.setString(message.text);
+            void Clipboard.setStringAsync(message.text);
           } else if (action.kind === "view") {
             setViewerVisible(true);
             return;
