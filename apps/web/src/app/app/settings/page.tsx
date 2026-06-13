@@ -1,9 +1,8 @@
 "use client";
 
-import * as Switch from "@radix-ui/react-switch";
-import { clsx } from "clsx";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { Switch, Tabs } from "@emberchamber/ui/components";
 import { DeviceLinkPanel } from "@/components/device-link-panel";
 import { StatusCallout } from "@/components/status-callout";
 import { formatUtcDate } from "@/lib/format";
@@ -209,30 +208,12 @@ export default function SettingsPage() {
         Settings
       </h2>
 
-      <div
-        role="tablist"
-        aria-label="Settings sections"
-        className="mb-6 flex gap-1 border-b border-[var(--border)]"
-      >
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            id={`settings-tab-${tab.id}`}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === tab.id}
-            aria-controls={`settings-panel-${tab.id}`}
-            onClick={() => setActiveTab(tab.id)}
-            className={clsx(
-              "px-4 py-2 text-sm font-medium transition-colors",
-              activeTab === tab.id
-                ? "border-b-2 border-brand-500 text-brand-500"
-                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div className="mb-6">
+        <Tabs
+          tabs={tabs.map((t) => ({ value: t.id, label: t.label }))}
+          value={activeTab}
+          onChange={(v) => setActiveTab(v as typeof activeTab)}
+        />
       </div>
 
       {activeTab === "profile" ? (
@@ -434,29 +415,23 @@ export default function SettingsPage() {
                   </p>
                 </div>
 
-                <Switch.Root
+                <Switch
                   checked={privacy[key]}
-                  onCheckedChange={(checked) =>
-                    setPrivacy((current) => ({ ...current, [key]: checked }))
+                  onChange={
+                    privacyControlsDisabled
+                      ? undefined
+                      : (checked) =>
+                          setPrivacy((current) => ({
+                            ...current,
+                            [key]: checked,
+                          }))
                   }
-                  aria-labelledby={labelId}
-                  aria-describedby={descriptionId}
-                  disabled={privacyControlsDisabled}
-                  className={clsx(
-                    "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500",
-                    privacy[key]
-                      ? "border-brand-500 bg-brand-500"
-                      : "border-[var(--border)] bg-[var(--bg-secondary)]",
-                    privacyControlsDisabled && "opacity-60",
-                  )}
-                >
-                  <Switch.Thumb
-                    className={clsx(
-                      "block h-4 w-4 rounded-full bg-white transition-transform",
-                      privacy[key] ? "translate-x-6" : "translate-x-1",
-                    )}
-                  />
-                </Switch.Root>
+                  style={
+                    privacyControlsDisabled
+                      ? { opacity: 0.6, pointerEvents: "none" }
+                      : undefined
+                  }
+                />
               </div>
             );
           })}

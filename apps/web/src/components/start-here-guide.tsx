@@ -248,7 +248,7 @@ export function StartHereGuide() {
         <StatusCallout
           tone="info"
           title="Entry is coordinated in small beta waves right now"
-          className="border-white/10 bg-white/[0.04]"
+          style={{ borderColor: "rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)" }}
         >
           Registration links are not being opened broadly on this deployment
           yet. You can still review the trust model, check the available builds,

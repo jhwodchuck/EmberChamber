@@ -36,6 +36,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { clsx } from "clsx";
+import { Button, MessageBubble } from "@emberchamber/ui/components";
 import { Avatar } from "@/components/avatar";
 import { CopyButton } from "@/components/copy-button";
 import { FormattedMessage } from "@/components/formatted-message";
@@ -1217,16 +1218,20 @@ export default function ChatPage() {
           title={loadError.title}
           action={
             <div className="flex flex-wrap gap-2">
-              <button
+              <Button
+                variant="primary"
                 type="button"
-                className="btn-primary"
                 onClick={() => void loadConversation(id)}
               >
                 Try again
-              </button>
-              <Link href="/app" className="btn-ghost">
+              </Button>
+              <Button
+                variant="ghost"
+                type="button"
+                onClick={() => router.push("/app")}
+              >
                 Back to overview
-              </Link>
+              </Button>
             </div>
           }
         >
@@ -1390,7 +1395,7 @@ export default function ChatPage() {
                       row.message.isOwn ? "justify-end" : "justify-start",
                     )}
                   >
-                    {/* Hover action menu (shown on group hover) */}
+                    {/* Hover reply action for other's messages */}
                     {!row.message.isOwn && (
                       <div className="mb-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                         <button
@@ -1402,83 +1407,143 @@ export default function ChatPage() {
                         </button>
                       </div>
                     )}
-                    <div
-                      className={clsx(
-                        "max-w-[min(82%,46rem)] rounded-[1.55rem] border px-4 py-3 shadow-[0_10px_24px_rgba(32,19,18,0.06)]",
+                    <MessageBubble
+                      own={row.message.isOwn}
+                      sender={
+                        !row.message.isOwn
+                          ? row.message.senderDisplayName
+                          : undefined
+                      }
+                      time={formatMessageTime(row.message.createdAt)}
+                      style={
                         row.message.kind === "system_notice"
-                          ? "border-brand-500/35 bg-brand-500/[0.08]"
-                          : row.message.isOwn
-                            ? "border-brand-500/35 bg-brand-500/[0.09]"
-                            : "border-[var(--border)] bg-[var(--bg-secondary)]",
-                      )}
+                          ? { opacity: 0.8 }
+                          : undefined
+                      }
                     >
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-600">
-                          {row.message.isOwn
-                            ? "You"
-                            : row.message.senderDisplayName}
-                        </p>
-                        <span className="text-[11px] text-[var(--text-secondary)]">
-                          {formatMessageTime(row.message.createdAt)}
-                        </span>
-                        {row.message.deliveryLabel ? (
-                          <span className="text-[11px] text-[var(--text-secondary)]">
-                            {row.message.deliveryLabel}
-                          </span>
-                        ) : null}
-                        {(row.message as unknown as GroupThreadMessage).editedAt ? (
-                          <span className="text-[11px] italic text-[var(--text-secondary)]">edited</span>
-                        ) : null}
-                        {row.message.isOwn && (row.message as unknown as GroupThreadMessage).readByCount ? (
-                          <span className="text-[11px] text-brand-600">✓✓</span>
-                        ) : null}
-                      </div>
+                      {/* Delivery / edit metadata */}
+                      {(row.message.deliveryLabel ||
+                        (row.message as unknown as GroupThreadMessage).editedAt ||
+                        (row.message.isOwn &&
+                          (row.message as unknown as GroupThreadMessage).readByCount)) ? (
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: "0.5rem",
+                            marginBottom: "0.25rem",
+                            fontSize: "0.6875rem",
+                            color: "var(--text-muted)",
+                          }}
+                        >
+                          {(row.message as unknown as GroupThreadMessage).editedAt ? (
+                            <span style={{ fontStyle: "italic" }}>edited</span>
+                          ) : null}
+                          {row.message.deliveryLabel ? (
+                            <span>{row.message.deliveryLabel}</span>
+                          ) : null}
+                          {row.message.isOwn &&
+                          (row.message as unknown as GroupThreadMessage).readByCount ? (
+                            <span style={{ color: "var(--ember-500)" }}>✓✓</span>
+                          ) : null}
+                        </div>
+                      ) : null}
 
                       {/* Reply quote */}
                       {(row.message as unknown as GroupThreadMessage).replyTo ? (
-                        <div className="mb-2 rounded-xl border-l-2 border-brand-500 bg-[var(--bg-primary)] px-3 py-2">
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-600">
+                        <div
+                          style={{
+                            marginBottom: "0.5rem",
+                            paddingLeft: "0.75rem",
+                            paddingBlock: "0.4rem",
+                            borderLeft: "2px solid var(--ember-500)",
+                            background: "rgba(0,0,0,0.12)",
+                            borderRadius: "0 0.5rem 0.5rem 0",
+                          }}
+                        >
+                          <p
+                            style={{
+                              fontSize: "0.6875rem",
+                              fontWeight: 600,
+                              letterSpacing: "0.14em",
+                              textTransform: "uppercase",
+                              color: "var(--ember-400)",
+                            }}
+                          >
                             {(row.message as unknown as GroupThreadMessage).replyTo!.senderDisplayName}
                           </p>
-                          <p className="mt-0.5 line-clamp-2 text-xs text-[var(--text-secondary)]">
+                          <p
+                            style={{
+                              marginTop: "0.125rem",
+                              fontSize: "0.75rem",
+                              color: "var(--text-secondary)",
+                              overflow: "hidden",
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                            }}
+                          >
                             {(row.message as unknown as GroupThreadMessage).replyTo!.text ?? "Attachment"}
                           </p>
                         </div>
                       ) : null}
 
+                      {/* Message body */}
                       {(row.message as unknown as GroupThreadMessage).deletedAt ? (
-                        <p className="mt-1 text-sm italic text-[var(--text-secondary)]">
+                        <p style={{ fontStyle: "italic", color: "var(--text-muted)", fontSize: "0.875rem" }}>
                           [Message deleted]
                         </p>
                       ) : row.message.text ? (
                         <FormattedMessage text={row.message.text} />
                       ) : null}
 
+                      {/* Reactions */}
                       {!(row.message as unknown as GroupThreadMessage).deletedAt ? (
-                        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                        <div
+                          style={{
+                            marginTop: "0.5rem",
+                            display: "flex",
+                            flexWrap: "wrap",
+                            alignItems: "center",
+                            gap: "0.375rem",
+                          }}
+                        >
                           {getMessageReactions(row.message.id).map((reaction) => (
                             <button
                               key={`${row.message.id}-${reaction.emoji}`}
                               type="button"
                               onClick={() => toggleReaction(row.message.id, reaction.emoji)}
-                              className={clsx(
-                                "rounded-full border px-2 py-0.5 text-xs",
-                                reaction.userReacted
-                                  ? "border-brand-500/50 bg-brand-500/10"
-                                  : "border-[var(--border)] bg-[var(--bg-primary)]",
-                              )}
+                              style={{
+                                borderRadius: "var(--radius-full)",
+                                border: "1px solid",
+                                borderColor: reaction.userReacted
+                                  ? "rgba(234,111,63,0.5)"
+                                  : "var(--border)",
+                                background: reaction.userReacted
+                                  ? "rgba(234,111,63,0.1)"
+                                  : "var(--bg-primary)",
+                                padding: "0.1rem 0.4rem",
+                                fontSize: "0.75rem",
+                                cursor: "pointer",
+                              }}
                             >
                               {reaction.emoji} {reaction.count}
                             </button>
                           ))}
 
-                          <div className="flex items-center gap-1">
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
                             {REACTION_EMOJI.map((emoji) => (
                               <button
                                 key={`${row.message.id}-quick-${emoji}`}
                                 type="button"
                                 onClick={() => toggleReaction(row.message.id, emoji)}
-                                className="rounded-full border border-[var(--border)] bg-[var(--bg-primary)] px-1.5 py-0.5 text-xs hover:border-brand-500"
+                                style={{
+                                  borderRadius: "var(--radius-full)",
+                                  border: "1px solid var(--border)",
+                                  background: "var(--bg-primary)",
+                                  padding: "0.1rem 0.35rem",
+                                  fontSize: "0.75rem",
+                                  cursor: "pointer",
+                                }}
                                 aria-label={`React with ${emoji}`}
                               >
                                 {emoji}
@@ -1489,42 +1554,78 @@ export default function ChatPage() {
                         </div>
                       ) : null}
 
-                      {!(row.message as unknown as GroupThreadMessage).deletedAt && row.message.attachment ? (
+                      {/* Attachment */}
+                      {!(row.message as unknown as GroupThreadMessage).deletedAt &&
+                      row.message.attachment ? (
                         <button
                           type="button"
                           onClick={() => void handleDownloadAttachment(row.message)}
-                          className="mt-3 flex w-full items-center justify-between gap-3 rounded-[1.2rem] border border-[var(--border)] bg-[var(--bg-primary)] px-3 py-3 text-left transition-colors hover:border-brand-500"
+                          style={{
+                            marginTop: "0.75rem",
+                            display: "flex",
+                            width: "100%",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            gap: "0.75rem",
+                            borderRadius: "var(--radius-2xl)",
+                            border: "1px solid var(--border)",
+                            background: "rgba(0,0,0,0.15)",
+                            padding: "0.6rem 0.75rem",
+                            textAlign: "left",
+                            cursor: "pointer",
+                          }}
                         >
                           <div>
-                            <p className="text-sm font-semibold text-[var(--text-primary)]">
+                            <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--text-primary)" }}>
                               {row.message.attachment.fileName}
                             </p>
-                            <p className="mt-1 text-xs uppercase tracking-[0.14em] text-[var(--text-secondary)]">
+                            <p
+                              style={{
+                                marginTop: "0.25rem",
+                                fontSize: "0.6875rem",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.14em",
+                                color: "var(--text-muted)",
+                              }}
+                            >
                               {row.message.attachment.contentClass} ·{" "}
-                              {formatBytes(
-                                row.message.attachment.byteLength ?? 0,
-                              )}
+                              {formatBytes(row.message.attachment.byteLength ?? 0)}
                             </p>
                           </div>
-                          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-600">
+                          <span
+                            style={{
+                              fontSize: "0.6875rem",
+                              fontWeight: 600,
+                              textTransform: "uppercase",
+                              letterSpacing: "0.16em",
+                              color: "var(--ember-400)",
+                            }}
+                          >
                             Download
                           </span>
                         </button>
                       ) : null}
-                    </div>
+                    </MessageBubble>
                     {/* Own message hover actions */}
-                    {row.message.isOwn && !(row.message as unknown as GroupThreadMessage).deletedAt && (
+                    {row.message.isOwn &&
+                    !(row.message as unknown as GroupThreadMessage).deletedAt && (
                       <div className="mb-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                         <button
                           type="button"
-                          onClick={() => handleStartEdit(row.message as unknown as GroupThreadMessage)}
+                          onClick={() =>
+                            handleStartEdit(row.message as unknown as GroupThreadMessage)
+                          }
                           className="rounded-full border border-[var(--border)] bg-[var(--bg-secondary)] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)] transition-colors hover:text-brand-600"
                         >
                           Edit
                         </button>
                         <button
                           type="button"
-                          onClick={() => void handleDeleteMessage(row.message as unknown as GroupThreadMessage)}
+                          onClick={() =>
+                            void handleDeleteMessage(
+                              row.message as unknown as GroupThreadMessage,
+                            )
+                          }
                           className="rounded-full border border-[var(--border)] bg-[var(--bg-secondary)] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)] transition-colors hover:text-red-500"
                         >
                           Delete
@@ -1721,14 +1822,14 @@ export default function ChatPage() {
                       ? "Browser stores decrypted history locally."
                       : "Relay stores this history until migration."}
                   </p>
-                  <button
+                  <Button
+                    variant="primary"
                     type="submit"
-                    className="btn-primary"
                     disabled={isSending}
+                    iconLeft={<SendHorizontal className="h-4 w-4" aria-hidden="true" />}
                   >
-                    <SendHorizontal className="h-4 w-4" aria-hidden="true" />
                     {isSending ? "Sending…" : "Send"}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -1836,13 +1937,14 @@ export default function ChatPage() {
                     ) : null}
 
                     {selectedMember.accountId !== user?.id ? (
-                      <button
+                      <Button
+                        variant="primary"
                         type="button"
                         onClick={() => void handleOpenDm(selectedMember)}
-                        className="btn-primary mt-4 w-full"
+                        style={{ marginTop: "1rem", width: "100%" }}
                       >
                         Start DM
-                      </button>
+                      </Button>
                     ) : null}
                   </div>
                 ) : null}
@@ -2012,14 +2114,15 @@ export default function ChatPage() {
                         />
                       </label>
 
-                      <button
+                      <Button
+                        variant="primary"
                         type="submit"
-                        className="btn-primary w-full"
                         disabled={isCreatingInvite}
+                        iconLeft={<Link2 className="h-4 w-4" aria-hidden="true" />}
+                        style={{ width: "100%" }}
                       >
-                        <Link2 className="h-4 w-4" aria-hidden="true" />
                         {isCreatingInvite ? "Creating…" : "Create invite"}
-                      </button>
+                      </Button>
                     </form>
 
                     {createdInvite ? (
