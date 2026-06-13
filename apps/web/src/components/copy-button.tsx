@@ -3,6 +3,7 @@
 import { Check, Copy } from "lucide-react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { Button } from "@emberchamber/ui/components";
 
 export function CopyButton({
   value,
@@ -37,13 +38,19 @@ export function CopyButton({
   }
 
   return (
-    <button type="button" onClick={handleCopy} className="btn-ghost">
-      {copied ? (
-        <Check className="h-4 w-4" aria-hidden="true" />
-      ) : (
-        <Copy className="h-4 w-4" aria-hidden="true" />
-      )}
+    <Button
+      variant="ghost"
+      type="button"
+      onClick={handleCopy}
+      iconLeft={
+        copied ? (
+          <Check className="h-4 w-4" aria-hidden="true" />
+        ) : (
+          <Copy className="h-4 w-4" aria-hidden="true" />
+        )
+      }
+    >
       {copied ? copiedLabel : label}
-    </button>
+    </Button>
   );
 }

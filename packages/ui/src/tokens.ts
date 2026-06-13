@@ -86,8 +86,8 @@ export const colorRoles = {
   brandPrimaryPressed: colors.ember[600],
   brandSoft: "rgba(234, 111, 63, 0.14)",
   brandMuted: "rgba(234, 111, 63, 0.12)",
-  textPrimary: "#f5f7fa",
-  textSecondary: "#c8ced6",
+  textPrimary: "#fcfbfa",
+  textSecondary: "#d7b9ab",
   textMuted: "#8d98a4",
   textSoft: "#ffd9c9",
   placeholder: "#707b86",
@@ -127,7 +127,11 @@ export const borderRoles = {
 
 export const shadows = {
   glass: "0 28px 70px rgba(0, 0, 0, 0.34)",
+  soft: "0 18px 42px rgba(0, 0, 0, 0.28)",
   glowEmber: "0 16px 38px rgba(234, 111, 63, 0.28)",
+  glowEmberStrong:
+    "0 18px 40px rgba(200, 88, 50, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.22)",
+  glowEmberRing: "0 0 12px rgba(255, 163, 104, 0.35)",
   inset: "inset 0 1px 0 rgba(255, 255, 255, 0.1)",
 } as const;
 
@@ -152,7 +156,7 @@ export const elevationRoles = {
 
 export const typography = {
   fontFamily: {
-    display: ["Georgia", "'Times New Roman'", "serif"],
+    display: ["'Cormorant Garamond'", "Georgia", "'Times New Roman'", "serif"],
     sans: ["'Inter'", "system-ui", "sans-serif"],
     mono: ["'JetBrains Mono'", "'Fira Code'", "monospace"],
   },
@@ -167,6 +171,7 @@ export const typography = {
     "4xl": ["2.25rem", { lineHeight: "2.5rem" }],
     "5xl": ["3rem", { lineHeight: "1" }],
     "6xl": ["3.75rem", { lineHeight: "1" }],
+    "7xl": ["4.5rem", { lineHeight: "1" }],
   },
 } as const;
 
@@ -229,6 +234,7 @@ export const borderRadius = {
   xl: "1.125rem", // 18px
   "2xl": "1.5rem", // 24px
   "3xl": "1.75rem", // 28px
+  "4xl": "2rem", // 32px
   full: "9999px",
 } as const;
 

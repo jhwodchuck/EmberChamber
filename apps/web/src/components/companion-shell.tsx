@@ -22,7 +22,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { clsx } from "clsx";
+import { Badge, Button, SidebarItem } from "@emberchamber/ui/components";
 import { Avatar } from "@/components/avatar";
 import { ChatRail } from "@/components/chat-rail";
 import {
@@ -662,20 +662,15 @@ export function CompanionShell({ children }: { children: ReactNode }) {
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              <div
-                className={clsx(
-                  "hidden rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] sm:block",
-                  isConnected
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                    : "border-amber-200 bg-amber-50 text-amber-700",
-                )}
+              <span
+                className="hidden sm:inline-flex"
                 aria-live="polite"
-                aria-label={
-                  isConnected ? "Relay link: live" : "Relay link: reconnecting"
-                }
+                aria-label={isConnected ? "Relay link: live" : "Relay link: reconnecting"}
               >
-                {isConnected ? "Live relay link" : "Reconnecting"}
-              </div>
+                <Badge tone={isConnected ? "success" : "warning"} dot>
+                  {isConnected ? "Live relay link" : "Reconnecting"}
+                </Badge>
+              </span>
               <div className="hidden text-right sm:block">
                 <p className="text-sm font-medium text-[var(--text-primary)]">
                   {contextValue.userName}
@@ -684,15 +679,15 @@ export function CompanionShell({ children }: { children: ReactNode }) {
                   Signed in relay session
                 </p>
               </div>
-              <button
+              <Button
+                variant="ghost"
                 type="button"
                 onClick={() => void handleSignOut()}
-                className="btn-ghost"
                 disabled={isSigningOut}
+                iconLeft={<LogOut className="h-4 w-4" aria-hidden="true" />}
               >
-                <LogOut className="h-4 w-4" aria-hidden="true" />
                 {isSigningOut ? "Signing Out…" : "Sign Out"}
-              </button>
+              </Button>
             </div>
           </div>
         </header>
@@ -712,7 +707,7 @@ export function CompanionShell({ children }: { children: ReactNode }) {
                 </div>
               </div>
 
-              <nav className="mt-5 space-y-1" aria-label="Workspace navigation">
+              <nav className="mt-5 space-y-0.5" aria-label="Workspace navigation">
                 {primaryLinks.map((item) => {
                   const Icon = item.icon;
                   const isActive =
@@ -721,19 +716,14 @@ export function CompanionShell({ children }: { children: ReactNode }) {
                       pathname.startsWith(`${item.href}/`));
 
                   return (
-                    <Link
+                    <SidebarItem
                       key={item.href}
-                      href={item.href}
-                      className={clsx(
-                        "flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-colors",
-                        isActive
-                          ? "bg-brand-500/10 text-brand-600"
-                          : "text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]",
-                      )}
+                      active={isActive}
+                      icon={<Icon className="h-4 w-4" aria-hidden="true" />}
+                      onClick={() => router.push(item.href)}
                     >
-                      <Icon className="h-4 w-4" aria-hidden="true" />
-                      <span>{item.label}</span>
-                    </Link>
+                      {item.label}
+                    </SidebarItem>
                   );
                 })}
               </nav>

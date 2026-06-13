@@ -8,9 +8,9 @@ import {
   RefreshCw,
   Search,
 } from "lucide-react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useDeferredValue, useMemo, useState } from "react";
-import { clsx } from "clsx";
+import { ConversationRow, IconButton, Input, Tabs } from "@emberchamber/ui/components";
 import {
   CHAT_LIST_FILTERS,
   type ChatListFilter,
@@ -19,7 +19,6 @@ import {
 } from "@/lib/conversation-preferences";
 import {
   conversationDefaultTitle,
-  conversationTypeLabel,
 } from "@/lib/conversation-labels";
 
 type ConversationItem = {
@@ -85,6 +84,7 @@ export function ChatRail({
   onToggleConversationMuted: (conversationId: string) => void;
   onToggleConversationArchived: (conversationId: string) => void;
 }) {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<ChatListFilter>("all");
   const deferredSearch = useDeferredValue(search.trim().toLowerCase());
@@ -122,7 +122,7 @@ export function ChatRail({
         const haystack = [
           conversation.name ?? conversationDefaultTitle(conversation.type),
           conversation.lastMessage?.content ?? "",
-          conversationTypeLabel(conversation.type),
+          conversation.type,
           conversation.historyMode === "device_encrypted"
             ? "local-first"
             : "relay-hosted",
@@ -169,47 +169,32 @@ export function ChatRail({
             {conversations.length} total, {unreadConversationCount} unread
           </p>
         </div>
-        <button
-          type="button"
+        <IconButton
+          size="sm"
+          label="Refresh conversation rail"
           onClick={() => void onRefresh()}
-          className="btn-ghost px-3"
-          aria-label="Refresh conversation rail"
         >
           <RefreshCw className="h-4 w-4" aria-hidden="true" />
-        </button>
+        </IconButton>
       </div>
 
-      <label
-        htmlFor="chat-rail-search"
-        className="mt-5 flex items-center gap-3 rounded-[1.3rem] border border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-3"
-      >
-        <Search className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
-        <input
+      <div className="mt-5">
+        <Input
           id="chat-rail-search"
           type="search"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Search joined chats"
-          className="w-full bg-transparent text-sm text-[var(--text-primary)] outline-none placeholder:text-[var(--text-secondary)]"
+          icon={<Search className="h-4 w-4" />}
         />
-      </label>
+      </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        {CHAT_LIST_FILTERS.map((option) => (
-          <button
-            key={option}
-            type="button"
-            onClick={() => setFilter(option)}
-            className={clsx(
-              "rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] transition-colors",
-              filter === option
-                ? "border-brand-500 bg-brand-500/10 text-brand-600"
-                : "border-[var(--border)] bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
-            )}
-          >
-            {option}
-          </button>
-        ))}
+      <div className="mt-4">
+        <Tabs
+          tabs={[...CHAT_LIST_FILTERS]}
+          value={filter}
+          onChange={(v) => setFilter(v as ChatListFilter)}
+        />
       </div>
 
       <div className="mt-5 space-y-2">
@@ -239,119 +224,59 @@ export function ChatRail({
             return (
               <div
                 key={conversation.id}
-                className={clsx(
-                  "group rounded-[1.45rem] border transition-colors",
-                  isActive
-                    ? "border-brand-500/60 bg-brand-500/[0.08]"
-                    : "border-[var(--border)] bg-[var(--bg-secondary)]",
-                )}
+                style={{ display: "flex", alignItems: "stretch", gap: "4px" }}
               >
-                <div className="flex items-stretch gap-2">
-                  <Link
-                    href={conversation.href}
-                    onClick={() => onOpenConversation(conversation.id)}
-                    className="min-w-0 flex-1 px-4 py-4"
+                <ConversationRow
+                  style={{ flex: 1, minWidth: 0 }}
+                  name={conversation.name ?? conversationDefaultTitle(conversation.type)}
+                  type={conversation.type}
+                  preview={conversation.lastMessage?.content ?? undefined}
+                  time={formatTimestamp(conversation.updatedAt)}
+                  unread={conversation.unreadCount}
+                  historyMode={conversation.historyMode}
+                  active={isActive}
+                  onClick={() => {
+                    onOpenConversation(conversation.id);
+                    router.push(conversation.href);
+                  }}
+                />
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    gap: "2px",
+                    paddingBlock: "4px",
+                  }}
+                >
+                  <IconButton
+                    size="sm"
+                    label={preference.isPinned ? "Unpin conversation" : "Pin conversation"}
+                    active={preference.isPinned}
+                    onClick={() => onToggleConversationPinned(conversation.id)}
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p
-                            className={clsx(
-                              "truncate text-sm font-semibold",
-                              conversation.unreadCount > 0
-                                ? "text-[var(--text-primary)]"
-                                : "text-[var(--text-primary)]/90",
-                            )}
-                          >
-                            {conversation.name ??
-                              conversationDefaultTitle(conversation.type)}
-                          </p>
-                          <span className="rounded-full border border-[var(--border)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-600">
-                            {conversationTypeLabel(conversation.type)}
-                          </span>
-                          {preference.isMuted ? (
-                            <span className="rounded-full border border-[var(--border)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
-                              muted
-                            </span>
-                          ) : null}
-                        </div>
-                        <p className="mt-2 max-h-12 overflow-hidden text-sm leading-6 text-[var(--text-secondary)]">
-                          {conversation.lastMessage?.content ??
-                            (conversation.historyMode === "device_encrypted"
-                              ? "Encrypted chat ready in this browser."
-                              : "No message preview yet.")}
-                        </p>
-                      </div>
-
-                      <div className="flex flex-col items-end gap-2">
-                        <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--text-secondary)]">
-                          {formatTimestamp(conversation.updatedAt)}
-                        </span>
-                        {conversation.unreadCount > 0 ? (
-                          <span className="rounded-full bg-brand-500 px-2 py-0.5 text-[10px] font-semibold text-white">
-                            {conversation.unreadCount > 99
-                              ? "99+"
-                              : conversation.unreadCount}
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-
-                    <div className="mt-3 flex flex-wrap gap-2 text-[11px] uppercase tracking-[0.14em] text-[var(--text-secondary)]">
-                      <span>{conversation.memberCount} members</span>
-                      <span>
-                        {conversation.historyMode === "device_encrypted"
-                          ? "Local-first"
-                          : "Relay-hosted"}
-                      </span>
-                    </div>
-                  </Link>
-
-                  <div className="flex flex-col justify-center gap-1 px-2 py-2">
-                    <button
-                      type="button"
-                      title={preference.isPinned ? "Unpin conversation" : "Pin conversation"}
-                      onClick={() => onToggleConversationPinned(conversation.id)}
-                      className={clsx(
-                        "rounded-full border p-2 text-[var(--text-secondary)] transition-colors hover:border-brand-500 hover:text-brand-600",
-                        preference.isPinned
-                          ? "border-brand-500/40 bg-brand-500/10 text-brand-600"
-                          : "border-transparent bg-transparent",
-                      )}
-                    >
-                      <Pin className="h-3.5 w-3.5" aria-hidden="true" />
-                    </button>
-                    <button
-                      type="button"
-                      title={preference.isMuted ? "Unmute conversation" : "Mute conversation"}
-                      onClick={() => onToggleConversationMuted(conversation.id)}
-                      className={clsx(
-                        "rounded-full border p-2 text-[var(--text-secondary)] transition-colors hover:border-brand-500 hover:text-brand-600",
-                        preference.isMuted
-                          ? "border-brand-500/40 bg-brand-500/10 text-brand-600"
-                          : "border-transparent bg-transparent",
-                      )}
-                    >
-                      <BellOff className="h-3.5 w-3.5" aria-hidden="true" />
-                    </button>
-                    <button
-                      type="button"
-                      title={
-                        preference.isArchived
-                          ? "Return conversation to the main rail"
-                          : "Archive conversation"
-                      }
-                      onClick={() => onToggleConversationArchived(conversation.id)}
-                      className={clsx(
-                        "rounded-full border p-2 text-[var(--text-secondary)] transition-colors hover:border-brand-500 hover:text-brand-600",
-                        preference.isArchived
-                          ? "border-brand-500/40 bg-brand-500/10 text-brand-600"
-                          : "border-transparent bg-transparent",
-                      )}
-                    >
-                      <Archive className="h-3.5 w-3.5" aria-hidden="true" />
-                    </button>
-                  </div>
+                    <Pin className="h-3.5 w-3.5" aria-hidden="true" />
+                  </IconButton>
+                  <IconButton
+                    size="sm"
+                    label={preference.isMuted ? "Unmute conversation" : "Mute conversation"}
+                    active={preference.isMuted}
+                    onClick={() => onToggleConversationMuted(conversation.id)}
+                  >
+                    <BellOff className="h-3.5 w-3.5" aria-hidden="true" />
+                  </IconButton>
+                  <IconButton
+                    size="sm"
+                    label={
+                      preference.isArchived
+                        ? "Return conversation to the main rail"
+                        : "Archive conversation"
+                    }
+                    active={preference.isArchived}
+                    onClick={() => onToggleConversationArchived(conversation.id)}
+                  >
+                    <Archive className="h-3.5 w-3.5" aria-hidden="true" />
+                  </IconButton>
                 </div>
               </div>
             );
