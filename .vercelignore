@@ -18,7 +18,6 @@ crates
 packages/api-types
 packages/client-sdk
 packages/config
-packages/ui
 infra
 docs
 
