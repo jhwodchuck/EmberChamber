@@ -15,6 +15,11 @@ import {
   Text,
   View,
 } from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import {
   parseFormattedMessage,
   type FormattedBlockNode,
@@ -23,12 +28,41 @@ import {
 import type { GroupThreadMessage } from "../types";
 import { formatBytes, parseSharedLocation } from "../lib/utils";
 import { styles, theme } from "../styles";
+import { avatarColor, avatarInitial } from "../lib/avatarColor";
+import { timings } from "../lib/motion";
+import { bubbleStyles } from "./messageBubble.styles";
 import { ImageViewerModal } from "./ImageViewerModal";
 import {
   MessageContextMenu,
   type ContextMenuAction,
 } from "./MessageContextMenu";
 import { useAttachmentManager } from "../hooks/useAttachmentManager";
+
+// Delivery ticks: a first ✓ is always visible, and a second ✓ fades + slides in
+// to settle into ✓✓ once the message has been read by at least one recipient.
+const ReadTicks = memo(function ReadTicks({ read }: { read: boolean }) {
+  const progress = useSharedValue(read ? 1 : 0);
+
+  useEffect(() => {
+    progress.value = withTiming(read ? 1 : 0, timings.base);
+  }, [progress, read]);
+
+  const secondTickStyle = useAnimatedStyle(() => ({
+    opacity: progress.value,
+    transform: [{ translateX: -2 + progress.value * 2 }],
+  }));
+
+  return (
+    <View style={bubbleStyles.ticks}>
+      <Text style={bubbleStyles.tick}>✓</Text>
+      <Animated.Text
+        style={[bubbleStyles.tick, bubbleStyles.tickSecond, secondTickStyle]}
+      >
+        ✓
+      </Animated.Text>
+    </View>
+  );
+});
 
 type InlineRenderOptions = {
   onOpenUrl: (url: string) => void;
@@ -225,6 +259,10 @@ export const MessageBubble = memo(function MessageBubble({
   message,
   isOwnMessage,
   selfAccountId,
+  isFirstInGroup,
+  isLastInGroup,
+  showSenderName,
+  showAvatar,
   onImageError,
   onAction,
   onResolveAttachmentAccess,
@@ -232,6 +270,10 @@ export const MessageBubble = memo(function MessageBubble({
   message: GroupThreadMessage;
   isOwnMessage: boolean;
   selfAccountId: string;
+  isFirstInGroup: boolean;
+  isLastInGroup: boolean;
+  showSenderName: boolean;
+  showAvatar: boolean;
   onImageError?: (messageId: string) => void;
   onAction?: (messageId: string, action: ContextMenuAction) => void;
   onResolveAttachmentAccess?: (
@@ -395,29 +437,52 @@ export const MessageBubble = memo(function MessageBubble({
           }
         }}
         delayLongPress={300}
-        style={[styles.messageRow, isOwnMessage ? styles.messageRowOwn : null]}
+        style={[
+          bubbleStyles.row,
+          isOwnMessage && bubbleStyles.rowOwn,
+          isFirstInGroup
+            ? bubbleStyles.rowFirstInGroup
+            : bubbleStyles.rowGrouped,
+        ]}
       >
+        {showAvatar && !isOwnMessage ? (
+          <View style={bubbleStyles.gutter}>
+            {isLastInGroup ? (
+              <View
+                style={[
+                  bubbleStyles.avatar,
+                  { backgroundColor: avatarColor(message.senderAccountId) },
+                ]}
+              >
+                <Text style={bubbleStyles.avatarText}>
+                  {avatarInitial(message.senderDisplayName)}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
         <View
           style={[
-            styles.messageBubble,
-            isOwnMessage ? styles.messageBubbleOwn : null,
+            bubbleStyles.bubble,
+            isOwnMessage && bubbleStyles.bubbleOwn,
+            isLastInGroup &&
+              (isOwnMessage
+                ? bubbleStyles.bubbleOwnTail
+                : bubbleStyles.bubbleIncomingTail),
           ]}
         >
-          <Text style={styles.messageMeta}>
-            {isOwnMessage ? "You" : message.senderDisplayName}
-            {" · "}
-            {messageTimeLabel}
-            {message.deletedAt
-              ? "  · deleted"
-              : message.editedAt
-                ? "  · edited"
-                : ""}
-            {isOwnMessage
-              ? (message.readByCount ?? 0) >= 1
-                ? "  ✓✓"
-                : "  ✓"
-              : ""}
-          </Text>
+          {showSenderName && !isOwnMessage && !isDeleted ? (
+            <Text
+              numberOfLines={1}
+              style={[
+                bubbleStyles.senderName,
+                { color: avatarColor(message.senderAccountId) },
+              ]}
+            >
+              {message.senderDisplayName}
+            </Text>
+          ) : null}
 
           {isDeleted ? (
             <Text style={styles.messageDeletedText}>Message deleted</Text>
@@ -602,6 +667,21 @@ export const MessageBubble = memo(function MessageBubble({
               })}
             </View>
           ) : null}
+
+          <View style={bubbleStyles.footerRow}>
+            <Text
+              style={[
+                bubbleStyles.footerText,
+                isOwnMessage && bubbleStyles.footerTextOwn,
+              ]}
+            >
+              {messageTimeLabel}
+              {message.editedAt && !message.deletedAt ? "  edited" : ""}
+            </Text>
+            {isOwnMessage && !message.deletedAt ? (
+              <ReadTicks read={(message.readByCount ?? 0) >= 1} />
+            ) : null}
+          </View>
         </View>
       </Pressable>
 

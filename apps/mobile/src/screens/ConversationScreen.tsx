@@ -15,6 +15,12 @@ import {
   type ViewToken,
   View,
 } from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 import type {
   AuthSession,
   GroupInviteRecord,
@@ -46,13 +52,27 @@ import {
   type DraftSelection,
   type DraftFormatAction,
 } from "../lib/messageDraftFormatting";
+import { haptics } from "../lib/haptics";
+import { springs, timings } from "../lib/motion";
+import { TypingDots } from "../components/TypingDots";
+import { conversationScreenStyles } from "./conversationScreen.styles";
 
 const AUTO_SCROLL_THRESHOLD = 96;
 const ANCHOR_REPORT_DELAY_MS = 400;
+const SCROLL_TO_END_REVEAL_DISTANCE = 240;
+// Grouped run break: messages from the same sender within this window collapse
+// into a single visual run (shared avatar, no repeated sender name).
+const GROUP_GAP_MS = 5 * 60 * 1000;
 
 type ConversationRow =
   | { type: "date"; key: string; label: string }
-  | { type: "message"; key: string; message: GroupThreadMessage };
+  | {
+      type: "message";
+      key: string;
+      message: GroupThreadMessage;
+      isFirstInGroup: boolean;
+      isLastInGroup: boolean;
+    };
 
 function formatConversationDate(value: string) {
   const parsed = new Date(value);
@@ -67,16 +87,51 @@ function formatConversationDate(value: string) {
   });
 }
 
+type MessageRow = Extract<ConversationRow, { type: "message" }>;
+
+// A run continues when the same sender posts again within GROUP_GAP_MS with no
+// date separator between. System notices never group. The "first/last" flags let
+// the bubble render the avatar + sender name only at the run's edges.
+function startsNewGroup(
+  current: GroupThreadMessage,
+  previous: GroupThreadMessage | null,
+  dateBreak: boolean,
+): boolean {
+  if (dateBreak || !previous) {
+    return true;
+  }
+
+  if (
+    current.kind === "system_notice" ||
+    previous.kind === "system_notice"
+  ) {
+    return true;
+  }
+
+  if (current.senderAccountId !== previous.senderAccountId) {
+    return true;
+  }
+
+  const gap =
+    new Date(current.createdAt).getTime() -
+    new Date(previous.createdAt).getTime();
+
+  return !(gap >= 0 && gap <= GROUP_GAP_MS);
+}
+
 function buildConversationRows(
   messages: GroupThreadMessage[],
 ): ConversationRow[] {
   const rows: ConversationRow[] = [];
+  const messageRows: MessageRow[] = [];
   let activeDate = "";
+  let previousMessage: GroupThreadMessage | null = null;
 
   for (const message of messages) {
     const messageDate = message.createdAt.slice(0, 10);
+    const dateBreak = messageDate !== activeDate;
 
-    if (messageDate !== activeDate) {
+    if (dateBreak) {
       activeDate = messageDate;
       rows.push({
         type: "date",
@@ -85,11 +140,34 @@ function buildConversationRows(
       });
     }
 
-    rows.push({
+    const isFirstInGroup = startsNewGroup(message, previousMessage, dateBreak);
+
+    // Resolve the previous message's run boundary now that we know whether this
+    // message continues it: a new group means the prior message closed its run;
+    // a continuation means the prior message is no longer the run's last.
+    const lastRow = messageRows[messageRows.length - 1];
+    if (lastRow) {
+      lastRow.isLastInGroup = isFirstInGroup;
+    }
+
+    const row: MessageRow = {
       type: "message",
       key: message.id,
       message,
-    });
+      isFirstInGroup,
+      // Provisional; corrected when the next message (or end of list) resolves.
+      isLastInGroup: true,
+    };
+
+    rows.push(row);
+    messageRows.push(row);
+    previousMessage = message;
+  }
+
+  // The final message of the thread always closes its run.
+  const finalRow = messageRows[messageRows.length - 1];
+  if (finalRow) {
+    finalRow.isLastInGroup = true;
   }
 
   return rows;
@@ -280,6 +358,7 @@ export function ConversationScreen({
   // `selection` prop races Android's native cursor placement and causes the
   // first typed character to jump to the end of the input.
   const [selectionOverride, setSelectionOverride] = useState<DraftSelection | null>(null);
+  const [showScrollToEnd, setShowScrollToEnd] = useState(false);
   const listRef = useRef<FlatList<ConversationRow>>(null);
   const messageInputRef = useRef<TextInput>(null);
   const shouldAutoScrollRef = useRef(true);
@@ -370,23 +449,56 @@ export function ConversationScreen({
     [threadMessages],
   );
 
+  // Jump-to-bottom FAB reveal: spring the scale, fade the opacity. Kept on a
+  // single shared value so show/hide stay in lockstep.
+  const scrollToEndProgress = useSharedValue(0);
+  useEffect(() => {
+    scrollToEndProgress.value = showScrollToEnd
+      ? withSpring(1, springs.snappy)
+      : withTiming(0, timings.fast);
+  }, [scrollToEndProgress, showScrollToEnd]);
+
+  const scrollToEndFabStyle = useAnimatedStyle(() => ({
+    opacity: scrollToEndProgress.value,
+    transform: [{ scale: 0.6 + scrollToEndProgress.value * 0.4 }],
+  }));
+
   const renderMessageItem = useCallback(
-    ({ item }: { item: (typeof conversationRows)[number] }) =>
-      item.type === "date" ? (
-        <View style={styles.dateSeparator}>
-          <Text style={styles.dateSeparatorLabel}>{item.label}</Text>
-        </View>
-      ) : (
+    ({ item }: { item: (typeof conversationRows)[number] }) => {
+      if (item.type === "date") {
+        return (
+          <View style={styles.dateSeparator}>
+            <Text style={styles.dateSeparatorLabel}>{item.label}</Text>
+          </View>
+        );
+      }
+
+      const { message } = item;
+      const isGroupThread = selectedGroup.memberCap > 2;
+      const isOwn = message.senderAccountId === session.accountId;
+
+      return (
         <MessageBubble
-          message={item.message}
-          isOwnMessage={item.message.senderAccountId === session.accountId}
+          message={message}
+          isOwnMessage={isOwn}
           selfAccountId={session.accountId}
+          isFirstInGroup={item.isFirstInGroup}
+          isLastInGroup={item.isLastInGroup}
+          showSenderName={item.isFirstInGroup && !isOwn && isGroupThread}
+          showAvatar={isGroupThread && !isOwn}
           onImageError={onImageError}
           onResolveAttachmentAccess={onResolveAttachmentAccess}
           onAction={onMessageAction}
         />
-      ),
-    [session.accountId, onImageError, onResolveAttachmentAccess, onMessageAction],
+      );
+    },
+    [
+      selectedGroup.memberCap,
+      session.accountId,
+      onImageError,
+      onResolveAttachmentAccess,
+      onMessageAction,
+    ],
   );
 
   const maintainVisibleContentPosition =
@@ -525,6 +637,15 @@ export function ConversationScreen({
     const distanceFromBottom =
       contentSize.height - (contentOffset.y + layoutMeasurement.height);
     shouldAutoScrollRef.current = distanceFromBottom <= AUTO_SCROLL_THRESHOLD;
+    setShowScrollToEnd((current) => {
+      const next = distanceFromBottom > SCROLL_TO_END_REVEAL_DISTANCE;
+      return next === current ? current : next;
+    });
+  }, []);
+
+  const handleScrollToEnd = useCallback(() => {
+    haptics.selection();
+    listRef.current?.scrollToEnd({ animated: true });
   }, []);
 
   const handleScrollToIndexFailed = useCallback(
@@ -725,9 +846,13 @@ export function ConversationScreen({
         <View style={styles.conversationMessages}>
           {typingNames.length ? (
             <View style={styles.typingBanner}>
-              <Text style={styles.typingBannerText}>
-                {typingNames.join(", ")} {typingNames.length === 1 ? "is" : "are"} typing...
-              </Text>
+              <View style={conversationScreenStyles.typingBannerRow}>
+                <TypingDots />
+                <Text style={styles.typingBannerText}>
+                  {typingNames.join(", ")}{" "}
+                  {typingNames.length === 1 ? "is" : "are"} typing...
+                </Text>
+              </View>
             </View>
           ) : null}
           <FlatList
@@ -759,6 +884,22 @@ export function ConversationScreen({
             }
             renderItem={renderMessageItem}
           />
+          <Animated.View
+            pointerEvents={showScrollToEnd ? "auto" : "none"}
+            style={[
+              conversationScreenStyles.scrollToEndFab,
+              scrollToEndFabStyle,
+            ]}
+          >
+            <Pressable
+              accessibilityLabel="Jump to latest messages"
+              hitSlop={8}
+              onPress={handleScrollToEnd}
+              style={conversationScreenStyles.scrollToEndFabPressable}
+            >
+              <Text style={conversationScreenStyles.scrollToEndFabIcon}>↓</Text>
+            </Pressable>
+          </Animated.View>
         </View>
       ) : (
         <View style={[styles.conversationMessages, styles.emptyState]}>
