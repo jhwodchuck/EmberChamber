@@ -1,11 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Pressable, Text, TextInput, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   runOnJS,
@@ -25,8 +19,14 @@ import { haptics } from "../lib/haptics";
 import { springs } from "../lib/motion";
 import { styles, theme } from "../styles";
 import { ScreenScaffold } from "../components/ScreenScaffold";
+import { SkeletonChatRow } from "../components/Shimmer";
+import { chatListScreenStyles } from "./chatListScreen.styles";
 
 const CHAT_ACTION_WIDTH = 216;
+
+// How many skeleton rows to show while the account is still loading. Enough to
+// fill the visible list area without overflowing into needless work.
+const SKELETON_ROW_COUNT = 6;
 
 // Open/close decision thresholds, mirrored from the original PanResponder so the
 // swipe feel is unchanged. When the row is closed it opens once the finger has
@@ -505,9 +505,14 @@ export function ChatListScreen({
       </View>
 
       {isLoadingAccount && !items.length ? (
-        <View style={styles.emptyState}>
-          <ActivityIndicator size="small" color={theme.colors.textSoft} />
-          <Text style={styles.emptyStateTitle}>Loading chats</Text>
+        <View
+          accessibilityRole="progressbar"
+          accessibilityLabel="Loading chats"
+          style={chatListScreenStyles.skeletonList}
+        >
+          {Array.from({ length: SKELETON_ROW_COUNT }, (_, index) => (
+            <SkeletonChatRow key={index} />
+          ))}
         </View>
       ) : null}
 
