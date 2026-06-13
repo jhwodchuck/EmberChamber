@@ -1,14 +1,19 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Animated,
-  FlatList,
-  PanResponder,
   Pressable,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
+import { FlashList } from "@shopify/flash-list";
 import type {
   ConversationPreference,
   GroupMembershipSummary,
@@ -16,10 +21,21 @@ import type {
 } from "../types";
 import { CHAT_LIST_FILTERS, type ChatListFilter } from "../lib/mainShell";
 import { parseSharedLocation } from "../lib/utils";
+import { haptics } from "../lib/haptics";
+import { springs } from "../lib/motion";
 import { styles, theme } from "../styles";
 import { ScreenScaffold } from "../components/ScreenScaffold";
 
 const CHAT_ACTION_WIDTH = 216;
+
+// Open/close decision thresholds, mirrored from the original PanResponder so the
+// swipe feel is unchanged. When the row is closed it opens once the finger has
+// dragged left past -42px; when it is open it stays open unless the finger has
+// dragged right past +28px.
+const OPEN_THRESHOLD = -42;
+const CLOSE_THRESHOLD = 28;
+// Horizontal travel before the pan should win over a vertical list scroll.
+const ACTIVATION_DISTANCE = 6;
 
 export type ChatListItem = {
   group: GroupMembershipSummary;
@@ -132,44 +148,69 @@ const SwipeableChatRow = memo(function SwipeableChatRow({
   onToggleConversationPinned,
   onToggleConversationMuted,
 }: SwipeableChatRowProps) {
-  const translateX = useRef(new Animated.Value(0)).current;
+  // `translateX` is the live position; `crossedOpen` tracks whether the gesture
+  // is currently past the open/close decision point so a haptic fires exactly
+  // once per threshold crossing (worklet-side, no JS round-trip per frame).
+  const translateX = useSharedValue(isOpen ? -CHAT_ACTION_WIDTH : 0);
+  const crossedOpen = useSharedValue(isOpen);
 
-
+  // The `isOpen` prop is the source of truth (driven by single-open-row
+  // coordination in the parent). Spring to match it whenever it changes —
+  // this mirrors the previous `Animated.spring` effect.
   useEffect(() => {
-    Animated.spring(translateX, {
-      toValue: isOpen ? -CHAT_ACTION_WIDTH : 0,
-      useNativeDriver: true,
-      bounciness: 0,
-      speed: 20,
-    }).start();
-  }, [isOpen, translateX]);
+    translateX.value = withSpring(
+      isOpen ? -CHAT_ACTION_WIDTH : 0,
+      springs.snappy,
+    );
+    crossedOpen.value = isOpen;
+  }, [isOpen, translateX, crossedOpen]);
 
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onMoveShouldSetPanResponder: (_event, gestureState) =>
-          Math.abs(gestureState.dx) > Math.abs(gestureState.dy) &&
-          Math.abs(gestureState.dx) > 6,
-        onPanResponderMove: (_event, gestureState) => {
-          const baseOffset = isOpen ? -CHAT_ACTION_WIDTH : 0;
-          const nextOffset = Math.max(
-            -CHAT_ACTION_WIDTH,
-            Math.min(0, baseOffset + gestureState.dx),
-          );
-          translateX.setValue(nextOffset);
-        },
-        onPanResponderRelease: (_event, gestureState) => {
-          const shouldOpen = isOpen
-            ? gestureState.dx < 28
-            : gestureState.dx < -42;
-          onSetOpen(shouldOpen ? item.group.id : null);
-        },
-        onPanResponderTerminate: () => {
-          onSetOpen(isOpen ? item.group.id : null);
-        },
-      }),
-    [isOpen, item.group.id, onSetOpen, translateX],
-  );
+  const panGesture = useMemo(() => {
+    const conversationId = item.group.id;
+
+    return Gesture.Pan()
+      .activeOffsetX([-ACTIVATION_DISTANCE, ACTIVATION_DISTANCE])
+      .failOffsetY([-ACTIVATION_DISTANCE, ACTIVATION_DISTANCE])
+      .onUpdate((event) => {
+        "worklet";
+        const baseOffset = isOpen ? -CHAT_ACTION_WIDTH : 0;
+        const nextOffset = Math.max(
+          -CHAT_ACTION_WIDTH,
+          Math.min(0, baseOffset + event.translationX),
+        );
+        translateX.value = nextOffset;
+
+        // Would the row end up open if released right now? Fire a selection tick
+        // the moment that decision flips, in either direction.
+        const wouldOpen = isOpen
+          ? event.translationX < CLOSE_THRESHOLD
+          : event.translationX < OPEN_THRESHOLD;
+        if (wouldOpen !== crossedOpen.value) {
+          crossedOpen.value = wouldOpen;
+          runOnJS(haptics.selection)();
+        }
+      })
+      .onEnd((event) => {
+        "worklet";
+        const shouldOpen = isOpen
+          ? event.translationX < CLOSE_THRESHOLD
+          : event.translationX < OPEN_THRESHOLD;
+        runOnJS(onSetOpen)(shouldOpen ? conversationId : null);
+      })
+      .onFinalize(() => {
+        "worklet";
+        // If the gesture was interrupted without an end (terminate), settle back
+        // to whatever the current open state is, matching the old terminate path.
+        translateX.value = withSpring(
+          isOpen ? -CHAT_ACTION_WIDTH : 0,
+          springs.gentle,
+        );
+      });
+  }, [isOpen, item.group.id, onSetOpen, translateX, crossedOpen]);
+
+  const animatedRowStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
 
   function handleRowPress() {
     if (isOpen) {
@@ -220,82 +261,81 @@ const SwipeableChatRow = memo(function SwipeableChatRow({
         </Pressable>
       </View>
 
-      <Animated.View
-        style={[styles.chatRowAnimated, { transform: [{ translateX }] }]}
-        {...panResponder.panHandlers}
-      >
-        <Pressable
-          onPress={handleRowPress}
-          onLongPress={() => onSetOpen(isOpen ? null : item.group.id)}
-          android_ripple={{ color: "rgba(255, 255, 255, 0.06)" }}
-          style={[styles.chatRow, isSelected ? styles.chatRowActive : null]}
-        >
-          <View style={styles.chatAvatar}>
-            <Text style={styles.chatAvatarText}>
-              {groupInitial(item.group.title)}
-            </Text>
-          </View>
+      <GestureDetector gesture={panGesture}>
+        <Animated.View style={[styles.chatRowAnimated, animatedRowStyle]}>
+          <Pressable
+            onPress={handleRowPress}
+            onLongPress={() => onSetOpen(isOpen ? null : item.group.id)}
+            android_ripple={{ color: "rgba(255, 255, 255, 0.06)" }}
+            style={[styles.chatRow, isSelected ? styles.chatRowActive : null]}
+          >
+            <View style={styles.chatAvatar}>
+              <Text style={styles.chatAvatarText}>
+                {groupInitial(item.group.title)}
+              </Text>
+            </View>
 
-          <View style={styles.chatRowCopy}>
-            <View style={styles.chatRowTop}>
+            <View style={styles.chatRowCopy}>
+              <View style={styles.chatRowTop}>
+                <Text
+                  style={[
+                    styles.chatRowTitle,
+                    isUnread ? styles.chatRowTitleUnread : null,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {item.group.title}
+                </Text>
+
+                <View style={styles.chatRowRight}>
+                  <Text
+                    style={[
+                      styles.chatRowTime,
+                      isUnread ? styles.chatRowTimeUnread : null,
+                    ]}
+                  >
+                    {formatTimestamp(
+                      item.latestMessage?.createdAt ?? item.group.updatedAt,
+                    )}
+                  </Text>
+                  {item.preference.isPinned ? (
+                    <Text style={styles.chatStateLabel}>PIN</Text>
+                  ) : null}
+                  {item.preference.isMuted ? (
+                    <Text style={styles.chatStateLabel}>MUTE</Text>
+                  ) : null}
+                  {item.unreadCount > 0 ? (
+                    <View style={styles.unreadBadge}>
+                      <Text style={styles.unreadBadgeText}>
+                        {unreadBadgeLabel(item.unreadCount)}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+              </View>
+
               <Text
                 style={[
-                  styles.chatRowTitle,
-                  isUnread ? styles.chatRowTitleUnread : null,
+                  styles.chatRowPreview,
+                  isUnread ? styles.chatRowPreviewUnread : null,
                 ]}
                 numberOfLines={1}
               >
-                {item.group.title}
+                {previewText(item.group, item.latestMessage)}
               </Text>
 
-              <View style={styles.chatRowRight}>
-                <Text
-                  style={[
-                    styles.chatRowTime,
-                    isUnread ? styles.chatRowTimeUnread : null,
-                  ]}
-                >
-                  {formatTimestamp(
-                    item.latestMessage?.createdAt ?? item.group.updatedAt,
-                  )}
-                </Text>
-                {item.preference.isPinned ? (
-                  <Text style={styles.chatStateLabel}>PIN</Text>
+              <View style={styles.chatMetaRow}>
+                {item.group.historyMode === "device_encrypted" ? (
+                  <Text style={styles.chatRowMeta}>Locked</Text>
                 ) : null}
-                {item.preference.isMuted ? (
-                  <Text style={styles.chatStateLabel}>MUTE</Text>
-                ) : null}
-                {item.unreadCount > 0 ? (
-                  <View style={styles.unreadBadge}>
-                    <Text style={styles.unreadBadgeText}>
-                      {unreadBadgeLabel(item.unreadCount)}
-                    </Text>
-                  </View>
+                {item.group.sensitiveMediaDefault ? (
+                  <Text style={styles.chatRowMeta}>Sensitive</Text>
                 ) : null}
               </View>
             </View>
-
-            <Text
-              style={[
-                styles.chatRowPreview,
-                isUnread ? styles.chatRowPreviewUnread : null,
-              ]}
-              numberOfLines={1}
-            >
-              {previewText(item.group, item.latestMessage)}
-            </Text>
-
-            <View style={styles.chatMetaRow}>
-              {item.group.historyMode === "device_encrypted" ? (
-                <Text style={styles.chatRowMeta}>Locked</Text>
-              ) : null}
-              {item.group.sensitiveMediaDefault ? (
-                <Text style={styles.chatRowMeta}>Sensitive</Text>
-              ) : null}
-            </View>
-          </View>
-        </Pressable>
-      </Animated.View>
+          </Pressable>
+        </Animated.View>
+      </GestureDetector>
     </View>
   );
 });
@@ -338,7 +378,7 @@ export function ChatListScreen({
   );
   const resumeItem = items[0] ?? null;
 
-  const flatListExtraData = useMemo(
+  const listExtraData = useMemo(
     () => ({ selectedConversationId, openConversationId }),
     [selectedConversationId, openConversationId],
   );
@@ -471,7 +511,7 @@ export function ChatListScreen({
         </View>
       ) : null}
 
-      <FlatList
+      <FlashList
         style={styles.screenScroll}
         contentContainerStyle={[
           styles.chatListContent,
@@ -481,11 +521,7 @@ export function ChatListScreen({
         keyExtractor={(item) => item.group.id}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-        initialNumToRender={12}
-        maxToRenderPerBatch={16}
-        windowSize={8}
-        removeClippedSubviews
-        extraData={flatListExtraData}
+        extraData={listExtraData}
         onScrollBeginDrag={handleScrollBeginDrag}
         renderItem={renderChatRow}
         ListEmptyComponent={
