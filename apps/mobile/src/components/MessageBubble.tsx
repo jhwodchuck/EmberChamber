@@ -8,13 +8,13 @@ import {
 } from "react";
 import {
   ActivityIndicator,
-  Clipboard,
   Image,
   Linking,
   Pressable,
   Text,
   View,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   Extrapolation,
@@ -867,7 +867,7 @@ export const MessageBubble = memo(function MessageBubble({
         onClose={() => setMenuVisible(false)}
         onAction={(action) => {
           if (action.kind === "copy" && message.text) {
-            Clipboard.setString(message.text);
+            void Clipboard.setStringAsync(message.text);
           } else if (action.kind === "view") {
             setViewerVisible(true);
             return;
