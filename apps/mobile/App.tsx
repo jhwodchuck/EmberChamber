@@ -2966,7 +2966,10 @@ export default function App() {
   }
 
   return (
-    <AppProviders showEntryChrome={showEntryChrome}>
+    <AppProviders
+      showEntryChrome={showEntryChrome}
+      oledBackground={privacyDefaults.oledDark}
+    >
       <AppShell
         showEntryChrome={showEntryChrome}
         isMainShellReady={isMainShellReady}

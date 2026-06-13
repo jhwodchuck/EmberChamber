@@ -157,6 +157,11 @@ export async function bootstrapLocalStore() {
       "secureAppSwitcher",
       defaultPrivacyDefaults.secureAppSwitcher ? "1" : "0",
     ),
+    db.runAsync(
+      "INSERT OR IGNORE INTO app_preferences (key, value) VALUES (?, ?)",
+      "oledDark",
+      defaultPrivacyDefaults.oledDark ? "1" : "0",
+    ),
   ]);
 
   return db;
@@ -166,11 +171,12 @@ export async function loadPrivacyDefaults(
   db: SQLite.SQLiteDatabase,
 ): Promise<PrivacyDefaults> {
   const rows = await db.getAllAsync<{ key: string; value: string }>(
-    "SELECT key, value FROM app_preferences WHERE key IN (?, ?, ?, ?)",
+    "SELECT key, value FROM app_preferences WHERE key IN (?, ?, ?, ?, ?)",
     "notificationPreviewMode",
     "autoDownloadSensitiveMedia",
     "allowSensitiveExport",
     "secureAppSwitcher",
+    "oledDark",
   );
   const values = Object.fromEntries(rows.map((row) => [row.key, row.value]));
 
@@ -181,6 +187,7 @@ export async function loadPrivacyDefaults(
     autoDownloadSensitiveMedia: values.autoDownloadSensitiveMedia === "1",
     allowSensitiveExport: values.allowSensitiveExport === "1",
     secureAppSwitcher: values.secureAppSwitcher !== "0",
+    oledDark: values.oledDark === "1",
   };
 }
 

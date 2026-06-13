@@ -8,10 +8,14 @@ import { styles } from "../styles";
 
 type AppProvidersProps = {
   showEntryChrome: boolean;
+  oledBackground?: boolean;
   children: ReactNode;
 };
 
-export function AppProviders({ children }: AppProvidersProps) {
+export function AppProviders({
+  children,
+  oledBackground = false,
+}: AppProvidersProps) {
   // GestureHandlerRootView must be the outermost host so Reanimated gesture
   // detectors (swipe-to-reply, contextual menu, list swipes) work anywhere in
   // the tree. KeyboardProvider supplies the animated keyboard values that the
@@ -27,7 +31,7 @@ export function AppProviders({ children }: AppProvidersProps) {
             style={styles.screen}
             edges={["top", "right", "bottom", "left"]}
           >
-            <GradientBackground />
+            <GradientBackground oled={oledBackground} />
             <KeyboardAvoidingView
               style={styles.keyboardShell}
               behavior={Platform.OS === "ios" ? "padding" : undefined}

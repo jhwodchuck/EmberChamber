@@ -18,6 +18,7 @@ export const defaultPrivacyDefaults: PrivacyDefaults = {
   autoDownloadSensitiveMedia: false,
   allowSensitiveExport: false,
   secureAppSwitcher: true,
+  oledDark: false,
 };
 
 export const onboardingSteps = [
