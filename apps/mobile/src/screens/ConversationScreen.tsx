@@ -20,6 +20,9 @@ import {
 // see app.json `softwareKeyboardLayoutMode: "resize"`.
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import Animated, {
+  FadeIn,
+  FadeOut,
+  LinearTransition,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -57,7 +60,7 @@ import {
   type DraftFormatAction,
 } from "../lib/messageDraftFormatting";
 import { haptics } from "../lib/haptics";
-import { springs, timings } from "../lib/motion";
+import { durations, springs, timings } from "../lib/motion";
 import { TypingDots } from "../components/TypingDots";
 import { conversationScreenStyles } from "./conversationScreen.styles";
 
@@ -947,18 +950,31 @@ export function ConversationScreen({
         </View>
       )}
 
-      <View style={styles.conversationComposer}>
+      <Animated.View
+        style={styles.conversationComposer}
+        layout={LinearTransition.duration(durations.fast)}
+      >
         {editingMessageId ? (
-          <View style={styles.editModeBanner}>
+          <Animated.View
+            style={styles.editModeBanner}
+            entering={FadeIn.duration(durations.fast)}
+            exiting={FadeOut.duration(durations.fast)}
+            layout={LinearTransition.duration(durations.fast)}
+          >
             <Text style={styles.editModeBannerText}>Editing message</Text>
             <Pressable onPress={onCancelEdit}>
               <Text style={styles.inlineAction}>Cancel</Text>
             </Pressable>
-          </View>
+          </Animated.View>
         ) : null}
 
         {replyingToMessage && !editingMessageId ? (
-          <View style={styles.replyComposerBanner}>
+          <Animated.View
+            style={styles.replyComposerBanner}
+            entering={FadeIn.duration(durations.fast)}
+            exiting={FadeOut.duration(durations.fast)}
+            layout={LinearTransition.duration(durations.fast)}
+          >
             <View style={styles.replyComposerAccent} />
             <View style={styles.replyComposerCopy}>
               <Text style={styles.replyComposerTitle} numberOfLines={1}>
@@ -974,11 +990,16 @@ export function ConversationScreen({
             <Pressable onPress={onCancelReply}>
               <Text style={styles.inlineAction}>Cancel</Text>
             </Pressable>
-          </View>
+          </Animated.View>
         ) : null}
 
         {pendingAttachment && !editingMessageId ? (
-          <View style={styles.pendingAttachmentCard}>
+          <Animated.View
+            style={styles.pendingAttachmentCard}
+            entering={FadeIn.duration(durations.fast)}
+            exiting={FadeOut.duration(durations.fast)}
+            layout={LinearTransition.duration(durations.fast)}
+          >
             <View style={styles.pendingAttachmentHeader}>
               <Text style={styles.infoTitle}>
                 {pendingAttachmentView?.title ?? "Attachment ready"}
@@ -1016,7 +1037,7 @@ export function ConversationScreen({
               {pendingAttachment.fileName} ·{" "}
               {formatBytes(pendingAttachment.byteLength || 0)}
             </Text>
-          </View>
+          </Animated.View>
         ) : null}
 
         <View style={styles.composerDock}>
@@ -1075,7 +1096,7 @@ export function ConversationScreen({
             </Pressable>
           </Animated.View>
         </View>
-      </View>
+      </Animated.View>
 
       <FormattingMenuSheet
         visible={formattingMenuOpen}
