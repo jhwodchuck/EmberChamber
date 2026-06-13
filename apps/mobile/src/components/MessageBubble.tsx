@@ -22,8 +22,10 @@ import Animated, {
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  withSequence,
   withSpring,
   withTiming,
+  ZoomIn,
 } from "react-native-reanimated";
 import {
   parseFormattedMessage,
@@ -71,6 +73,63 @@ const ReadTicks = memo(function ReadTicks({ read }: { read: boolean }) {
         ✓
       </Animated.Text>
     </View>
+  );
+});
+
+// A single reaction chip that pops in with a bouncy spring on first appearance,
+// re-pops whenever its count changes (someone toggled it), and gives a quick
+// scale bounce + light haptic the moment it is tapped — before the toggle round
+// trip — so the gesture feels instant.
+const ReactionChip = memo(function ReactionChip({
+  emoji,
+  count,
+  isActive,
+  onToggle,
+}: {
+  emoji: string;
+  count: number;
+  isActive: boolean;
+  onToggle: () => void;
+}) {
+  const scale = useSharedValue(1);
+
+  useEffect(() => {
+    // Re-pop when the count changes so toggles feel alive even after first mount.
+    scale.value = withSequence(
+      withTiming(1.18, timings.fast),
+      withSpring(1, springs.bouncy),
+    );
+  }, [count, scale]);
+
+  const handlePress = useCallback(() => {
+    haptics.light();
+    scale.value = withSequence(
+      withTiming(0.86, timings.fast),
+      withSpring(1, springs.bouncy),
+    );
+    onToggle();
+  }, [onToggle, scale]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Animated.View entering={ZoomIn.springify().damping(12).stiffness(320)}>
+      <Pressable onPress={handlePress}>
+        <Animated.View
+          style={[
+            styles.messageReactionChip,
+            isActive ? styles.messageReactionChipActive : null,
+            animatedStyle,
+          ]}
+        >
+          <Text style={styles.messageReactionText}>
+            {emoji} {count}
+          </Text>
+        </Animated.View>
+      </Pressable>
+    </Animated.View>
   );
 });
 
@@ -754,25 +813,17 @@ export const MessageBubble = memo(function MessageBubble({
 
           {reactionEntries.length ? (
             <View style={styles.messageReactionRow}>
-              {reactionEntries.map(([emoji, accountIds]) => {
-                const isActive = accountIds.includes(selfAccountId);
-                return (
-                  <Pressable
-                    key={emoji}
-                    style={[
-                      styles.messageReactionChip,
-                      isActive ? styles.messageReactionChipActive : null,
-                    ]}
-                    onPress={() =>
-                      onAction?.(message.id, { kind: "react", emoji })
-                    }
-                  >
-                    <Text style={styles.messageReactionText}>
-                      {emoji} {accountIds.length}
-                    </Text>
-                  </Pressable>
-                );
-              })}
+              {reactionEntries.map(([emoji, accountIds]) => (
+                <ReactionChip
+                  key={emoji}
+                  emoji={emoji}
+                  count={accountIds.length}
+                  isActive={accountIds.includes(selfAccountId)}
+                  onToggle={() =>
+                    onAction?.(message.id, { kind: "react", emoji })
+                  }
+                />
+              ))}
             </View>
           ) : null}
 
