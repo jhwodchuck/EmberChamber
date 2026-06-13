@@ -21,7 +21,18 @@ const gradientLocations = [0, 0.55, 1] as const;
  * on top. It fills the screen, sits behind all content, and is fully
  * non-interactive.
  */
-export function GradientBackground() {
+export function GradientBackground({ oled = false }: { oled?: boolean }) {
+  // OLED mode: a true-black canvas (no gradient or glows) so pixels stay off on
+  // OLED panels and the dark surfaces read as elevated cards above it.
+  if (oled) {
+    return (
+      <View
+        pointerEvents="none"
+        style={[StyleSheet.absoluteFill, styles.oled]}
+      />
+    );
+  }
+
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <LinearGradient
@@ -38,6 +49,9 @@ export function GradientBackground() {
 }
 
 const styles = StyleSheet.create({
+  oled: {
+    backgroundColor: "#000000",
+  },
   // Soft circular glows reuse the existing ember orb tones for warmth.
   glowTop: {
     position: "absolute",
