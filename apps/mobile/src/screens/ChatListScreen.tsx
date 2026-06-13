@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { Pressable, RefreshControl, Text, TextInput, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   runOnJS,
@@ -355,6 +355,7 @@ export type ChatListScreenProps = {
   onToggleConversationPinned: (conversationId: string) => void;
   onToggleConversationMuted: (conversationId: string) => void;
   onOpenInvites: () => void;
+  onRefresh?: () => Promise<void>;
 };
 
 export function ChatListScreen({
@@ -372,10 +373,24 @@ export function ChatListScreen({
   onToggleConversationPinned,
   onToggleConversationMuted,
   onOpenInvites,
+  onRefresh,
 }: ChatListScreenProps) {
   const [openConversationId, setOpenConversationId] = useState<string | null>(
     null,
   );
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(async () => {
+    if (!onRefresh) {
+      return;
+    }
+    setIsRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [onRefresh]);
   const resumeItem = items[0] ?? null;
 
   const listExtraData = useMemo(
@@ -528,6 +543,17 @@ export function ChatListScreen({
         showsVerticalScrollIndicator={false}
         extraData={listExtraData}
         onScrollBeginDrag={handleScrollBeginDrag}
+        refreshControl={
+          onRefresh ? (
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              tintColor={theme.colors.textSoft}
+              colors={[theme.colors.brand]}
+              progressBackgroundColor={theme.colors.panel}
+            />
+          ) : undefined
+        }
         renderItem={renderChatRow}
         ListEmptyComponent={
           !isLoadingAccount ? (
