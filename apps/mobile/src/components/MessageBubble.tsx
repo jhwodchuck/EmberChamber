@@ -507,7 +507,8 @@ export const MessageBubble = memo(function MessageBubble({
 
   const openMenu = useCallback(() => {
     if (!isDeleted) {
-      haptics.medium();
+      // The open haptic + entrance animation are owned by MessageContextMenu so
+      // it fires once regardless of how the menu was triggered.
       setMenuVisible(true);
     }
   }, [isDeleted]);
