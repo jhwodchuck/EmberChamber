@@ -111,6 +111,7 @@ export type MainScreenProps = {
   onToggleConversationArchived: (conversationId: string) => void;
   onToggleConversationPinned: (conversationId: string) => void;
   onToggleConversationMuted: (conversationId: string) => void;
+  onRefreshConversations: () => Promise<void>;
   // member roster
   groupMembers: GroupMember[];
   isLoadingMembers: boolean;
@@ -206,6 +207,7 @@ export function MainScreen(props: MainScreenProps) {
     onToggleConversationArchived,
     onToggleConversationPinned,
     onToggleConversationMuted,
+    onRefreshConversations,
     groupMembers,
     isLoadingMembers,
     isOpeningDm,
@@ -362,6 +364,7 @@ export function MainScreen(props: MainScreenProps) {
       onToggleConversationArchived={onToggleConversationArchived}
       onToggleConversationPinned={onToggleConversationPinned}
       onToggleConversationMuted={onToggleConversationMuted}
+      onRefresh={onRefreshConversations}
       onOpenInvites={() => setActiveTab("invites")}
     />
   );
