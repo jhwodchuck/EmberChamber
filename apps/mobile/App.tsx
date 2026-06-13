@@ -2835,6 +2835,27 @@ export default function App() {
     isSubmittingProfile,
     onSubmit: () => void submitProfileSetup(),
   };
+  async function handleRefreshConversations() {
+    const currentSession = sessionRef.current;
+    if (!currentSession) {
+      return;
+    }
+    try {
+      const nextGroups = await relayFetch<GroupMembershipSummary[]>(
+        currentSession,
+        "/v1/groups",
+      );
+      setGroups(nextGroups);
+      if (db) {
+        await saveCachedGroups(db, currentSession.accountId, nextGroups);
+      }
+      await syncEncryptedMailbox(currentSession);
+      refreshConversationCatalog();
+    } catch {
+      // Pull-to-refresh is best-effort; keep the last good state on failure.
+    }
+  }
+
   const mainScreenProps = {
     session: session!,
     profile,
@@ -2921,6 +2942,7 @@ export default function App() {
     onToggleConversationArchived: handleToggleConversationArchived,
     onToggleConversationPinned: handleToggleConversationPinned,
     onToggleConversationMuted: handleToggleConversationMuted,
+    onRefreshConversations: handleRefreshConversations,
     groupMembers,
     isLoadingMembers,
     isOpeningDm,
