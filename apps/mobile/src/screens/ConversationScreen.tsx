@@ -39,6 +39,7 @@ import type {
 import { styles, theme } from "../styles";
 import { formatBytes } from "../lib/utils";
 import { MessageBubble } from "../components/MessageBubble";
+import { Shimmer } from "../components/Shimmer";
 import type { ContextMenuAction } from "../components/MessageContextMenu";
 import { MemberRosterModal } from "../components/MemberRosterModal";
 import { MemberProfileSheet } from "../components/MemberProfileSheet";
@@ -875,9 +876,36 @@ export function ConversationScreen({
           style={[styles.conversationMessages, styles.conversationLoadingState]}
         >
           <View style={styles.threadList}>
-            <View style={styles.skeletonBubble} />
-            <View style={[styles.skeletonBubble, styles.skeletonBubbleSoft]} />
-            <View style={[styles.skeletonBubble, styles.skeletonBubbleFaint]} />
+            <Shimmer
+              width="58%"
+              height={52}
+              borderRadius={18}
+              style={{ alignSelf: "flex-start" }}
+            />
+            <Shimmer
+              width="44%"
+              height={38}
+              borderRadius={18}
+              style={{ alignSelf: "flex-end" }}
+            />
+            <Shimmer
+              width="68%"
+              height={64}
+              borderRadius={18}
+              style={{ alignSelf: "flex-start" }}
+            />
+            <Shimmer
+              width="36%"
+              height={36}
+              borderRadius={18}
+              style={{ alignSelf: "flex-end" }}
+            />
+            <Shimmer
+              width="50%"
+              height={44}
+              borderRadius={18}
+              style={{ alignSelf: "flex-start" }}
+            />
           </View>
         </View>
       ) : threadMessages.length ? (
