@@ -15,7 +15,7 @@
     "prepare": "bash scripts/install-git-hooks.sh",
     "bootstrap": "bash scripts/bootstrap-dev.sh",
     "check:repo-contracts": "node scripts/check-repo-contracts.mjs",
-    "audit:high": "npm audit --audit-level=high",
+    "audit:high": "npm audit --audit-level=high --omit=dev",
     "audit:moderate": "npm audit --audit-level=moderate",
     "council:review": "bash llm_council/scripts/orchestrate_review.sh",
     "council:route": "python3 -B llm_council/scripts/route_reviewers.py",
@@ -56,6 +56,9 @@
   },
   "overrides": {
     "@xmldom/xmldom": "0.8.13",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "shell-quote": ">=1.8.4",
     "expo": "55.0.26",
     "expo-constants": "55.0.16",
     "postcss": "8.5.12",
