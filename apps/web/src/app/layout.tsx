@@ -64,11 +64,11 @@ const themeInitScript = `
   (function () {
     try {
       var storedTheme = window.localStorage.getItem("theme");
+      var oled = window.localStorage.getItem("oled") === "true";
       var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      var resolvedTheme = storedTheme === "dark" || ((storedTheme === null || storedTheme === "system") && prefersDark)
-        ? "dark"
-        : "light";
-      document.documentElement.classList.toggle("dark", resolvedTheme === "dark");
+      var resolvedDark = oled || storedTheme === "dark" || ((storedTheme === null || storedTheme === "system") && prefersDark);
+      document.documentElement.classList.toggle("dark", resolvedDark);
+      document.documentElement.classList.toggle("oled", oled);
     } catch (error) {
       document.documentElement.classList.add("dark");
     }

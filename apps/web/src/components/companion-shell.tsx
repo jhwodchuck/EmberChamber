@@ -649,7 +649,7 @@ export function CompanionShell({ children }: { children: ReactNode }) {
 
   return (
     <CompanionShellContext.Provider value={contextValue}>
-      <div className="min-h-screen bg-[var(--bg-primary)]">
+      <div className="workspace-ember min-h-screen">
         <header className="border-b border-[var(--border)] bg-[color:var(--bg-overlay)]/85 px-6 py-4 backdrop-blur-xl">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4">
             <div className="min-w-0">
