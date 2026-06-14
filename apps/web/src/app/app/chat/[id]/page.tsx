@@ -15,7 +15,6 @@ import {
   Quote,
   SendHorizontal,
   ShieldCheck,
-  SmilePlus,
   Strikethrough,
   Users,
   X,
@@ -36,12 +35,17 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { clsx } from "clsx";
-import { Button, MessageBubble } from "@emberchamber/ui/components";
+import { Button } from "@emberchamber/ui/components";
 import { Avatar } from "@/components/avatar";
 import { CopyButton } from "@/components/copy-button";
 import { FormattedMessage } from "@/components/formatted-message";
 import { StatusCallout } from "@/components/status-callout";
 import { useCompanionShell } from "@/components/companion-shell";
+import { MessageRow } from "@/components/chat/message-row";
+import { TypingDots } from "@/components/chat/typing-dots";
+import { JumpToBottom } from "@/components/chat/jump-to-bottom";
+import { ImageLightbox } from "@/components/chat/image-lightbox";
+import { SkeletonMessage } from "@/components/chat/skeletons";
 import {
   applyDraftFormatting,
   insertDraftSnippet,
@@ -95,19 +99,27 @@ type ThreadMessage = {
   status?: StoredDmMessage["status"];
   isOwn: boolean;
   deliveryLabel?: string;
+  historyMode?: "relay_hosted" | "device_encrypted";
+  replyTo?: GroupThreadMessage["replyTo"];
+  editedAt?: string | null;
+  deletedAt?: string | null;
+  reactions?: GroupThreadMessage["reactions"];
+  readByCount?: number;
+};
+
+type ConversationMessageRow = {
+  type: "message";
+  key: string;
+  message: ThreadMessage;
+  isFirstInGroup: boolean;
+  isLastInGroup: boolean;
+  showSenderName: boolean;
+  showAvatar: boolean;
 };
 
 type ConversationRow =
   | { type: "date"; key: string; label: string }
-  | { type: "message"; key: string; message: ThreadMessage };
-
-type MessageReaction = {
-  emoji: string;
-  count: number;
-  userReacted: boolean;
-};
-
-const REACTION_EMOJI = ["👍", "❤️", "😂", "🔥", "🎉", "😮"] as const;
+  | ConversationMessageRow;
 
 const composerActions: Array<{
   id: DraftFormatAction;
@@ -194,13 +206,31 @@ function formatJoinDate(value: string) {
   });
 }
 
-function buildConversationRows(messages: ThreadMessage[]): ConversationRow[] {
+// Consecutive messages from the same sender within this window collapse into a
+// grouped run (shared avatar, tightened spacing) — Telegram/Signal-style.
+const GROUP_WINDOW_MS = 5 * 60 * 1000;
+
+function sameGroup(earlier: ThreadMessage, later: ThreadMessage) {
+  return (
+    earlier.senderAccountId === later.senderAccountId &&
+    earlier.kind !== "system_notice" &&
+    later.kind !== "system_notice" &&
+    new Date(later.createdAt).getTime() - new Date(earlier.createdAt).getTime() <=
+      GROUP_WINDOW_MS
+  );
+}
+
+function buildConversationRows(
+  messages: ThreadMessage[],
+  isGroupThread: boolean,
+): ConversationRow[] {
   const rows: ConversationRow[] = [];
   let activeDate = "";
 
-  for (const message of messages) {
+  messages.forEach((message, index) => {
     const messageDate = message.createdAt.slice(0, 10);
-    if (messageDate !== activeDate) {
+    const isNewDay = messageDate !== activeDate;
+    if (isNewDay) {
       activeDate = messageDate;
       rows.push({
         type: "date",
@@ -209,12 +239,26 @@ function buildConversationRows(messages: ThreadMessage[]): ConversationRow[] {
       });
     }
 
+    const prev = messages[index - 1];
+    const next = messages[index + 1];
+    const prevSameGroup = !isNewDay && prev ? sameGroup(prev, message) : false;
+    const nextSameGroup =
+      next && next.createdAt.slice(0, 10) === messageDate
+        ? sameGroup(message, next)
+        : false;
+    const isSystem = message.kind === "system_notice";
+
     rows.push({
       type: "message",
       key: message.id,
       message,
+      isFirstInGroup: !prevSameGroup,
+      isLastInGroup: !nextSameGroup,
+      showSenderName:
+        isGroupThread && !message.isOwn && !isSystem && !prevSameGroup,
+      showAvatar: isGroupThread && !message.isOwn && !isSystem,
     });
-  }
+  });
 
   return rows;
 }
@@ -297,10 +341,16 @@ export default function ChatPage() {
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(
     null,
   );
+  const [isPinnedToBottom, setIsPinnedToBottom] = useState(true);
+  const [unreadWhileAway, setUnreadWhileAway] = useState(0);
+  const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(
+    null,
+  );
   const typingStopTimerRef = useRef<number | null>(null);
   const lastTypingPublishAtRef = useRef(0);
   const messageListRef = useRef<HTMLDivElement | null>(null);
   const messageInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const prevThreadLenRef = useRef(0);
 
   const loadRelayHostedMessages = useCallback(
     async (conversationId: string, focusMessageId?: string) => {
@@ -385,6 +435,8 @@ export default function ChatPage() {
     setSidePanel(null);
     setCreatedInvite(null);
     setInviteForm(inviteDefaults);
+    setIsPinnedToBottom(true);
+    setUnreadWhileAway(0);
   }, [conversation?.id]);
 
   useEffect(() => {
@@ -687,18 +739,6 @@ export default function ChatPage() {
     [conversation],
   );
 
-  function getMessageReactions(messageId: string): MessageReaction[] {
-    const reactions =
-      groupMessages.find((message) => message.id === messageId)?.reactions ?? {};
-    return Object.entries(reactions)
-      .map(([emoji, accountIds]) => ({
-        emoji,
-        count: accountIds.length,
-        userReacted: accountIds.includes(user?.id ?? ""),
-      }))
-      .sort((left, right) => right.count - left.count);
-  }
-
   async function toggleReaction(messageId: string, emoji: string) {
     if (!conversation || conversation.historyMode !== "relay_hosted") {
       return;
@@ -742,6 +782,7 @@ export default function ChatPage() {
         kind: message.attachment ? "media" : "text",
         status: message.status,
         isOwn: message.senderAccountId === user?.id,
+        historyMode: "device_encrypted" as const,
         deliveryLabel:
           message.status === "sent"
             ? "Sent"
@@ -762,15 +803,24 @@ export default function ChatPage() {
       createdAt: message.createdAt,
       kind: message.kind,
       isOwn: message.senderAccountId === user?.id,
+      historyMode: "relay_hosted" as const,
+      replyTo: message.replyTo,
+      editedAt: message.editedAt,
+      deletedAt: message.deletedAt,
+      reactions: message.reactions,
+      readByCount: message.readByCount,
       deliveryLabel: message.readByCount
         ? `Seen by ${message.readByCount}`
         : undefined,
     }));
   }, [conversation, dmMessages, groupMessages, user?.id]);
 
+  const isGroupThread = conversation
+    ? conversation.kind !== "direct_message"
+    : false;
   const threadRows = useMemo(
-    () => buildConversationRows(threadMessages),
-    [threadMessages],
+    () => buildConversationRows(threadMessages, isGroupThread),
+    [threadMessages, isGroupThread],
   );
   const galleryItems = useMemo(
     () =>
@@ -792,7 +842,11 @@ export default function ChatPage() {
     threadMessages[threadMessages.length - 1]?.id ?? null;
 
   useEffect(() => {
-    if (!threadMessages.length) {
+    const len = threadMessages.length;
+    const prevLen = prevThreadLenRef.current;
+    prevThreadLenRef.current = len;
+
+    if (!len) {
       return;
     }
 
@@ -802,20 +856,64 @@ export default function ChatPage() {
       return;
     }
 
-    const frame = window.requestAnimationFrame(() => {
-      const list = messageListRef.current;
-      if (!list) {
-        return;
-      }
-
-      list.scrollTo({
-        top: list.scrollHeight,
-        behavior: threadMessages.length <= 1 ? "auto" : "smooth",
+    // Only yank the view to the bottom when the reader is already pinned there
+    // (or this is the first load). Otherwise leave them in place and surface the
+    // new arrivals on the jump-to-bottom badge.
+    if (prevLen === 0 || isPinnedToBottom) {
+      const frame = window.requestAnimationFrame(() => {
+        const list = messageListRef.current;
+        if (!list) {
+          return;
+        }
+        list.scrollTo({
+          top: list.scrollHeight,
+          behavior: prevLen === 0 ? "auto" : "smooth",
+        });
       });
-    });
 
-    return () => window.cancelAnimationFrame(frame);
-  }, [lastThreadMessageId, threadMessages.length]);
+      return () => window.cancelAnimationFrame(frame);
+    }
+
+    if (len > prevLen) {
+      setUnreadWhileAway((count) => count + (len - prevLen));
+    }
+  }, [lastThreadMessageId, threadMessages.length, isPinnedToBottom]);
+
+  const handleListScroll = useCallback(() => {
+    const list = messageListRef.current;
+    if (!list) {
+      return;
+    }
+    const distanceFromBottom =
+      list.scrollHeight - list.scrollTop - list.clientHeight;
+    const atBottom = distanceFromBottom < 80;
+    setIsPinnedToBottom(atBottom);
+    if (atBottom) {
+      setUnreadWhileAway(0);
+    }
+  }, []);
+
+  const scrollToBottom = useCallback(() => {
+    const list = messageListRef.current;
+    if (!list) {
+      return;
+    }
+    list.scrollTo({ top: list.scrollHeight, behavior: "smooth" });
+    setUnreadWhileAway(0);
+    setIsPinnedToBottom(true);
+  }, []);
+
+  const handleCopyMessage = useCallback(async (text: string) => {
+    if (!text) {
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Copied to clipboard");
+    } catch {
+      toast.error("Could not copy message");
+    }
+  }, []);
 
   useEffect(() => {
     if (!conversation || !threadRows.length || typeof window === "undefined") {
@@ -1348,13 +1446,17 @@ export default function ChatPage() {
         )}
       >
         <section className="flex min-h-0 flex-col">
-          <div
-            ref={messageListRef}
-            className="flex-1 space-y-4 overflow-y-auto px-4 py-5 sm:px-6"
-          >
+          <div className="relative min-h-0 flex-1">
+            <div
+              ref={messageListRef}
+              onScroll={handleListScroll}
+              className="absolute inset-0 overflow-y-auto px-4 py-5 sm:px-6"
+            >
             {isLoading ? (
-              <div className="flex h-full items-center justify-center">
-                <div className="h-7 w-7 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+              <div className="space-y-3">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <SkeletonMessage key={index} own={index % 3 === 0} />
+                ))}
               </div>
             ) : threadRows.length === 0 ? (
               <div className="flex h-full items-center justify-center">
@@ -1369,274 +1471,106 @@ export default function ChatPage() {
               </div>
             ) : (
               <>
+                {threadRows.map((row) =>
+                  row.type === "date" ? (
+                    <div
+                      key={row.key}
+                      className="sticky top-0 z-10 flex justify-center"
+                      style={{ pointerEvents: "none", margin: "0.5rem 0" }}
+                    >
+                      <span
+                        style={{
+                          borderRadius: "var(--radius-full)",
+                          border: "1px solid var(--border)",
+                          background: "var(--bg-elevated)",
+                          backdropFilter: "blur(var(--blur-sm))",
+                          padding: "0.2rem 0.7rem",
+                          fontSize: "0.6875rem",
+                          fontWeight: 600,
+                          letterSpacing: "0.14em",
+                          textTransform: "uppercase",
+                          color: "var(--text-secondary)",
+                        }}
+                      >
+                        {row.label}
+                      </span>
+                    </div>
+                  ) : (
+                    <MessageRow
+                      key={row.key}
+                      message={row.message}
+                      selfAccountId={user?.id ?? ""}
+                      isFirstInGroup={row.isFirstInGroup}
+                      isLastInGroup={row.isLastInGroup}
+                      showSenderName={row.showSenderName}
+                      showAvatar={row.showAvatar}
+                      highlighted={highlightedMessageId === row.message.id}
+                      onReply={() => {
+                        setReplyingTo(
+                          groupMessages.find((m) => m.id === row.message.id) ??
+                            null,
+                        );
+                        setEditingMessage(null);
+                      }}
+                      onEdit={() => {
+                        const original = groupMessages.find(
+                          (m) => m.id === row.message.id,
+                        );
+                        if (original) {
+                          handleStartEdit(original);
+                        }
+                      }}
+                      onDelete={() => {
+                        const original = groupMessages.find(
+                          (m) => m.id === row.message.id,
+                        );
+                        if (original) {
+                          void handleDeleteMessage(original);
+                        }
+                      }}
+                      onCopy={(text) => void handleCopyMessage(text)}
+                      onToggleReaction={(emoji) =>
+                        void toggleReaction(row.message.id, emoji)
+                      }
+                      onDownloadAttachment={() =>
+                        void handleDownloadAttachment(row.message)
+                      }
+                      onOpenImage={(src, alt) => setLightbox({ src, alt })}
+                    />
+                  ),
+                )}
+
                 {typingNames.length > 0 ? (
-                  <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2 text-xs text-[var(--text-secondary)]">
-                    {typingNames.join(", ")} {typingNames.length === 1 ? "is" : "are"} typing...
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      marginTop: "0.6rem",
+                      paddingLeft: "0.4rem",
+                    }}
+                  >
+                    <TypingDots />
+                    <span
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "var(--text-secondary)",
+                      }}
+                    >
+                      {typingNames.join(", ")}{" "}
+                      {typingNames.length === 1 ? "is" : "are"} typing
+                    </span>
                   </div>
                 ) : null}
-                {threadRows.map((row) =>
-                row.type === "date" ? (
-                  <div
-                    key={row.key}
-                    className="flex items-center gap-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-secondary)]"
-                  >
-                    <div className="h-px flex-1 bg-[var(--border)]" />
-                    <span>{row.label}</span>
-                    <div className="h-px flex-1 bg-[var(--border)]" />
-                  </div>
-                ) : (
-                  <div
-                    key={row.key}
-                    id={`message-${row.message.id}`}
-                    className={clsx(
-                      "group flex items-end gap-1 scroll-mt-20 rounded-xl px-1 py-1 transition-colors",
-                      highlightedMessageId === row.message.id &&
-                        "bg-brand-500/[0.10] ring-1 ring-brand-500/45",
-                      row.message.isOwn ? "justify-end" : "justify-start",
-                    )}
-                  >
-                    {/* Hover reply action for other's messages */}
-                    {!row.message.isOwn && (
-                      <div className="mb-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                        <button
-                          type="button"
-                          onClick={() => setReplyingTo(row.message as unknown as GroupThreadMessage)}
-                          className="rounded-full border border-[var(--border)] bg-[var(--bg-secondary)] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)] transition-colors hover:text-brand-600"
-                        >
-                          Reply
-                        </button>
-                      </div>
-                    )}
-                    <MessageBubble
-                      own={row.message.isOwn}
-                      sender={
-                        !row.message.isOwn
-                          ? row.message.senderDisplayName
-                          : undefined
-                      }
-                      time={formatMessageTime(row.message.createdAt)}
-                      style={
-                        row.message.kind === "system_notice"
-                          ? { opacity: 0.8 }
-                          : undefined
-                      }
-                    >
-                      {/* Delivery / edit metadata */}
-                      {(row.message.deliveryLabel ||
-                        (row.message as unknown as GroupThreadMessage).editedAt ||
-                        (row.message.isOwn &&
-                          (row.message as unknown as GroupThreadMessage).readByCount)) ? (
-                        <div
-                          style={{
-                            display: "flex",
-                            gap: "0.5rem",
-                            marginBottom: "0.25rem",
-                            fontSize: "0.6875rem",
-                            color: "var(--text-muted)",
-                          }}
-                        >
-                          {(row.message as unknown as GroupThreadMessage).editedAt ? (
-                            <span style={{ fontStyle: "italic" }}>edited</span>
-                          ) : null}
-                          {row.message.deliveryLabel ? (
-                            <span>{row.message.deliveryLabel}</span>
-                          ) : null}
-                          {row.message.isOwn &&
-                          (row.message as unknown as GroupThreadMessage).readByCount ? (
-                            <span style={{ color: "var(--ember-500)" }}>✓✓</span>
-                          ) : null}
-                        </div>
-                      ) : null}
-
-                      {/* Reply quote */}
-                      {(row.message as unknown as GroupThreadMessage).replyTo ? (
-                        <div
-                          style={{
-                            marginBottom: "0.5rem",
-                            paddingLeft: "0.75rem",
-                            paddingBlock: "0.4rem",
-                            borderLeft: "2px solid var(--ember-500)",
-                            background: "rgba(0,0,0,0.12)",
-                            borderRadius: "0 0.5rem 0.5rem 0",
-                          }}
-                        >
-                          <p
-                            style={{
-                              fontSize: "0.6875rem",
-                              fontWeight: 600,
-                              letterSpacing: "0.14em",
-                              textTransform: "uppercase",
-                              color: "var(--ember-400)",
-                            }}
-                          >
-                            {(row.message as unknown as GroupThreadMessage).replyTo!.senderDisplayName}
-                          </p>
-                          <p
-                            style={{
-                              marginTop: "0.125rem",
-                              fontSize: "0.75rem",
-                              color: "var(--text-secondary)",
-                              overflow: "hidden",
-                              display: "-webkit-box",
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: "vertical",
-                            }}
-                          >
-                            {(row.message as unknown as GroupThreadMessage).replyTo!.text ?? "Attachment"}
-                          </p>
-                        </div>
-                      ) : null}
-
-                      {/* Message body */}
-                      {(row.message as unknown as GroupThreadMessage).deletedAt ? (
-                        <p style={{ fontStyle: "italic", color: "var(--text-muted)", fontSize: "0.875rem" }}>
-                          [Message deleted]
-                        </p>
-                      ) : row.message.text ? (
-                        <FormattedMessage text={row.message.text} />
-                      ) : null}
-
-                      {/* Reactions */}
-                      {!(row.message as unknown as GroupThreadMessage).deletedAt ? (
-                        <div
-                          style={{
-                            marginTop: "0.5rem",
-                            display: "flex",
-                            flexWrap: "wrap",
-                            alignItems: "center",
-                            gap: "0.375rem",
-                          }}
-                        >
-                          {getMessageReactions(row.message.id).map((reaction) => (
-                            <button
-                              key={`${row.message.id}-${reaction.emoji}`}
-                              type="button"
-                              onClick={() => toggleReaction(row.message.id, reaction.emoji)}
-                              style={{
-                                borderRadius: "var(--radius-full)",
-                                border: "1px solid",
-                                borderColor: reaction.userReacted
-                                  ? "rgba(234,111,63,0.5)"
-                                  : "var(--border)",
-                                background: reaction.userReacted
-                                  ? "rgba(234,111,63,0.1)"
-                                  : "var(--bg-primary)",
-                                padding: "0.1rem 0.4rem",
-                                fontSize: "0.75rem",
-                                cursor: "pointer",
-                              }}
-                            >
-                              {reaction.emoji} {reaction.count}
-                            </button>
-                          ))}
-
-                          <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
-                            {REACTION_EMOJI.map((emoji) => (
-                              <button
-                                key={`${row.message.id}-quick-${emoji}`}
-                                type="button"
-                                onClick={() => toggleReaction(row.message.id, emoji)}
-                                style={{
-                                  borderRadius: "var(--radius-full)",
-                                  border: "1px solid var(--border)",
-                                  background: "var(--bg-primary)",
-                                  padding: "0.1rem 0.35rem",
-                                  fontSize: "0.75rem",
-                                  cursor: "pointer",
-                                }}
-                                aria-label={`React with ${emoji}`}
-                              >
-                                {emoji}
-                              </button>
-                            ))}
-                            <SmilePlus className="h-3.5 w-3.5 text-[var(--text-secondary)]" aria-hidden="true" />
-                          </div>
-                        </div>
-                      ) : null}
-
-                      {/* Attachment */}
-                      {!(row.message as unknown as GroupThreadMessage).deletedAt &&
-                      row.message.attachment ? (
-                        <button
-                          type="button"
-                          onClick={() => void handleDownloadAttachment(row.message)}
-                          style={{
-                            marginTop: "0.75rem",
-                            display: "flex",
-                            width: "100%",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            gap: "0.75rem",
-                            borderRadius: "var(--radius-2xl)",
-                            border: "1px solid var(--border)",
-                            background: "rgba(0,0,0,0.15)",
-                            padding: "0.6rem 0.75rem",
-                            textAlign: "left",
-                            cursor: "pointer",
-                          }}
-                        >
-                          <div>
-                            <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--text-primary)" }}>
-                              {row.message.attachment.fileName}
-                            </p>
-                            <p
-                              style={{
-                                marginTop: "0.25rem",
-                                fontSize: "0.6875rem",
-                                textTransform: "uppercase",
-                                letterSpacing: "0.14em",
-                                color: "var(--text-muted)",
-                              }}
-                            >
-                              {row.message.attachment.contentClass} ·{" "}
-                              {formatBytes(row.message.attachment.byteLength ?? 0)}
-                            </p>
-                          </div>
-                          <span
-                            style={{
-                              fontSize: "0.6875rem",
-                              fontWeight: 600,
-                              textTransform: "uppercase",
-                              letterSpacing: "0.16em",
-                              color: "var(--ember-400)",
-                            }}
-                          >
-                            Download
-                          </span>
-                        </button>
-                      ) : null}
-                    </MessageBubble>
-                    {/* Own message hover actions */}
-                    {row.message.isOwn &&
-                    !(row.message as unknown as GroupThreadMessage).deletedAt && (
-                      <div className="mb-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleStartEdit(row.message as unknown as GroupThreadMessage)
-                          }
-                          className="rounded-full border border-[var(--border)] bg-[var(--bg-secondary)] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)] transition-colors hover:text-brand-600"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            void handleDeleteMessage(
-                              row.message as unknown as GroupThreadMessage,
-                            )
-                          }
-                          className="rounded-full border border-[var(--border)] bg-[var(--bg-secondary)] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)] transition-colors hover:text-red-500"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ),
-                )}
               </>
             )}
+            </div>
+
+            <JumpToBottom
+              visible={!isLoading && !isPinnedToBottom}
+              unreadCount={unreadWhileAway}
+              onClick={scrollToBottom}
+            />
           </div>
 
           <form
@@ -1645,7 +1579,7 @@ export default function ChatPage() {
           >
             {/* Reply preview banner */}
             {replyingTo ? (
-              <div className="mb-2 flex items-start justify-between rounded-xl border-l-2 border-brand-500 bg-[var(--bg-secondary)] px-3 py-2">
+              <div className="ec-banner-enter mb-2 flex items-start justify-between rounded-xl border-l-2 border-brand-500 bg-[var(--bg-secondary)] px-3 py-2">
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-600">
                     Replying to {replyingTo.senderDisplayName}
@@ -1666,7 +1600,7 @@ export default function ChatPage() {
             ) : null}
             {/* Edit mode banner */}
             {editingMessage ? (
-              <div className="mb-2 flex items-center justify-between rounded-xl border-l-2 border-amber-500 bg-[var(--bg-secondary)] px-3 py-2">
+              <div className="ec-banner-enter mb-2 flex items-center justify-between rounded-xl border-l-2 border-amber-500 bg-[var(--bg-secondary)] px-3 py-2">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-600">
                   Editing message
                 </p>
@@ -1734,7 +1668,7 @@ export default function ChatPage() {
               </div>
 
               {selectedFile ? (
-                <div className="rounded-[1.45rem] border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
+                <div className="ec-banner-enter rounded-[1.45rem] border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
@@ -1822,14 +1756,31 @@ export default function ChatPage() {
                       ? "Browser stores decrypted history locally."
                       : "Relay stores this history until migration."}
                   </p>
-                  <Button
-                    variant="primary"
-                    type="submit"
-                    disabled={isSending}
-                    iconLeft={<SendHorizontal className="h-4 w-4" aria-hidden="true" />}
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      transformOrigin: "center",
+                      transform:
+                        content.trim().length > 0 || selectedFile
+                          ? "scale(1)"
+                          : "scale(0.94)",
+                      opacity:
+                        content.trim().length > 0 || selectedFile ? 1 : 0.8,
+                      transition:
+                        "transform var(--dur-base) var(--ease-spring), opacity var(--dur-base) var(--ease-out)",
+                    }}
                   >
-                    {isSending ? "Sending…" : "Send"}
-                  </Button>
+                    <Button
+                      variant="primary"
+                      type="submit"
+                      disabled={isSending}
+                      iconLeft={
+                        <SendHorizontal className="h-4 w-4" aria-hidden="true" />
+                      }
+                    >
+                      {isSending ? "Sending…" : "Send"}
+                    </Button>
+                  </span>
                 </div>
               </div>
             </div>
@@ -2158,6 +2109,14 @@ export default function ChatPage() {
           </aside>
         ) : null}
       </div>
+
+      {lightbox ? (
+        <ImageLightbox
+          src={lightbox.src}
+          alt={lightbox.alt}
+          onClose={() => setLightbox(null)}
+        />
+      ) : null}
     </div>
   );
 }

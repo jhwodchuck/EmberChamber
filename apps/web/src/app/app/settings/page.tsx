@@ -51,6 +51,7 @@ const privacyToggleFields = [
 export default function SettingsPage() {
   const { user, updateUser } = useAuthStore();
   const [activeTab, setActiveTab] = useState<TabType>("profile");
+  const [oledEnabled, setOledEnabled] = useState(false);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [profile, setProfile] = useState({ displayName: "", bio: "" });
   const [privacy, setPrivacy] = useState({
@@ -85,6 +86,13 @@ export default function SettingsPage() {
       setProfile({ displayName: user.displayName ?? "", bio: user.bio ?? "" });
     }
   }, [user]);
+
+  useEffect(() => {
+    setOledEnabled(
+      typeof window !== "undefined" &&
+        localStorage.getItem("oled") === "true",
+    );
+  }, []);
 
   useEffect(() => {
     if (activeTab === "sessions") {
@@ -580,6 +588,14 @@ export default function SettingsPage() {
                           : "light"
                         : themeOption;
 
+                    // OLED is a dark sub-mode; picking a non-dark theme turns it
+                    // off so the surfaces stay coherent.
+                    if (resolvedTheme !== "dark" && oledEnabled) {
+                      setOledEnabled(false);
+                      localStorage.setItem("oled", "false");
+                      document.documentElement.classList.remove("oled");
+                    }
+
                     document.documentElement.classList.toggle(
                       "dark",
                       resolvedTheme === "dark",
@@ -596,6 +612,30 @@ export default function SettingsPage() {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-4 py-2">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-[var(--text-primary)]">
+                OLED true black
+              </p>
+              <p className="text-xs text-[var(--text-secondary)]">
+                Use a pure-black background on dark themes so unlit pixels stay
+                off on OLED displays.
+              </p>
+            </div>
+            <Switch
+              checked={oledEnabled}
+              onChange={(checked) => {
+                setOledEnabled(checked);
+                localStorage.setItem("oled", checked ? "true" : "false");
+                document.documentElement.classList.toggle("oled", checked);
+                if (checked) {
+                  document.documentElement.classList.add("dark");
+                  localStorage.setItem("theme", "dark");
+                }
+              }}
+            />
           </div>
         </div>
       ) : null}

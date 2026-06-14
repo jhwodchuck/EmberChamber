@@ -72,6 +72,23 @@
     color-scheme: dark;
   }
 
+  /* OLED true-black variant. Applied alongside `.dark` (OLED implies dark,
+     mirroring the Android client where OLED is a dark sub-mode). Only the
+     background roles drop to true black so unlit pixels stay off on OLED panels
+     and the dark surfaces read as elevated cards above the void. Text, borders,
+     and accents are inherited from `.dark`. */
+  .oled {
+    --bg-primary: #000000;
+    --bg-secondary: #070506;
+    --bg-sidebar: #0a0708;
+    --bg-elevated: rgba(10, 7, 8, 0.92);
+    --bg-overlay: 0 0 0;
+    --bg-app: #000000;
+    --bg-panel: #070506;
+    --bg-panel-strong: #0d0809;
+    --bg-input: #08090b;
+  }
+
   /* Canonical design-system tokens — theme-independent.
      Sourced verbatim from the EmberChamber design system token files
      (tokens/colors.css, typography.css, spacing.css, effects.css).
@@ -568,6 +585,95 @@
   .message-bubble.other {
     @apply bg-[var(--bg-secondary)] text-[var(--text-primary)] rounded-bl-sm;
   }
+
+  /* Ember workspace background — web port of apps/mobile GradientBackground:
+     a calm diagonal sweep grounded in the app surfaces plus two soft ember
+     glows (top-right + bottom-left). OLED collapses it to a true-black canvas. */
+  .workspace-ember {
+    background-color: var(--bg-app);
+    background-image:
+      radial-gradient(circle at 100% 0%, rgba(255, 173, 112, 0.08), transparent 38%),
+      radial-gradient(circle at 0% 100%, rgba(234, 111, 63, 0.07), transparent 38%),
+      linear-gradient(135deg, var(--bg-panel-strong), var(--bg-app) 55%, var(--bg-app));
+    background-attachment: fixed;
+  }
+
+  .oled .workspace-ember {
+    background-color: #000000;
+    background-image: none;
+  }
+
+  /* Animated typing indicator — three dots that bounce in a staggered loop,
+     replacing the plain "is typing" text banner. Stagger is set inline. */
+  .ec-typing {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .ec-typing-dot {
+    height: 6px;
+    width: 6px;
+    border-radius: var(--radius-full);
+    background: var(--text-secondary);
+    animation: ec-typing-bounce 1.2s ease-in-out infinite;
+  }
+
+  /* Second delivery tick that fades + slides in to settle into ✓✓ once read. */
+  .ec-tick-second {
+    opacity: 0;
+    transform: translateX(-2px);
+    transition:
+      opacity var(--dur-base) var(--ease-out),
+      transform var(--dur-base) var(--ease-out);
+  }
+
+  .ec-tick-second.is-read {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  /* Reaction chip pop — runs on mount and is re-triggered on count change by
+     remounting via a React key. */
+  .ec-reaction-pop {
+    animation: ec-reaction-pop var(--dur-base) var(--ease-spring);
+  }
+
+  /* New-message entrance + generic element fade-in (FAB, popovers). */
+  .ec-message-enter {
+    animation: ec-message-enter var(--dur-base) var(--ease-out);
+  }
+
+  .ec-fade-in {
+    animation: ec-fade-in var(--dur-base) var(--ease-out);
+  }
+
+  /* Composer reply/edit banner + attachment-preview enter. */
+  .ec-banner-enter {
+    animation: ec-banner-enter var(--dur-base) var(--ease-out);
+  }
+
+  /* Skeleton shimmer placeholder. A muted block with a highlight band sweeping
+     across it — web port of apps/mobile Shimmer. */
+  .ec-shimmer {
+    position: relative;
+    overflow: hidden;
+    background: var(--surface-strong);
+  }
+
+  .ec-shimmer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.08),
+      transparent
+    );
+    animation: ec-shimmer 1.2s ease-in-out infinite;
+  }
 }
 
 @keyframes hero-glow-pulse {
@@ -584,6 +690,64 @@
 @keyframes float-soft {
   0%, 100% { transform: translate3d(0, 0, 0); }
   50% { transform: translate3d(0, -10px, 0); }
+}
+
+/* Own (ember) message bubbles need light typography. FormattedMessage hardcodes
+   `text-[var(--text-primary)]` on its blocks, so these unlayered rules win on
+   specificity + layer order to force on-brand text inside an own bubble. */
+.ec-bubble-own,
+.ec-bubble-own p,
+.ec-bubble-own li,
+.ec-bubble-own strong,
+.ec-bubble-own em,
+.ec-bubble-own s {
+  color: var(--on-brand);
+}
+
+.ec-bubble-own a {
+  color: #ffffff;
+  text-decoration-color: rgba(255, 255, 255, 0.7);
+}
+
+.ec-bubble-own code,
+.ec-bubble-own pre,
+.ec-bubble-own blockquote {
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+/* --- Chat polish keyframes (web parity with the Android client) --- */
+
+@keyframes ec-typing-bounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.35; }
+  40% { transform: translateY(-3px); opacity: 1; }
+}
+
+@keyframes ec-reaction-pop {
+  0% { transform: scale(0.6); }
+  60% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+
+@keyframes ec-message-enter {
+  0% { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes ec-fade-in {
+  0% { opacity: 0; transform: translateY(4px) scale(0.96); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes ec-banner-enter {
+  0% { opacity: 0; transform: translateY(-6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes ec-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
 }
 
 @keyframes drift-soft {
@@ -606,5 +770,20 @@
   .marketing-shell [class*="hero-glow-pulse"],
   .marketing-shell [class*="live-ping"] {
     animation: none !important;
+  }
+
+  /* Collapse all chat-polish motion to static resting states (web analog of
+     the mobile ReduceMotion.System discipline). */
+  .ec-typing-dot,
+  .ec-shimmer::after,
+  .ec-reaction-pop,
+  .ec-message-enter,
+  .ec-fade-in,
+  .ec-banner-enter {
+    animation: none !important;
+  }
+
+  .ec-tick-second {
+    transition: none !important;
   }
 }
