@@ -20,6 +20,7 @@ import {
 import {
   conversationDefaultTitle,
 } from "@/lib/conversation-labels";
+import { SkeletonChatRow } from "@/components/chat/skeletons";
 
 type ConversationItem = {
   id: string;
@@ -199,8 +200,10 @@ export function ChatRail({
 
       <div className="mt-5 space-y-2">
         {conversationsState.status === "loading" ? (
-          <div className="rounded-[1.4rem] border border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-4 text-sm text-[var(--text-secondary)]">
-            Syncing the latest relay and local conversation previews…
+          <div className="space-y-2">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <SkeletonChatRow key={index} />
+            ))}
           </div>
         ) : conversationsState.status === "error" ? (
           <div className="rounded-[1.4rem] border border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-4 text-sm text-[var(--text-secondary)]">
