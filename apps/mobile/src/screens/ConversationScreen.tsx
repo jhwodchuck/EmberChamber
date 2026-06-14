@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from "react";
 import {
   FlatList,
   Image,
+  KeyboardAvoidingView,
   Modal,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -14,11 +15,6 @@ import {
   type ViewToken,
   View,
 } from "react-native";
-// Drop-in for RN's KeyboardAvoidingView, but keyboard-frame-accurate and active
-// on Android (RN's KAV is effectively inert there). Driven by the root
-// KeyboardProvider wired in AppProviders. Requires adjustResize on Android —
-// see app.json `softwareKeyboardLayoutMode: "resize"`.
-import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import Animated, {
   FadeIn,
   FadeOut,
@@ -823,11 +819,12 @@ export function ConversationScreen({
   return (
     <KeyboardAvoidingView
       style={styles.conversationShell}
-      // keyboard-controller's KAV reads the real IME frame and works on both
-      // platforms (RN's is inert on Android), so "padding" is enabled on both:
-      // the docked composer stays pinned above the keyboard while the message
-      // list keeps its full height and stays scrollable as the keyboard opens.
-      behavior="padding"
+      // iOS: "padding" keeps the composer above the keyboard.
+      // Android: the activity uses adjustPan (app.json
+      // softwareKeyboardLayoutMode: "pan") to pan the focused composer into
+      // view, so this local KAV stays inert there to avoid double movement
+      // that previously pushed the composer off-screen.
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={0}
     >
       <View style={styles.conversationTopBar}>
