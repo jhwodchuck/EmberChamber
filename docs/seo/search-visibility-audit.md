@@ -19,7 +19,7 @@ This report summarizes the SEO and crawlability audit and implementation complet
 - **The Fix:** Changed the default title to `EmberChamber — Invite-Only Encrypted Messaging`. Refined the H1 from "Private messaging for your trusted circle." to "Invite-only encrypted messaging for trusted circles." Adjusted the lead paragraph to include key search queries ("private messaging app", "encrypted direct messages", "small group chats", "local-first history", "device-local search", "relay boundaries") without keyword stuffing or making misleading cryptographic claims.
 
 ### D. Structured Data (JSON-LD) Integration
-- **The Fix:** Created a safe `<JsonLd>` schema injection component. Injected `Organization` structured data on the homepage, and `SoftwareApplication` structured data on the download page detailing application categories, operating systems, download targets, and source code repository links.
+- **The Fix:** Created a safe `<JsonLd>` schema injection component. Injected `SoftwareApplication` structured data on both the homepage and the download page detailing application categories, operating systems, download targets, and source code repository links.
 
 ### E. Authenticated Page indexing Protection
 - **The Fix:** Added `noIndex: true` using our metadata helper to `/login` and `/register` pages, generating `robots: { index: false, follow: false }` tags to shield low-value authentication pages from index pollution.
@@ -52,7 +52,7 @@ We also added a root repository security policy file:
 - `apps/web/src/components/json-ld.tsx` (NEW structured data renderer)
 - `apps/web/src/components/docs-page.tsx` (NEW interactive docs template wrapper)
 - `apps/web/src/app/layout.tsx` (MODIFIED canonical layout config, set default title)
-- `apps/web/src/app/page.tsx` (MODIFIED H1 copy, added metadata, added JSON-LD Organization)
+- `apps/web/src/app/page.tsx` (MODIFIED H1 copy, added metadata, added JSON-LD SoftwareApplication)
 - `apps/web/src/app/download/page.tsx` (MODIFIED H1 copy, added metadata, added JSON-LD SoftwareApplication)
 - `apps/web/src/app/privacy/page.tsx` (MODIFIED page metadata)
 - `apps/web/src/app/beta-terms/page.tsx` (MODIFIED page metadata)
