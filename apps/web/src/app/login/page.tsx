@@ -1,13 +1,15 @@
-import type { Metadata } from "next";
 import { AuthPageIntro } from "@/components/auth-page-intro";
 import { LoginForm } from "@/components/login-form";
 import { MarketingShell } from "@/components/marketing-shell";
+import { createMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = {
+export const metadata = createMetadata({
   title: "Sign In",
   description:
     "Request a private adults-only email magic link for an existing EmberChamber beta account.",
-};
+  path: "/login",
+  noIndex: true,
+});
 
 export default async function LoginPage({
   searchParams,

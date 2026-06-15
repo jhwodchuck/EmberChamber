@@ -1,4 +1,4 @@
-# Market research
+# Market Research: Messaging Subsystems & Workspace Layouts
 
 ## Subject
 
@@ -9,7 +9,6 @@ Source review of Telegram Android, Telegram X, and Telegram Desktop as of April 
 This note is intentionally source-focused.
 
 It does not treat Telegram as a product template for EmberChamber. Telegram and Telegram X are useful here as Android implementation references for:
-
 - chat list performance
 - conversation rendering
 - media and attachment pipelines
@@ -17,27 +16,25 @@ It does not treat Telegram as a product template for EmberChamber. Telegram and 
 - separation of app state from UI surfaces
 
 Telegram Desktop is useful mainly as a larger-screen and desktop workspace reference for:
-
 - pane-based shell structure
 - optional detail panes
 - layered popups and detached tool surfaces
 - denser context actions and search modes
 
 They are not a fit for EmberChamber's product direction around:
-
 - invite-only onboarding
 - adults-only access
 - local-first history
 - private trusted-circle messaging
 - small encrypted groups
 
-## Repos reviewed
+## Repos Reviewed
 
 - Telegram Android: `https://github.com/DrKLO/Telegram`
 - Telegram X: `https://github.com/TGX-Android/Telegram-X`
 - Telegram Desktop: `https://github.com/telegramdesktop/tdesktop`
 
-## Executive summary
+## Executive Summary
 
 - Telegram Android is the better reference for subsystem separation under heavy scale: storage, message state, notifications, image loading, file loading, and diffed chat-list updates all live in distinct modules.
 - Telegram X is the better reference for controller boundaries and reusable Android screen infrastructure. Its codebase is still large, but the seams are easier to map onto a cleaner application architecture.
@@ -54,7 +51,7 @@ They are not a fit for EmberChamber's product direction around:
   - Telegram's cloud-history assumptions
   - Telegram's public discovery, large community, monetization, and bot surface area
 
-## Telegram Android findings
+## Telegram Android Findings
 
 ### What stands out
 
@@ -68,7 +65,6 @@ They are not a fit for EmberChamber's product direction around:
 ### Why it matters
 
 Telegram Android's codebase is very large and not something EmberChamber should emulate structurally. The useful lesson is that the app remains survivable because core responsibilities are isolated:
-
 - storage is not owned by the chat screen
 - file handling is not owned by the message bubble
 - notification fan-out is not owned by the app entry point
@@ -85,7 +81,7 @@ Telegram Android's codebase is very large and not something EmberChamber should 
 - `RecyclerListView.java`
 - `ChatActivity.java`
 
-## Telegram X findings
+## Telegram X Findings
 
 ### What stands out
 
@@ -99,7 +95,6 @@ Telegram Android's codebase is very large and not something EmberChamber should 
 ### Why it matters
 
 Telegram X is still a large native Android codebase, but it is a better reference for layering:
-
 - runtime/service layer
 - navigation layer
 - controller layer
@@ -121,7 +116,7 @@ That maps more cleanly to the kind of modular architecture EmberChamber needs th
 - `ChatsAdapter.java`
 - `MessagesAdapter.java`
 
-## Telegram X outside review synthesis
+## Telegram X Outside Review Synthesis
 
 An additional outside review of Telegram X's current source helps clarify the screen map and why the codebase feels more structurally coherent than the main Telegram Android client.
 
@@ -142,7 +137,7 @@ An additional outside review of Telegram X's current source helps clarify the sc
 - Mode-based reuse is stronger when screen controllers share scroll restore, inset handling, preview interactions, and action wiring.
 - Telegram X's custom navigation framework is not something to port literally, but its layering is a good reference for how EmberChamber should separate bootstrap, shell, screen, and manager responsibilities.
 
-## tg / telegram-cli findings
+## tg / telegram-cli Findings
 
 ### What stands out
 
@@ -159,7 +154,6 @@ An additional outside review of Telegram X's current source helps clarify the sc
 ### Why it matters
 
 `tg` is not a UI architecture reference for EmberChamber mobile. It is still useful as a contrast case:
-
 - it shows how much navigation, discoverability, and context modern mobile chat apps actually provide beyond raw messaging verbs
 - it reinforces that explicit operational boundaries are good, but command-only interaction is the wrong fit for EmberChamber's Android-first beta
 - it is a reminder that "feature complete" interaction can still feel structurally thin if state, history, and media are treated as one-shot outputs rather than durable surfaces
@@ -171,7 +165,7 @@ An additional outside review of Telegram X's current source helps clarify the sc
 - keep media, history, profile, and group-management flows visible and stateful in the app shell rather than delegating them to generic external handling
 - treat this repo as a contrast reference, not an implementation template
 
-## Telegram Desktop findings
+## Telegram Desktop Findings
 
 ### What stands out
 
@@ -186,7 +180,6 @@ An additional outside review of Telegram X's current source helps clarify the sc
 ### Why it matters
 
 Telegram Desktop is not a phone-navigation reference, but it is useful for EmberChamber in two ways:
-
 - it reinforces that the product can be organized around a few durable primary surfaces with secondary detail surfaces layered around them
 - it gives better reference material for future tablet, foldable, desktop, and web-secondary layouts than the Android apps do
 
@@ -197,10 +190,9 @@ Telegram Desktop is not a phone-navigation reference, but it is useful for Ember
 - use context actions and search modes deliberately, but do not let mobile flows become desktop-style menu mazes
 - treat Telegram Desktop as a larger-screen layout and interaction reference, not as the main mobile architecture template
 
-## Outside review synthesis
+## Outside Review Synthesis
 
 An additional outside review of the Telegram Android UI surfaced a useful screen-level interpretation of the same codebase:
-
 - `LaunchActivity` behaves as a router and state-restoration shell, not just a splash screen.
 - the signed-in app is organized around a tab shell rather than a flat page list
 - the user lives mostly inside a small set of high-frequency surfaces:
@@ -220,10 +212,9 @@ An additional outside review of the Telegram Android UI surfaced a useful screen
 - Telegram's chat screen is only one part of the system. The navigation shell and state restore logic are just as important to the product feel.
 - Reusing one screen in multiple modes, especially for contacts, lists, and pickers, reduces duplication while preserving native behavior.
 
-## Telegram Desktop outside review synthesis
+## Telegram Desktop Outside Review Synthesis
 
 An additional outside review of Telegram Desktop's current source reinforces the pane-based nature of the desktop client:
-
 - the signed-in app is a workspace with left chats, center conversation, and optional right details pane
 - many important surfaces are detached or layered instead of inline:
   - media viewer
@@ -241,17 +232,16 @@ An additional outside review of Telegram Desktop's current source reinforces the
 - Detached media, call, and reader surfaces are useful patterns when a feature outgrows inline treatment.
 - Dense context menus work on desktop because of pointer and keyboard affordances; mobile should borrow the action taxonomy, not the interaction model.
 
-## EmberChamber mobile baseline
+## EmberChamber Mobile Baseline
 
 Current `apps/mobile` observations from this repo:
-
 - `App.tsx` is currently the main orchestration point for session state, group state, thread state, device-link state, invite state, and relay calls.
 - `src/lib/db.ts` already gives EmberChamber a useful local SQLite foundation for cached memberships, cached messages, conversation preferences, privacy defaults, and vault media records.
 - `src/screens/ChatListScreen.tsx` currently renders the chat list with `ScrollView`, which is acceptable for a scaffold but not a good long-term choice for a growing encrypted inbox.
 - `src/screens/ConversationScreen.tsx` currently auto-scrolls to the end whenever row count changes. That is simple, but it will get brittle as mailbox sync, unread jumps, and history paging get more complex.
 - `src/components/MessageBubble.tsx` currently owns attachment open flow inline, including download, decrypt, file write, and viewer launch behavior.
 
-## Research takeaways for EmberChamber
+## Research Takeaways for EmberChamber
 
 ### Ideas worth adopting
 
@@ -285,47 +275,12 @@ Current `apps/mobile` observations from this repo:
 - Do not port Java singleton and event-bus patterns literally into Expo or React Native.
 - Do not copy Telegram's UI density or feature sprawl. EmberChamber needs clearer flows and stronger boundaries.
 
-## Bottom line
+## Bottom Line
 
 The best inspiration from these repos is not "build a smaller Telegram."
-
 The better direction is:
-
 - borrow Telegram Android's subsystem discipline
 - borrow Telegram X's cleaner controller layering
 - use `tg` only as a reminder of what a command-complete but low-context messaging surface looks like
 - use Telegram Desktop as a larger-screen layout and detached-surface reference, not a phone-shell reference
 - adapt those lessons to EmberChamber's much smaller, more private, local-first beta surface
-
-## Sources
-
-- Telegram Android repo:
-  - `https://github.com/DrKLO/Telegram`
-- Telegram Android source areas reviewed:
-  - `https://github.com/DrKLO/Telegram/blob/master/TMessagesProj/src/main/java/org/telegram/messenger/MessagesStorage.java`
-  - `https://github.com/DrKLO/Telegram/blob/master/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java`
-  - `https://github.com/DrKLO/Telegram/blob/master/TMessagesProj/src/main/java/org/telegram/messenger/NotificationCenter.java`
-  - `https://github.com/DrKLO/Telegram/blob/master/TMessagesProj/src/main/java/org/telegram/messenger/ImageLoader.java`
-  - `https://github.com/DrKLO/Telegram/blob/master/TMessagesProj/src/main/java/org/telegram/messenger/FileLoader.java`
-  - `https://github.com/DrKLO/Telegram/blob/master/TMessagesProj/src/main/java/org/telegram/ui/Adapters/DialogsAdapter.java`
-  - `https://github.com/DrKLO/Telegram/blob/master/TMessagesProj/src/main/java/org/telegram/ui/Components/RecyclerListView.java`
-  - `https://github.com/DrKLO/Telegram/blob/master/TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java`
-- Telegram X repo:
-  - `https://github.com/TGX-Android/Telegram-X`
-- Telegram X source areas reviewed:
-  - `https://github.com/TGX-Android/Telegram-X/blob/main/app/src/main/java/org/thunderdog/challegram/MainActivity.java`
-  - `https://github.com/TGX-Android/Telegram-X/blob/main/app/src/main/java/org/thunderdog/challegram/ui/MainController.java`
-  - `https://github.com/TGX-Android/Telegram-X/blob/main/app/src/main/java/org/thunderdog/challegram/navigation/NavigationController.java`
-  - `https://github.com/TGX-Android/Telegram-X/blob/main/app/src/main/java/org/thunderdog/challegram/telegram/TdlibManager.java`
-  - `https://github.com/TGX-Android/Telegram-X/blob/main/app/src/main/java/org/thunderdog/challegram/ui/ChatsController.java`
-  - `https://github.com/TGX-Android/Telegram-X/blob/main/app/src/main/java/org/thunderdog/challegram/ui/RecyclerViewController.java`
-  - `https://github.com/TGX-Android/Telegram-X/blob/main/app/src/main/java/org/thunderdog/challegram/ui/MessagesController.java`
-  - `https://github.com/TGX-Android/Telegram-X/blob/main/app/src/main/java/org/thunderdog/challegram/component/chat/MessagesManager.java`
-  - `https://github.com/TGX-Android/Telegram-X/blob/main/app/src/main/java/org/thunderdog/challegram/component/dialogs/ChatsAdapter.java`
-  - `https://github.com/TGX-Android/Telegram-X/blob/main/app/src/main/java/org/thunderdog/challegram/component/chat/MessagesAdapter.java`
-- tg / telegram-cli repo:
-  - `https://github.com/vysheng/tg`
-- tg / telegram-cli source areas reviewed:
-  - `https://github.com/vysheng/tg/blob/master/README.md`
-- Telegram Desktop repo:
-  - `https://github.com/telegramdesktop/tdesktop`

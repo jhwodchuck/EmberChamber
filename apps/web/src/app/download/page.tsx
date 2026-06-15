@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import {
   ArrowUpRight,
@@ -18,11 +17,26 @@ import {
   surfaceCapabilities,
 } from "@/lib/site";
 import { MarketingShell } from "@/components/marketing-shell";
+import { createMetadata } from "@/lib/metadata";
+import { JsonLd } from "@/components/json-ld";
 
-export const metadata: Metadata = {
-  title: "Launch Targets",
+export const metadata = createMetadata({
+  title: "Download EmberChamber for Android, Windows, and Ubuntu",
   description:
-    "Current EmberChamber beta targets, packaging paths, and what the browser is still responsible for.",
+    "Get current EmberChamber beta builds for Android, Windows, Ubuntu, and web.",
+  path: "/download",
+});
+
+const downloadSchema = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "EmberChamber",
+  applicationCategory: "CommunicationApplication",
+  operatingSystem: "Web, Android, Windows, Ubuntu",
+  url: "https://emberchamber.com/download",
+  description:
+    "Get current EmberChamber beta builds for Android, Windows, Ubuntu, and web.",
+  sameAs: "https://github.com/jhwodchuck/EmberChamber",
 };
 
 function formatBytes(bytes: number) {
@@ -125,6 +139,7 @@ async function DownloadPageInner({
 
   return (
     <MarketingShell>
+      <JsonLd json={downloadSchema} />
       <section className="mx-auto max-w-6xl px-6 py-20 sm:py-24">
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-stretch">
           <div className="cinema-panel relative overflow-hidden rounded-[2.4rem] px-6 py-8 sm:px-8 sm:py-10">
@@ -137,16 +152,12 @@ async function DownloadPageInner({
               aria-hidden="true"
             />
             <div className="relative max-w-3xl">
-              <div className="eyebrow">Launch Targets</div>
+              <div className="eyebrow">Download</div>
               <h1 className="mt-5 text-balance font-display text-5xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-6xl">
-                Pick the surface you want to live in, then verify the posted
-                build.
+                Download EmberChamber for Android, Windows, and Ubuntu
               </h1>
               <p className="mt-5 text-lg leading-8 text-[var(--text-secondary)]">
-                Android, Windows, and Ubuntu are the first committed native
-                surfaces. The browser still matters for onboarding, lighter
-                sessions, settings, and immediate access when no posted native
-                build exists yet.
+                Download EmberChamber for Android, Windows, Ubuntu, or use the web app. EmberChamber is an invite-only encrypted messaging beta for trusted circles.
               </p>
 
               <div className="mt-6 flex flex-wrap gap-3">

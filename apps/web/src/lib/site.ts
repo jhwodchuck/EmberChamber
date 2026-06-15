@@ -193,12 +193,31 @@ export const primaryNav = [
 
 export const footerLinks = [
   { href: "/start", label: "Start Here" },
+  { href: "/download", label: "Download" },
+  { href: "/trust-and-safety", label: "Trust & Safety" },
   { href: "/privacy", label: "Privacy Policy" },
   { href: "/beta-terms", label: "Beta Terms" },
-  { href: "/trust-and-safety", label: "Trust & Safety" },
   { href: "/support", label: "Support" },
-  { href: "/download", label: "Launch Targets" },
+  { href: "/security", label: "Security" },
+  { href: "/changelog", label: "Changelog" },
 ];
+
+export const docsNav = [
+  {
+    href: "/docs/no-phone-number-private-messaging",
+    label: "No Phone Number Discovery",
+  },
+  { href: "/docs/local-first-messaging", label: "Local-First & Local Search" },
+  { href: "/docs/relay-boundary", label: "Relay Privacy Boundary" },
+  { href: "/docs/encrypted-group-chat", label: "Encrypted Group Chat" },
+  {
+    href: "/docs/android-private-messenger-beta",
+    label: "Android Beta Client",
+  },
+  { href: "/docs/windows-encrypted-messenger", label: "Windows Client" },
+  { href: "/docs/ubuntu-encrypted-messenger", label: "Ubuntu & Linux Client" },
+];
+
 
 export const launchPlatforms = [
   {
