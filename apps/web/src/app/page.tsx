@@ -30,8 +30,10 @@ export const metadata = createMetadata({
 
 const homepageSchema = {
   "@context": "https://schema.org",
-  "@type": "Organization",
+  "@type": "SoftwareApplication",
   name: "EmberChamber",
+  applicationCategory: "CommunicationApplication",
+  operatingSystem: "Web, Android, Windows, Ubuntu",
   url: "https://emberchamber.com",
   description:
     "Invite-only encrypted messaging for trusted circles with local-first history and clear relay boundaries.",
