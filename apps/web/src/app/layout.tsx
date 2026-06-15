@@ -14,15 +14,12 @@ const cormorant = Cormorant_Garamond({
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "EmberChamber",
+    default: "EmberChamber — Invite-Only Encrypted Messaging",
     template: "%s | EmberChamber",
   },
   description:
     "Invite-only encrypted messaging for trusted circles with a minimal relay, local-first history, and honest privacy boundaries.",
   applicationName: "EmberChamber",
-  alternates: {
-    canonical: "/",
-  },
   keywords: [
     "private messaging",
     "encrypted messaging",

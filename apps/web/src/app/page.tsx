@@ -19,6 +19,24 @@ import {
   launchPlatforms,
   trustFacts,
 } from "@/lib/site";
+import { createMetadata } from "@/lib/metadata";
+import { JsonLd } from "@/components/json-ld";
+
+export const metadata = createMetadata({
+  path: "/",
+  description:
+    "Invite-only encrypted messaging for private DMs and trusted small groups, with local-first history, device-local search, and clear relay boundaries.",
+});
+
+const homepageSchema = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "EmberChamber",
+  url: "https://emberchamber.com",
+  description:
+    "Invite-only encrypted messaging for trusted circles with local-first history and clear relay boundaries.",
+  sameAs: ["https://github.com/jhwodchuck/EmberChamber"],
+};
 
 const heroSignals = [
   "Invite-only access",
@@ -63,6 +81,7 @@ const launchSignals = {
 export default function HomePage() {
   return (
     <MarketingShell>
+      <JsonLd json={homepageSchema} />
       <section className="relative px-6 pb-16 pt-16 sm:pb-24 sm:pt-24">
         <div className="mx-auto max-w-6xl">
           <div className="grid gap-14 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center">
@@ -71,13 +90,10 @@ export default function HomePage() {
                 Private Messaging For Trusted Circles
               </div>
               <h1 className="mt-6 max-w-4xl text-balance font-display text-6xl font-semibold tracking-tight text-[#fff1e8] sm:text-7xl lg:text-[5.4rem]">
-                Private messaging for your trusted circle.
+                Invite-only encrypted messaging for trusted circles.
               </h1>
               <p className="mt-6 max-w-3xl text-lg leading-8 text-[#cdb1a5] sm:text-xl">
-                Invite-only, private by design, and built so your conversations
-                do not turn into a public profile or a searchable archive.
-                Direct messages and new device-encrypted groups are live now,
-                and the remaining compatibility paths are called out plainly.
+                EmberChamber is a private messaging app for encrypted direct messages and small group chats. It uses invite-only onboarding, keeps private history and search device-local, and documents what the relay can and cannot see.
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">

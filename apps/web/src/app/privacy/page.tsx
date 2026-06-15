@@ -1,13 +1,14 @@
-import type { Metadata } from "next";
+import { createMetadata } from "@/lib/metadata";
 import { PrivacyBoundaryMatrix } from "@/components/privacy-boundary-matrix";
 import { PolicyPage } from "@/components/policy-page";
 import { privacyBoundaryItems } from "@/lib/site";
 
-export const metadata: Metadata = {
-  title: "Privacy",
+export const metadata = createMetadata({
+  title: "Privacy Policy",
   description:
     "High-level privacy commitments and data-handling boundaries for the EmberChamber beta.",
-};
+  path: "/privacy",
+});
 
 export default function PrivacyPage() {
   return (

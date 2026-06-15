@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import {
   Ban,
   EyeOff,
@@ -8,12 +7,14 @@ import {
 } from "lucide-react";
 import { PolicyPage } from "@/components/policy-page";
 import { trustFacts } from "@/lib/site";
+import { createMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = {
+export const metadata = createMetadata({
   title: "Trust & Safety",
   description:
     "How EmberChamber keeps your conversations private — and the platform healthy for everyone in it.",
-};
+  path: "/trust-and-safety",
+});
 
 const attentionCards = [
   {

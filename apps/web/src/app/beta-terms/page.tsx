@@ -1,11 +1,12 @@
-import type { Metadata } from "next";
 import { PolicyPage } from "@/components/policy-page";
+import { createMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = {
+export const metadata = createMetadata({
   title: "Beta Terms",
   description:
     "Plain-language beta expectations for EmberChamber before broader availability.",
-};
+  path: "/beta-terms",
+});
 
 export default function BetaTermsPage() {
   return (

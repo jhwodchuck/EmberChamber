@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { CopyButton } from "@/components/copy-button";
 import { PrivacyBoundaryMatrix } from "@/components/privacy-boundary-matrix";
@@ -8,12 +7,14 @@ import {
   privacyBoundaryItems,
   supportEmail,
 } from "@/lib/site";
+import { createMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = {
+export const metadata = createMetadata({
   title: "Support",
   description:
     "Get help with EmberChamber beta access, invites, and app issues.",
-};
+  path: "/support",
+});
 
 const supportTracks = [
   {
@@ -32,16 +33,22 @@ const supportTracks = [
 
 const supportDecisionTree = [
   {
-    title: "Need to join",
-    body: "Use this if you have a beta invite or need help figuring out whether the invite path is still valid.",
-    href: "/register",
-    label: "Join Beta",
+    title: "Invite not working?",
+    body: "Check whether your code is still valid, has uses left, or has expired — before you start registration.",
+    href: "/support/invite",
+    label: "Check Invite",
   },
   {
-    title: "Need to recover access",
-    body: "Use this only if the account already exists. If the email does not match a beta account, the login flow will stop and point you back to Join Beta instead.",
-    href: "/login",
-    label: "Request Sign-In Link",
+    title: "No sign-in email?",
+    body: "Resend a fresh magic link to your registered email. Works without contacting support.",
+    href: "/support/resend",
+    label: "Resend Link",
+  },
+  {
+    title: "Need to join",
+    body: "Use this if you have a valid beta invite and want to create a new account.",
+    href: "/register",
+    label: "Join Beta",
   },
   {
     title: "Need a build or product answer",
@@ -61,16 +68,6 @@ const bugReportTemplate = [
 ].join("\n");
 
 const quickAnswers = [
-  {
-    question: "Can't access my invite code.",
-    answer:
-      "Invite codes expire and have limited uses. Ask whoever sent yours to confirm it's still active, then email us the code and we'll look it up.",
-  },
-  {
-    question: "Didn't get the magic-link email.",
-    answer:
-      "Check your spam folder first. If it still does not arrive within a few minutes, email support with the address you used so we can help confirm the request and restart sign-in.",
-  },
   {
     question: "Which client should I start with?",
     answer:
@@ -93,7 +90,7 @@ export default function SupportPage() {
             Get help with your beta access.
           </h1>
 
-          <div className="mt-8 grid gap-4 lg:grid-cols-3">
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {supportDecisionTree.map((item) => (
               <div
                 key={item.title}
@@ -194,10 +191,15 @@ export default function SupportPage() {
                 Invite codes that aren&apos;t working
               </h2>
               <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-                Codes can expire or run out of uses. Confirm with whoever sent
-                yours that it&apos;s still valid, then email support with the
-                code. We can look it up on our end.
+                Codes can expire or run out of uses. Check yours instantly
+                without contacting support — the invite checker shows its exact
+                state in seconds.
               </p>
+              <div className="mt-4">
+                <Link href="/support/invite" className="btn-ghost">
+                  Check invite code
+                </Link>
+              </div>
             </div>
           </div>
 

@@ -1,13 +1,15 @@
-import type { Metadata } from "next";
 import { AuthPageIntro } from "@/components/auth-page-intro";
 import { MarketingShell } from "@/components/marketing-shell";
 import { RegisterForm } from "@/components/register-form";
+import { createMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = {
+export const metadata = createMetadata({
   title: "Join Beta",
   description:
     "Start age-gated invite-only EmberChamber beta onboarding with a private email bootstrap.",
-};
+  path: "/register",
+  noIndex: true,
+});
 
 export default async function RegisterPage({
   searchParams,

@@ -3,12 +3,22 @@ import { siteUrl } from "@/lib/site";
 
 const publicRoutes = [
   "",
+  "/start",
   "/download",
   "/privacy",
   "/beta-terms",
   "/trust-and-safety",
-  "/login",
-  "/register",
+  "/support",
+  "/changelog",
+  "/security",
+  "/docs",
+  "/docs/no-phone-number-private-messaging",
+  "/docs/local-first-messaging",
+  "/docs/relay-boundary",
+  "/docs/encrypted-group-chat",
+  "/docs/android-private-messenger-beta",
+  "/docs/windows-encrypted-messenger",
+  "/docs/ubuntu-encrypted-messenger",
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {
