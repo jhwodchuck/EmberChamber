@@ -18,10 +18,11 @@
       "types": "./dist/components/index.d.ts",
       "default": "./dist/components/index.js"
     },
-    "./tailwind": "./tailwind.config.js"
+    "./tailwind": "./tailwind.config.js",
+    "./tokens.css": "./dist/tokens.css"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node scripts/generate-tokens-css.mjs",
     "type-check": "tsc --noEmit",
     "lint": "eslint src --ext .ts,.tsx"
   },

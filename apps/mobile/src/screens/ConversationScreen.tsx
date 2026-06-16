@@ -32,7 +32,7 @@ import type {
   GroupThreadMessage,
   PendingAttachment,
 } from "../types";
-import { styles, theme } from "../styles";
+import { theme } from "../theme/theme";
 import { formatBytes } from "../lib/utils";
 import { MessageBubble } from "../components/MessageBubble";
 import { Shimmer } from "../components/Shimmer";
@@ -59,7 +59,11 @@ import {
 import { haptics } from "../lib/haptics";
 import { durations, springs, timings } from "../lib/motion";
 import { TypingDots } from "../components/TypingDots";
+import { styles as sharedStyles } from "../styles";
 import { conversationScreenStyles } from "./conversationScreen.styles";
+import { styles as composerStyles } from "../components/composer.styles";
+
+const styles = { ...sharedStyles, ...conversationScreenStyles, ...composerStyles };
 
 const AUTO_SCROLL_THRESHOLD = 96;
 const ANCHOR_REPORT_DELAY_MS = 400;

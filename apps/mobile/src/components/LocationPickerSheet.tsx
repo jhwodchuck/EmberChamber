@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { Modal, Pressable, Text, View } from "react-native";
-import { styles } from "../styles";
+import { styles as sharedStyles } from "../styles";
+import { styles as locationStyles } from "./locationCard.styles";
+import { styles as attachStyles } from "./attachMenuSheet.styles";
+import { styles as contextStyles } from "./contextMenuSheet.styles";
+
+const styles = { ...sharedStyles, ...locationStyles, ...attachStyles, ...contextStyles };
 
 export type LocationChoice =
   | { kind: "once" }

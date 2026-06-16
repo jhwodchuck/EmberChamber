@@ -273,41 +273,7 @@ export const styles = StyleSheet.create({
   },
   stepGrid: {
     gap: spacing[3],
-  },
-  stepCard: {
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.panel,
-    padding: 14,
-    gap: spacing[2] + 2,
-    ...panelShadow,
-  },
-  stepNumber: {
-    alignSelf: "flex-start",
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.brandMuted,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    color: colors.textSoft,
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 1.4,
-    textTransform: "uppercase",
-    overflow: "hidden",
-  },
-  stepTitle: {
-    color: colors.textPrimary,
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  stepBody: {
-    color: colors.textSecondary,
-    fontSize: 14,
-    lineHeight: 21,
-  },
+  },
   card: {
     borderRadius: radius.xl,
     borderWidth: 1,
@@ -580,37 +546,7 @@ export const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 14,
     lineHeight: 22,
-  },
-  statusCard: {
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    padding: 12,
-    gap: 6,
-  },
-  statusCardWarning: {
-    borderColor: colors.warningBorder,
-    backgroundColor: colors.warningBackground,
-  },
-  statusCardError: {
-    borderColor: colors.errorBorder,
-    backgroundColor: colors.errorBackground,
-  },
-  statusCardSuccess: {
-    borderColor: colors.successBorder,
-    backgroundColor: colors.successBackground,
-  },
-  statusTitle: {
-    color: colors.textPrimary,
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  statusBody: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    lineHeight: 20,
-  },
+  },
   metricRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -741,49 +677,7 @@ export const styles = StyleSheet.create({
   },
   segmentButtonLabelActive: {
     color: colors.textSoft,
-  },
-  toggleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 16,
-    paddingVertical: 6,
-  },
-  toggleTextBlock: {
-    flex: 1,
-    gap: 4,
-  },
-  toggleTitle: {
-    color: colors.textPrimary,
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  toggleDescription: {
-    color: colors.textMuted,
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  toggleTrack: {
-    width: 50,
-    height: 30,
-    borderRadius: 999,
-    backgroundColor: "rgba(255, 255, 255, 0.12)",
-    padding: 4,
-    justifyContent: "center",
-  },
-  toggleTrackOn: {
-    backgroundColor: "rgba(234, 111, 63, 0.38)",
-  },
-  toggleThumb: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: "#f0dbd0",
-  },
-  toggleThumbOn: {
-    alignSelf: "flex-end",
-    backgroundColor: colors.textPrimary,
-  },
+  },
   buttonRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -900,247 +794,7 @@ export const styles = StyleSheet.create({
   skeletonBubbleFaint: {
     opacity: 0.3,
     width: "40%",
-  },
-  messageMeta: {
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  messageText: {
-    color: colors.textPrimary,
-    fontSize: 15,
-    lineHeight: 21,
-  },
-  formattedMessage: {
-    gap: 8,
-  },
-  messageDeletedText: {
-    color: colors.textMuted,
-    fontSize: 14,
-    fontStyle: "italic",
-    lineHeight: 20,
-  },
-  messageReplyPreview: {
-    flexDirection: "row",
-    gap: 8,
-    borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.06)",
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  messageReplyAccent: {
-    width: 3,
-    borderRadius: 2,
-    backgroundColor: colors.brand,
-  },
-  messageReplyCopy: {
-    flex: 1,
-    minWidth: 0,
-    gap: 2,
-  },
-  messageReplySender: {
-    color: colors.textSoft,
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  messageReplyText: {
-    color: colors.textMuted,
-    fontSize: 12,
-    lineHeight: 16,
-  },
-  messageReactionRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-    paddingTop: 2,
-  },
-  messageReactionChip: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: "rgba(255,255,255,0.06)",
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-  },
-  messageReactionChipActive: {
-    borderColor: colors.brand,
-    backgroundColor: "rgba(250,204,21,0.16)",
-  },
-  messageReactionText: {
-    color: colors.textPrimary,
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  inlineBold: {
-    fontWeight: "700",
-  },
-  inlineItalic: {
-    fontStyle: "italic",
-  },
-  inlineStrikethrough: {
-    textDecorationLine: "line-through",
-  },
-  inlineLink: {
-    color: colors.textSoft,
-    textDecorationLine: "underline",
-    textDecorationColor: colors.textSoft,
-  },
-  inlineMention: {
-    color: colors.textSoft,
-    fontWeight: "700",
-  },
-  inlineCode: {
-    borderRadius: 6,
-    backgroundColor: "rgba(255,255,255,0.08)",
-    color: colors.textSoft,
-    fontFamily: Platform.select({
-      ios: "Menlo",
-      android: "monospace",
-      default: "monospace",
-    }),
-    fontSize: 14,
-  },
-  inlineSpoiler: {
-    borderRadius: 6,
-    backgroundColor: colors.brandMuted,
-    color: colors.textSoft,
-    fontSize: 14,
-    fontWeight: "700",
-    paddingHorizontal: 6,
-    overflow: "hidden",
-  },
-  inlineSpoilerRevealed: {
-    borderRadius: 6,
-    backgroundColor: "rgba(255,255,255,0.08)",
-    color: colors.textPrimary,
-    paddingHorizontal: 6,
-    overflow: "hidden",
-  },
-  quoteBlock: {
-    borderLeftWidth: 2,
-    borderLeftColor: colors.borderStrong,
-    backgroundColor: colors.inputBackground,
-    paddingLeft: 12,
-    paddingVertical: 8,
-    paddingRight: 10,
-    borderRadius: 12,
-  },
-  quoteText: {
-    color: colors.textSecondary,
-    fontSize: 15,
-    lineHeight: 21,
-  },
-  codeBlock: {
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.inputBackground,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  codeBlockText: {
-    color: colors.textSoft,
-    fontFamily: Platform.select({
-      ios: "Menlo",
-      android: "monospace",
-      default: "monospace",
-    }),
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  attachmentMeta: {
-    color: colors.textMuted,
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  messageImage: {
-    width: "100%",
-    minHeight: 220,
-    borderRadius: 16,
-    backgroundColor: colors.inputBackground,
-  },
-  attachmentActionGroup: {
-    gap: 8,
-  },
-  attachmentActionButton: {
-    alignSelf: "flex-start",
-    minWidth: 148,
-  },
-  locationCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.panel,
-    overflow: "hidden",
-  },
-  locationMapFrame: {
-    position: "relative",
-    width: "100%",
-    aspectRatio: 16 / 9,
-    backgroundColor: colors.inputBackground,
-  },
-  locationMapImage: {
-    width: "100%",
-    height: "100%",
-  },
-  locationMapMarker: {
-    position: "absolute",
-    width: 18,
-    height: 18,
-    marginLeft: -9,
-    marginTop: -9,
-    borderRadius: 999,
-    borderWidth: 3,
-    borderColor: "#ffffff",
-    backgroundColor: colors.brand,
-  },
-  locationCardBody: {
-    paddingHorizontal: 12,
-    paddingVertical: 11,
-    gap: 4,
-  },
-  locationTitle: {
-    color: colors.textPrimary,
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  locationDetail: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  locationActionRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 12,
-    marginTop: 4,
-  },
-  locationActionLabel: {
-    color: colors.textSoft,
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  locationAttribution: {
-    flex: 1,
-    color: colors.textMuted,
-    fontSize: 11,
-    textAlign: "right",
-  },
-  systemMessageCard: {
-    alignSelf: "center",
-    borderRadius: 999,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  systemMessageText: {
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: "600",
-  },
+  },
   emptyThreadCard: {
     borderRadius: 16,
     borderWidth: 1,
@@ -1168,90 +822,7 @@ export const styles = StyleSheet.create({
     height: 180,
     borderRadius: 16,
     backgroundColor: colors.inputBackground,
-  },
-  appShell: {
-    flex: 1,
-    minHeight: 0,
-    paddingHorizontal: 14,
-    paddingTop: 10,
-    paddingBottom: 12,
-    gap: 12,
-  },
-  shellBanner: {
-    gap: 8,
-  },
-  appBody: {
-    flex: 1,
-    minHeight: 0,
-  },
-  appTabBar: {
-    flexDirection: "row",
-    gap: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.panel,
-    borderRadius: 18,
-    padding: 8,
-  },
-  appTabButton: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 12,
-    paddingVertical: 12,
-    backgroundColor: colors.surface,
-  },
-  appTabButtonActive: {
-    backgroundColor: colors.brandSoft,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-  },
-  appTabLabel: {
-    color: colors.textMuted,
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  appTabLabelActive: {
-    color: colors.textSoft,
-  },
-  screenSection: {
-    flex: 1,
-    gap: 12,
-  },
-  screenScroll: {
-    flex: 1,
-  },
-  screenScrollContent: {
-    gap: 12,
-    paddingBottom: 20,
-  },
-  screenHeaderRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  screenHeader: {
-    flex: 1,
-    gap: 4,
-    paddingHorizontal: 2,
-  },
-  screenHeaderActionSlot: {
-    paddingTop: 2,
-  },
-  screenHeaderActionButton: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.brandSoft,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  screenHeaderActionLabel: {
-    color: colors.textSoft,
-    fontSize: 12,
-    fontWeight: "700",
-  },
+  },
   resumeCard: {
     borderRadius: 18,
     borderWidth: 1,
@@ -1316,18 +887,7 @@ export const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 13,
     lineHeight: 19,
-  },
-  screenTitle: {
-    color: colors.textPrimary,
-    fontSize: 24,
-    fontWeight: "700",
-    letterSpacing: -0.3,
-  },
-  screenSubtitle: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    lineHeight: 19,
-  },
+  },
   searchInput: {
     borderRadius: 16,
     borderWidth: 1,
@@ -1363,98 +923,7 @@ export const styles = StyleSheet.create({
   },
   filterLabelActive: {
     color: colors.textSoft,
-  },
-  chatRow: {
-    flexDirection: "row",
-    gap: 12,
-    alignItems: "flex-start",
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.panel,
-    padding: 14,
-  },
-  chatRowActive: {
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.brandSoft,
-  },
-  chatAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.surfaceStrong,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  chatAvatarText: {
-    color: colors.textPrimary,
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  chatRowCopy: {
-    flex: 1,
-    gap: 6,
-  },
-  chatRowTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  chatRowTitle: {
-    flex: 1,
-    color: colors.textPrimary,
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  chatRowTime: {
-    color: colors.textMuted,
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  chatRowPreview: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  chatMetaRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    gap: 8,
-  },
-  chatRowMeta: {
-    color: colors.textMuted,
-    fontSize: 12,
-  },
-  chatBadge: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceStrong,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  chatBadgeText: {
-    color: colors.textSoft,
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  unreadBadge: {
-    borderRadius: 999,
-    minWidth: 24,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.brand,
-  },
-  unreadBadgeText: {
-    color: "#1b0d08",
-    fontSize: 11,
-    fontWeight: "800",
-  },
+  },
   emptyState: {
     alignItems: "flex-start",
     justifyContent: "center",
@@ -1474,252 +943,13 @@ export const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 13,
     lineHeight: 19,
-  },
-  conversationShell: {
-    flex: 1,
-    minHeight: 0,
-    gap: 12,
-  },
-  conversationHeader: {
-    gap: 8,
-  },
-  backButton: {
-    alignSelf: "flex-start",
-    paddingVertical: 4,
-  },
-  backButtonLabel: {
-    color: colors.textSoft,
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  conversationHeaderCopy: {
-    gap: 4,
-  },
-  conversationTitle: {
-    color: colors.textPrimary,
-    fontSize: 24,
-    fontWeight: "700",
-    letterSpacing: -0.3,
-  },
-  conversationSubtitle: {
-    color: colors.textSecondary,
-    fontSize: 13,
-  },
-  conversationMessages: {
-    flex: 1,
-    minHeight: 0,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.panel,
-    padding: 12,
-  },
-  conversationMessagesContent: {
-    gap: 10,
-    paddingBottom: 8,
-  },
-  typingBanner: {
-    marginBottom: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  typingBannerText: {
-    color: colors.textSecondary,
-    fontSize: 12,
-    lineHeight: 16,
-  },
-  conversationComposer: {
-    flexShrink: 0,
-    gap: 10,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.panel,
-    padding: 12,
-  },
-  composerInputCompact: {
-    minHeight: 86,
-    textAlignVertical: "top",
-  },
-  composerActionsRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  composerSendButton: {
-    minWidth: 92,
-  },
+  },
 
-  // ---- image viewer ----
-  imageViewerOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.96)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  imageViewerCloseButton: {
-    position: "absolute",
-    top: 52,
-    right: 20,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  imageViewerCloseText: {
-    color: "#ffffff",
-    fontSize: 18,
-    fontWeight: "700",
-  },
-  imageViewerError: {
-    alignItems: "center",
-    paddingHorizontal: 32,
-    gap: 8,
-  },
-  imageViewerStatus: {
-    alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 28,
-  },
-  imageViewerStatusText: {
-    color: colors.textSecondary,
-    fontSize: 14,
-    textAlign: "center",
-    lineHeight: 21,
-  },
-  imageViewerErrorText: {
-    color: colors.errorText,
-    fontSize: 14,
-    textAlign: "center",
-    lineHeight: 21,
-  },
+  // ---- image viewer ----
 
-  // ---- message context menu ----
-  contextMenuOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.55)",
-    justifyContent: "flex-end",
-  },
-  contextMenuSheet: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    backgroundColor: colors.panelStrong,
-    borderTopWidth: 1,
-    borderColor: colors.border,
-    paddingBottom: 36,
-    paddingTop: 12,
-  },
-  contextMenuDrag: {
-    alignSelf: "center",
-    width: 44,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.border,
-    marginBottom: 12,
-  },
-  contextReactionRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 10,
-    gap: 8,
-  },
-  contextReactionButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  contextReactionLabel: {
-    fontSize: 22,
-    lineHeight: 26,
-  },
-  contextMenuItem: {
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-  },
-  contextMenuItemLabel: {
-    color: colors.textPrimary,
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  contextMenuItemDestructive: {
-    color: colors.errorText,
-  },
-  contextMenuDivider: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginHorizontal: 20,
-  },
+  // ---- message context menu ----
 
-  // ---- format toolbar ----
-  formatToolbar: {
-    flexDirection: "row",
-    gap: 6,
-    paddingBottom: 4,
-  },
-  formatButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.inputBorder,
-    backgroundColor: colors.inputBackground,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  formatButtonActive: {
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.brandSoft,
-  },
-  formatButtonLabel: {
-    color: colors.textMuted,
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  formatButtonLabelActive: {
-    color: colors.textSoft,
-  },
-  formatMenuHeader: {
-    paddingHorizontal: 24,
-    paddingBottom: 12,
-    gap: 6,
-  },
-  formatMenuItemMeta: {
-    flex: 1,
-    gap: 4,
-  },
-  formatMenuSyntax: {
-    color: colors.textMuted,
-    fontSize: 12,
-    lineHeight: 18,
-    fontFamily: Platform.select({
-      ios: "Menlo",
-      android: "monospace",
-      default: "monospace",
-    }),
-  },
-  formatMenuFooter: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-  },
-  formatMenuFooterText: {
-    color: colors.textMuted,
-    fontSize: 12,
-    lineHeight: 18,
-  },
+  // ---- format toolbar ----
   editModeBanner: {
     flexDirection: "row",
     alignItems: "center",
@@ -1847,154 +1077,9 @@ export const styles = StyleSheet.create({
     alignSelf: "center",
   },
 
-  // ---- swipeable chat row ----
-  chatRowShell: {
-    position: "relative",
-    marginBottom: 4,
-    overflow: "hidden",
-    borderRadius: 18,
-  },
-  chatRowActions: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    bottom: 0,
-    flexDirection: "row",
-    alignItems: "stretch",
-  },
-  chatActionButton: {
-    alignItems: "center",
-    justifyContent: "center",
-    width: 80,
-    paddingHorizontal: 8,
-  },
-  chatActionButtonMuted: {
-    backgroundColor: "#2d3748",
-  },
-  chatActionButtonPinned: {
-    backgroundColor: "#44380c",
-  },
-  chatActionButtonArchived: {
-    backgroundColor: "#1a2430",
-  },
-  chatActionLabel: {
-    color: colors.textSoft,
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  chatRowAnimated: {
-    backgroundColor: colors.background,
-    borderRadius: 18,
-  },
-  chatRowTitleUnread: {
-    color: "#ffffff",
-    fontWeight: "800",
-  },
-  chatRowRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  chatRowTimeUnread: {
-    color: colors.textSoft,
-  },
-  chatStateLabel: {
-    color: colors.textMuted,
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
-  chatRowPreviewUnread: {
-    color: colors.textPrimary,
-  },
-  chatListContent: {
-    gap: 4,
-    paddingBottom: 24,
-  },
-  chatWorkspaceShell: {
-    flex: 1,
-    minHeight: 0,
-    minWidth: 0,
-    flexDirection: "row",
-    gap: 12,
-  },
-  chatWorkspaceListPane: {
-    flex: 0.95,
-    minWidth: 320,
-    maxWidth: 420,
-    minHeight: 0,
-  },
-  chatWorkspaceDetailPane: {
-    flex: 1.35,
-    minHeight: 0,
-    minWidth: 0,
-  },
-  chatWorkspaceEmptyPane: {
-    flex: 1,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.panel,
-    padding: 24,
-    justifyContent: "center",
-    gap: 10,
-  },
-  chatWorkspaceEmptyTitle: {
-    color: colors.textPrimary,
-    fontSize: 22,
-    fontWeight: "700",
-  },
-  chatWorkspaceEmptyBody: {
-    color: colors.textSecondary,
-    fontSize: 14,
-    lineHeight: 22,
-    maxWidth: 420,
-  },
+  // ---- swipeable chat row ----
 
-  // ---- conversation top bar ----
-  conversationTopBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexShrink: 0,
-    gap: 8,
-    paddingBottom: 2,
-  },
-  conversationIdentity: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    overflow: "hidden",
-  },
-  conversationAvatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.surfaceStrong,
-    borderWidth: 1,
-    borderColor: colors.border,
-    flexShrink: 0,
-  },
-  conversationAvatarText: {
-    color: colors.textPrimary,
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  conversationOverflowButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  conversationOverflowLabel: {
-    color: colors.textSoft,
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  conversationLoadingState: {
-    alignItems: "flex-start",
-    justifyContent: "flex-end",
-  },
+  // ---- conversation top bar ----
   attachmentRetryButton: {
     alignSelf: "flex-start",
     paddingVertical: 2,
@@ -2005,529 +1090,42 @@ export const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  // ---- date separator ----
-  dateSeparator: {
-    alignItems: "center",
-    paddingVertical: 6,
-  },
-  dateSeparatorLabel: {
-    color: colors.textMuted,
-    fontSize: 11,
-    fontWeight: "600",
-    letterSpacing: 0.4,
-  },
+  // ---- date separator ----
 
-  // ---- docked composer ----
-  composerDock: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    gap: 6,
-  },
-  composerAttachColumn: {
-    flexDirection: "column",
-    gap: 6,
-    flexShrink: 0,
-  },
-  composerAttachButton: {
-    width: 46,
-    height: 46,
-    borderRadius: 12,
+  // ---- docked composer ----
+  // Telegram-style icon buttons
+
+  // ---- member roster modal ----
+
+  // ---- member profile sheet ----
+
+  // ---- role badge ----
+
+  // ---- member activity section ----
+
+  // ---- member notes section ----
+
+  // ---- member profile action buttons ----
+
+  // ---- attach menu sheet ----
+
+  // ---- attach sub-sheets (location / poll / checklist) ----
+
+  // duration chips (live location)
+
+  // poll / checklist option rows
+  textInput: {
+    backgroundColor: colors.inputBackground,
     borderWidth: 1,
     borderColor: colors.inputBorder,
-    backgroundColor: colors.inputBackground,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  composerAttachLabel: {
-    color: colors.textMuted,
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  composerInputDocked: {
-    flex: 1,
-    minHeight: 40,
-    maxHeight: 140,
-    textAlignVertical: "top",
-    paddingTop: 9,
-    paddingBottom: 9,
-    paddingHorizontal: 4,
-  },
-  composerSendButtonDocked: {
-    minWidth: 64,
-    height: 46,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.brand,
+    borderRadius: radius.lg,
     paddingHorizontal: 12,
-    flexShrink: 0,
-  },
-  composerSendButtonLabel: {
-    color: "#1b0d08",
-    fontSize: 14,
-    fontWeight: "800",
-  },
-  // Telegram-style icon buttons
-  composerIconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.inputBorder,
-    backgroundColor: colors.inputBackground,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-    marginBottom: 2,
-  },
-  composerIconButtonDisabled: {
-    opacity: 0.4,
-  },
-  composerIconLabel: {
-    fontSize: 17,
-    lineHeight: 20,
-  },
-  composerFormatLabel: {
-    color: colors.textMuted,
-    fontSize: 13,
-    fontWeight: "800",
-    lineHeight: 16,
-  },
-  composerSendCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.brand,
-    flexShrink: 0,
-    marginBottom: 2,
-  },
-  composerSendCircleDisabled: {
-    opacity: 0.45,
-  },
-  composerSendIcon: {
-    color: "#1b0d08",
-    fontSize: 20,
-    fontWeight: "900",
-    lineHeight: 22,
-  },
-
-  // ---- member roster modal ----
-  memberRosterSheet: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    backgroundColor: colors.panelStrong,
-    borderTopWidth: 1,
-    borderColor: colors.border,
-    padding: 20,
-    paddingBottom: 48,
-    gap: 16,
-    minHeight: 300,
-    maxHeight: "85%",
-  },
-  memberRosterScroll: {
-    flexGrow: 0,
-  },
-  memberRosterLoading: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 12,
-  },
-  memberRosterLoadingText: {
-    color: colors.textMuted,
-    fontSize: 14,
-  },
-  memberRosterList: {
-    gap: 4,
-  },
-  memberRosterRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
     paddingVertical: 10,
-    paddingHorizontal: 4,
-    borderRadius: 12,
-  },
-  memberRosterAvatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.surfaceStrong,
-    borderWidth: 1,
-    borderColor: colors.border,
-    flexShrink: 0,
-  },
-  memberRosterAvatarText: {
-    color: colors.textPrimary,
     fontSize: 14,
-    fontWeight: "700",
-  },
-  memberRosterCopy: {
-    flex: 1,
-    gap: 2,
-  },
-  memberRosterName: {
     color: colors.textPrimary,
-    fontSize: 15,
-    fontWeight: "600",
+    marginTop: 6,
   },
-  memberRosterMeta: {
-    color: colors.textMuted,
-    fontSize: 12,
-  },
-  memberRosterChevron: {
-    color: colors.textMuted,
-    fontSize: 22,
-    fontWeight: "300",
-    marginLeft: 4,
-  },
-
-  // ---- member profile sheet ----
-  memberProfileSheet: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    backgroundColor: colors.panelStrong,
-    borderTopWidth: 1,
-    borderColor: colors.border,
-    padding: 20,
-    paddingBottom: 48,
-    gap: 18,
-    maxHeight: "90%",
-  },
-  memberProfileDrag: {
-    alignSelf: "center",
-    width: 44,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.border,
-    marginBottom: 4,
-  },
-  memberProfileHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-  },
-  memberProfileAvatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.surfaceStrong,
-    borderWidth: 1,
-    borderColor: colors.border,
-    flexShrink: 0,
-  },
-  memberProfileAvatarText: {
-    color: colors.textPrimary,
-    fontSize: 20,
-    fontWeight: "700",
-  },
-  memberProfileHeaderCopy: {
-    flex: 1,
-    gap: 6,
-  },
-  memberProfileName: {
-    color: colors.textPrimary,
-    fontSize: 20,
-    fontWeight: "700",
-    letterSpacing: -0.2,
-  },
-  memberProfileRoleRow: {
-    flexDirection: "row",
-    gap: 8,
-    alignItems: "center",
-    flexWrap: "wrap",
-  },
-  memberProfileMeta: {
-    flexDirection: "row",
-    gap: 14,
-    flexWrap: "wrap",
-  },
-  memberProfileMetaText: {
-    color: colors.textMuted,
-    fontSize: 12,
-  },
-
-  // ---- role badge ----
-  roleBadge: {
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderWidth: 1,
-  },
-  roleBadgeOwner: {
-    borderColor: "rgba(234, 111, 63, 0.45)",
-    backgroundColor: "rgba(234, 111, 63, 0.12)",
-  },
-  roleBadgeAdmin: {
-    borderColor: "rgba(168, 139, 250, 0.4)",
-    backgroundColor: "rgba(168, 139, 250, 0.1)",
-  },
-  roleBadgeMember: {
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceStrong,
-  },
-  roleBadgeSelf: {
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: colors.successBorder,
-    backgroundColor: colors.successBackground,
-  },
-  roleBadgeLabel: {
-    color: colors.textSoft,
-    fontSize: 11,
-    fontWeight: "700",
-  },
-
-  // ---- member activity section ----
-  memberActivitySection: {
-    gap: 8,
-  },
-  memberActivityLabel: {
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-  },
-  memberActivityRow: {
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  memberActivityText: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-
-  // ---- member notes section ----
-  memberNotesSection: {
-    gap: 10,
-  },
-  memberNotesTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  memberNotesTitle: {
-    color: colors.textPrimary,
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  memberNotesHint: {
-    color: colors.textMuted,
-    fontSize: 11,
-  },
-  memberNotesInput: {
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.inputBorder,
-    backgroundColor: colors.inputBackground,
-    padding: 12,
-    color: colors.textPrimary,
-    fontSize: 14,
-    lineHeight: 21,
-    textAlignVertical: "top",
-    minHeight: 80,
-  },
-
-  // ---- member profile action buttons ----
-  memberProfileActions: {
-    gap: 10,
-  },
-
-  // ---- attach menu sheet ----
-  attachMenuSheet: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    backgroundColor: colors.panelStrong,
-    borderTopWidth: 1,
-    borderColor: colors.border,
-    paddingBottom: 32,
-    paddingTop: 12,
-    gap: 14,
-  },
-  attachCameraPreview: {
-    marginHorizontal: 16,
-    height: 170,
-    borderRadius: 18,
-    overflow: "hidden",
-    backgroundColor: colors.surface,
-    position: "relative",
-  },
-  attachCameraPlaceholder: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-  },
-  attachCameraPlaceholderIcon: {
-    fontSize: 40,
-  },
-  attachCameraPlaceholderLabel: {
-    color: colors.textMuted,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  attachCameraHintBadge: {
-    position: "absolute",
-    bottom: 10,
-    left: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    backgroundColor: "rgba(0,0,0,0.55)",
-  },
-  attachCameraHintText: {
-    color: "#ffffff",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  attachGrid: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    paddingHorizontal: 8,
-  },
-  attachGridTile: {
-    alignItems: "center",
-    gap: 6,
-    flex: 1,
-  },
-  attachGridIconCircle: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  attachGridIconText: {
-    fontSize: 24,
-  },
-  attachGridLabel: {
-    color: colors.textSecondary,
-    fontSize: 11,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-
-  // ---- attach sub-sheets (location / poll / checklist) ----
-  attachSubSheet: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    backgroundColor: colors.panelStrong,
-    borderTopWidth: 1,
-    borderColor: colors.border,
-    paddingBottom: 32,
-    paddingTop: 12,
-    paddingHorizontal: 20,
-    gap: 16,
-    maxHeight: "85%",
-  },
-  attachSubSheetTitle: {
-    color: colors.textPrimary,
-    fontSize: 18,
-    fontWeight: "700",
-    letterSpacing: -0.2,
-  },
-  attachSubSheetScroll: {
-    maxHeight: 340,
-  },
-  attachSubSheetInput: {
-    marginBottom: 10,
-  },
-  attachSubSheetOption: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 14,
-    paddingVertical: 12,
-  },
-  attachSubSheetOptionIcon: {
-    fontSize: 24,
-    lineHeight: 28,
-  },
-  attachSubSheetOptionCopy: {
-    gap: 3,
-  },
-  attachSubSheetOptionLabel: {
-    color: colors.textPrimary,
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  attachSubSheetOptionHint: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-
-  // duration chips (live location)
-  attachDurationRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 8,
-    flexWrap: "wrap",
-  },
-  attachDurationChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.inputBorder,
-    backgroundColor: colors.inputBackground,
-  },
-  attachDurationChipActive: {
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.brandSoft,
-  },
-  attachDurationChipLabel: {
-    color: colors.textMuted,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  attachDurationChipLabelActive: {
-    color: colors.textSoft,
-  },
-
-  // poll / checklist option rows
-  attachPollOptionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 8,
-  },
-  attachPollRemove: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    flexShrink: 0,
-  },
-  attachPollRemoveLabel: {
-    color: colors.textMuted,
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  attachCheckPrefix: {
-    color: colors.textSecondary,
-    fontSize: 18,
-    lineHeight: 44,
-    flexShrink: 0,
+  disabledButton: {
+    opacity: 0.45,
   },
 });

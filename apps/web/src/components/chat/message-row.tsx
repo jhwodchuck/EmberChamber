@@ -30,6 +30,7 @@ export type ChatRowMessage = {
   createdAt: string;
   kind: "text" | "media" | "system_notice";
   isOwn: boolean;
+  status?: "pending" | "sent" | "received" | "failed";
   historyMode?: "relay_hosted" | "device_encrypted";
   deliveryLabel?: string;
   replyTo?: { senderDisplayName?: string | null; text?: string | null } | null;
@@ -54,6 +55,7 @@ type MessageRowProps = {
   onToggleReaction: (emoji: string) => void;
   onDownloadAttachment: () => void;
   onOpenImage: (src: string, alt: string) => void;
+  onRetry?: () => void;
 };
 
 const BUBBLE_RADIUS = 18;
@@ -93,6 +95,7 @@ export const MessageRow = memo(function MessageRow({
   onToggleReaction,
   onDownloadAttachment,
   onOpenImage,
+  onRetry,
 }: MessageRowProps) {
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -457,12 +460,33 @@ export const MessageRow = memo(function MessageRow({
               color: isOwn ? "rgba(255,255,255,0.72)" : "var(--text-muted)",
             }}
           >
-            {message.deliveryLabel ? <span>{message.deliveryLabel}</span> : null}
+            {isOwn && message.status === "failed" && onRetry ? (
+              <button
+                type="button"
+                onClick={onRetry}
+                aria-label="Retry sending this message"
+                style={{
+                  background: "none",
+                  border: "none",
+                  padding: "0 0.15rem",
+                  cursor: "pointer",
+                  fontSize: "0.625rem",
+                  fontWeight: 600,
+                  color: "var(--error-text)",
+                  textDecoration: "underline",
+                  textUnderlineOffset: "2px",
+                }}
+              >
+                Failed · Retry
+              </button>
+            ) : message.deliveryLabel ? (
+              <span>{message.deliveryLabel}</span>
+            ) : null}
             {message.editedAt && !isDeleted ? (
               <span style={{ fontStyle: "italic" }}>edited</span>
             ) : null}
             <span>{formatMessageTime(message.createdAt)}</span>
-            {isOwn && !isDeleted ? (
+            {isOwn && !isDeleted && message.status !== "failed" ? (
               <ReadTicks read={(message.readByCount ?? 0) >= 1} />
             ) : null}
           </div>

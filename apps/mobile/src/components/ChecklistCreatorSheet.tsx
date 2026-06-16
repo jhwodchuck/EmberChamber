@@ -7,7 +7,10 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { styles, theme } from "../styles";
+import { styles as sharedStyles, theme } from "../styles";
+import { styles as attachStyles } from "./attachMenuSheet.styles";
+import { styles as contextStyles } from "./contextMenuSheet.styles";
+const styles = { ...sharedStyles, ...attachStyles, ...contextStyles };
 
 type Props = {
   visible: boolean;

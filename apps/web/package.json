@@ -36,6 +36,7 @@
     "zustand": "^4.5.2"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
     "@playwright/test": "^1.55.1",
     "@types/node": "^20.12.7",
     "@types/qrcode": "^1.5.6",

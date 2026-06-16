@@ -114,7 +114,11 @@ import {
 import { useNotificationBridge } from "./src/features/notifications/useNotificationBridge";
 import { AppBootstrap } from "./src/app/AppBootstrap";
 import { AppProviders } from "./src/app/AppProviders";
+import { useBackupManager } from "./src/hooks/useBackupManager";
 import { AppShell } from "./src/app/AppShell";
+import { useAuth } from "./src/features/auth/useAuth";
+import { useDeviceLink } from "./src/features/deviceLink/useDeviceLink";
+import { useInvites } from "./src/features/invites/useInvites";
 import { theme } from "./src/styles";
 
 const onboardingHeroSignals = [
@@ -330,6 +334,129 @@ export default function App() {
   );
   const lastTypingPublishAtRef = useRef(0);
 
+
+  const auth = useAuth({
+    session,
+    setSession,
+    sessionRef,
+    inviteToken,
+    inviteInput,
+    inviteFieldVisible,
+    setInviteFieldVisible,
+    deviceLabel,
+    setProfile,
+    setContactCard,
+    setGroups,
+    setThreadMessages,
+    setPendingAttachment,
+    setProfileSetupActive,
+    setProfileSetupName,
+    setProfileSetupError,
+    setAuthMethod,
+    setSessionMessage,
+    setFormMessage,
+    setInviteFocusToken,
+    setCompletedDeviceLinkSessionId,
+    setDeviceLinkQrValue,
+    setDeviceLinkStatus,
+    setDeviceLinkMessage,
+    setActiveDeviceLink,
+    email,
+    setEmail,
+    ageConfirmed18,
+    setAgeConfirmed18,
+    challenge,
+    setChallenge,
+    sessions,
+    setSessions,
+    isLoadingSessions,
+    setIsLoadingSessions,
+    sessionsError,
+    setSessionsError,
+    isRevokingSession,
+    setIsRevokingSession,
+    isSending,
+    setIsSending,
+    isCompleting,
+    setIsCompleting,
+    errors,
+    setErrors,
+  });
+
+  const {
+    refreshRelaySession,
+    refreshSignedInSessions,
+    revokeSignedInSession,
+    persistAuthenticatedSession,
+    submitMagicLink,
+    completeMagicLink,
+    signOut,
+    relayFetch,
+  } = auth;
+
+  const {
+    isExporting: isExportingBackup,
+    isImporting: isImportingBackup,
+    exportBackup,
+    importBackup,
+  } = useBackupManager({ session, db });
+
+  const deviceLink = useDeviceLink({
+    session,
+    sessionRef,
+    deviceLabel,
+    onCompleteDeviceLink: persistAuthenticatedSession,
+    relayFetch,
+    deviceLinkQrValue,
+    setDeviceLinkQrValue,
+    deviceLinkStatus,
+    setDeviceLinkStatus,
+    deviceLinkMessage,
+    setDeviceLinkMessage,
+    isWorkingDeviceLink,
+    setIsWorkingDeviceLink,
+    isApprovingDeviceLink,
+    setIsApprovingDeviceLink,
+    activeDeviceLink,
+    setActiveDeviceLink,
+    completedDeviceLinkSessionId,
+    setCompletedDeviceLinkSessionId,
+  });
+
+  const {
+    resetDeviceLinkState,
+    beginSourceDeviceLink,
+    beginTargetDeviceLink,
+    scanDeviceLinkQr,
+    approveDeviceLink,
+  } = deviceLink;
+
+  const invites = useInvites({
+    session,
+    sessionRef,
+    db,
+    setGroups,
+    setSelectedConversationId,
+    setSessionMessage,
+    setFormMessage,
+    setAuthMethod,
+    relayFetch,
+    inviteToken,
+    setInviteToken,
+    inviteInput,
+    setInviteInput,
+    inviteFocusToken,
+    setInviteFocusToken,
+    inviteFieldVisible,
+    setInviteFieldVisible,
+  });
+
+  const {
+    previewInviteReference,
+    previewInvite,
+    acceptInvite,
+  } = invites;
+
   const selectedGroup =
     groups.find((group) => group.id === selectedConversationId) ??
     (session?.bootstrapConversationId
@@ -371,450 +498,18 @@ export default function App() {
 
   // ---- relay helpers (stay here because they close over setSession) ----
 
-  async function relayFetch<T>(
-    currentSession: AuthSession,
-    path: string,
-    init?: RequestInit,
-    allowRefresh = true,
-  ): Promise<T> {
-    return relayFetchRequest<T>({
-      session: currentSession,
-      path,
-      init,
-      allowRefresh,
-      onRefreshSession: refreshRelaySession,
-      baseUrl: relayUrl,
-    });
-  }
 
-  async function refreshRelaySession(currentSession: AuthSession) {
-    const { response, body } = await requestRelaySessionRefresh(
-      currentSession.refreshToken,
-    );
 
-    if (!response.ok || !("accessToken" in body)) {
-      setSessionMessage({
-        tone: "warning",
-        title: "Session refresh failed",
-        body:
-          "This phone kept its saved session so it can retry refresh instead of losing the only recovery token.",
-      });
-      return null;
-    }
 
-    const nextSession: AuthSession = {
-      ...currentSession,
-      accessToken: body.accessToken,
-      deviceId: body.deviceId,
-      sessionId: body.sessionId,
-      expiresAt: body.expiresAt ?? currentSession.expiresAt,
-    };
 
-    await saveStoredSession(nextSession);
-    setSession(nextSession);
-    return nextSession;
-  }
 
-  async function refreshSignedInSessions(currentSession: AuthSession) {
-    setIsLoadingSessions(true);
 
-    try {
-      const nextSessions = await relayFetch<SessionDescriptor[]>(
-        currentSession,
-        "/v1/sessions",
-      );
-      setSessions(nextSessions);
-      setSessionsError(null);
-    } catch (error) {
-      setSessionsError(
-        error instanceof Error
-          ? error.message
-          : "Unable to load signed-in sessions.",
-      );
-    } finally {
-      setIsLoadingSessions(false);
-    }
-  }
 
-  async function revokeSignedInSession(sessionId: string) {
-    const currentSession = sessionRef.current;
-    if (!currentSession) return;
 
-    setIsRevokingSession(sessionId);
-    try {
-      await relayFetch<{ revoked: boolean; sessionId: string }>(
-        currentSession,
-        `/v1/sessions/${sessionId}`,
-        { method: "DELETE" },
-      );
-      await refreshSignedInSessions(currentSession);
-    } catch (error) {
-      setSessionsError(
-        error instanceof Error
-          ? error.message
-          : "Unable to revoke that session.",
-      );
-    } finally {
-      setIsRevokingSession(null);
-    }
-  }
 
-  function resetDeviceLinkState() {
-    setDeviceLinkQrValue(null);
-    setDeviceLinkStatus(null);
-    setDeviceLinkMessage(null);
-    setIsWorkingDeviceLink(false);
-    setIsApprovingDeviceLink(false);
-    setActiveDeviceLink(null);
-    setCompletedDeviceLinkSessionId(null);
-  }
 
-  function normalizeStartedSourceDeviceLink(
-    response: DeviceLinkStartResponse,
-    requesterLabel: string,
-  ): {
-    legacy: boolean;
-    qrPayload: string;
-    parsed: ReturnType<typeof parseDeviceLinkQrPayload>;
-    status: DeviceLinkStatus;
-  } {
-    try {
-      return {
-        legacy: false,
-        qrPayload: response.qrPayload,
-        parsed: parseDeviceLinkQrPayload(response.qrPayload),
-        status: response,
-      };
-    } catch {
-      if (!response.linkId || !response.qrPayload?.trim()) {
-        throw new Error(
-          "The relay returned an unreadable device-link QR payload.",
-        );
-      }
 
-      const qrPayload = encodeDeviceLinkQrPayload({
-        relayOrigin: getMobileRelayOrigin(relayUrl),
-        qrMode: "source_display",
-        linkToken: response.qrPayload.trim(),
-        requesterLabel,
-      });
 
-      return {
-        legacy: true,
-        qrPayload,
-        parsed: parseDeviceLinkQrPayload(qrPayload),
-        status: {
-          linkId: response.linkId,
-          relayOrigin: getMobileRelayOrigin(relayUrl),
-          qrMode: "source_display",
-          state: "pending_claim",
-          requesterLabel,
-          expiresAt: response.expiresAt,
-          canComplete: false,
-        },
-      };
-    }
-  }
-
-  function buildSessionReadyMessage(
-    nextSession: AuthSession,
-    source: "magic-link" | "device-link",
-  ): FormMessage {
-    if (nextSession.bootstrapConversationTitle) {
-      return {
-        tone: "success",
-        title:
-          source === "device-link"
-            ? "Device linked and thread ready"
-            : "Signed in and thread ready",
-        body: `${nextSession.bootstrapConversationTitle} should appear below as soon as account sync finishes.`,
-      };
-    }
-
-    return {
-      tone: "success",
-      title: source === "device-link" ? "Device linked" : "Session ready",
-      body:
-        source === "device-link"
-          ? "This phone now has a relay session from the trusted-device approval flow."
-          : "This phone now has a relay session. Join or create a trusted circle to send your first message.",
-    };
-  }
-
-  async function persistAuthenticatedSession(
-    nextSession: AuthSession,
-    source: "magic-link" | "device-link",
-  ) {
-    const normalizedDeviceLabel =
-      deviceLabel.trim() || suggestMobileDeviceLabel();
-    const bootstrapInvite = normalizeInviteReference(inviteInput);
-
-    await Promise.all([
-      saveStoredSession(nextSession),
-      secureStorageCapability.setItem(
-        STORAGE_KEYS.deviceLabel,
-        normalizedDeviceLabel,
-      ),
-    ]);
-
-    setSession(nextSession);
-    setChallenge(null);
-    setCompletedDeviceLinkSessionId(nextSession.sessionId);
-    setDeviceLinkQrValue(null);
-    setDeviceLinkStatus(null);
-    setDeviceLinkMessage(null);
-    setActiveDeviceLink(null);
-    if (bootstrapInvite) {
-      setInviteFocusToken((current) => current + 1);
-      setSessionMessage({
-        tone: "success",
-        title:
-          source === "device-link"
-            ? "Device linked and invite ready"
-            : "Signed in and invite ready",
-        body: "The incoming invite is loaded under Invites. Review the preview there and join when you are ready.",
-      });
-    } else {
-      setSessionMessage(buildSessionReadyMessage(nextSession, source));
-    }
-  }
-
-  async function beginSourceDeviceLink() {
-    const currentSession = sessionRef.current;
-    if (!currentSession) {
-      return;
-    }
-
-    setIsWorkingDeviceLink(true);
-    setDeviceLinkMessage(null);
-    setCompletedDeviceLinkSessionId(null);
-
-    try {
-      const normalizedDeviceLabel =
-        deviceLabel.trim() || suggestMobileDeviceLabel();
-      const response = await relayFetch<DeviceLinkStartResponse>(
-        currentSession,
-        "/v1/devices/link/start",
-        {
-          method: "POST",
-          body: JSON.stringify({ deviceLabel: normalizedDeviceLabel }),
-        },
-      );
-      const normalized = normalizeStartedSourceDeviceLink(
-        response,
-        normalizedDeviceLabel,
-      );
-
-      setActiveDeviceLink(
-        normalized.legacy
-          ? null
-          : {
-              linkToken: normalized.parsed.linkToken,
-              qrMode: normalized.parsed.qrMode,
-            },
-      );
-      setDeviceLinkQrValue(normalized.qrPayload);
-      setDeviceLinkStatus(normalized.status);
-      if (normalized.legacy) {
-        setDeviceLinkMessage({
-          tone: "warning",
-          title: "Relay rollout still pending",
-          body: "This QR is displayed using the older relay contract. Completing the full device-link handoff still requires the relay update.",
-        });
-      }
-    } catch (error) {
-      setDeviceLinkMessage({
-        tone: "error",
-        title: "Unable to prepare device link",
-        body: error instanceof Error ? error.message : "Unknown relay error",
-      });
-    } finally {
-      setIsWorkingDeviceLink(false);
-    }
-  }
-
-  async function beginTargetDeviceLink() {
-    if (deviceLabel.trim().length < 3) {
-      setDeviceLinkMessage({
-        tone: "warning",
-        title: "Name this phone first",
-        body: "Use at least 3 characters so the signed-in device can recognize the approval target.",
-      });
-      return;
-    }
-
-    setIsWorkingDeviceLink(true);
-    setDeviceLinkMessage(null);
-    setCompletedDeviceLinkSessionId(null);
-
-    try {
-      const normalizedDeviceLabel = deviceLabel.trim();
-      const linkToken = createDeviceLinkToken();
-      const qrPayload = encodeDeviceLinkQrPayload({
-        relayOrigin: getMobileRelayOrigin(relayUrl),
-        qrMode: "target_display",
-        linkToken,
-        requesterLabel: normalizedDeviceLabel,
-      });
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-
-      await secureStorageCapability.setItem(
-        STORAGE_KEYS.deviceLabel,
-        normalizedDeviceLabel,
-      );
-
-      setActiveDeviceLink({ linkToken, qrMode: "target_display" });
-      setDeviceLinkQrValue(qrPayload);
-      setDeviceLinkStatus({
-        relayOrigin: getMobileRelayOrigin(relayUrl),
-        qrMode: "target_display",
-        state: "waiting_for_source",
-        requesterLabel: normalizedDeviceLabel,
-        expiresAt,
-        canComplete: false,
-      });
-    } catch (error) {
-      setDeviceLinkMessage({
-        tone: "error",
-        title: "Unable to prepare device link",
-        body: error instanceof Error ? error.message : "Unknown relay error",
-      });
-    } finally {
-      setIsWorkingDeviceLink(false);
-    }
-  }
-
-  async function scanDeviceLinkQr(qrPayload: string) {
-    setIsWorkingDeviceLink(true);
-    setDeviceLinkMessage(null);
-    setCompletedDeviceLinkSessionId(null);
-
-    try {
-      const parsed = parseDeviceLinkQrPayload(qrPayload);
-      if (
-        !relayOriginsMatch(getMobileRelayOrigin(relayUrl), parsed.relayOrigin)
-      ) {
-        throw new Error("That QR belongs to a different relay environment.");
-      }
-
-      if (sessionRef.current) {
-        if (parsed.qrMode !== "target_display") {
-          throw new Error(
-            "That QR is meant for a new device, not a signed-in device.",
-          );
-        }
-
-        const response = await relayFetch<DeviceLinkStatus>(
-          sessionRef.current,
-          "/v1/devices/link/scan",
-          {
-            method: "POST",
-            body: JSON.stringify({ qrPayload }),
-          },
-        );
-
-        setActiveDeviceLink({
-          linkToken: parsed.linkToken,
-          qrMode: parsed.qrMode,
-        });
-        setDeviceLinkQrValue(null);
-        setDeviceLinkStatus(response);
-        return;
-      }
-
-      if (deviceLabel.trim().length < 3) {
-        throw new Error(
-          "Name this phone before scanning so the approval request is readable.",
-        );
-      }
-      if (parsed.qrMode !== "source_display") {
-        throw new Error(
-          "That QR is meant to be scanned by a signed-in device.",
-        );
-      }
-
-      const normalizedDeviceLabel = deviceLabel.trim();
-      await secureStorageCapability.setItem(
-        STORAGE_KEYS.deviceLabel,
-        normalizedDeviceLabel,
-      );
-
-      const { response, body } = await claimDeviceLinkRequest({
-        qrPayload,
-        deviceLabel: normalizedDeviceLabel,
-      });
-      if (!response.ok) {
-        throw new Error(
-          body.error ?? "Unable to claim this device-link request.",
-        );
-      }
-
-      setActiveDeviceLink({
-        linkToken: parsed.linkToken,
-        qrMode: parsed.qrMode,
-      });
-      setDeviceLinkQrValue(null);
-      setDeviceLinkStatus(body);
-    } catch (error) {
-      setDeviceLinkMessage({
-        tone: "error",
-        title: "QR scan failed",
-        body: error instanceof Error ? error.message : "Unknown scan error",
-      });
-    } finally {
-      setIsWorkingDeviceLink(false);
-    }
-  }
-
-  async function approveDeviceLink() {
-    const currentSession = sessionRef.current;
-    if (!currentSession || !deviceLinkStatus?.linkId) {
-      return;
-    }
-
-    setIsApprovingDeviceLink(true);
-    setDeviceLinkMessage(null);
-
-    try {
-      const response = await relayFetch<DeviceLinkStatus>(
-        currentSession,
-        "/v1/devices/link/confirm",
-        {
-          method: "POST",
-          body: JSON.stringify({ linkId: deviceLinkStatus.linkId }),
-        },
-      );
-      setDeviceLinkStatus(response);
-      setDeviceLinkMessage({
-        tone: "success",
-        title: "Device approved",
-        body: `${response.requesterLabel} can finish sign-in now.`,
-      });
-    } catch (error) {
-      setDeviceLinkMessage({
-        tone: "error",
-        title: "Approval failed",
-        body: error instanceof Error ? error.message : "Unknown relay error",
-      });
-    } finally {
-      setIsApprovingDeviceLink(false);
-    }
-  }
-
-  async function completeDeviceLink(
-    linkToken: string,
-    qrMode: DeviceLinkQrMode,
-  ) {
-    const { response, body } = await completeDeviceLinkRequest({
-      linkToken,
-      qrMode,
-    });
-    if (!response.ok || !("accessToken" in body)) {
-      throw new Error(body.error ?? "Unable to complete device linking.");
-    }
-
-    await persistAuthenticatedSession(body, "device-link");
-  }
 
   async function ensureDeviceBundleRegistered(currentSession: AuthSession) {
     return ensureDeviceBundleRegisteredRequest({
@@ -910,76 +605,6 @@ export default function App() {
     groupsRef.current = groups;
   }, [groups]);
 
-  useEffect(() => {
-    if (!activeDeviceLink || completedDeviceLinkSessionId) {
-      return;
-    }
-
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-
-    const poll = async () => {
-      try {
-        const { response, body } = await fetchDeviceLinkStatusRequest({
-          linkToken: activeDeviceLink.linkToken,
-          qrMode: activeDeviceLink.qrMode,
-        });
-        if (!response.ok) {
-          const awaitingSourceScan =
-            !sessionRef.current &&
-            activeDeviceLink.qrMode === "target_display" &&
-            body.code === "DEVICE_LINK_NOT_FOUND";
-          if (!awaitingSourceScan) {
-            throw new Error(
-              body.error ?? "Unable to refresh device-link status.",
-            );
-          }
-        } else {
-          if (cancelled) {
-            return;
-          }
-
-          setDeviceLinkStatus(body);
-
-          if (!sessionRef.current && body.state === "approved") {
-            await completeDeviceLink(
-              activeDeviceLink.linkToken,
-              activeDeviceLink.qrMode,
-            );
-            return;
-          }
-
-          if (body.state === "consumed" || body.state === "expired") {
-            return;
-          }
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setDeviceLinkMessage({
-            tone: "error",
-            title: "Device-link status failed",
-            body:
-              error instanceof Error ? error.message : "Unknown relay error",
-          });
-        }
-      }
-
-      if (!cancelled) {
-        timer = setTimeout(() => {
-          void poll();
-        }, 2000);
-      }
-    };
-
-    void poll();
-
-    return () => {
-      cancelled = true;
-      if (timer) {
-        clearTimeout(timer);
-      }
-    };
-  }, [activeDeviceLink, completedDeviceLinkSessionId]);
 
   useEffect(() => {
     let mounted = true;
@@ -1598,328 +1223,7 @@ export default function App() {
 
   // ---- handlers ----
 
-  function validateForm() {
-    const nextErrors: Partial<Record<Field, string>> = {};
-    const bootstrapInvite = normalizeInviteReference(inviteInput);
-    const requireInviteToken = inviteFieldVisible && !bootstrapInvite;
 
-    if (!email.trim()) {
-      nextErrors.email =
-        "Enter the email that should receive the bootstrap link.";
-    } else if (!isValidEmail(email.trim())) {
-      nextErrors.email =
-        "Enter a valid email address so the inbox step can complete.";
-    }
-
-    if (requireInviteToken) {
-      if (!inviteToken.trim()) {
-        nextErrors.inviteToken =
-          "New beta accounts need an invite token unless a group invite is present.";
-      } else if (inviteToken.trim().length < 4) {
-        nextErrors.inviteToken = "This invite token is too short to be valid.";
-      }
-    }
-
-    if (inviteInput.trim() && !bootstrapInvite) {
-      nextErrors.groupInvite =
-        "Paste a full invite link or a groupId/token pair.";
-    }
-
-    if (!ageConfirmed18) {
-      nextErrors.ageConfirmed18 =
-        "EmberChamber beta access is limited to adults 18 and over.";
-    }
-
-    if (!deviceLabel.trim()) {
-      nextErrors.deviceLabel =
-        "Name this device so session review stays readable.";
-    } else if (deviceLabel.trim().length < 3) {
-      nextErrors.deviceLabel =
-        "Use at least 3 characters so the device label is recognizable.";
-    }
-
-    setErrors(nextErrors);
-    return { isValid: Object.keys(nextErrors).length === 0, bootstrapInvite };
-  }
-
-  async function submitMagicLink() {
-    setChallenge(null);
-    setFormMessage(null);
-
-    const { isValid, bootstrapInvite } = validateForm();
-    if (!isValid) {
-      setFormMessage({
-        tone: "error",
-        title: "Fix the highlighted fields first",
-        body: "This bootstrap needs a valid email, 18+ confirmation, a readable device label, and either a beta invite token or a valid group invite for new accounts.",
-      });
-      return;
-    }
-
-    setIsSending(true);
-    try {
-      const { response, body } = await startMagicLinkRequest({
-        email: email.trim(),
-        inviteToken: inviteToken.trim() || undefined,
-        groupId: bootstrapInvite?.groupId,
-        groupInviteToken: bootstrapInvite?.inviteToken,
-        deviceLabel: deviceLabel.trim(),
-        ageConfirmed18: true,
-      });
-      if (!response.ok) {
-        if (body.code === "INVITE_REQUIRED") {
-          setInviteFieldVisible(true);
-          setErrors((current) => ({
-            ...current,
-            inviteToken: bootstrapInvite
-              ? undefined
-              : "This email does not have beta access yet. Add an invite token or use a valid group invite to continue.",
-          }));
-          setFormMessage({
-            tone: "warning",
-            title: "Invite needed for the first bootstrap",
-            body: bootstrapInvite
-              ? "The group invite was not enough on its own. Add the beta invite token that granted early access."
-              : "Returning users can continue with email alone. New beta accounts still need an invite token or a qualifying group invite.",
-          });
-          return;
-        }
-
-        throw new Error(body.error ?? "Unable to start sign-in");
-      }
-
-      await Promise.all([
-        secureStorageCapability.setItem(STORAGE_KEYS.email, email.trim()),
-        secureStorageCapability.setItem(
-          STORAGE_KEYS.inviteToken,
-          inviteToken.trim(),
-        ),
-        secureStorageCapability.setItem(
-          STORAGE_KEYS.deviceLabel,
-          deviceLabel.trim(),
-        ),
-      ]);
-
-      setErrors({});
-      setChallenge(body);
-      setFormMessage({
-        tone: "success",
-        title: "Check your inbox",
-        body: bootstrapInvite
-          ? "Open the email link on this phone. When the app comes back, it should already know which group thread to open."
-          : "Open the email link on this phone. The browser can hand the token back into EmberChamber to finish the session.",
-      });
-    } catch (error) {
-      setFormMessage({
-        tone: "error",
-        title: "Unable to queue the magic link",
-        body: error instanceof Error ? error.message : "Unknown relay error",
-      });
-    } finally {
-      setIsSending(false);
-    }
-  }
-
-  async function completeMagicLink(completionToken: string) {
-    setIsCompleting(true);
-    setSessionMessage({
-      tone: "info",
-      title: "Completing sign-in",
-      body: "Finishing the relay session for this phone…",
-    });
-
-    try {
-      const { response, body } = await completeMagicLinkRequest({
-        completionToken,
-        deviceLabel: deviceLabel.trim() || suggestMobileDeviceLabel(),
-      });
-      if (!response.ok || !("accessToken" in body)) {
-        throw new Error(body.error ?? "Unable to complete the magic link");
-      }
-
-      await persistAuthenticatedSession(body, "magic-link");
-    } catch (error) {
-      setSessionMessage({
-        tone: "error",
-        title: "Magic link completion failed",
-        body: error instanceof Error ? error.message : "Unknown relay error",
-      });
-    } finally {
-      setIsCompleting(false);
-    }
-  }
-
-  async function signOut() {
-    if (session) {
-      try {
-        await clearNativePushToken(session, relayFetch);
-      } catch {
-        // Ignore logout cleanup failures and clear the local session anyway.
-      }
-    }
-
-    await clearStoredSession();
-    setSession(null);
-    setProfile(null);
-    setContactCard(null);
-    setGroups([]);
-    setThreadMessages([]);
-    setPendingAttachment(null);
-    setProfileSetupActive(false);
-    setProfileSetupName("");
-    setProfileSetupError(null);
-    setAuthMethod("magic-link");
-    resetDeviceLinkState();
-    setSessionMessage({
-      tone: "info",
-      title: "Signed out",
-      body: "This device no longer has a relay session. You can request a fresh magic link whenever needed.",
-    });
-  }
-
-  async function previewInviteReference(
-    rawValue: string,
-    options: {
-      routeToInvites?: boolean;
-      signedIn?: boolean;
-      source?: "deep-link" | "manual";
-    } = {},
-  ) {
-    const {
-      routeToInvites = false,
-      signedIn = !!sessionRef.current,
-      source = "manual",
-    } = options;
-    const normalized = normalizeInviteReference(rawValue);
-    const normalizedValue = normalized
-      ? `${normalized.groupId}/${normalized.inviteToken}`
-      : rawValue.trim();
-
-    setInviteInput(normalizedValue);
-    if (routeToInvites) {
-      setInviteFocusToken((current) => current + 1);
-    }
-
-    if (!normalized?.groupId || !normalized.inviteToken) {
-      const message = "Paste a full invite link or a groupId/token pair first.";
-      setInvitePreview(null);
-      setInvitePreviewError(message);
-      if (source === "deep-link") {
-        const nextMessage = {
-          tone: "warning" as const,
-          title: "Invite link needs attention",
-          body: message,
-        };
-        if (signedIn) {
-          setSessionMessage(nextMessage);
-        } else {
-          setFormMessage(nextMessage);
-        }
-      }
-      return null;
-    }
-
-    setIsPreviewingInvite(true);
-    setInvitePreviewError(null);
-    try {
-      const { response, body } = await previewGroupInviteRequest(
-        normalized.groupId,
-        normalized.inviteToken,
-      );
-      if (!response.ok || !("group" in body)) {
-        throw new Error(body.error ?? "Invite preview failed");
-      }
-
-      setInvitePreview(body);
-
-      if (source === "deep-link") {
-        if (signedIn) {
-          setSessionMessage({
-            tone: "info",
-            title: "Invite ready",
-            body: `${body.group.title} is open under Invites. Review the preview and accept it when ready.`,
-          });
-        } else {
-          setFormMessage({
-            tone: "info",
-            title: "Invite ready",
-            body: `${body.group.title} is loaded on this phone. Finish sign-in here when you want to join it.`,
-          });
-        }
-      }
-
-      return body;
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Invite preview failed";
-      setInvitePreview(null);
-      setInvitePreviewError(message);
-      if (source === "deep-link") {
-        const nextMessage = {
-          tone: "error" as const,
-          title: "Invite preview failed",
-          body: message,
-        };
-        if (signedIn) {
-          setSessionMessage(nextMessage);
-        } else {
-          setFormMessage(nextMessage);
-        }
-      }
-      return null;
-    } finally {
-      setIsPreviewingInvite(false);
-    }
-  }
-
-  async function previewInvite() {
-    await previewInviteReference(inviteInput);
-  }
-
-  async function acceptInvite() {
-    if (!session) {
-      setInvitePreviewError("Finish sign-in before accepting a group invite.");
-      return;
-    }
-
-    const normalized = normalizeInviteReference(inviteInput);
-    if (!normalized?.groupId || !normalized.inviteToken) {
-      setInvitePreviewError("Paste a valid invite first.");
-      return;
-    }
-
-    setIsAcceptingInvite(true);
-    setInvitePreviewError(null);
-    try {
-      const result = await relayFetch<GroupInviteAcceptance>(
-        session,
-        `/v1/groups/${normalized.groupId}/invites/${encodeURIComponent(normalized.inviteToken)}/accept`,
-        { method: "POST" },
-      );
-
-      const nextGroups = await relayFetch<GroupMembershipSummary[]>(
-        session,
-        "/v1/groups",
-      );
-      setGroups(nextGroups);
-      if (db) {
-        await saveCachedGroups(db, session.accountId, nextGroups);
-      }
-      setSelectedConversationId(result.conversationId);
-      setInvitePreview(null);
-      setSessionMessage({
-        tone: "success",
-        title: "Group joined",
-        body: `${result.title} is ready below. You can send a text or photo now.`,
-      });
-    } catch (error) {
-      setInvitePreviewError(
-        error instanceof Error ? error.message : "Invite acceptance failed",
-      );
-    } finally {
-      setIsAcceptingInvite(false);
-    }
-  }
 
   async function buildPendingAttachmentFromAsset(
     asset: ImagePicker.ImagePickerAsset,
@@ -2955,6 +2259,10 @@ export default function App() {
     onPersistShellState: persistMainShellState,
     restoredConversationAnchorId,
     onPersistConversationAnchor: persistConversationAnchor,
+    isExportingBackup,
+    isImportingBackup,
+    onExportBackup: exportBackup,
+    onImportBackup: importBackup,
   };
 
   if (isBooting) {

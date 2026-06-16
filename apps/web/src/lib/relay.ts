@@ -322,6 +322,19 @@ export const relayAccountApi = {
     relayFetch<{ revoked: boolean; sessionId: string }>(`/v1/sessions/${sessionId}`, {
       method: "DELETE",
     }),
+  getVapidPublicKey: () =>
+    relayFetch<{ publicKey: string }>("/v1/push/vapid-public-key", undefined, {
+      auth: false,
+    }),
+  subscribeWebPush: (data: { endpoint: string; p256dh: string; auth: string }) =>
+    relayFetch<{ subscribed: boolean }>("/v1/push/web-subscribe", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  unsubscribeWebPush: () =>
+    relayFetch<{ unsubscribed: boolean }>("/v1/push/web-subscribe", {
+      method: "DELETE",
+    }),
 };
 
 export const relayGroupApi = {

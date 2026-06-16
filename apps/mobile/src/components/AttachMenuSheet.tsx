@@ -15,7 +15,11 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { styles } from "../styles";
+import { styles as sharedStyles } from "../styles";
+import { styles as attachStyles } from "./attachMenuSheet.styles";
+import { styles as contextStyles } from "./contextMenuSheet.styles";
+
+const styles = { ...sharedStyles, ...attachStyles, ...contextStyles };
 import { haptics } from "../lib/haptics";
 import { springs, timings } from "../lib/motion";
 

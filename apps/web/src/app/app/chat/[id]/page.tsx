@@ -35,7 +35,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { clsx } from "clsx";
-import { Button } from "@emberchamber/ui/components";
+import { Button, TrustBadge } from "@emberchamber/ui/components";
 import { Avatar } from "@/components/avatar";
 import { CopyButton } from "@/components/copy-button";
 import { FormattedMessage } from "@/components/formatted-message";
@@ -314,6 +314,7 @@ export default function ChatPage() {
   const [content, setContent] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedFilePreviewUrl, setSelectedFilePreviewUrl] = useState<
     string | null
@@ -1199,6 +1200,7 @@ export default function ChatPage() {
     }
 
     setIsSending(true);
+    setSendError(null);
 
     try {
       if (conversation.historyMode === "device_encrypted") {
@@ -1239,9 +1241,9 @@ export default function ChatPage() {
       setDraftSelection({ start: 0, end: 0 });
       publishTypingState(false);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to send the message",
-      );
+      const message =
+        error instanceof Error ? error.message : "Failed to send the message";
+      setSendError(message);
     } finally {
       setIsSending(false);
     }
@@ -1346,7 +1348,7 @@ export default function ChatPage() {
 
   const emptyStateLabel =
     conversation?.historyMode === "device_encrypted"
-      ? "No local encrypted history on this browser yet."
+      ? "No encrypted messages stored on this browser yet. History from other sessions or devices stays on those devices."
       : conversation?.kind === "room"
         ? "No room messages yet."
         : "No messages yet.";
@@ -1370,16 +1372,18 @@ export default function ChatPage() {
                       : "Group"}
                 </span>
               </div>
-              <div className="mt-2 flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--text-secondary)]">
                 <span className="rounded-full border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-1">
                   {conversation?.memberCount ?? 0} members
                 </span>
-                <span className="rounded-full border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-1">
-                  {trustLabel}
-                </span>
-                <span className="rounded-full border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-1">
-                  Relay delivery, device-held keys
-                </span>
+                <TrustBadge
+                  state={
+                    conversation?.historyMode === "device_encrypted"
+                      ? "secure"
+                      : "hosted"
+                  }
+                  label={trustLabel}
+                />
               </div>
             </div>
           </div>
@@ -1471,6 +1475,47 @@ export default function ChatPage() {
               </div>
             ) : (
               <>
+                {conversation?.historyMode === "device_encrypted" ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "center",
+                      marginBottom: "1rem",
+                    }}
+                  >
+                    <div
+                      style={{
+                        maxWidth: "min(28rem, 92%)",
+                        borderRadius: "var(--radius-xl)",
+                        border: "1px solid var(--trust-secure-border, var(--success-border))",
+                        background: "var(--trust-secure-bg, var(--success-bg))",
+                        padding: "0.55rem 0.9rem",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                      }}
+                    >
+                      <svg
+                        aria-hidden="true"
+                        viewBox="0 0 16 16"
+                        style={{ width: "0.875rem", height: "0.875rem", flexShrink: 0, color: "var(--success-text)" }}
+                        fill="currentColor"
+                      >
+                        <path d="M11 6V5a3 3 0 1 0-6 0v1H3.5A1.5 1.5 0 0 0 2 7.5v5A1.5 1.5 0 0 0 3.5 14h9a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 12.5 6H11zm-4.5-.5A1.5 1.5 0 0 1 8 4a1.5 1.5 0 0 1 1.5 1.5V6h-3V5.5z"/>
+                      </svg>
+                      <p
+                        style={{
+                          fontSize: "0.6875rem",
+                          lineHeight: 1.5,
+                          color: "var(--success-text)",
+                          margin: 0,
+                        }}
+                      >
+                        Local session boundary — messages from other browsers or devices aren&apos;t synced here.
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
                 {threadRows.map((row) =>
                   row.type === "date" ? (
                     <div
@@ -1536,6 +1581,16 @@ export default function ChatPage() {
                         void handleDownloadAttachment(row.message)
                       }
                       onOpenImage={(src, alt) => setLightbox({ src, alt })}
+                      onRetry={
+                        row.message.status === "failed" &&
+                        row.message.text &&
+                        conversation?.historyMode === "device_encrypted"
+                          ? () => {
+                              setContent(row.message.text ?? "");
+                              void handleSend();
+                            }
+                          : undefined
+                      }
                     />
                   ),
                 )}
@@ -1577,6 +1632,34 @@ export default function ChatPage() {
             onSubmit={handleSend}
             className="border-t border-[var(--border)] bg-[var(--bg-primary)] px-4 py-4 sm:px-6"
           >
+            {/* Send-failure banner — stays visible until retried or dismissed */}
+            {sendError ? (
+              <div
+                role="alert"
+                className="ec-banner-enter mb-2 flex items-center justify-between gap-3 rounded-xl border border-[var(--error-border)] bg-[var(--error-bg)] px-3 py-2"
+              >
+                <span className="text-xs text-[var(--error-text)]">
+                  {sendError}
+                </span>
+                <div className="flex shrink-0 items-center gap-2">
+                  <button
+                    type="submit"
+                    disabled={isSending}
+                    className="text-xs font-semibold text-[var(--error-text)] underline underline-offset-2 disabled:opacity-50"
+                  >
+                    {isSending ? "Retrying…" : "Retry"}
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Dismiss send error"
+                    onClick={() => setSendError(null)}
+                    className="text-xs text-[var(--error-text)] opacity-60 hover:opacity-100"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            ) : null}
             {/* Reply preview banner */}
             {replyingTo ? (
               <div className="ec-banner-enter mb-2 flex items-start justify-between rounded-xl border-l-2 border-brand-500 bg-[var(--bg-secondary)] px-3 py-2">

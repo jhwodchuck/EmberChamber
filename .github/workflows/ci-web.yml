@@ -125,7 +125,7 @@ jobs:
           fuser -k 3000/tcp 2>/dev/null || true
           fuser -k 8787/tcp 2>/dev/null || true
 
-      - name: Capture web route flow screenshots
+      - name: Capture web route flow screenshots + run accessibility and visual checks
         env:
           NEXT_PUBLIC_RELAY_URL: http://127.0.0.1:8787
           NEXT_PUBLIC_WEB_URL: http://127.0.0.1:3000
@@ -143,10 +143,34 @@ jobs:
 
           npx -y wait-on@8.0.3 --timeout 120000 http-get://127.0.0.1:8787/health
           npx -y wait-on@8.0.3 --timeout 120000 http://127.0.0.1:3000/start
+
+          # Auth + DM flow tests (existing)
           CI_WEB_BASE_URL="$NEXT_PUBLIC_WEB_URL" \
           CI_RELAY_BASE_URL="$NEXT_PUBLIC_RELAY_URL" \
           CI_AUTH_INVITE_TOKEN="$EMBERCHAMBER_LOCAL_TEST_INVITE_TOKEN" \
-          npm run e2e --workspace=apps/web
+          node_modules/.bin/playwright test e2e/ci-new-user-flow.spec.ts e2e/invite-continuation.spec.ts \
+            --workers=1 --reporter=line
+
+          # Accessibility gate — fail on critical/serious axe violations
+          CI_WEB_BASE_URL="$NEXT_PUBLIC_WEB_URL" \
+          node_modules/.bin/playwright test e2e/accessibility.spec.ts \
+            --workers=1 --reporter=line
+
+          # Visual regression — generate/update baselines and upload as artifacts
+          # (run with --update-snapshots so CI always produces fresh snapshots;
+          #  commit the generated e2e/__snapshots__ directory after reviewing diffs)
+          CI_WEB_BASE_URL="$NEXT_PUBLIC_WEB_URL" \
+          node_modules/.bin/playwright test e2e/visual.spec.ts \
+            --workers=1 --reporter=line --update-snapshots
+
+      - name: Upload visual regression snapshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: emberchamber-visual-snapshots-${{ github.run_number }}
+          path: apps/web/e2e/__snapshots__
+          retention-days: 30
+          if-no-files-found: warn
 
       - name: Capture desktop shell screenshot
         run: |

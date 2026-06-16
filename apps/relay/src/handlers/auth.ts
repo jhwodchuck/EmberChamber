@@ -2,13 +2,18 @@ import { type MagicLinkChallenge } from "@emberchamber/protocol";
 import { z } from "zod";
 import { enforceRateLimit } from "../middleware/rate-limit";
 import { parseClientMetadata } from "../middleware/auth";
-import { authStartSchema, authCompleteSchema } from "../schemas";
+import {
+  authStartSchema,
+  authCompleteSchema,
+  inviteCheckSchema,
+  resendMagicLinkSchema,
+} from "../schemas";
 import { blindIndex, encryptString, normalizeEmail, sha256Hex } from "../lib/crypto";
 import { dbFirst, dbRun } from "../lib/d1";
 import { HttpError, json, readJson } from "../lib/http";
 import { signAccessToken } from "../lib/tokens";
 import { scheduleCleanup } from "../services/cleanup";
-import { resolveBootstrapAccess, acceptConversationInviteByTokenHash } from "../services/invites";
+import { hashInviteToken, resolveBootstrapAccess, acceptConversationInviteByTokenHash } from "../services/invites";
 import {
   isExistingAccount,
   createSession,
@@ -305,6 +310,98 @@ export async function handle(
       deviceId: session.device_id,
       expiresAt,
     });
+  }
+
+  if (request.method === "POST" && pathname === "/v1/invite/check") {
+    const ip = request.headers.get("cf-connecting-ip") ?? "local";
+    await enforceRateLimit(env, `invite:check:${ip}`, 20, 60 * 60 * 1000);
+
+    const body = inviteCheckSchema.parse(await readJson(request));
+    const tokenHash = await hashInviteToken(body.code);
+
+    const invite = await dbFirst<{
+      revoked_at: string | null;
+      expires_at: string | null;
+      max_uses: number | null;
+      use_count: number;
+    }>(
+      env.DB,
+      `SELECT revoked_at, expires_at, max_uses, use_count
+         FROM beta_invites
+        WHERE token_hash = ?1`,
+      tokenHash,
+    );
+
+    if (!invite) {
+      return json({ status: "not_found" });
+    }
+    if (invite.revoked_at) {
+      return json({ status: "revoked" });
+    }
+    if (invite.expires_at && invite.expires_at <= new Date().toISOString()) {
+      return json({ status: "expired", expiresAt: invite.expires_at });
+    }
+    if (invite.max_uses !== null && invite.use_count >= invite.max_uses) {
+      return json({ status: "exhausted" });
+    }
+
+    const usesRemaining =
+      invite.max_uses !== null ? invite.max_uses - invite.use_count : null;
+    return json({
+      status: "valid",
+      expiresAt: invite.expires_at ?? undefined,
+      usesRemaining,
+    });
+  }
+
+  if (request.method === "POST" && pathname === "/v1/auth/resend-magic-link") {
+    const ip = request.headers.get("cf-connecting-ip") ?? "local";
+    const body = resendMagicLinkSchema.parse(await readJson(request));
+    const email = normalizeEmail(body.email);
+    const emailBlindIndex = await blindIndex(env.EMBERCHAMBER_EMAIL_INDEX_SECRET, email);
+
+    // Rate-limit by IP and by email blind index to prevent abuse.
+    await enforceRateLimit(env, `resend:ip:${ip}`, 5, 15 * 60 * 1000);
+    await enforceRateLimit(env, `resend:email:${emailBlindIndex}`, 3, 15 * 60 * 1000);
+
+    const accountExists = await isExistingAccount(env, emailBlindIndex);
+    if (accountExists) {
+      const challengeId = crypto.randomUUID();
+      const completionToken = `${challengeId}.${crypto.randomUUID()}`;
+      const completionTokenHash = await sha256Hex(`completion:${completionToken}`);
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+      const emailCiphertext = await encryptString(env.EMBERCHAMBER_EMAIL_ENCRYPTION_SECRET, email);
+
+      await dbRun(
+        env.DB,
+        `INSERT INTO auth_challenges (
+          id, email_ciphertext, email_blind_index, invite_token_hash, completion_token_hash, expires_at, created_at, requested_device_label, pending_group_conversation_id, pending_group_invite_token_hash, age_confirmed_18
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)`,
+        challengeId,
+        emailCiphertext,
+        emailBlindIndex,
+        null,
+        completionTokenHash,
+        expiresAt,
+        new Date().toISOString(),
+        "Resent device",
+        null,
+        null,
+        1,
+      );
+
+      await env.EMAIL_QUEUE.send({
+        type: "magic_link",
+        to: email,
+        from: env.EMBERCHAMBER_EMAIL_FROM,
+        completionUrl: `${publicWebUrl(env)}/auth/complete?token=${encodeURIComponent(completionToken)}`,
+        expiresAt,
+      });
+      await scheduleCleanup(env, "auth_start");
+    }
+
+    // Always return the same response to prevent account enumeration.
+    return json({ sent: true });
   }
 
   if (

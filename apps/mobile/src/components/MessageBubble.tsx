@@ -34,12 +34,15 @@ import {
 } from "@emberchamber/shared";
 import type { GroupThreadMessage } from "../types";
 import { formatBytes, parseSharedLocation } from "../lib/utils";
-import { styles, theme } from "../styles";
+import { theme } from "../theme/theme";
+import { styles as sharedStyles } from "../styles";
+import { styles as locationStyles } from "./locationCard.styles";
+import { AVATAR_SIZE, GUTTER_WIDTH, bubbleStyles, styles as localStyles } from "./messageBubble.styles";
+const styles = { ...sharedStyles, ...localStyles, ...locationStyles };
 import { avatarColor, avatarInitial } from "../lib/avatarColor";
 import { haptics } from "../lib/haptics";
 import { springs, timings } from "../lib/motion";
 import {
-  bubbleStyles,
   REPLY_MAX_TRAVEL,
   REPLY_THRESHOLD,
 } from "./messageBubble.styles";

@@ -1,10 +1,13 @@
 import type { Dispatch, SetStateAction } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
-import type { GroupInvitePreview } from "../types";
-import { styles, theme } from "../styles";
-import { ScreenScaffold } from "../components/ScreenScaffold";
+import type { GroupInvitePreview } from "../../types";
+import { styles as sharedStyles, theme } from "../../styles";
+import { styles as scaffoldStyles } from "../../components/screenScaffold.styles";
 
-export type InvitesScreenProps = {
+const styles = { ...sharedStyles, ...scaffoldStyles };
+import { ScreenScaffold } from "../../components/ScreenScaffold";
+
+export type InviteFlowProps = {
   inviteInput: string;
   setInviteInput: Dispatch<SetStateAction<string>>;
   invitePreview: GroupInvitePreview | null;
@@ -17,7 +20,7 @@ export type InvitesScreenProps = {
   onOpenChats: () => void;
 };
 
-export function InvitesScreen({
+export function InviteFlow({
   inviteInput,
   setInviteInput,
   invitePreview,
@@ -28,7 +31,7 @@ export function InvitesScreen({
   onPreviewInvite,
   onAcceptInvite,
   onOpenChats,
-}: InvitesScreenProps) {
+}: InviteFlowProps) {
   return (
     <ScreenScaffold
       scrollable

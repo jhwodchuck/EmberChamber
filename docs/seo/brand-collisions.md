@@ -34,6 +34,14 @@ This document records the search brand collision audit performed for the name **
 - **Recommended Action:**
   - **Ignore:** No product confusion is possible.
 
+### 4. Gmail Account Namespace (`emberchamber@gmail.com` and fallback)
+- **Result URL:** N/A (Google Sign-up)
+- **Why it may confuse users:** The username `emberchamber` is already taken on Gmail (third-party registration). Google suggested alternatives like `emberchamber515@gmail.com` or `chamberember237@gmail.com`.
+- **Project Resolution:** The fallback address **`emberchamber.com@gmail.com`** has been registered and is designated as the official project-linked Google account.
+- **Recommended Action:**
+  - **Use Custom Domain Email:** Route official external correspondence through custom domain emails (e.g., `@emberchamber.com`).
+  - **Use for Consoles:** Use `emberchamber.com@gmail.com` only when an explicit Google/Gmail account is required (e.g., Google Play Console, Google Analytics).
+
 ---
 
 ## Strategic Recommendations

@@ -512,6 +512,51 @@ export async function saveCachedGroupMessages(
   );
 }
 
+export type GroupMessagesCacheRow = {
+  conversationId: string;
+  messageId: string;
+  payload: string;
+  createdAt: string;
+};
+
+export async function dumpGroupMessagesCacheRaw(
+  db: SQLite.SQLiteDatabase,
+): Promise<GroupMessagesCacheRow[]> {
+  const rows = await db.getAllAsync<{
+    conversation_id: string;
+    message_id: string;
+    payload: string;
+    created_at: string;
+  }>(
+    "SELECT conversation_id, message_id, payload, created_at FROM group_messages_cache ORDER BY created_at ASC",
+  );
+  return rows.map((row) => ({
+    conversationId: row.conversation_id,
+    messageId: row.message_id,
+    payload: row.payload,
+    createdAt: row.created_at,
+  }));
+}
+
+export async function restoreGroupMessagesCache(
+  db: SQLite.SQLiteDatabase,
+  rows: GroupMessagesCacheRow[],
+): Promise<void> {
+  for (const row of rows) {
+    await db.runAsync(
+      `INSERT INTO group_messages_cache (conversation_id, message_id, payload, created_at)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(conversation_id, message_id) DO UPDATE
+         SET payload = excluded.payload,
+             created_at = excluded.created_at`,
+      row.conversationId,
+      row.messageId,
+      row.payload,
+      row.createdAt,
+    );
+  }
+}
+
 export async function loadDoubleRatchetSession(
   db: SQLite.SQLiteDatabase,
   peerDeviceId: string,
