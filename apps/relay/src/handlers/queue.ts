@@ -1,6 +1,6 @@
 import { runRelayCleanup } from "../services/cleanup";
 import { deliverMagicLinkEmail } from "../services/email";
-import { deliverPushWake } from "../services/push";
+import { deliverAllPushWake } from "../services/push";
 import type { Env, RelayQueueMessage } from "../types";
 
 export async function consumeQueue(
@@ -14,7 +14,7 @@ export async function consumeQueue(
       } else if (message.body.type === "magic_link") {
         await deliverMagicLinkEmail(env, message.body);
       } else if (message.body.type === "push_wake") {
-        await deliverPushWake(env, message.body);
+        await deliverAllPushWake(env, message.body);
       }
       message.ack();
     } catch (error) {

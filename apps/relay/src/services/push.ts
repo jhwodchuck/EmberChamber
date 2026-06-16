@@ -3,6 +3,7 @@ import { HttpError } from "../lib/http";
 import { dbFirst, dbRun } from "../lib/d1";
 import { decryptString } from "../lib/crypto";
 import { sendFcmNotification } from "../lib/fcm";
+import { sendWebPush, type WebPushSubscription } from "../lib/web-push";
 
 export function requirePushTokenSecret(env: Env): string {
   if (!env.EMBERCHAMBER_PUSH_TOKEN_SECRET) {
@@ -180,4 +181,68 @@ export async function deliverPushWake(
   );
 
   throw new Error(`FCM delivery failed (${result.status}): ${result.bodyText}`);
+}
+
+async function deliverWebPushWake(env: Env, targetDeviceId: string): Promise<void> {
+  if (!env.EMBERCHAMBER_VAPID_PRIVATE_KEY || !env.EMBERCHAMBER_VAPID_PUBLIC_KEY) return;
+
+  const sub = await dbFirst<WebPushSubscription>(
+    env.DB,
+    `SELECT endpoint, p256dh, auth FROM web_push_subscriptions WHERE device_id = ?1`,
+    targetDeviceId,
+  );
+  if (!sub) return;
+
+  const subject =
+    env.EMBERCHAMBER_VAPID_SUBJECT ?? "mailto:push@emberchamber.com";
+  const now = new Date().toISOString();
+
+  const result = await sendWebPush(
+    sub,
+    env.EMBERCHAMBER_VAPID_PRIVATE_KEY,
+    env.EMBERCHAMBER_VAPID_PUBLIC_KEY,
+    subject,
+  );
+
+  if (result.gone) {
+    await dbRun(
+      env.DB,
+      `DELETE FROM web_push_subscriptions WHERE device_id = ?1`,
+      targetDeviceId,
+    );
+    return;
+  }
+
+  if (result.ok) {
+    await dbRun(
+      env.DB,
+      `UPDATE web_push_subscriptions
+          SET last_push_attempt_at = ?1, last_push_success_at = ?1, last_push_error = NULL
+        WHERE device_id = ?2`,
+      now,
+      targetDeviceId,
+    );
+    return;
+  }
+
+  await dbRun(
+    env.DB,
+    `UPDATE web_push_subscriptions
+        SET last_push_attempt_at = ?1, last_push_error = ?2
+      WHERE device_id = ?3`,
+    now,
+    `send_failed:${result.status}`,
+    targetDeviceId,
+  );
+}
+
+export async function deliverAllPushWake(
+  env: Env,
+  message: PushWakeMessage,
+): Promise<void> {
+  // Try FCM (Android) and Web Push in parallel; failures in one do not block the other.
+  await Promise.allSettled([
+    deliverPushWake(env, message),
+    deliverWebPushWake(env, message.targetDeviceId),
+  ]);
 }

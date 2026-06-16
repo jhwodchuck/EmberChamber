@@ -19,11 +19,13 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 import type { GroupThreadMessage } from "../types";
-import { styles, theme } from "../styles";
+import { styles as sharedStyles, theme } from "../styles";
 import { useAttachmentManager } from "../hooks/useAttachmentManager";
 import { haptics } from "../lib/haptics";
 import { springs } from "../lib/motion";
-import { imageViewerStyles } from "./imageViewerModal.styles";
+import { imageViewerStyles as modalStyles } from "./imageViewerModal.styles";
+
+const styles = { ...sharedStyles, ...modalStyles };
 
 type Attachment = NonNullable<GroupThreadMessage["attachment"]>;
 
@@ -188,10 +190,10 @@ function ZoomableImage({ uri, width, height, onClose }: ZoomableImageProps) {
   });
 
   return (
-    <View style={imageViewerStyles.gestureRoot}>
+    <View style={styles.gestureRoot}>
       <Animated.View
         pointerEvents="none"
-        style={[imageViewerStyles.backdrop, animatedBackdropStyle]}
+        style={[styles.backdrop, animatedBackdropStyle]}
       />
       <GestureDetector gesture={composed}>
         <AnimatedImage

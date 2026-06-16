@@ -103,3 +103,7 @@ docs/wiki/
 
 # Playwright test artifacts
 apps/web/test-results/
+
+# Model workspace configuration
+.claude/
+CLAUDE.md

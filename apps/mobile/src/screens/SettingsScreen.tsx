@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { ActivityIndicator, Image, Pressable, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import type { DeviceLinkStatus } from "@emberchamber/protocol";
 import type {
   ContactCard,
@@ -9,6 +16,7 @@ import type {
   SessionDescriptor,
 } from "../types";
 import { styles, theme } from "../styles";
+import { scorePassphrase } from "../lib/backupCrypto";
 import { DeviceLinkCard } from "../components/DeviceLinkCard";
 import { ScreenScaffold } from "../components/ScreenScaffold";
 import { ToggleRow } from "../components/ToggleRow";
@@ -36,6 +44,10 @@ export type SettingsScreenProps = {
   onRefreshSessions: () => void;
   onRevokeSession: (sessionId: string) => void;
   isUploadingAvatar: boolean;
+  isExportingBackup: boolean;
+  isImportingBackup: boolean;
+  onExportBackup: (passphrase: string) => Promise<{ fileName: string }>;
+  onImportBackup: (passphrase: string) => Promise<{ messageCount: number; preferenceCount: number }>;
   onShowDeviceLinkQr: () => void;
   onScanDeviceLinkQr: (payload: string) => void | Promise<void>;
   onApproveDeviceLink: () => void;
@@ -71,6 +83,10 @@ export function SettingsScreen({
   onRefreshSessions,
   onRevokeSession,
   isUploadingAvatar,
+  isExportingBackup,
+  isImportingBackup,
+  onExportBackup,
+  onImportBackup,
   onShowDeviceLinkQr,
   onScanDeviceLinkQr,
   onApproveDeviceLink,
@@ -80,6 +96,17 @@ export function SettingsScreen({
   onSignOut,
 }: SettingsScreenProps) {
   const [diagnosticsExpanded, setDiagnosticsExpanded] = useState(false);
+  const [exportPassphrase, setExportPassphrase] = useState("");
+  const [exportResult, setExportResult] = useState<{
+    fileName: string;
+  } | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [importPassphrase, setImportPassphrase] = useState("");
+  const [importResult, setImportResult] = useState<{
+    messageCount: number;
+    preferenceCount: number;
+  } | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
   const initials = profile?.displayName
     ? profile.displayName
         .trim()
@@ -379,10 +406,153 @@ export function SettingsScreen({
         />
       </View>
 
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Device data backup</Text>
+        <Text style={styles.sectionBody}>
+          Export your message history and conversation preferences as an
+          encrypted file. The passphrase is never sent to the relay — keep it
+          safe because a lost passphrase makes the backup unrecoverable.
+        </Text>
+
+        <Text style={[styles.label, { marginTop: 12 }]}>Export backup</Text>
+        <TextInput
+          style={styles.textInput}
+          value={exportPassphrase}
+          onChangeText={(text) => {
+            setExportPassphrase(text);
+            setExportResult(null);
+            setExportError(null);
+          }}
+          placeholder="Choose a strong passphrase"
+          placeholderTextColor={theme.colors.textMuted}
+          secureTextEntry
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        {exportPassphrase.length > 0 ? (
+          <PassphraseStrength passphrase={exportPassphrase} />
+        ) : null}
+        {exportError ? (
+          <Text style={styles.errorText}>{exportError}</Text>
+        ) : null}
+        {exportResult ? (
+          <View style={styles.infoCard}>
+            <Text style={styles.infoTitle}>Backup saved</Text>
+            <Text style={styles.infoBody}>{exportResult.fileName}</Text>
+          </View>
+        ) : null}
+        <Pressable
+          style={[
+            styles.secondaryButton,
+            { marginTop: 8 },
+            (isExportingBackup || exportPassphrase.length < 8) &&
+              styles.disabledButton,
+          ]}
+          disabled={isExportingBackup || exportPassphrase.length < 8}
+          onPress={() => {
+            setExportResult(null);
+            setExportError(null);
+            void onExportBackup(exportPassphrase)
+              .then((res) => {
+                setExportResult(res);
+                setExportPassphrase("");
+              })
+              .catch((err: unknown) => {
+                setExportError(
+                  err instanceof Error ? err.message : "Export failed.",
+                );
+              });
+          }}
+        >
+          <Text style={styles.secondaryButtonLabel}>
+            {isExportingBackup ? "Exporting…" : "Export device data"}
+          </Text>
+        </Pressable>
+
+        <Text style={[styles.label, { marginTop: 16 }]}>Import backup</Text>
+        <Text style={styles.helper}>
+          Choose the backup file, then enter the passphrase you used when you
+          exported it. Your existing message cache will be merged with the
+          imported data.
+        </Text>
+        <TextInput
+          style={[styles.textInput, { marginTop: 8 }]}
+          value={importPassphrase}
+          onChangeText={(text) => {
+            setImportPassphrase(text);
+            setImportResult(null);
+            setImportError(null);
+          }}
+          placeholder="Backup passphrase"
+          placeholderTextColor={theme.colors.textMuted}
+          secureTextEntry
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        {importError ? (
+          <Text style={styles.errorText}>{importError}</Text>
+        ) : null}
+        {importResult ? (
+          <View style={styles.infoCard}>
+            <Text style={styles.infoTitle}>Import complete</Text>
+            <Text style={styles.infoBody}>
+              Restored {importResult.messageCount} messages and{" "}
+              {importResult.preferenceCount} conversation preferences.
+            </Text>
+          </View>
+        ) : null}
+        <Pressable
+          style={[
+            styles.secondaryButton,
+            { marginTop: 8 },
+            (isImportingBackup || !importPassphrase) && styles.disabledButton,
+          ]}
+          disabled={isImportingBackup || !importPassphrase}
+          onPress={() => {
+            setImportResult(null);
+            setImportError(null);
+            void onImportBackup(importPassphrase)
+              .then((res) => {
+                setImportResult(res);
+                setImportPassphrase("");
+              })
+              .catch((err: unknown) => {
+                setImportError(
+                  err instanceof Error ? err.message : "Import failed.",
+                );
+              });
+          }}
+        >
+          <Text style={styles.secondaryButtonLabel}>
+            {isImportingBackup ? "Importing…" : "Choose backup file"}
+          </Text>
+        </Pressable>
+      </View>
+
       <Pressable style={styles.secondaryButton} onPress={onSignOut}>
         <Text style={styles.secondaryButtonLabel}>Sign out</Text>
       </Pressable>
     </ScreenScaffold>
+  );
+}
+
+function PassphraseStrength({ passphrase }: { passphrase: string }) {
+  const { score, label } = scorePassphrase(passphrase);
+  const scoreColors: Record<number, string> = {
+    0: theme.colors.errorText,
+    1: "#f97316",
+    2: "#ca8a04",
+    3: "#16a34a",
+  };
+  return (
+    <Text
+      style={[
+        styles.helper,
+        { color: scoreColors[score] ?? theme.colors.textSoft },
+      ]}
+    >
+      Strength: {label}
+    </Text>
   );
 }
 

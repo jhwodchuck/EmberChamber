@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { Avatar } from "@/components/avatar";
+import { StatusCallout } from "@/components/status-callout";
 import { relayConversationApi } from "@/lib/relay";
 
 interface User {
@@ -17,10 +18,12 @@ export default function NewDmPage() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<User[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const trimmedQuery = query.trim();
 
   async function handleSearch(q: string) {
     setQuery(q);
+    setSearchError(null);
     if (q.length < 2) {
       setResults([]);
       return;
@@ -30,6 +33,11 @@ export default function NewDmPage() {
     try {
       const data = await relayConversationApi.search(q);
       setResults(data.accounts as User[]);
+    } catch (err: unknown) {
+      setSearchError(
+        err instanceof Error ? err.message : "Search failed — relay may be temporarily unavailable.",
+      );
+      setResults([]);
     } finally {
       setIsSearching(false);
     }
@@ -66,7 +74,11 @@ export default function NewDmPage() {
         />
       </div>
       <div className="flex-1 overflow-y-auto p-2">
-        {isSearching ? (
+        {searchError ? (
+          <StatusCallout tone="error" title="Search unavailable">
+            {searchError}
+          </StatusCallout>
+        ) : isSearching ? (
           <div className="flex justify-center py-8">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
           </div>

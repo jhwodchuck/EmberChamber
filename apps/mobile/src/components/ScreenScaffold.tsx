@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { StyleProp, ViewStyle } from "react-native";
 import { ScrollView, Text, View } from "react-native";
-import { styles } from "../styles";
+import { styles } from "./screenScaffold.styles";
 
 type ScreenScaffoldProps = {
   children: ReactNode;

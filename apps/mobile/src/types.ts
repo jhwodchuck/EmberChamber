@@ -192,6 +192,8 @@ export type FormMessage = {
   tone: "error" | "success" | "warning" | "info";
   title: string;
   body: string;
+  actionLabel?: string;
+  onAction?: () => void;
 };
 
 export type Field =

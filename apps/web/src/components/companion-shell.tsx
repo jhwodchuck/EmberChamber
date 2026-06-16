@@ -37,8 +37,10 @@ import {
   createRelayMailboxWebSocket,
   ensureRelayAccessToken,
   readRelaySession,
+  relayAccountApi,
   relayConversationApi,
 } from "@/lib/relay";
+import { onPushSubscriptionChange, registerServiceWorker } from "@/lib/push";
 import { conversationHref } from "@/lib/conversation-routes";
 import {
   ensureWorkspaceReady,
@@ -440,6 +442,23 @@ export function CompanionShell({ children }: { children: ReactNode }) {
     } else {
       notificationPermissionRef.current = Notification.permission;
     }
+  }, [isAuthenticated]);
+
+  // Keep the service worker alive and re-register rotated Web Push subscriptions
+  // with the relay. When a push service rotates a subscription, sw.js re-subscribes
+  // and posts the new subscription here; without this listener the relay keeps a
+  // stale endpoint and push goes dark.
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+    void registerServiceWorker();
+    const cleanup = onPushSubscriptionChange((subscription) => {
+      void relayAccountApi.subscribeWebPush(subscription).catch(() => {
+        // Best-effort; the user can re-enable from Settings if this fails.
+      });
+    });
+    return cleanup;
   }, [isAuthenticated]);
 
   useEffect(() => {

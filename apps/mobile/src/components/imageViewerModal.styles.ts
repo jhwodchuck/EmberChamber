@@ -1,3 +1,4 @@
+import { colors, radius, spacing, brandShadow, panelShadow, displayFontFamily } from "../theme/theme";
 import { StyleSheet } from "react-native";
 
 // New styles for the gesture-driven full-screen image viewer (Phase 3 slice).
@@ -18,5 +19,49 @@ export const imageViewerStyles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "#000000",
+  },
+  imageViewerOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.96)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  imageViewerCloseButton: {
+    position: "absolute",
+    top: 52,
+    right: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  imageViewerCloseText: {
+    color: "#ffffff",
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  imageViewerError: {
+    alignItems: "center",
+    paddingHorizontal: 32,
+    gap: 8,
+  },
+  imageViewerStatus: {
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 28,
+  },
+  imageViewerStatusText: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 21,
+  },
+  imageViewerErrorText: {
+    color: colors.errorText,
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 21,
   },
 });

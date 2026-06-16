@@ -17,10 +17,13 @@ import { CHAT_LIST_FILTERS, type ChatListFilter } from "../lib/mainShell";
 import { parseSharedLocation } from "../lib/utils";
 import { haptics } from "../lib/haptics";
 import { springs } from "../lib/motion";
-import { styles, theme } from "../styles";
+import { styles as sharedStyles, theme } from "../styles";
 import { ScreenScaffold } from "../components/ScreenScaffold";
 import { SkeletonChatRow } from "../components/Shimmer";
+import { styles as scaffoldStyles } from "../components/screenScaffold.styles";
 import { chatListScreenStyles } from "./chatListScreen.styles";
+
+const styles = { ...sharedStyles, ...scaffoldStyles, ...chatListScreenStyles };
 
 const CHAT_ACTION_WIDTH = 216;
 
@@ -326,8 +329,10 @@ const SwipeableChatRow = memo(function SwipeableChatRow({
 
               <View style={styles.chatMetaRow}>
                 {item.group.historyMode === "device_encrypted" ? (
-                  <Text style={styles.chatRowMeta}>Locked</Text>
-                ) : null}
+                  <Text style={styles.chatRowMeta}>Local-first</Text>
+                ) : (
+                  <Text style={styles.chatRowMeta}>Relay-hosted</Text>
+                )}
                 {item.group.sensitiveMediaDefault ? (
                   <Text style={styles.chatRowMeta}>Sensitive</Text>
                 ) : null}

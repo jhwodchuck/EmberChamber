@@ -314,6 +314,55 @@ export async function syncEncryptedMailbox(args: {
       const conversationMessages =
         updatedMessages.get(envelope.conversationId) ??
         (await loadCachedGroupMessages(db, envelope.conversationId));
+
+      if (payload.messageType === "reaction") {
+        const targetMsgId = payload.targetClientMessageId;
+        if (targetMsgId) {
+          const updated = conversationMessages.map((message) => {
+            const mId = message.id.includes(":") ? message.id.split(":")[1] : message.id;
+            if (mId === targetMsgId) {
+              const reactions = message.reactions ? { ...message.reactions } : {};
+              const emoji = payload.emoji;
+              if (emoji) {
+                const list = reactions[emoji] ? [...reactions[emoji]] : [];
+                const senderId = envelope.senderAccountId;
+                if (list.includes(senderId)) {
+                  reactions[emoji] = list.filter((id) => id !== senderId);
+                } else {
+                  reactions[emoji] = [...list, senderId].sort();
+                }
+                if (reactions[emoji].length === 0) {
+                  delete reactions[emoji];
+                }
+              }
+              return { ...message, reactions };
+            }
+            return message;
+          });
+          updatedMessages.set(envelope.conversationId, updated);
+        }
+        receivedConversationIds.add(envelope.conversationId);
+        ackEnvelopeIds.push(envelope.envelopeId);
+        continue;
+      }
+
+      if (payload.messageType === "delete") {
+        const targetMsgId = payload.targetClientMessageId;
+        if (targetMsgId) {
+          const updated = conversationMessages.map((message) => {
+            const mId = message.id.includes(":") ? message.id.split(":")[1] : message.id;
+            if (mId === targetMsgId) {
+              return { ...message, deletedAt: payload.deletedAt || new Date().toISOString() };
+            }
+            return message;
+          });
+          updatedMessages.set(envelope.conversationId, updated);
+        }
+        receivedConversationIds.add(envelope.conversationId);
+        ackEnvelopeIds.push(envelope.envelopeId);
+        continue;
+      }
+
       const messageId = `${envelope.envelopeId}:${payload.clientMessageId}`;
       const nextMessage: GroupThreadMessage = {
         id: messageId,

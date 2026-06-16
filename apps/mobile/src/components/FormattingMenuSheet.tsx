@@ -15,7 +15,12 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import type { DraftFormatAction } from "../lib/messageDraftFormatting";
-import { styles } from "../styles";
+import { styles as sharedStyles } from "../styles";
+import { styles as formattingStyles } from "./formattingMenuSheet.styles";
+import { styles as contextStyles } from "./contextMenuSheet.styles";
+import { styles as profileStyles } from "./memberProfileSheet.styles";
+
+const styles = { ...sharedStyles, ...formattingStyles, ...contextStyles, ...profileStyles };
 import { haptics } from "../lib/haptics";
 import { springs, timings } from "../lib/motion";
 

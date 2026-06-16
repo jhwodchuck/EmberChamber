@@ -17,12 +17,15 @@ import type {
   SessionDescriptor,
 } from "../types";
 import type { ContextMenuAction } from "../components/MessageContextMenu";
-import { styles } from "../styles";
+import { styles as mainStyles } from "./mainScreen.styles";
+import { chatListScreenStyles as chatListStyles } from "./chatListScreen.styles";
+
+const styles = { ...mainStyles, ...chatListStyles };
 import { StatusCard } from "../components/StatusCard";
 import type { DeviceLinkStatus } from "@emberchamber/protocol";
 import { ChatListScreen, type ChatListItem } from "./ChatListScreen";
 import { ConversationScreen } from "./ConversationScreen";
-import { InvitesScreen } from "./InvitesScreen";
+import { InviteFlow } from "../features/invites/InviteFlow";
 import { SettingsScreen } from "./SettingsScreen";
 import type { PersistedMainShellState } from "../lib/mainShell";
 import type { ChatListFilter, MainChatView, MainTab } from "../lib/mainShell";
@@ -106,6 +109,10 @@ export type MainScreenProps = {
   onUpdateGroup: (title: string, sensitiveMedia: boolean) => Promise<void>;
   onCreateInvite: () => Promise<GroupInviteRecord | null>;
   isUploadingAvatar: boolean;
+  isExportingBackup: boolean;
+  isImportingBackup: boolean;
+  onExportBackup: (passphrase: string) => Promise<{ fileName: string }>;
+  onImportBackup: (passphrase: string) => Promise<{ messageCount: number; preferenceCount: number }>;
   onChangeAvatar: () => void;
   unreadIds: Set<string>;
   onToggleConversationArchived: (conversationId: string) => void;
@@ -202,6 +209,10 @@ export function MainScreen(props: MainScreenProps) {
     onUpdateGroup,
     onCreateInvite,
     isUploadingAvatar,
+    isExportingBackup,
+    isImportingBackup,
+    onExportBackup,
+    onImportBackup,
     onChangeAvatar,
     unreadIds,
     onToggleConversationArchived,
@@ -433,7 +444,7 @@ export function MainScreen(props: MainScreenProps) {
         chatListPane
       )
     ) : activeTab === "invites" ? (
-      <InvitesScreen
+      <InviteFlow
         inviteInput={inviteInput}
         setInviteInput={setInviteInput}
         invitePreview={invitePreview}
@@ -469,6 +480,10 @@ export function MainScreen(props: MainScreenProps) {
         onRefreshSessions={onRefreshSessions}
         onRevokeSession={onRevokeSession}
         isUploadingAvatar={isUploadingAvatar}
+        isExportingBackup={isExportingBackup}
+        isImportingBackup={isImportingBackup}
+        onExportBackup={onExportBackup}
+        onImportBackup={onImportBackup}
         onShowDeviceLinkQr={onShowDeviceLinkQr}
         onScanDeviceLinkQr={onScanDeviceLinkQr}
         onApproveDeviceLink={onApproveDeviceLink}

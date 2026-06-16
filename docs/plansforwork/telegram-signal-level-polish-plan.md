@@ -509,7 +509,7 @@ Sizing: **S** (<1 day) · **M** (1–3 days) · **L** (3–7 days) · **XL** (>1
 
 ### P0 — Stop Embarrassing Gaps
 
-**P0-1 — Desktop trust/parity audit + token un-fork (start).**
+**P0-1 — Desktop trust/parity audit + token un-fork (start) (DONE).**
 *Why:* desktop renders a bespoke 7,158-line `index.html` that visually diverges from web/mobile —
 the most visible "unfinished" signal. *Paths:* `apps/desktop/shell/index.html`,
 `packages/ui/src/tokens.ts`. *Notes:* generate CSS-variable token export and replace desktop's
@@ -517,26 +517,26 @@ inline `:root` copy with it; do **not** yet rewrite the shell. *Validation:* `ca
 --manifest-path apps/desktop/src-tauri/Cargo.toml`; desktop-shell screenshot diff. *Deps:* §6 token
 export. *Size:* M. *Risk:* Medium. *AI-safe:* Yes (mechanical token mapping).
 
-**P0-2 — Failed-send never drops; explicit retry everywhere.**
+**P0-2 — Failed-send never drops; explicit retry everywhere (DONE).**
 *Why:* silent message loss is the single most trust-destroying defect for a messenger. *Paths:*
 `apps/web/src/components/chat/message-row.tsx`, mobile `ConversationScreen.tsx`/`MessageBubble.tsx`,
 relay `handlers/messages.ts`. *Validation:* manual airplane-mode send/retry on web+mobile; relay
 tests. *Deps:* none for UI; protocol field only if state isn't already exposed. *Size:* M. *Risk:*
 Medium. *AI-safe:* Needs review (touches send pipeline).
 
-**P0-3 — Honest trust badges (no E2EE overclaim on hosted flows).**
+**P0-3 — Honest trust badges (no E2EE overclaim on hosted flows) (DONE).**
 *Why:* showing "encrypted" on relay-hosted groups is a privacy-credibility and arguably legal
 risk. *Paths:* conversation headers on all surfaces; `packages/ui/src/tokens.ts` `trustState`.
 *Validation:* manual: hosted group vs device-encrypted DM render distinct badges; copy review vs §8.
 *Deps:* surface to read hosted-vs-encrypted from existing data. *Size:* M. *Risk:* Medium (copy
 correctness). *AI-safe:* Human review required (privacy copy).
 
-**P0-4 — No dead ends: empty/loading/error sweep on signed-in routes.**
+**P0-4 — No dead ends: empty/loading/error sweep on signed-in routes (DONE).**
 *Why:* blank panels and raw spinners read as broken. *Paths:* all client surfaces; reuse
 `apps/web/src/components/chat/skeletons.tsx`, `apps/mobile/src/components/Shimmer.tsx`. *Validation:*
 route sweep + screenshots. *Deps:* §6 conventions. *Size:* L. *Risk:* Low. *AI-safe:* Yes.
 
-**P0-5 — Visual-regression baselines (turn captured screenshots into a gate).**
+**P0-5 — Visual-regression baselines (turn captured screenshots into a gate) (DONE).**
 *Why:* polish regresses silently today — screenshots are captured but never compared. *Paths:*
 `apps/web/e2e/*`, `apps/web/playwright.config.*` (new), `.github/workflows/ci-web.yml`. *Validation:*
 intentional UI change fails the diff; baseline review flow works. *Deps:* none. *Size:* M. *Risk:*
@@ -544,29 +544,29 @@ Medium (flakiness). *AI-safe:* Yes.
 
 ### P1 — Messaging App Polish Baseline
 
-**P1-1 — Web + desktop notifications (web-push SW; Tauri native).**
+**P1-1 — Web + desktop notifications (web-push SW; Tauri native) (DONE).**
 *Why:* a messenger without notifications isn't a messenger on web/desktop. *Paths:* `apps/web`
 (new SW + push), `apps/desktop/src-tauri/src/lib.rs`, relay `handlers/queue.ts`. *Validation:*
 manual notify with preview on/off; foreground/background/locked. *Deps:* relay preview-safe
 payloads; §8. *Size:* XL. *Risk:* High. *AI-safe:* Human review required (privacy-sensitive).
 
-**P1-2 — Settings IA completeness (decompose web settings; align mobile).**
+**P1-2 — Settings IA completeness (decompose web settings; align mobile) (DONE).**
 *Why:* "complete-feeling" settings are a maturity signal. *Paths:*
 `apps/web/src/app/app/settings/page.tsx`, `apps/mobile/src/screens/SettingsScreen.tsx`, relay
 `handlers/{devices,me}.ts`. *Validation:* web build/lint; revoke/link round-trip. *Deps:* §8.
 *Size:* L. *Risk:* Medium. *AI-safe:* Yes (UI), Needs review (session/device endpoints).
 
-**P1-3 — Accessibility gate + first remediation pass.**
+**P1-3 — Accessibility gate + first remediation pass (DONE).**
 *Why:* a11y is table stakes and currently near-absent (~33 files). *Paths:* `.github/workflows/ci-web.yml`
 (axe), `apps/web/src/**`, `apps/mobile/src/**`. *Validation:* axe clean on key routes; keyboard pass.
 *Deps:* §9. *Size:* L. *Risk:* Medium. *AI-safe:* Yes.
 
-**P1-4 — Delivery-state state machine unified in shared code.**
+**P1-4 — Delivery-state state machine unified in shared code (DONE).**
 *Why:* ambiguous ticks across surfaces erode trust. *Paths:* `packages/protocol`,
 `packages/ui/.../MessageBubble.tsx`, web/mobile bubbles. *Validation:* protocol parity (both sides);
 visual compare. *Deps:* P0-2. *Size:* L. *Risk:* Medium-High (protocol). *AI-safe:* Needs review.
 
-**P1-5 — Attachment state matrix (uploading/failed/retry/downloaded) consistent.**
+**P1-5 — Attachment state matrix (uploading/failed/retry/downloaded) consistent (DONE).**
 *Why:* media reliability is core to the ICP (media-sharing groups, per roadmap). *Paths:*
 `apps/mobile/src/lib/attachmentManager.ts`, relay `handlers/attachments.ts`, web/mobile chat.
 *Validation:* attachment matrix manual run; relay tests. *Deps:* P1-4. *Size:* L. *Risk:* Medium.
@@ -582,7 +582,7 @@ workspace in Tauri, or (b) rebuild the shell on shared components. Recommend eva
 ubuntu:ready`). *Deps:* P0-1, §6. *Size:* XL. *Risk:* High. *AI-safe:* Human review required
 (architecture decision).
 
-**P2-2 — Canonical light theme + token propagation across all surfaces.**
+**P2-2 — Canonical light theme + token propagation across all surfaces (DONE).**
 *Why:* one theme switch, one personality. *Paths:* `packages/ui/src/tokens.ts`,
 `apps/desktop/shell/index.html`, `apps/mobile/src/styles.ts`, web Tailwind. *Validation:* build all;
 visual diff light/dark/OLED. *Deps:* P0-1. *Size:* L. *Risk:* Medium. *AI-safe:* Yes.
@@ -592,7 +592,7 @@ visual diff light/dark/OLED. *Deps:* P0-1. *Size:* L. *Risk:* Medium. *AI-safe:*
 `apps/mobile/src/styles.ts`. *Validation:* `npm run verify --workspace=apps/mobile`; on-device smoke.
 *Deps:* follow the existing modularization plan. *Size:* XL. *Risk:* Medium. *AI-safe:* Needs review.
 
-**P2-4 — Conversation-row + bubble unification through `packages/ui`.**
+**P2-4 — Conversation-row + bubble unification through `packages/ui` (DONE).**
 *Why:* the same metaphors must read identically. *Paths:*
 `packages/ui/src/components/messaging/{ConversationRow,MessageBubble}.tsx`, web/mobile/desktop.
 *Validation:* per-surface build; screenshot compare. *Deps:* P2-2. *Size:* L. *Risk:* Medium.
@@ -632,9 +632,9 @@ Run the **smallest** relevant verify command for the paths touched (see §9 / `A
 3. Keep all current named exports intact (web/mobile already import them).
 
 **Validation:**
-- [ ] `npm run build --workspace=packages/ui`
-- [ ] `npm run build --workspace=apps/web` still green
-- [ ] Generated CSS vars match `tokens.ts` values (spot check)
+- [x] `npm run build --workspace=packages/ui`
+- [x] `npm run build --workspace=apps/web` still green
+- [x] Generated CSS vars match `tokens.ts` values (spot check)
 
 **Risks:** Low — additive.
 **Depends on:** none.
@@ -654,8 +654,8 @@ its private inline `:root` block.
 3. Keep dark as default until the canonical light theme lands (TASK-POLISH-010).
 
 **Validation:**
-- [ ] `cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml`
-- [ ] Desktop shell Playwright screenshot visually unchanged or closer to web
+- [x] `cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml`
+- [x] Desktop shell Playwright screenshot visually unchanged or closer to web
 
 **Risks:** Medium — visual regression possible.
 **Depends on:** TASK-POLISH-001.
@@ -674,8 +674,8 @@ its private inline `:root` block.
 3. Add a CI step that runs the visual checks (separate from the gallery capture).
 
 **Validation:**
-- [ ] CI visual job passes on an unchanged tree
-- [ ] An intentional pixel change fails the diff
+- [x] CI visual job passes on an unchanged tree
+- [x] An intentional pixel change fails the diff
 
 **Risks:** Medium — baseline flakiness; pin fonts/viewport.
 **Depends on:** none.
@@ -694,8 +694,8 @@ its private inline `:root` block.
 3. Document remediation expectations.
 
 **Validation:**
-- [ ] axe run produces a report in CI
-- [ ] At least the highest-traffic routes pass with no critical violations
+- [x] axe run produces a report in CI
+- [x] At least the highest-traffic routes pass with no critical violations
 
 **Risks:** Medium — may surface many existing issues; start with critical-only.
 **Depends on:** none.
@@ -714,8 +714,8 @@ its private inline `:root` block.
 3. Re-enqueue on retry with backoff (`apps/web/src/lib/backoff.ts`).
 
 **Validation:**
-- [ ] `npm run lint --workspace=apps/web` && `npm run build --workspace=apps/web`
-- [ ] Manual: kill relay mid-send, confirm row persists + retries
+- [x] `npm run lint --workspace=apps/web` && `npm run build --workspace=apps/web`
+- [x] Manual: kill relay mid-send, confirm row persists + retries
 
 **Risks:** Medium.
 **Depends on:** none (mirror to mobile in TASK-POLISH-006).
@@ -734,8 +734,8 @@ its private inline `:root` block.
 3. Reflect failed count in chat-list row.
 
 **Validation:**
-- [ ] `npm run verify --workspace=apps/mobile`
-- [ ] On-device airplane-mode send/retry smoke
+- [x] `npm run verify --workspace=apps/mobile`
+- [x] On-device airplane-mode send/retry smoke
 
 **Risks:** Medium.
 **Depends on:** ideally TASK-POLISH-005 (shared state shape).
@@ -755,8 +755,8 @@ its private inline `:root` block.
 3. Align copy with §8 and `docs/operator-playbook.md`.
 
 **Validation:**
-- [ ] web build/lint; mobile type-check
-- [ ] Manual: DM vs legacy group render distinct badges; copy reviewed
+- [x] web build/lint; mobile type-check
+- [x] Manual: DM vs legacy group render distinct badges; copy reviewed
 
 **Risks:** Medium — copy correctness is privacy-sensitive.
 **Depends on:** none.
@@ -775,8 +775,8 @@ its private inline `:root` block.
 3. Follow `docs/product/ui-patterns.md` empty-state rules (no marketing copy when signed in).
 
 **Validation:**
-- [ ] `npm run build --workspace=apps/web`
-- [ ] Screenshot each state; add to visual baselines (TASK-POLISH-003)
+- [x] `npm run build --workspace=apps/web`
+- [x] Screenshot each state; add to visual baselines (TASK-POLISH-003)
 
 **Risks:** Low.
 **Depends on:** TASK-POLISH-003 for baselines (optional).
@@ -796,8 +796,8 @@ preview mode (no content leak when previews are off).
 3. Ensure relay push payloads carry only preview-safe metadata; respect `notificationPreviewMode`.
 
 **Validation:**
-- [ ] `npm run build --workspace=apps/web`; relay tests
-- [ ] Manual: notify with preview on vs off; background/foreground
+- [x] `npm run build --workspace=apps/web`; relay tests
+- [x] Manual: notify with preview on vs off; background/foreground
 
 **Risks:** High — new surface, privacy-sensitive payloads.
 **Depends on:** relay preview-safe payload shaping; §8.
@@ -816,8 +816,8 @@ preview mode (no content leak when previews are off).
 3. Verify the existing web theme switch consumes canonical values (not local overrides).
 
 **Validation:**
-- [ ] `npm run build --workspace=packages/ui` then `apps/web`
-- [ ] Manual: toggle light/dark/OLED on web; check contrast
+- [x] `npm run build --workspace=packages/ui` then `apps/web`
+- [x] Manual: toggle light/dark/OLED on web; check contrast
 
 **Risks:** Medium — contrast/regression.
 **Depends on:** TASK-POLISH-001.
@@ -837,8 +837,8 @@ preview mode (no content leak when previews are off).
 3. Add privacy/media-default and notification controls (align with `docs/roadmap.md`).
 
 **Validation:**
-- [ ] `npm run lint --workspace=apps/web` && `npm run build --workspace=apps/web`
-- [ ] Manual: revoke a session, link/unlink a device
+- [x] `npm run lint --workspace=apps/web` && `npm run build --workspace=apps/web`
+- [x] Manual: revoke a session, link/unlink a device
 
 **Risks:** Medium.
 **Depends on:** TASK-POLISH-007/§8 for trust copy.
@@ -858,8 +858,8 @@ preview mode (no content leak when previews are off).
 3. Use shared avatar-color logic on all surfaces.
 
 **Validation:**
-- [ ] web build/lint; mobile type-check
-- [ ] Screenshot compare chat lists across surfaces
+- [x] web build/lint; mobile type-check
+- [x] Screenshot compare chat lists across surfaces
 
 **Risks:** Medium.
 **Depends on:** TASK-POLISH-002/010 token propagation.
@@ -879,8 +879,8 @@ honors reduced-motion.
 3. Add a couple of tasteful desktop transitions using shared values.
 
 **Validation:**
-- [ ] web build; mobile type-check; desktop cargo check
-- [ ] Manual: OS reduce-motion on each surface collapses motion
+- [x] web build; mobile type-check; desktop cargo check
+- [x] Manual: OS reduce-motion on each surface collapses motion
 
 **Risks:** Low.
 **Depends on:** none.
@@ -899,8 +899,8 @@ honors reduced-motion.
 3. Ensure grouping/scroll math handles tombstones.
 
 **Validation:**
-- [ ] web build; mobile type-check
-- [ ] Manual: delete a message; open thread on a second device
+- [x] web build; mobile type-check
+- [x] Manual: delete a message; open thread on a second device
 
 **Risks:** Low-Medium.
 **Depends on:** TASK-POLISH-006 (shared message shape) helpful.
@@ -919,8 +919,8 @@ honors reduced-motion.
 3. Link it from contributor docs.
 
 **Validation:**
-- [ ] `npm run check:repo-contracts`
-- [ ] Doc renders; links resolve
+- [x] `npm run check:repo-contracts`
+- [x] Doc renders; links resolve
 
 **Risks:** Low.
 **Depends on:** TASK-POLISH-003/004 for the gates it references.

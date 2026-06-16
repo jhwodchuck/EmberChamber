@@ -1,5 +1,5 @@
 import { Pressable, Text, View } from "react-native";
-import { styles } from "../styles";
+import { styles } from "./toggleRow.styles";
 
 export function ToggleRow({
   title,

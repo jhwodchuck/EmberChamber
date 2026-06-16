@@ -7,7 +7,11 @@ import {
   View,
 } from "react-native";
 import type { GroupMember } from "../types";
-import { styles } from "../styles";
+import { styles as sharedStyles, theme } from "../styles";
+import { styles as rosterStyles } from "./memberRosterModal.styles";
+import { styles as profileStyles } from "./memberProfileSheet.styles";
+
+const styles = { ...sharedStyles, ...rosterStyles, ...profileStyles };
 
 export type MemberRosterModalProps = {
   members: GroupMember[];

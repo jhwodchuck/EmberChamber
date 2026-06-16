@@ -1,4 +1,4 @@
-import { StyleSheet } from "react-native";
+import { StyleSheet, Platform } from "react-native";
 import { theme } from "../styles";
 
 // Co-located styles for the redesigned message bubble (grouped runs, avatar
@@ -138,5 +138,218 @@ export const bubbleStyles = StyleSheet.create({
   // reads as a single ✓✓ glyph as it animates in.
   tickSecond: {
     marginLeft: -3,
+  },
+});
+
+
+export const styles = StyleSheet.create({
+  inlineBold: {
+    fontWeight: "700",
+  },
+
+  inlineItalic: {
+    fontStyle: "italic",
+  },
+
+  inlineStrikethrough: {
+    textDecorationLine: "line-through",
+  },
+
+  inlineLink: {
+    color: colors.textSoft,
+    textDecorationLine: "underline",
+    textDecorationColor: colors.textSoft,
+  },
+
+  inlineMention: {
+    color: colors.textSoft,
+    fontWeight: "700",
+  },
+
+  inlineCode: {
+    borderRadius: 6,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    color: colors.textSoft,
+    fontFamily: Platform.select({
+      ios: "Menlo",
+      android: "monospace",
+      default: "monospace",
+    }),
+    fontSize: 14,
+  },
+
+  inlineSpoiler: {
+    borderRadius: 6,
+    backgroundColor: colors.brandMuted,
+    color: colors.textSoft,
+    fontSize: 14,
+    fontWeight: "700",
+    paddingHorizontal: 6,
+    overflow: "hidden",
+  },
+
+  inlineSpoilerRevealed: {
+    borderRadius: 6,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    color: colors.textPrimary,
+    paddingHorizontal: 6,
+    overflow: "hidden",
+  },
+
+  quoteBlock: {
+    borderLeftWidth: 2,
+    borderLeftColor: colors.borderStrong,
+    backgroundColor: colors.inputBackground,
+    paddingLeft: 12,
+    paddingVertical: 8,
+    paddingRight: 10,
+    borderRadius: 12,
+  },
+
+  quoteText: {
+    color: colors.textSecondary,
+    fontSize: 15,
+    lineHeight: 21,
+  },
+
+  codeBlock: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.inputBackground,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+
+  codeBlockText: {
+    color: colors.textSoft,
+    fontFamily: Platform.select({
+      ios: "Menlo",
+      android: "monospace",
+      default: "monospace",
+    }),
+    fontSize: 13,
+    lineHeight: 19,
+  },
+
+  attachmentMeta: {
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+
+  messageImage: {
+    width: "100%",
+    minHeight: 220,
+    borderRadius: 16,
+    backgroundColor: colors.inputBackground,
+  },
+
+  attachmentActionGroup: {
+    gap: 8,
+  },
+
+  attachmentActionButton: {
+    alignSelf: "flex-start",
+    minWidth: 148,
+  },
+
+  systemMessageCard: {
+    alignSelf: "center",
+    borderRadius: 999,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+
+  systemMessageText: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: "600",
+  },
+
+  formattedMessage: {
+    gap: 8,
+  },
+
+  messageDeletedText: {
+    color: colors.textMuted,
+    fontSize: 14,
+    fontStyle: "italic",
+    lineHeight: 20,
+  },
+
+  messageReplyPreview: {
+    flexDirection: "row",
+    gap: 8,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+
+  messageReplyAccent: {
+    width: 3,
+    borderRadius: 2,
+    backgroundColor: colors.brand,
+  },
+
+  messageReplyCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+
+  messageReplySender: {
+    color: colors.textSoft,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+
+  messageReplyText: {
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+
+  messageReactionRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    paddingTop: 2,
+  },
+
+  messageReactionChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+  },
+
+  messageReactionChipActive: {
+    borderColor: colors.brand,
+    backgroundColor: "rgba(250,204,21,0.16)",
+  },
+
+  messageReactionText: {
+    color: colors.textPrimary,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+
+  messageMeta: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: "600",
+  },
+
+  messageText: {
+    color: colors.textPrimary,
+    fontSize: 15,
+    lineHeight: 21,
   },
 });

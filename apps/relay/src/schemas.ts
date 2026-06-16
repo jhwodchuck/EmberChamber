@@ -29,6 +29,20 @@ export const devicePushTokenSchema = z.object({
   pushEnvironment: z.enum(["production", "sandbox"]).optional(),
 });
 
+export const webPushSubscribeSchema = z.object({
+  endpoint: z.string().url().max(2048),
+  p256dh: z.string().min(4).max(512),
+  auth: z.string().min(4).max(128),
+});
+
+export const inviteCheckSchema = z.object({
+  code: z.string().min(3).max(128),
+});
+
+export const resendMagicLinkSchema = z.object({
+  email: z.string().email().max(254),
+});
+
 export const directMessageSchema = z.object({
   peerAccountId: z.string().uuid(),
 });

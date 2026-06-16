@@ -8,7 +8,10 @@ import {
   View,
 } from "react-native";
 import type { GroupMember, GroupThreadMessage } from "../types";
-import { styles, theme } from "../styles";
+import { styles as sharedStyles, theme } from "../styles";
+import { styles as profileStyles } from "./memberProfileSheet.styles";
+
+const styles = { ...sharedStyles, ...profileStyles };
 
 export type MemberProfileSheetProps = {
   member: GroupMember;

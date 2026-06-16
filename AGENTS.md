@@ -11,6 +11,7 @@ Read these docs before making broad product or architecture changes:
 - `llm_council/README.md`
 - `docs/architecture.md`
 - `docs/launch-targets.md`
+- `docs/release-checklist.md` before tagging a release
 - `docs/operator-playbook.md` for privacy, safety, abuse, and moderation language
 
 ## Active Beta Runtime

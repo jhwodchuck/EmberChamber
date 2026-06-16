@@ -4,27 +4,59 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>EmberChamber Desktop Companion</title>
+    <!-- Canonical EmberChamber design tokens (palette, radii, motion, etc.)
+         generated from packages/ui/src/tokens.ts. Re-copy with:
+           npm run build --workspace=packages/ui
+           cp packages/ui/dist/tokens.css apps/desktop/shell/vendor/tokens.css -->
+    <link rel="stylesheet" href="vendor/tokens.css" />
     <style>
       :root {
         color-scheme: dark;
-        --bg: #0d0809;
-        --bg-secondary: #130c0d;
+        /* Semantic role aliases built on canonical tokens.
+           These mirror the roles in apps/web/src/app/globals.css (.dark block). */
+        --bg: var(--obsidian-950);
+        --bg-secondary: var(--obsidian-900);
         --panel: rgba(19, 12, 13, 0.9);
         --panel-strong: rgba(17, 11, 12, 0.94);
-        --line: rgba(255, 255, 255, 0.08);
-        --line-strong: rgba(255, 184, 144, 0.24);
-        --text: #fcfbfa;
-        --muted: #d7b9ab;
-        --accent: #ffb890;
-        --accent-strong: #ea6f3f;
+        --line: var(--glass-border);
+        --line-strong: var(--glass-border-strong);
+        --text: var(--obsidian-50);
+        --muted: var(--obsidian-200);
+        --accent: var(--ember-300);
+        --accent-strong: var(--ember-500);
         --accent-ink: #fff7f1;
-        --warning: #ffd28b;
-        --error: #fecdd3;
-        --success: #98efc5;
+        --warning: var(--warning-text);
+        --error: var(--error-text);
+        --success: var(--success-text);
         --shadow: 0 14px 34px rgba(0, 0, 0, 0.24);
         font-family: "Ubuntu", "Cantarell", "Segoe UI", system-ui, sans-serif;
         background: var(--bg);
         color: var(--text);
+      }
+
+      @media (prefers-color-scheme: light) {
+        :root {
+          color-scheme: light;
+          --bg: var(--obsidian-50);
+          --bg-secondary: #fffdf9;
+          --panel: rgba(255, 253, 249, 0.9);
+          --panel-strong: rgba(255, 247, 241, 0.94);
+          --line: var(--obsidian-200);
+          --line-strong: rgba(200, 88, 50, 0.22);
+          --text: var(--obsidian-800);
+          --muted: var(--obsidian-600);
+          --accent: var(--ember-600);
+          --accent-strong: var(--ember-700);
+          --shadow: 0 14px 34px rgba(0, 0, 0, 0.10);
+        }
+
+        body {
+          background:
+            radial-gradient(circle at top, rgba(200, 88, 50, 0.06), transparent 20%),
+            radial-gradient(circle at 12% 14%, rgba(234, 111, 63, 0.04), transparent 14%),
+            linear-gradient(180deg, rgba(0, 0, 0, 0.01), transparent 24%),
+            var(--bg);
+        }
       }
 
       * {
@@ -1001,7 +1033,8 @@
         border: 1px solid var(--line);
         color: var(--muted);
       }
-      .chat-badge.locked { border-color: rgba(152,239,197,0.26); color: var(--success); }
+      .chat-badge.local-first { border-color: rgba(152,239,197,0.26); color: var(--success); }
+      .chat-badge.relay-hosted { border-color: var(--line); color: var(--muted); }
       .chat-badge.sensitive { border-color: rgba(255,210,139,0.28); color: var(--warning); }
       .chat-member-count { font-size: 0.78rem; color: var(--muted); margin-left: auto; }
 
@@ -1102,6 +1135,15 @@
           align-items: flex-start;
         }
       }
+
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          transition-duration: 0.01ms !important;
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+        }
+        .toggle-thumb { transition: none !important; }
+      }
     </style>
   </head>
   <body>
@@ -1174,6 +1216,8 @@
         mailboxCursor: "",
         revealedMessages: {},
         attachmentMedia: {},
+        doubleRatchetSessions: {},
+        groupSenderKeys: {},
         authForm: {
           mode: "magic-link",
           email: "",
@@ -1308,6 +1352,8 @@
           deviceBundle: readLegacyJson("emberchamber.desktop.device-bundle.v1", null),
           mailboxCursor: readLegacyText("emberchamber.desktop.mailbox-cursor.v1"),
           deviceLabel: readLegacyText(legacyStorageKeys.deviceLabel),
+          doubleRatchetSessions: readLegacyJson("emberchamber.desktop.double-ratchet-sessions.v1", {}),
+          groupSenderKeys: readLegacyJson("emberchamber.desktop.group-sender-keys.v1", {}),
         };
       }
 
@@ -1315,6 +1361,8 @@
         Object.values(legacyStorageKeys).forEach(removeLocalKey);
         removeLocalKey("emberchamber.desktop.device-bundle.v1");
         removeLocalKey("emberchamber.desktop.mailbox-cursor.v1");
+        removeLocalKey("emberchamber.desktop.double-ratchet-sessions.v1");
+        removeLocalKey("emberchamber.desktop.group-sender-keys.v1");
       }
 
       function hasPersistedSecureState(payload) {
@@ -1331,7 +1379,9 @@
             payload.groupInviteReference ||
             payload.deviceBundle ||
             payload.mailboxCursor ||
-            payload.deviceLabel
+            payload.deviceLabel ||
+            (payload.doubleRatchetSessions && Object.keys(payload.doubleRatchetSessions).length > 0) ||
+            (payload.groupSenderKeys && Object.keys(payload.groupSenderKeys).length > 0)
         );
       }
 
@@ -1351,6 +1401,10 @@
           typeof payload.deviceLabel === "string" && payload.deviceLabel.trim()
             ? payload.deviceLabel
             : suggestDesktopLabel();
+        state.doubleRatchetSessions =
+          payload.doubleRatchetSessions && typeof payload.doubleRatchetSessions === "object" ? payload.doubleRatchetSessions : {};
+        state.groupSenderKeys =
+          payload.groupSenderKeys && typeof payload.groupSenderKeys === "object" ? payload.groupSenderKeys : {};
       }
 
       function currentSecureStatePayload() {
@@ -1364,6 +1418,8 @@
           deviceBundle: state.deviceBundle,
           mailboxCursor: state.mailboxCursor,
           deviceLabel: state.authForm.deviceLabel.trim() || suggestDesktopLabel(),
+          doubleRatchetSessions: state.doubleRatchetSessions,
+          groupSenderKeys: state.groupSenderKeys,
         };
       }
 
@@ -1394,6 +1450,8 @@
         writeLegacyJson("emberchamber.desktop.device-bundle.v1", payload.deviceBundle || null);
         writeLocalText("emberchamber.desktop.mailbox-cursor.v1", payload.mailboxCursor || "");
         writeLocalText(legacyStorageKeys.deviceLabel, payload.deviceLabel || suggestDesktopLabel());
+        writeLegacyJson("emberchamber.desktop.double-ratchet-sessions.v1", payload.doubleRatchetSessions || {});
+        writeLegacyJson("emberchamber.desktop.group-sender-keys.v1", payload.groupSenderKeys || {});
       }
 
       async function loadPersistedSecureState() {
@@ -1814,6 +1872,430 @@
         return JSON.parse(utf8Decoder.decode(plaintext));
       }
 
+      async function hmacSha256(keyBytes, dataBytes) {
+        const cryptoKey = await crypto.subtle.importKey(
+          "raw",
+          keyBytes,
+          { name: "HMAC", hash: "SHA-256" },
+          false,
+          ["sign"]
+        );
+        const sig = await crypto.subtle.sign("HMAC", cryptoKey, dataBytes);
+        return new Uint8Array(sig);
+      }
+
+      async function hkdfSha256(ikm, length, salt, info) {
+        const prk = await hmacSha256(salt || new Uint8Array(32), ikm);
+        const okm = new Uint8Array(length);
+        let t = new Uint8Array(0);
+        let offset = 0;
+        let counter = 1;
+        const infoBytes = info || new Uint8Array(0);
+
+        while (offset < length) {
+          const chunkInput = new Uint8Array(t.length + infoBytes.length + 1);
+          chunkInput.set(t, 0);
+          chunkInput.set(infoBytes, t.length);
+          chunkInput.set([counter], t.length + infoBytes.length);
+          t = await hmacSha256(prk, chunkInput);
+
+          const bytesToWrite = Math.min(t.length, length - offset);
+          okm.set(t.subarray(0, bytesToWrite), offset);
+          offset += bytesToWrite;
+          counter++;
+        }
+
+        return okm;
+      }
+
+      function diffieHellman(privateKeyB64, publicKeyB64) {
+        const secretKey = decodeBytes(privateKeyB64);
+        const publicKey = decodeBytes(publicKeyB64);
+        return nacl.scalarMult(secretKey, publicKey);
+      }
+
+      const X3DH_INFO = new TextEncoder().encode("EmberChamberX3DH");
+      const X3DH_SALT = new Uint8Array(32);
+
+      async function computeX3dhAlice(args) {
+        const dh1 = diffieHellman(args.ourIdentityPrivateB64, args.peerSignedPrekeyPublicB64);
+        const dh2 = diffieHellman(args.ourEphemeralPrivateB64, args.peerIdentityPublicB64);
+        const dh3 = diffieHellman(args.ourEphemeralPrivateB64, args.peerSignedPrekeyPublicB64);
+
+        let ikm;
+        if (args.peerOneTimePrekeyPublicB64) {
+          const dh4 = diffieHellman(args.ourEphemeralPrivateB64, args.peerOneTimePrekeyPublicB64);
+          ikm = new Uint8Array(dh1.length + dh2.length + dh3.length + dh4.length);
+          ikm.set(dh1, 0);
+          ikm.set(dh2, dh1.length);
+          ikm.set(dh3, dh1.length + dh2.length);
+          ikm.set(dh4, dh1.length + dh2.length + dh3.length);
+        } else {
+          ikm = new Uint8Array(dh1.length + dh2.length + dh3.length);
+          ikm.set(dh1, 0);
+          ikm.set(dh2, dh1.length);
+          ikm.set(dh3, dh1.length + dh2.length);
+        }
+
+        return hkdfSha256(ikm, 32, X3DH_SALT, X3DH_INFO);
+      }
+
+      async function computeX3dhBob(args) {
+        const dh1 = diffieHellman(args.ourSignedPrekeyPrivateB64, args.peerIdentityPublicB64);
+        const dh2 = diffieHellman(args.ourIdentityPrivateB64, args.peerEphemeralPublicB64);
+        const dh3 = diffieHellman(args.ourSignedPrekeyPrivateB64, args.peerEphemeralPublicB64);
+
+        let ikm;
+        if (args.ourOneTimePrekeyPrivateB64) {
+          const dh4 = diffieHellman(args.ourOneTimePrekeyPrivateB64, args.peerEphemeralPublicB64);
+          ikm = new Uint8Array(dh1.length + dh2.length + dh3.length + dh4.length);
+          ikm.set(dh1, 0);
+          ikm.set(dh2, dh1.length);
+          ikm.set(dh3, dh1.length + dh2.length);
+          ikm.set(dh4, dh1.length + dh2.length + dh3.length);
+        } else {
+          ikm = new Uint8Array(dh1.length + dh2.length + dh3.length);
+          ikm.set(dh1, 0);
+          ikm.set(dh2, dh1.length);
+          ikm.set(dh3, dh1.length + dh2.length);
+        }
+
+        return hkdfSha256(ikm, 32, X3DH_SALT, X3DH_INFO);
+      }
+
+      const CONST_CK_SEND = new Uint8Array([1]);
+      const CONST_CK_RECV = new Uint8Array([2]);
+      const DR_INFO = new TextEncoder().encode("EmberChamberRatchetRK");
+
+      class DoubleRatchetSession {
+        constructor(state) {
+          this.state = state;
+        }
+
+        static async initAlice(args) {
+          const ourKeyPair = nacl.box.keyPair();
+          const dhOut = nacl.scalarMult(ourKeyPair.secretKey, decodeBytes(args.peerDhPublicKeyB64));
+
+          const okm = await hkdfSha256(dhOut, 64, args.sharedMasterKey, DR_INFO);
+          const rk = okm.slice(0, 32);
+          const ckSend = okm.slice(32, 64);
+
+          return new DoubleRatchetSession({
+            peerDeviceId: args.peerDeviceId,
+            rk: encodeBytes(rk),
+            ckSend: encodeBytes(ckSend),
+            ckRecv: null,
+            ourDhPublicKey: encodeBytes(ourKeyPair.publicKey),
+            ourDhPrivateKey: encodeBytes(ourKeyPair.secretKey),
+            peerDhPublicKey: args.peerDhPublicKeyB64,
+            nSend: 0,
+            nRecv: 0,
+            pn: 0,
+            skippedMessageKeys: {},
+          });
+        }
+
+        static initBob(args) {
+          return new DoubleRatchetSession({
+            peerDeviceId: args.peerDeviceId,
+            rk: encodeBytes(args.sharedMasterKey),
+            ckSend: null,
+            ckRecv: null,
+            ourDhPublicKey: encodeBytes(args.ourSignedPrekeyKeyPair.publicKey),
+            ourDhPrivateKey: encodeBytes(args.ourSignedPrekeyKeyPair.secretKey),
+            peerDhPublicKey: null,
+            nSend: 0,
+            nRecv: 0,
+            pn: 0,
+            skippedMessageKeys: {},
+          });
+        }
+
+        getState() {
+          return this.state;
+        }
+
+        async encrypt(plaintext) {
+          if (!this.state.ckSend) {
+            throw new Error("Double Ratchet sending chain not initialized.");
+          }
+
+          const ck = decodeBytes(this.state.ckSend);
+          const mk = await hmacSha256(ck, CONST_CK_SEND);
+          const nextCk = await hmacSha256(ck, CONST_CK_RECV);
+
+          this.state.ckSend = encodeBytes(nextCk);
+          const messageIndex = this.state.nSend;
+          this.state.nSend += 1;
+
+          const nonce = nacl.randomBytes(nacl.secretbox.nonceLength);
+          const cipherbytes = nacl.secretbox(plaintext, nonce, mk);
+
+          const transportBytes = new Uint8Array(nonce.length + cipherbytes.length);
+          transportBytes.set(nonce, 0);
+          transportBytes.set(cipherbytes, nonce.length);
+
+          return {
+            ciphertext: transportBytes,
+            dhPub: decodeBytes(this.state.ourDhPublicKey),
+            n: messageIndex,
+            pn: this.state.pn,
+          };
+        }
+
+        async decrypt(args) {
+          const skippedKey = `${args.dhPubB64}:${args.n}`;
+          if (this.state.skippedMessageKeys[skippedKey]) {
+            const mk = decodeBytes(this.state.skippedMessageKeys[skippedKey]);
+            delete this.state.skippedMessageKeys[skippedKey];
+            return this.decryptSymmetric(args.ciphertext, mk);
+          }
+
+          if (args.dhPubB64 !== this.state.peerDhPublicKey) {
+            await this.skipMessageKeys(args.pn);
+            await this.dhRatchetStep(args.dhPubB64);
+          }
+
+          await this.skipMessageKeys(args.n);
+
+          if (!this.state.ckRecv) {
+            throw new Error("Double Ratchet receiving chain not initialized.");
+          }
+          const ck = decodeBytes(this.state.ckRecv);
+          const mk = await hmacSha256(ck, CONST_CK_SEND);
+          const nextCk = await hmacSha256(ck, CONST_CK_RECV);
+
+          this.state.ckRecv = encodeBytes(nextCk);
+          this.state.nRecv += 1;
+
+          return this.decryptSymmetric(args.ciphertext, mk);
+        }
+
+        decryptSymmetric(transportBytes, mk) {
+          const nonceLength = nacl.secretbox.nonceLength;
+          if (transportBytes.length < nonceLength) {
+            throw new Error("Invalid symmetric ciphertext package.");
+          }
+
+          const nonce = transportBytes.subarray(0, nonceLength);
+          const cipherbytes = transportBytes.subarray(nonceLength);
+
+          const plaintext = nacl.secretbox.open(cipherbytes, nonce, mk);
+          if (!plaintext) {
+            throw new Error("Decryption failed. Invalid message key.");
+          }
+
+          return plaintext;
+        }
+
+        async dhRatchetStep(peerDhPubB64) {
+          this.state.pn = this.state.nSend;
+          this.state.nSend = 0;
+          this.state.nRecv = 0;
+          this.state.peerDhPublicKey = peerDhPubB64;
+
+          const rk = decodeBytes(this.state.rk);
+          const dhOut1 = nacl.scalarMult(decodeBytes(this.state.ourDhPrivateKey), decodeBytes(peerDhPubB64));
+
+          const okm1 = await hkdfSha256(dhOut1, 64, rk, DR_INFO);
+          const nextRk1 = okm1.slice(0, 32);
+          const ckRecv = okm1.slice(32, 64);
+
+          this.state.rk = encodeBytes(nextRk1);
+          this.state.ckRecv = encodeBytes(ckRecv);
+
+          const nextKeyPair = nacl.box.keyPair();
+          this.state.ourDhPublicKey = encodeBytes(nextKeyPair.publicKey);
+          this.state.ourDhPrivateKey = encodeBytes(nextKeyPair.secretKey);
+
+          const dhOut2 = nacl.scalarMult(nextKeyPair.secretKey, decodeBytes(peerDhPubB64));
+
+          const okm2 = await hkdfSha256(dhOut2, 64, nextRk1, DR_INFO);
+          const nextRk2 = okm2.slice(0, 32);
+          const ckSend = okm2.slice(32, 64);
+
+          this.state.rk = encodeBytes(nextRk2);
+          this.state.ckSend = encodeBytes(ckSend);
+        }
+
+        async skipMessageKeys(untilIndex) {
+          const MAX_SKIPPED_KEYS = 1000;
+          if (this.state.nRecv + 100 < untilIndex) {
+            throw new Error("Too many skipped messages.");
+          }
+
+          if (!this.state.ckRecv) {
+            return;
+          }
+
+          let ck = decodeBytes(this.state.ckRecv);
+          while (this.state.nRecv < untilIndex) {
+            const mk = await hmacSha256(ck, CONST_CK_SEND);
+            const nextCk = await hmacSha256(ck, CONST_CK_RECV);
+
+            const peerDhPub = this.state.peerDhPublicKey;
+            if (!peerDhPub) {
+              break;
+            }
+
+            const key = `${peerDhPub}:${this.state.nRecv}`;
+            this.state.skippedMessageKeys[key] = encodeBytes(mk);
+
+            const keys = Object.keys(this.state.skippedMessageKeys);
+            if (keys.length > MAX_SKIPPED_KEYS) {
+              delete this.state.skippedMessageKeys[keys[0]];
+            }
+
+            ck = nextCk;
+            this.state.nRecv += 1;
+          }
+
+          this.state.ckRecv = encodeBytes(ck);
+        }
+      }
+
+      const CONST_SENDER_KEY_MK = new Uint8Array([3]);
+      const CONST_SENDER_KEY_CK = new Uint8Array([4]);
+
+      class SenderKeySession {
+        constructor(state) {
+          this.state = state;
+        }
+
+        static create(groupId, senderDeviceId) {
+          const chainKey = nacl.randomBytes(32);
+          const signatureKeyPair = nacl.sign.keyPair();
+
+          return new SenderKeySession({
+            groupId,
+            senderDeviceId,
+            iteration: 0,
+            chainKeyB64: encodeBytes(chainKey),
+            signaturePublicKeyB64: encodeBytes(signatureKeyPair.publicKey),
+            signaturePrivateKeyB64: encodeBytes(signatureKeyPair.secretKey),
+            skippedMessageKeys: {},
+          });
+        }
+
+        getState() {
+          return this.state;
+        }
+
+        makeDistributionMessage() {
+          return {
+            kind: "ember_sender_key_distribution_v1",
+            groupId: this.state.groupId,
+            senderDeviceId: this.state.senderDeviceId,
+            iteration: this.state.iteration,
+            chainKeyB64: this.state.chainKeyB64,
+            signaturePublicKeyB64: this.state.signaturePublicKeyB64,
+          };
+        }
+
+        async encrypt(plaintext) {
+          if (!this.state.signaturePrivateKeyB64) {
+            throw new Error("Cannot encrypt: missing private signing key.");
+          }
+
+          const ck = decodeBytes(this.state.chainKeyB64);
+          const mk = await hmacSha256(ck, CONST_SENDER_KEY_MK);
+          const nextCk = await hmacSha256(ck, CONST_SENDER_KEY_CK);
+
+          this.state.chainKeyB64 = encodeBytes(nextCk);
+          const currentIteration = this.state.iteration;
+          this.state.iteration += 1;
+
+          const nonce = nacl.randomBytes(nacl.secretbox.nonceLength);
+          const cipherbytes = nacl.secretbox(plaintext, nonce, mk);
+
+          const transportBytes = new Uint8Array(nonce.length + cipherbytes.length);
+          transportBytes.set(nonce, 0);
+          transportBytes.set(cipherbytes, nonce.length);
+
+          const privateKey = decodeBytes(this.state.signaturePrivateKeyB64);
+          const signature = nacl.sign.detached(transportBytes, privateKey);
+
+          return {
+            ciphertext: transportBytes,
+            iteration: currentIteration,
+            signature,
+          };
+        }
+
+        async decrypt(args) {
+          const publicKey = decodeBytes(this.state.signaturePublicKeyB64);
+          const verified = nacl.sign.detached.verify(args.ciphertext, args.signature, publicKey);
+          if (!verified) {
+            throw new Error("Sender Key message signature verification failed.");
+          }
+
+          const skippedKey = String(args.iteration);
+          if (this.state.skippedMessageKeys[skippedKey]) {
+            const mk = decodeBytes(this.state.skippedMessageKeys[skippedKey]);
+            delete this.state.skippedMessageKeys[skippedKey];
+            return this.decryptSymmetric(args.ciphertext, mk);
+          }
+
+          if (args.iteration < this.state.iteration) {
+            throw new Error("Sender Key message is too old / replay attack.");
+          }
+
+          await this.skipMessageKeys(args.iteration);
+
+          const ck = decodeBytes(this.state.chainKeyB64);
+          const mk = await hmacSha256(ck, CONST_SENDER_KEY_MK);
+          const nextCk = await hmacSha256(ck, CONST_SENDER_KEY_CK);
+
+          this.state.chainKeyB64 = encodeBytes(nextCk);
+          this.state.iteration += 1;
+
+          return this.decryptSymmetric(args.ciphertext, mk);
+        }
+
+        decryptSymmetric(transportBytes, mk) {
+          const nonceLength = nacl.secretbox.nonceLength;
+          if (transportBytes.length < nonceLength) {
+            throw new Error("Invalid symmetric group ciphertext package.");
+          }
+
+          const nonce = transportBytes.subarray(0, nonceLength);
+          const cipherbytes = transportBytes.subarray(nonceLength);
+
+          const plaintext = nacl.secretbox.open(cipherbytes, nonce, mk);
+          if (!plaintext) {
+            throw new Error("Group decryption failed. Invalid message key.");
+          }
+
+          return plaintext;
+        }
+
+        async skipMessageKeys(untilIteration) {
+          const MAX_SKIPPED_KEYS = 1000;
+          if (this.state.iteration + 100 < untilIteration) {
+            throw new Error("Too many skipped group messages.");
+          }
+
+          let ck = decodeBytes(this.state.chainKeyB64);
+          while (this.state.iteration < untilIteration) {
+            const mk = await hmacSha256(ck, CONST_SENDER_KEY_MK);
+            const nextCk = await hmacSha256(ck, CONST_SENDER_KEY_CK);
+
+            const key = String(this.state.iteration);
+            this.state.skippedMessageKeys[key] = encodeBytes(mk);
+
+            const keys = Object.keys(this.state.skippedMessageKeys);
+            if (keys.length > MAX_SKIPPED_KEYS) {
+              delete this.state.skippedMessageKeys[keys[0]];
+            }
+
+            ck = nextCk;
+            this.state.iteration += 1;
+          }
+
+          this.state.chainKeyB64 = encodeBytes(ck);
+        }
+      }
+
       function isBusy(action) {
         return state.busyAction === action;
       }
@@ -2190,16 +2672,168 @@
               continue;
             }
 
-            const payload = decryptConversationPayload(
-              envelope.ciphertext,
-              senderBundle.bundle.identityKeyB64,
-              localBundle.privateKeyB64
-            );
+            let payload = null;
+            let isDoubleRatchet = false;
+            let isGroupSenderKey = false;
+
+            try {
+              const decodedOuter = utf8Decoder.decode(decodeBytes(envelope.ciphertext));
+              if (decodedOuter.startsWith("{")) {
+                const outerPayload = JSON.parse(decodedOuter);
+                if (outerPayload && outerPayload.version === 2) {
+                  isDoubleRatchet = true;
+
+                  const savedSession = state.doubleRatchetSessions[envelope.senderDeviceId];
+                  let drSession;
+
+                  if (savedSession) {
+                    drSession = new DoubleRatchetSession(savedSession);
+                  } else {
+                    if (!outerPayload.ephemeralKeyB64) {
+                      throw new Error("Missing ephemeral key for Double Ratchet initialization");
+                    }
+
+                    const sharedMasterKey = await computeX3dhBob({
+                      ourIdentityPrivateB64: localBundle.privateKeyB64,
+                      ourSignedPrekeyPrivateB64: localBundle.privateKeyB64,
+                      peerIdentityPublicB64: senderBundle.bundle.identityKeyB64,
+                      peerEphemeralPublicB64: outerPayload.ephemeralKeyB64,
+                    });
+
+                    drSession = DoubleRatchetSession.initBob({
+                      peerDeviceId: envelope.senderDeviceId,
+                      sharedMasterKey,
+                      ourSignedPrekeyKeyPair: {
+                        publicKey: decodeBytes(localBundle.signedPrekeyB64),
+                        secretKey: decodeBytes(localBundle.privateKeyB64),
+                      },
+                    });
+                  }
+
+                  const decryptedBytes = await drSession.decrypt({
+                    ciphertext: decodeBytes(outerPayload.ciphertextB64),
+                    dhPubB64: outerPayload.dhPubB64,
+                    n: outerPayload.n,
+                    pn: outerPayload.pn,
+                  });
+
+                  state.doubleRatchetSessions[envelope.senderDeviceId] = drSession.getState();
+                  await persistSecureStateNow();
+
+                  payload = JSON.parse(utf8Decoder.decode(decryptedBytes));
+
+                  if (payload && payload.kind === "ember_sender_key_distribution_v1") {
+                    const skdm = payload;
+                    const senderKeyState = {
+                      groupId: skdm.groupId,
+                      senderDeviceId: skdm.senderDeviceId,
+                      iteration: skdm.iteration,
+                      chainKeyB64: skdm.chainKeyB64,
+                      signaturePublicKeyB64: skdm.signaturePublicKeyB64,
+                      skippedMessageKeys: {},
+                    };
+                    if (!state.groupSenderKeys[skdm.groupId]) {
+                      state.groupSenderKeys[skdm.groupId] = {};
+                    }
+                    state.groupSenderKeys[skdm.groupId][skdm.senderDeviceId] = senderKeyState;
+                    await persistSecureStateNow();
+
+                    ackEnvelopeIds.push(envelope.envelopeId);
+                    continue;
+                  }
+                } else if (outerPayload && outerPayload.version === 3) {
+                  isGroupSenderKey = true;
+
+                  const savedKey = state.groupSenderKeys[envelope.conversationId]?.[envelope.senderDeviceId];
+                  if (!savedKey) {
+                    throw new Error(`No Sender Key session found for group ${envelope.conversationId} from device ${envelope.senderDeviceId}`);
+                  }
+
+                  const senderKeySession = new SenderKeySession(savedKey);
+
+                  const decryptedBytes = await senderKeySession.decrypt({
+                    ciphertext: decodeBytes(outerPayload.ciphertextB64),
+                    iteration: outerPayload.iteration,
+                    signature: decodeBytes(outerPayload.signatureB64),
+                  });
+
+                  if (!state.groupSenderKeys[envelope.conversationId]) {
+                    state.groupSenderKeys[envelope.conversationId] = {};
+                  }
+                  state.groupSenderKeys[envelope.conversationId][envelope.senderDeviceId] = senderKeySession.getState();
+                  await persistSecureStateNow();
+
+                  payload = JSON.parse(utf8Decoder.decode(decryptedBytes));
+                }
+              }
+            } catch (err) {
+              if (isDoubleRatchet || isGroupSenderKey) {
+                throw err;
+              }
+            }
+
+            if (!isDoubleRatchet && !isGroupSenderKey) {
+              payload = decryptConversationPayload(
+                envelope.ciphertext,
+                senderBundle.bundle.identityKeyB64,
+                localBundle.privateKeyB64
+              );
+            }
+
             if (!payload || payload.kind !== "ember_conversation_v1") {
               continue;
             }
 
-            const existing = updates.get(envelope.conversationId) || readCachedThreadMessages(envelope.conversationId);
+            const conversationMessages = updates.get(envelope.conversationId) || readCachedThreadMessages(envelope.conversationId);
+
+            if (payload.messageType === "reaction") {
+              const targetMsgId = payload.targetClientMessageId;
+              if (targetMsgId) {
+                const updated = conversationMessages.map((message) => {
+                  const mId = message.id.includes(":") ? message.id.split(":")[1] : message.id;
+                  if (mId === targetMsgId) {
+                    const reactions = message.reactions ? { ...message.reactions } : {};
+                    const emoji = payload.emoji;
+                    if (emoji) {
+                      const list = reactions[emoji] ? [...reactions[emoji]] : [];
+                      const senderId = envelope.senderAccountId;
+                      if (list.includes(senderId)) {
+                        reactions[emoji] = list.filter((id) => id !== senderId);
+                      } else {
+                        reactions[emoji] = [...list, senderId].sort();
+                      }
+                      if (reactions[emoji].length === 0) {
+                        delete reactions[emoji];
+                      }
+                    }
+                    return { ...message, reactions };
+                  }
+                  return message;
+                });
+                updates.set(envelope.conversationId, updated);
+              }
+              ackEnvelopeIds.push(envelope.envelopeId);
+              receivedConversationIds.add(envelope.conversationId);
+              continue;
+            }
+
+            if (payload.messageType === "delete") {
+              const targetMsgId = payload.targetClientMessageId;
+              if (targetMsgId) {
+                const updated = conversationMessages.map((message) => {
+                  const mId = message.id.includes(":") ? message.id.split(":")[1] : message.id;
+                  if (mId === targetMsgId) {
+                    return { ...message, deletedAt: payload.deletedAt || new Date().toISOString() };
+                  }
+                  return message;
+                });
+                updates.set(envelope.conversationId, updated);
+              }
+              ackEnvelopeIds.push(envelope.envelopeId);
+              receivedConversationIds.add(envelope.conversationId);
+              continue;
+            }
+
             const message = {
               id: `${envelope.envelopeId}:${payload.clientMessageId}`,
               conversationId: envelope.conversationId,
@@ -2216,7 +2850,7 @@
                 : null,
               createdAt: payload.createdAt,
             };
-            const merged = existing
+            const merged = conversationMessages
               .filter((entry) => entry.id !== message.id)
               .concat(message)
               .sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime());
@@ -2995,21 +3629,143 @@
               clientMessageId,
             };
 
-            await relayFetch("/v1/messages/batch", {
+            // Retrieve or generate our own Sender Key for the group.
+            if (!state.groupSenderKeys[group.id]) {
+              state.groupSenderKeys[group.id] = {};
+            }
+            const savedKeyJson = state.groupSenderKeys[group.id][state.session.deviceId];
+            let senderKeySession;
+            let mustDistribute = false;
+            let targetRecipientDevicesToDistribute = [];
+
+            if (savedKeyJson) {
+              const keyState = typeof savedKeyJson === "string" ? JSON.parse(savedKeyJson) : savedKeyJson;
+              senderKeySession = new SenderKeySession(keyState);
+
+              const previouslyShared = keyState.sharedWithDeviceIds || [];
+              const currentRecipientDeviceIds = recipientDevices.map((d) => d.deviceId);
+              const isAnyRemoved = previouslyShared.some((id) => !currentRecipientDeviceIds.includes(id));
+
+              if (isAnyRemoved) {
+                senderKeySession = SenderKeySession.create(group.id, state.session.deviceId);
+                mustDistribute = true;
+                targetRecipientDevicesToDistribute = recipientDevices;
+              } else {
+                const missingDevices = recipientDevices.filter((d) => !previouslyShared.includes(d.deviceId));
+                if (missingDevices.length > 0) {
+                  mustDistribute = true;
+                  targetRecipientDevicesToDistribute = missingDevices;
+                }
+              }
+            } else {
+              senderKeySession = SenderKeySession.create(group.id, state.session.deviceId);
+              mustDistribute = true;
+              targetRecipientDevicesToDistribute = recipientDevices;
+            }
+
+            if (mustDistribute && targetRecipientDevicesToDistribute.length > 0) {
+              const envelopesToDistribute = [];
+
+              for (const bundle of targetRecipientDevicesToDistribute) {
+                const savedSession = state.doubleRatchetSessions[bundle.deviceId];
+                let drSession;
+                let ephemeralKeyB64 = null;
+
+                if (savedSession) {
+                  drSession = new DoubleRatchetSession(savedSession);
+                } else {
+                  const ephemeralKeyPair = nacl.box.keyPair();
+                  ephemeralKeyB64 = encodeBytes(ephemeralKeyPair.publicKey);
+
+                  const sharedMasterKey = await computeX3dhAlice({
+                    ourIdentityPrivateB64: localBundle.privateKeyB64,
+                    ourEphemeralPrivateB64: encodeBytes(ephemeralKeyPair.secretKey),
+                    peerIdentityPublicB64: bundle.bundle.identityKeyB64,
+                    peerSignedPrekeyPublicB64: bundle.bundle.signedPrekeyB64,
+                    peerOneTimePrekeyPublicB64: bundle.bundle.oneTimePrekeysB64?.[0] || null,
+                  });
+
+                  drSession = await DoubleRatchetSession.initAlice({
+                    peerDeviceId: bundle.deviceId,
+                    sharedMasterKey,
+                    peerDhPublicKeyB64: bundle.bundle.signedPrekeyB64,
+                  });
+                }
+
+                const distMessage = senderKeySession.makeDistributionMessage();
+                const distPayloadBytes = new TextEncoder().encode(JSON.stringify(distMessage));
+                const encryptedDr = await drSession.encrypt(distPayloadBytes);
+
+                state.doubleRatchetSessions[bundle.deviceId] = drSession.getState();
+
+                const drEnvelope = {
+                  version: 2,
+                  ephemeralKeyB64,
+                  ciphertextB64: encodeBytes(encryptedDr.ciphertext),
+                  dhPubB64: encodeBytes(encryptedDr.dhPub),
+                  n: encryptedDr.n,
+                  pn: encryptedDr.pn,
+                };
+
+                const drEnvelopeJson = JSON.stringify(drEnvelope);
+                const outerCiphertext = encodeBytes(new TextEncoder().encode(drEnvelopeJson));
+
+                envelopesToDistribute.push({
+                  recipientDeviceId: bundle.deviceId,
+                  ciphertext: outerCiphertext,
+                  clientMessageId: crypto.randomUUID(),
+                  attachmentIds: [],
+                });
+              }
+
+              // Send distribution envelopes via batch
+              await relayFetch("/v1/messages/batch", {
+                method: "POST",
+                body: JSON.stringify({
+                  conversationId: group.id,
+                  epoch: group.epoch,
+                  envelopes: envelopesToDistribute,
+                }),
+              });
+
+              // Update sharedWithDeviceIds list
+              const currentShared = senderKeySession.getState().sharedWithDeviceIds || [];
+              const newShared = Array.from(new Set([
+                ...currentShared,
+                ...targetRecipientDevicesToDistribute.map((d) => d.deviceId),
+              ]));
+              senderKeySession.getState().sharedWithDeviceIds = newShared;
+            }
+
+            // Encrypt conversation payload using our Sender Key
+            const payloadBytes = new TextEncoder().encode(JSON.stringify(payload));
+            const encryptedGroup = await senderKeySession.encrypt(payloadBytes);
+
+            // Save the updated Sender Key state
+            state.groupSenderKeys[group.id][state.session.deviceId] = senderKeySession.getState();
+            await persistSecureStateNow();
+
+            // Build Version 3 envelope
+            const groupEnvelope = {
+              version: 3,
+              groupId: group.id,
+              senderDeviceId: state.session.deviceId,
+              iteration: encryptedGroup.iteration,
+              ciphertextB64: encodeBytes(encryptedGroup.ciphertext),
+              signatureB64: encodeBytes(encryptedGroup.signature),
+            };
+
+            const outerCiphertext = encodeBytes(new TextEncoder().encode(JSON.stringify(groupEnvelope)));
+
+            // Send the group message ciphertext via the new POST /v1/messages/group endpoint
+            await relayFetch("/v1/messages/group", {
               method: "POST",
               body: JSON.stringify({
                 conversationId: group.id,
                 epoch: group.epoch,
-                envelopes: recipientDevices.map((bundle) => ({
-                  recipientDeviceId: bundle.deviceId,
-                  ciphertext: encryptConversationPayload(
-                    payload,
-                    bundle.bundle.identityKeyB64,
-                    localBundle.privateKeyB64
-                  ),
-                  clientMessageId,
-                  attachmentIds,
-                })),
+                ciphertext: outerCiphertext,
+                clientMessageId,
+                attachmentIds,
               }),
             });
 
@@ -5508,7 +6264,7 @@
                         </div>
                         <div class="chat-row-preview">${escapeHtml(preview)}</div>
                         <div class="chat-meta-row">
-                          ${group.historyMode === "device_encrypted" ? '<span class="chat-badge locked">Locked</span>' : ""}
+                          ${group.historyMode === "device_encrypted" ? '<span class="chat-badge local-first">Local-first</span>' : '<span class="chat-badge relay-hosted">Relay-hosted</span>'}
                           ${group.sensitiveMediaDefault ? '<span class="chat-badge sensitive">Sensitive</span>' : ""}
                           <span class="chat-member-count">${escapeHtml(String(group.memberCount))}/${escapeHtml(String(group.memberCap))}</span>
                         </div>

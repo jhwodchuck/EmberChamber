@@ -105,6 +105,27 @@ export const colorRoles = {
   infoText: colors.info.text,
 } as const;
 
+export const colorRolesLight = {
+  appBackground: colors.obsidian[50],       // #fcfbfa
+  panel: "#fffdf9",
+  panelStrong: "#fff7f1",
+  inputBackground: "#fffdf9",
+  textPrimary: colors.obsidian[800],        // #1a1012
+  textSecondary: colors.obsidian[600],      // #4a3f3f
+  textMuted: colors.obsidian[500],          // #716666
+  textSoft: "#a4543a",
+  placeholder: colors.obsidian[300],        // #b9968f
+  surface: "rgba(26, 16, 18, 0.03)",
+  surfaceStrong: "rgba(26, 16, 18, 0.05)",
+  surfaceSubtle: "rgba(26, 16, 18, 0.02)",
+  border: colors.obsidian[200],             // #d7b9ab
+  borderStrong: "rgba(200, 88, 50, 0.22)",
+  inputBorder: colors.obsidian[200],        // #d7b9ab
+  trustHostedText: colors.obsidian[600],    // #4a3f3f
+  trustHostedBg: "#f6e6dc",
+  trustHostedBorder: colors.obsidian[200],  // #d7b9ab
+} as const;
+
 export const textRoles = {
   title: colorRoles.textPrimary,
   body: colorRoles.textSecondary,
