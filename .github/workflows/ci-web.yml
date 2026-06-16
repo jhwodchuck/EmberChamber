@@ -159,9 +159,15 @@ jobs:
           # Visual regression — generate/update baselines and upload as artifacts
           # (run with --update-snapshots so CI always produces fresh snapshots;
           #  commit the generated e2e/__snapshots__ directory after reviewing diffs)
+          #
+          # --config is required: this step runs from the repo root, so without it
+          # Playwright ignores apps/web/playwright.config.ts and writes snapshots to
+          # the default *-snapshots path instead of e2e/__snapshots__ (which the
+          # upload step below expects).
           CI_WEB_BASE_URL="$NEXT_PUBLIC_WEB_URL" \
           node_modules/.bin/playwright test e2e/visual.spec.ts \
-            --workers=1 --reporter=line --update-snapshots
+            --config=apps/web/playwright.config.ts \
+            --reporter=line --update-snapshots
 
       - name: Upload visual regression snapshots
         if: always()
