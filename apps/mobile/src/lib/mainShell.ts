@@ -1,7 +1,7 @@
 export const MAIN_TABS = ["chats", "invites", "settings"] as const;
 export type MainTab = (typeof MAIN_TABS)[number];
 
-export const MAIN_CHAT_VIEWS = ["list", "conversation"] as const;
+export const MAIN_CHAT_VIEWS = ["list", "conversation", "community"] as const;
 export type MainChatView = (typeof MAIN_CHAT_VIEWS)[number];
 
 export const CHAT_LIST_FILTERS = [

@@ -1,0 +1,295 @@
+import { StyleSheet } from "react-native";
+import { colors, radius, spacing } from "../theme/theme";
+
+export { colors as communityScreenColors };
+
+export const communityScreenStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  scrollContent: {
+    padding: spacing[4],
+    paddingBottom: spacing[12],
+    gap: spacing[4],
+  },
+  backButton: {
+    paddingVertical: spacing[2],
+    paddingHorizontal: spacing[1],
+    marginBottom: spacing[2],
+    alignSelf: "flex-start",
+  },
+  backLabel: {
+    color: colors.brand,
+    fontSize: 15,
+    fontWeight: "500",
+  },
+  header: {
+    gap: spacing[1],
+    marginBottom: spacing[2],
+  },
+  title: {
+    fontSize: 26,
+    fontWeight: "700",
+    color: colors.textPrimary,
+  },
+  metaRow: {
+    flexDirection: "row",
+    gap: spacing[3],
+  },
+  metaChip: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.full,
+    paddingVertical: spacing[1],
+    paddingHorizontal: spacing[3],
+  },
+  metaChipText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: "500",
+  },
+  section: {
+    backgroundColor: colors.panel,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: "hidden",
+  },
+  sectionHeader: {
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+  roomRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    gap: spacing[3],
+  },
+  roomRowLast: {
+    borderBottomWidth: 0,
+  },
+  roomIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  roomIconText: {
+    fontSize: 16,
+    color: colors.textSecondary,
+  },
+  roomInfo: {
+    flex: 1,
+  },
+  roomTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: colors.textPrimary,
+  },
+  roomMeta: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  roomArrow: {
+    fontSize: 16,
+    color: colors.textMuted,
+  },
+  toggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  toggleRowLast: {
+    borderBottomWidth: 0,
+  },
+  toggleLabel: {
+    flex: 1,
+    fontSize: 15,
+    color: colors.textPrimary,
+  },
+  toggleHint: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  memberRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    gap: spacing[3],
+  },
+  memberRowLast: {
+    borderBottomWidth: 0,
+  },
+  memberAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.brandSoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  memberAvatarText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: colors.brand,
+  },
+  memberInfo: {
+    flex: 1,
+  },
+  memberName: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: colors.textPrimary,
+  },
+  memberRole: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  removeButton: {
+    paddingVertical: spacing[1],
+    paddingHorizontal: spacing[3],
+    borderRadius: radius.base,
+    borderWidth: 1,
+    borderColor: colors.errorBorder,
+  },
+  removeButtonLabel: {
+    fontSize: 13,
+    color: colors.errorText,
+    fontWeight: "500",
+  },
+  inviteRow: {
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    gap: spacing[1],
+  },
+  inviteRowLast: {
+    borderBottomWidth: 0,
+  },
+  inviteToken: {
+    fontSize: 13,
+    fontFamily: "monospace",
+    color: colors.textSecondary,
+  },
+  inviteStatus: {
+    fontSize: 12,
+    color: colors.textMuted,
+  },
+  inviteActions: {
+    flexDirection: "row",
+    gap: spacing[2],
+    marginTop: spacing[1],
+  },
+  revokeButton: {
+    paddingVertical: spacing[1],
+    paddingHorizontal: spacing[3],
+    borderRadius: radius.base,
+    borderWidth: 1,
+    borderColor: colors.errorBorder,
+  },
+  revokeButtonLabel: {
+    fontSize: 12,
+    color: colors.errorText,
+    fontWeight: "500",
+  },
+  primaryButton: {
+    margin: spacing[4],
+    paddingVertical: spacing[3],
+    paddingHorizontal: spacing[4],
+    borderRadius: radius.lg,
+    backgroundColor: colors.brand,
+    alignItems: "center",
+  },
+  primaryButtonLabel: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#ffffff",
+  },
+  secondaryButton: {
+    paddingVertical: spacing[3],
+    paddingHorizontal: spacing[4],
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    margin: spacing[4],
+  },
+  secondaryButtonLabel: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: colors.textSecondary,
+  },
+  emptyRooms: {
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[4],
+    alignItems: "center",
+    gap: spacing[2],
+  },
+  emptyRoomsText: {
+    fontSize: 14,
+    color: colors.textMuted,
+    textAlign: "center",
+  },
+  loadingText: {
+    fontSize: 14,
+    color: colors.textMuted,
+    textAlign: "center",
+    paddingVertical: spacing[4],
+  },
+  errorText: {
+    fontSize: 14,
+    color: colors.errorText,
+    textAlign: "center",
+    paddingVertical: spacing[4],
+  },
+  freezeBanner: {
+    backgroundColor: colors.warningBackground,
+    borderRadius: radius.base,
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+    borderWidth: 1,
+    borderColor: colors.warningBorder,
+    marginHorizontal: spacing[4],
+    marginBottom: spacing[2],
+  },
+  freezeBannerText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    textAlign: "center",
+  },
+  searchInput: {
+    backgroundColor: colors.inputBackground,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.inputBorder,
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
+    fontSize: 15,
+    color: colors.textPrimary,
+  },
+});

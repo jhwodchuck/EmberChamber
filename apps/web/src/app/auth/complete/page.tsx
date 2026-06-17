@@ -1,7 +1,13 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { AuthCompleteClient } from "@/components/auth-complete-client";
 import { MarketingShell } from "@/components/marketing-shell";
 import { StatusCallout } from "@/components/status-callout";
+
+// Transactional sign-in completion page — no public index value.
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default function AuthCompletePage() {
   return (

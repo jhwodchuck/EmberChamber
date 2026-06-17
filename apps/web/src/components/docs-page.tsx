@@ -1,7 +1,8 @@
 import React, { ReactNode } from "react";
 import Link from "next/link";
 import { MarketingShell } from "@/components/marketing-shell";
-import { docsNav } from "@/lib/site";
+import { JsonLd } from "@/components/json-ld";
+import { docsNav, siteUrl } from "@/lib/site";
 import { BookOpen, ArrowLeft, ArrowRight } from "lucide-react";
 
 interface DocsPageProps {
@@ -25,8 +26,53 @@ export function DocsPage({
       ? docsNav[currentIndex + 1]
       : null;
 
+  const articleSchema = {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    headline: title,
+    description,
+    url: `${siteUrl}${currentPath}`,
+    mainEntityOfPage: `${siteUrl}${currentPath}`,
+    inLanguage: "en",
+    isPartOf: {
+      "@type": "WebSite",
+      name: "EmberChamber",
+      url: siteUrl,
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "EmberChamber",
+      logo: {
+        "@type": "ImageObject",
+        url: `${siteUrl}/brand/emberchamber-mark.svg`,
+      },
+    },
+  };
+
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: siteUrl },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Documentation",
+        item: `${siteUrl}/docs`,
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: title,
+        item: `${siteUrl}${currentPath}`,
+      },
+    ],
+  };
+
   return (
     <MarketingShell>
+      <JsonLd json={articleSchema} />
+      <JsonLd json={breadcrumbSchema} />
       <section className="mx-auto max-w-7xl px-6 py-16 sm:py-20">
         {/* Header Section */}
         <div className="cinema-panel relative overflow-hidden rounded-[2.4rem] px-6 py-8 sm:px-8 sm:py-10 mb-8">

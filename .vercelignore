@@ -19,6 +19,6 @@ packages/api-types
 packages/client-sdk
 packages/config
 infra
-docs
+/docs
 
 *.log

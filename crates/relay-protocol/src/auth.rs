@@ -135,6 +135,7 @@ pub struct PrivacySettings {
     pub auto_download_sensitive_media: bool,
     pub allow_sensitive_export: bool,
     pub secure_app_switcher: bool,
+    pub oled_dark: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

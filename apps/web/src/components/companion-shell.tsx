@@ -8,6 +8,7 @@ import {
   PlusSquare,
   Search,
   Settings,
+  ShieldAlert,
   ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
@@ -162,6 +163,7 @@ export function CompanionShell({ children }: { children: ReactNode }) {
     Record<string, ConversationPreference>
   >({});
   const [isConnected, setIsConnected] = useState(false);
+  const [isOperator, setIsOperator] = useState(false);
   const [mailboxRevision, setMailboxRevision] = useState(0);
   const mailboxReconnectTimerRef = useRef<number | null>(null);
   const mailboxReconnectAttemptRef = useRef(0);
@@ -185,6 +187,27 @@ export function CompanionShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     setConversationPreferences(readConversationPreferences(user?.id));
   }, [user?.id]);
+
+  // Operator status decides whether to surface the admin nav. Best-effort: a
+  // failure just leaves the entry hidden (the route itself is also guarded).
+  useEffect(() => {
+    if (!hasSession || !isAuthenticated) {
+      setIsOperator(false);
+      return;
+    }
+    let cancelled = false;
+    void relayAccountApi
+      .operatorStatus()
+      .then((result) => {
+        if (!cancelled) setIsOperator(result.isOperator);
+      })
+      .catch(() => {
+        if (!cancelled) setIsOperator(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [hasSession, isAuthenticated]);
 
   const refreshShellData = useCallback(
     async (options: { syncWorkspace?: boolean } = {}) => {
@@ -727,7 +750,17 @@ export function CompanionShell({ children }: { children: ReactNode }) {
               </div>
 
               <nav className="mt-5 space-y-0.5" aria-label="Workspace navigation">
-                {primaryLinks.map((item) => {
+                {(isOperator
+                  ? [
+                      ...primaryLinks,
+                      {
+                        href: "/app/admin",
+                        label: "Operator",
+                        icon: ShieldAlert,
+                      } as const,
+                    ]
+                  : primaryLinks
+                ).map((item) => {
                   const Icon = item.icon;
                   const isActive =
                     pathname === item.href ||

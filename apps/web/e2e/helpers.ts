@@ -27,6 +27,22 @@ export const relayBaseUrl =
   process.env.CI_RELAY_BASE_URL ?? "http://127.0.0.1:8787";
 export const inviteToken =
   process.env.CI_AUTH_INVITE_TOKEN ?? "dev-beta-invite";
+export const relayAdminSecret =
+  process.env.CI_RELAY_ADMIN_SECRET ?? "local-admin-secret";
+
+export async function grantOperator(
+  request: APIRequestContext,
+  accountId: string,
+) {
+  const response = await request.post(
+    `${relayBaseUrl}/v1/admin/grant-operator`,
+    {
+      headers: { authorization: `Bearer ${relayAdminSecret}` },
+      data: { accountId, isOperator: true },
+    },
+  );
+  expect(response.ok()).toBeTruthy();
+}
 
 export async function saveCheckpoint(
   page: Page,

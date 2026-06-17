@@ -148,7 +148,8 @@ jobs:
           CI_WEB_BASE_URL="$NEXT_PUBLIC_WEB_URL" \
           CI_RELAY_BASE_URL="$NEXT_PUBLIC_RELAY_URL" \
           CI_AUTH_INVITE_TOKEN="$EMBERCHAMBER_LOCAL_TEST_INVITE_TOKEN" \
-          node_modules/.bin/playwright test e2e/ci-new-user-flow.spec.ts e2e/invite-continuation.spec.ts \
+          CI_RELAY_ADMIN_SECRET="local-admin-secret" \
+          node_modules/.bin/playwright test e2e/ci-new-user-flow.spec.ts e2e/invite-continuation.spec.ts e2e/operator-flow.spec.ts e2e/network-resilience.spec.ts \
             --workers=1 --reporter=line
 
           # Accessibility gate — fail on critical/serious axe violations

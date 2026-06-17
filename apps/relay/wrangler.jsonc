@@ -3,6 +3,7 @@
   "name": "emberchamber-relay",
   "main": "src/index.ts",
   "compatibility_date": "2025-01-10",
+  "compatibility_flags": ["nodejs_compat_v2"],
   "workers_dev": true,
   "preview_urls": false,
   "vars": {
@@ -11,8 +12,11 @@
     "EMBERCHAMBER_EMAIL_PROVIDER": "log",
     "EMBERCHAMBER_EMAIL_FROM": "noreply@emberchamber.local",
     "EMBERCHAMBER_DEV_INVITE_TOKEN": "dev-beta-invite",
-    "EMBERCHAMBER_ALLOWED_ORIGINS": "http://127.0.0.1:3000,http://localhost:3000,https://tauri.localhost,http://tauri.localhost,tauri://localhost"
+    "EMBERCHAMBER_ALLOWED_ORIGINS": "http://127.0.0.1:3000,http://localhost:3000,https://tauri.localhost,http://tauri.localhost,tauri://localhost",
+    "PASSKEY_RPID": "localhost",
+    "PASSKEY_ORIGIN": "http://localhost:3000"
     // EMBERCHAMBER_PUSH_TOKEN_SECRET is in .dev.vars for local dev; set via wrangler secret put for production.
+    // PASSKEY_RPID and PASSKEY_ORIGIN must match the deployed web app domain for each environment.
   },
   "durable_objects": {
     "bindings": [
@@ -99,7 +103,9 @@
         "EMBERCHAMBER_EMAIL_PROVIDER": "queue",
         "EMBERCHAMBER_EMAIL_FROM": "noreply@emberchamber.com",
         "EMBERCHAMBER_DEV_INVITE_TOKEN": "",
-        "EMBERCHAMBER_ALLOWED_ORIGINS": "https://replace-with-staging-web-origin.example.com,https://tauri.localhost,http://tauri.localhost,tauri://localhost"
+        "EMBERCHAMBER_ALLOWED_ORIGINS": "https://replace-with-staging-web-origin.example.com,https://tauri.localhost,http://tauri.localhost,tauri://localhost",
+        "PASSKEY_RPID": "replace-with-staging-web-origin.example.com",
+        "PASSKEY_ORIGIN": "https://replace-with-staging-web-origin.example.com"
       },
       "durable_objects": {
         "bindings": [
@@ -178,7 +184,9 @@
         "EMBERCHAMBER_EMAIL_PROVIDER": "queue",
         "EMBERCHAMBER_EMAIL_FROM": "noreply@signup.emberchamber.com",
         "EMBERCHAMBER_DEV_INVITE_TOKEN": "",
-        "EMBERCHAMBER_ALLOWED_ORIGINS": "https://emberchamber.com,https://www.emberchamber.com,https://tauri.localhost,http://tauri.localhost,tauri://localhost"
+        "EMBERCHAMBER_ALLOWED_ORIGINS": "https://emberchamber.com,https://www.emberchamber.com,https://tauri.localhost,http://tauri.localhost,tauri://localhost",
+        "PASSKEY_RPID": "emberchamber.com",
+        "PASSKEY_ORIGIN": "https://emberchamber.com"
       },
       "durable_objects": {
         "bindings": [

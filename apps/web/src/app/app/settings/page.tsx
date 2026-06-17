@@ -6,17 +6,19 @@ import { Tabs } from "@emberchamber/ui/components";
 import { relayAccountApi } from "@/lib/relay";
 import { useAuthStore } from "@/lib/store";
 import { AppearanceSection } from "./_sections/AppearanceSection";
+import { PasskeysSection } from "./_sections/PasskeysSection";
 import { PrivacySection } from "./_sections/PrivacySection";
 import { ProfileSection } from "./_sections/ProfileSection";
 import { SessionsSection, type Session } from "./_sections/SessionsSection";
 
-type TabType = "profile" | "privacy" | "sessions" | "appearance";
+type TabType = "profile" | "privacy" | "sessions" | "security" | "appearance";
 type LoadStatus = "idle" | "loading" | "ready" | "error";
 
 const tabs: { id: TabType; label: string }[] = [
   { id: "profile", label: "Profile" },
   { id: "privacy", label: "Privacy" },
   { id: "sessions", label: "Sessions" },
+  { id: "security", label: "Security" },
   { id: "appearance", label: "Appearance" },
 ] as const;
 
@@ -25,6 +27,7 @@ type PrivacyState = {
   autoDownloadSensitiveMedia: boolean;
   allowSensitiveExport: boolean;
   secureAppSwitcher: boolean;
+  oledDark: boolean;
 };
 
 export default function SettingsPage() {
@@ -38,6 +41,7 @@ export default function SettingsPage() {
     autoDownloadSensitiveMedia: false,
     allowSensitiveExport: false,
     secureAppSwitcher: true,
+    oledDark: false,
   });
   const [sessionsStatus, setSessionsStatus] = useState<{
     state: LoadStatus;
@@ -207,6 +211,8 @@ export default function SettingsPage() {
           onRevoke={(id) => void revokeSession(id)}
         />
       ) : null}
+
+      {activeTab === "security" ? <PasskeysSection /> : null}
 
       {activeTab === "appearance" ? (
         <AppearanceSection

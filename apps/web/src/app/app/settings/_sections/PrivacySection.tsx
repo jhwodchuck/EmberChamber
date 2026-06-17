@@ -6,6 +6,8 @@ type PrivacyState = {
   autoDownloadSensitiveMedia: boolean;
   allowSensitiveExport: boolean;
   secureAppSwitcher: boolean;
+  // Synced server-side; surfaced through the Appearance tab rather than here.
+  oledDark: boolean;
 };
 
 interface PrivacySectionProps {

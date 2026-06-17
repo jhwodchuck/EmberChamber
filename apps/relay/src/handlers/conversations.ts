@@ -28,6 +28,7 @@ import {
 } from "../schemas";
 import { dbAll, dbFirst, dbRun } from "../lib/d1";
 import { HttpError, json, readJson } from "../lib/http";
+import { recordAuditEvent } from "../services/audit";
 import { scheduleCleanup } from "../services/cleanup";
 import {
   acceptConversationInviteByTokenHash,
@@ -439,6 +440,16 @@ export async function handle(
       throw new HttpError(404, "Community not found", "COMMUNITY_NOT_FOUND");
     }
 
+    await recordAuditEvent(env, {
+      actorAccountId: auth.accountId,
+      action: "community_policy_update",
+      targetConversationId: communityId,
+      metadata: {
+        allowMemberInvites: body.allowMemberInvites ?? null,
+        inviteFreezeEnabled: body.inviteFreezeEnabled ?? null,
+      },
+    });
+
     return json({
       ...updated.summary,
       members: updated.members,
@@ -651,6 +662,14 @@ export async function handle(
 
     await syncRelayHostedConversationSockets(env, roomId);
 
+    await recordAuditEvent(env, {
+      actorAccountId: auth.accountId,
+      action: "room_access_revoke",
+      targetAccountId,
+      targetConversationId: roomId,
+      metadata: { communityId },
+    });
+
     return json({ removed: true, communityId, roomId, targetAccountId });
   }
 
@@ -748,6 +767,14 @@ export async function handle(
         syncRelayHostedConversationSockets(env, roomId),
       ),
     );
+
+    await recordAuditEvent(env, {
+      actorAccountId: auth.accountId,
+      action: "community_member_remove",
+      targetAccountId,
+      targetConversationId: communityId,
+      metadata: { affectedRoomIds },
+    });
 
     return json({ removed: true, communityId, targetAccountId });
   }
@@ -2244,6 +2271,13 @@ export async function handle(
       inviteId,
       conversationId,
     );
+
+    await recordAuditEvent(env, {
+      actorAccountId: auth.accountId,
+      action: "conversation_invite_revoke",
+      targetConversationId: conversationId,
+      metadata: { inviteId },
+    });
 
     return json({ revoked: true, inviteId });
   }

@@ -1,5 +1,6 @@
 import {
   type MeProfile,
+  type PasskeyCredentialRef,
   type SessionDescriptor,
 } from "@emberchamber/protocol";
 import { requireAuth } from "../middleware/auth";
@@ -109,9 +110,10 @@ export async function handle(
       auto_download_sensitive_media: number | null;
       allow_sensitive_export: number | null;
       secure_app_switcher: number | null;
+      oled_dark: number | null;
     }>(
       env.DB,
-      `SELECT notification_preview_mode, auto_download_sensitive_media, allow_sensitive_export, secure_app_switcher
+      `SELECT notification_preview_mode, auto_download_sensitive_media, allow_sensitive_export, secure_app_switcher, oled_dark
          FROM accounts
         WHERE id = ?1`,
       auth.accountId,
@@ -129,6 +131,7 @@ export async function handle(
       ),
       allowSensitiveExport: Boolean(settings.allow_sensitive_export ?? 0),
       secureAppSwitcher: Boolean(settings.secure_app_switcher ?? 1),
+      oledDark: Boolean(settings.oled_dark ?? 0),
     });
   }
 
@@ -142,12 +145,14 @@ export async function handle(
               auto_download_sensitive_media = ?2,
               allow_sensitive_export = ?3,
               secure_app_switcher = ?4,
-              updated_at = ?5
-        WHERE id = ?6`,
+              oled_dark = ?5,
+              updated_at = ?6
+        WHERE id = ?7`,
       body.notificationPreviewMode,
       body.autoDownloadSensitiveMedia ? 1 : 0,
       body.allowSensitiveExport ? 1 : 0,
       body.secureAppSwitcher ? 1 : 0,
+      body.oledDark ? 1 : 0,
       new Date().toISOString(),
       auth.accountId,
     );
@@ -200,6 +205,28 @@ export async function handle(
     }));
 
     return json(sessions);
+  }
+
+  if (request.method === "GET" && pathname === "/v1/me/passkeys") {
+    const auth = await requireAuth(request, env);
+    const rows = await dbAll<{
+      credential_id: string;
+      transports_json: string;
+      created_at: string;
+    }>(
+      env.DB,
+      `SELECT credential_id, transports_json, created_at
+         FROM passkeys
+        WHERE account_id = ?1
+        ORDER BY created_at ASC`,
+      auth.accountId,
+    );
+    const passkeys: PasskeyCredentialRef[] = rows.map((r) => ({
+      credentialId: r.credential_id,
+      transports: JSON.parse(r.transports_json) as string[],
+      createdAt: r.created_at,
+    }));
+    return json(passkeys);
   }
 
   const sessionDeleteMatch = pathname.match(

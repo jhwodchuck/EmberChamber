@@ -39,7 +39,8 @@ from target direction so the docs do not overstate privacy, platform maturity, o
 ## Present but Not Finished
 
 - Passkey endpoints exist but currently return `501`.
-- Device-link start/confirm exists, but the full user-facing recovery and trusted-device flow is not complete.
+- Operator-assisted recovery is implemented: operators can force-signout all of an account's sessions and mint a single-use recovery magic link (same account identity) from the operator console (`/app/admin`), which also backs disclosure-report review and a permanent operator audit log. Account *suspension* and bulk review are not built.
+- Device-link start/confirm exists, but passkey-based peer-to-peer trusted-device recovery is not complete.
 - Android FCM token registration, encrypted token storage, and `PUSH_QUEUE` delivery are now wired for the mobile client, but production push still depends on deployed Cloudflare secrets plus Apple-side APNS work for iPhone.
 - The encrypted mailbox/device-bundle path now powers the browser DM flow and new group creation in the relay runtime, but the repo does not yet expose a fully uniform encrypted-group and encrypted-attachment experience across every client surface.
 - Community and room management currently live on the relay plus web companion surface; native parity for those organizer flows still remains later work.
@@ -56,7 +57,7 @@ from target direction so the docs do not overstate privacy, platform maturity, o
 
 - Bootstrap and auth: `beta_invites`, `accounts`, `account_emails`, `auth_challenges`, `devices`, `sessions`, `passkeys`, `device_links`, `device_push_tokens`
 - Conversations and membership: `conversations`, `conversation_members`, `conversation_invites`, `conversation_messages`, `blocks`
-- Media and safety: `attachments`, `reports`
+- Media and safety: `attachments`, `reports` (with review lifecycle columns), `operator_audit_log`
 
 ## Durable Objects and Queues
 

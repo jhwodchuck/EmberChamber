@@ -49,12 +49,12 @@ const encryptionStatus = [
   {
     title: "New groups",
     status: "Live with migration caveats",
-    body: "New groups start device-encrypted, while legacy relay-hosted group and room history still exists in compatibility paths.",
+    body: "Groups created with the device-encrypted option keep message bodies on member devices rather than on the relay. Older relay-hosted groups and rooms still leave readable history in compatibility paths until that history is retired.",
   },
   {
     title: "Attachments",
     status: "Mixed by client flow",
-    body: "Browser encrypted-conversation uploads can encrypt before upload, but native attachment encryption is still uneven across client paths.",
+    body: "The web direct-message flow encrypts attachments before upload. The Android and desktop clients still upload raw bytes today, so attachment encryption is not yet uniform across surfaces.",
   },
 ];
 

@@ -224,3 +224,64 @@ export type InviteReference = {
   groupId: string;
   inviteToken: string;
 };
+
+export type CommunityListEntry = {
+  id: string;
+  title: string;
+  memberCount: number;
+  roomCount: number;
+  memberCap: number;
+  updatedAt: string;
+  allowMemberInvites: boolean;
+  inviteFreezeEnabled: boolean;
+  sensitiveMediaDefault: boolean;
+  joinRuleText: string | null;
+  capabilities: {
+    canCreateInvites: boolean;
+    canManageMembers: boolean;
+    canManagePolicies: boolean;
+    canManageRooms: boolean;
+    canGrantRoomAccess: boolean;
+  };
+};
+
+export type CommunityRoom = {
+  id: string;
+  title: string;
+  epoch: number;
+  memberCount: number;
+  memberCap: number;
+  roomAccessPolicy: "all_members" | "restricted" | null;
+  parentConversationId: string;
+};
+
+export type CommunityMember = {
+  accountId: string;
+  username: string;
+  displayName: string;
+  role: string;
+  joinedAt: string;
+};
+
+export type CommunityDetail = CommunityListEntry & {
+  rooms: CommunityRoom[];
+  members: CommunityMember[];
+};
+
+export type ConversationInviteDescriptor = {
+  id: string;
+  conversationId: string;
+  conversationKind: "group" | "community";
+  scope: "conversation" | "room";
+  targetRoomConversationId?: string | null;
+  targetRoomTitle?: string | null;
+  inviteToken: string;
+  inviteUrl: string;
+  inviterDisplayName: string;
+  expiresAt?: string | null;
+  maxUses?: number | null;
+  useCount: number;
+  note?: string | null;
+  status: "active" | "revoked" | "expired" | "exhausted" | "frozen";
+  createdAt: string;
+};

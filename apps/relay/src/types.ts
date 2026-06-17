@@ -32,6 +32,8 @@ export interface Env {
   EMBERCHAMBER_VAPID_PUBLIC_KEY?: string;
   EMBERCHAMBER_VAPID_SUBJECT?: string;
   RESEND_API_KEY?: string;
+  PASSKEY_RPID: string;
+  PASSKEY_ORIGIN: string;
 }
 
 export interface AuthContext {

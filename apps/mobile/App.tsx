@@ -17,6 +17,7 @@ import {
   pruneConversationTypingIndicators,
   relayOriginsMatch,
   type ConversationSocketEvent,
+  type ConversationSummary,
   type ConversationTypingIndicatorMap,
   type DeviceLinkQrMode,
   type DeviceLinkStartResponse,
@@ -26,6 +27,7 @@ import {
 import type {
   AttachmentTicket,
   AuthSession,
+  CommunityListEntry,
   ContactCard,
   DeviceKeyBundle,
   Field,
@@ -263,6 +265,12 @@ export default function App() {
   const [profile, setProfile] = useState<MeProfile | null>(null);
   const [contactCard, setContactCard] = useState<ContactCard | null>(null);
   const [groups, setGroups] = useState<GroupMembershipSummary[]>([]);
+  const [communities, setCommunities] = useState<CommunityListEntry[]>([]);
+  const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(
+    null,
+  );
+  const [communityRoomForConversation, setCommunityRoomForConversation] =
+    useState<GroupMembershipSummary | null>(null);
   const [selectedConversationId, setSelectedConversationId] = useState<
     string | null
   >(null);
@@ -459,6 +467,9 @@ export default function App() {
 
   const selectedGroup =
     groups.find((group) => group.id === selectedConversationId) ??
+    (communityRoomForConversation?.id === selectedConversationId
+      ? communityRoomForConversation
+      : null) ??
     (session?.bootstrapConversationId
       ? (groups.find((group) => group.id === session.bootstrapConversationId) ??
         null)
@@ -778,11 +789,13 @@ export default function App() {
       }
 
       try {
-        const [nextProfile, nextCard, nextGroups] = await Promise.all([
-          relayFetch<MeProfile>(session, "/v1/me"),
-          relayFetch<ContactCard>(session, "/v1/me/contact-card"),
-          relayFetch<GroupMembershipSummary[]>(session, "/v1/groups"),
-        ]);
+        const [nextProfile, nextCard, nextGroups, allConversations] =
+          await Promise.all([
+            relayFetch<MeProfile>(session, "/v1/me"),
+            relayFetch<ContactCard>(session, "/v1/me/contact-card"),
+            relayFetch<GroupMembershipSummary[]>(session, "/v1/groups"),
+            relayFetch<ConversationSummary[]>(session, "/v1/conversations"),
+          ]);
 
         if (cancelled) {
           return;
@@ -791,6 +804,29 @@ export default function App() {
         setProfile(nextProfile);
         setContactCard(nextCard);
         setGroups(nextGroups);
+        setCommunities(
+          allConversations
+            .filter((c) => c.kind === "community")
+            .map((c) => ({
+              id: c.id,
+              title: c.title ?? "",
+              memberCount: c.memberCount,
+              roomCount: c.roomCount ?? 0,
+              memberCap: c.memberCap ?? 150,
+              updatedAt: c.updatedAt,
+              allowMemberInvites: c.allowMemberInvites ?? false,
+              inviteFreezeEnabled: c.inviteFreezeEnabled ?? false,
+              sensitiveMediaDefault: c.sensitiveMediaDefault ?? false,
+              joinRuleText: c.joinRuleText ?? null,
+              capabilities: {
+                canCreateInvites: c.capabilities.canCreateInvites,
+                canManageMembers: c.capabilities.canManageMembers,
+                canManagePolicies: c.capabilities.canManagePolicies,
+                canManageRooms: c.capabilities.canManageRooms,
+                canGrantRoomAccess: c.capabilities.canGrantRoomAccess,
+              },
+            })),
+        );
         setProfileSetupActive(isDefaultDisplayName(nextProfile.displayName));
         setProfileSetupName(
           isDefaultDisplayName(nextProfile.displayName)
@@ -2139,17 +2175,45 @@ export default function App() {
     isSubmittingProfile,
     onSubmit: () => void submitProfileSetup(),
   };
+  function handleOpenRoom(syntheticGroup: GroupMembershipSummary) {
+    setCommunityRoomForConversation(syntheticGroup);
+    setSelectedConversationId(syntheticGroup.id);
+  }
+
   async function handleRefreshConversations() {
     const currentSession = sessionRef.current;
     if (!currentSession) {
       return;
     }
     try {
-      const nextGroups = await relayFetch<GroupMembershipSummary[]>(
-        currentSession,
-        "/v1/groups",
-      );
+      const [nextGroups, allConversations] = await Promise.all([
+        relayFetch<GroupMembershipSummary[]>(currentSession, "/v1/groups"),
+        relayFetch<ConversationSummary[]>(currentSession, "/v1/conversations"),
+      ]);
       setGroups(nextGroups);
+      setCommunities(
+        allConversations
+          .filter((c) => c.kind === "community")
+          .map((c) => ({
+            id: c.id,
+            title: c.title ?? "",
+            memberCount: c.memberCount,
+            roomCount: c.roomCount ?? 0,
+            memberCap: c.memberCap ?? 150,
+            updatedAt: c.updatedAt,
+            allowMemberInvites: c.allowMemberInvites ?? false,
+            inviteFreezeEnabled: c.inviteFreezeEnabled ?? false,
+            sensitiveMediaDefault: c.sensitiveMediaDefault ?? false,
+            joinRuleText: c.joinRuleText ?? null,
+            capabilities: {
+              canCreateInvites: c.capabilities.canCreateInvites,
+              canManageMembers: c.capabilities.canManageMembers,
+              canManagePolicies: c.capabilities.canManagePolicies,
+              canManageRooms: c.capabilities.canManageRooms,
+              canGrantRoomAccess: c.capabilities.canGrantRoomAccess,
+            },
+          })),
+      );
       if (db) {
         await saveCachedGroups(db, currentSession.accountId, nextGroups);
       }
@@ -2255,6 +2319,11 @@ export default function App() {
     onSaveMemberNote: handleSaveMemberNote,
     onOpenDm: handleOpenDm,
     onSendContactRequest: handleSendContactRequest,
+    communities,
+    selectedCommunityId,
+    setSelectedCommunityId,
+    onOpenRoom: handleOpenRoom,
+    relayFetch,
     initialShellState: mainShellState,
     onPersistShellState: persistMainShellState,
     restoredConversationAnchorId,
