@@ -1,4 +1,5 @@
 import { BootstrapAuthForm } from "@/components/bootstrap-auth-form";
+import { PasskeySignInButton } from "@/components/passkey-sign-in-button";
 
 export function LoginForm({
   continueTo,
@@ -8,10 +9,13 @@ export function LoginForm({
   initialEntryMethod?: "magic-link" | "device-link";
 }) {
   return (
-    <BootstrapAuthForm
-      mode="signin"
-      continueTo={continueTo}
-      initialEntryMethod={initialEntryMethod}
-    />
+    <div className="space-y-0">
+      <BootstrapAuthForm
+        mode="signin"
+        continueTo={continueTo}
+        initialEntryMethod={initialEntryMethod}
+      />
+      <PasskeySignInButton continueTo={continueTo} />
+    </div>
   );
 }

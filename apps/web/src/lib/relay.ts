@@ -18,6 +18,7 @@ import type {
   DeviceLinkStatus,
   DeviceLinkStatusQuery,
   MailboxAck,
+  PasskeyCredentialRef,
   PrekeyBundle,
   GroupInviteAcceptance,
   GroupInviteDescriptor,
@@ -322,6 +323,8 @@ export const relayAccountApi = {
     relayFetch<{ revoked: boolean; sessionId: string }>(`/v1/sessions/${sessionId}`, {
       method: "DELETE",
     }),
+  operatorStatus: () =>
+    relayFetch<{ isOperator: boolean }>("/v1/me/operator-status"),
   getVapidPublicKey: () =>
     relayFetch<{ publicKey: string }>("/v1/push/vapid-public-key", undefined, {
       auth: false,
@@ -542,6 +545,150 @@ export const relayConversationApi = {
     ),
   revokeInvite: (conversationId: string, inviteId: string) =>
     relayFetch<{ revoked: boolean; inviteId: string }>(`/v1/conversations/${conversationId}/invites/${inviteId}`, {
+      method: "DELETE",
+    }),
+};
+
+// Operator-only moderation/recovery surface. Backed by the operator-session-gated
+// relay endpoints in handlers/operator.ts. These response shapes are web-internal
+// (not part of the canonical protocol contract).
+export type AdminReportSummary = {
+  id: string;
+  reporterAccountId: string;
+  reporterUsername: string;
+  targetConversationId: string | null;
+  targetAccountId: string | null;
+  targetAttachmentId: string | null;
+  reason: string;
+  status: "open" | "reviewing" | "actioned" | "dismissed";
+  createdAt: string;
+  reviewedAt: string | null;
+};
+
+export type AdminReportDetail = AdminReportSummary & {
+  disclosedPayload: unknown;
+  evidenceMessageIds: string[];
+  reviewedByAccountId: string | null;
+  resolutionNote: string | null;
+};
+
+export type AdminAccountLookup = {
+  id: string;
+  username: string;
+  displayName: string;
+  isOperator: boolean;
+  isSuspended: boolean;
+  suspendedAt: string | null;
+  suspensionReason: string | null;
+  createdAt: string;
+  activeSessionCount: number;
+};
+
+export type AdminAuditEvent = {
+  id: string;
+  actorAccountId: string | null;
+  actorKind: string;
+  action: string;
+  targetAccountId: string | null;
+  targetConversationId: string | null;
+  metadata: unknown;
+  createdAt: string;
+};
+
+export const relayAdminApi = {
+  listReports: (params: { status?: string; cursor?: string } = {}) => {
+    const query = new URLSearchParams();
+    if (params.status) query.set("status", params.status);
+    if (params.cursor) query.set("cursor", params.cursor);
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+    return relayFetch<{ reports: AdminReportSummary[]; nextCursor: string | null }>(
+      `/v1/admin/reports${suffix}`,
+    );
+  },
+  getReport: (reportId: string) =>
+    relayFetch<AdminReportDetail>(`/v1/admin/reports/${reportId}`),
+  updateReport: (
+    reportId: string,
+    data: { status: AdminReportSummary["status"]; resolutionNote?: string },
+  ) =>
+    relayFetch<{ id: string; status: string; reviewedAt: string }>(
+      `/v1/admin/reports/${reportId}`,
+      { method: "PATCH", body: JSON.stringify(data) },
+    ),
+  lookupAccount: (q: string) =>
+    relayFetch<{ account: AdminAccountLookup | null }>(
+      `/v1/admin/accounts/lookup?q=${encodeURIComponent(q)}`,
+    ),
+  listAuditLog: (cursor?: string) =>
+    relayFetch<{ events: AdminAuditEvent[]; nextCursor: string | null }>(
+      `/v1/admin/audit-log${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`,
+    ),
+  recoveryHandoff: (accountId: string, reason?: string) =>
+    relayFetch<{
+      accountId: string;
+      sessionsRevoked: number;
+      completionUrl: string;
+      expiresAt: string;
+      note: string;
+    }>(`/v1/admin/accounts/${accountId}/recovery-handoff`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    }),
+  batchUpdateReports: (
+    ids: string[],
+    status: "reviewing" | "actioned" | "dismissed",
+    resolutionNote?: string,
+  ) =>
+    relayFetch<{ updated: number; status: string; reviewedAt: string }>(
+      "/v1/admin/reports/batch",
+      { method: "PATCH", body: JSON.stringify({ ids, status, resolutionNote }) },
+    ),
+  suspendAccount: (accountId: string, reason?: string) =>
+    relayFetch<{ suspended: boolean; accountId: string; suspendedAt: string }>(
+      `/v1/admin/accounts/${accountId}/suspend`,
+      { method: "POST", body: JSON.stringify({ reason }) },
+    ),
+  unsuspendAccount: (accountId: string) =>
+    relayFetch<{ suspended: boolean; accountId: string }>(
+      `/v1/admin/accounts/${accountId}/unsuspend`,
+      { method: "POST", body: JSON.stringify({}) },
+    ),
+};
+
+export { type PasskeyCredentialRef };
+
+export const relayPasskeyApi = {
+  listPasskeys: () => relayFetch<PasskeyCredentialRef[]>("/v1/me/passkeys"),
+  registerOptions: () =>
+    relayFetch<Record<string, unknown>>("/v1/passkeys/register/options", {
+      method: "POST",
+      body: "{}",
+    }),
+  registerVerify: (response: unknown) =>
+    relayFetch<{ enrolled: boolean; credentialId: string }>(
+      "/v1/passkeys/register/verify",
+      { method: "POST", body: JSON.stringify({ response }) },
+    ),
+  authOptions: (accountHint?: string) =>
+    relayFetch<{ challengeToken: string; options: Record<string, unknown> }>(
+      "/v1/passkeys/auth/options",
+      {
+        method: "POST",
+        body: JSON.stringify(accountHint ? { accountHint } : {}),
+      },
+      { auth: false },
+    ),
+  authVerify: (challengeToken: string, response: unknown, deviceLabel?: string) =>
+    relayFetch<AuthSession>(
+      "/v1/passkeys/auth/verify",
+      {
+        method: "POST",
+        body: JSON.stringify({ challengeToken, response, deviceLabel }),
+      },
+      { auth: false },
+    ),
+  removePasskey: (credentialId: string) =>
+    relayFetch<{ removed: boolean }>(`/v1/me/passkeys/${encodeURIComponent(credentialId)}`, {
       method: "DELETE",
     }),
 };

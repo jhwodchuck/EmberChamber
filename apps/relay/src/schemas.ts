@@ -246,12 +246,38 @@ export const privacySettingsSchema = z.object({
   autoDownloadSensitiveMedia: z.boolean().default(false),
   allowSensitiveExport: z.boolean().default(false),
   secureAppSwitcher: z.boolean().default(true),
+  oledDark: z.boolean().default(false),
 });
 
 export const adminRevokeSessionsSchema = z.object({
   accountId: z.string().uuid(),
   reason: z.string().trim().max(240).optional(),
   revokePushTokens: z.boolean().default(true),
+});
+
+export const adminGrantOperatorSchema = z.object({
+  accountId: z.string().uuid(),
+  isOperator: z.boolean().default(true),
+});
+
+export const reportStatusUpdateSchema = z.object({
+  status: z.enum(["open", "reviewing", "actioned", "dismissed"]),
+  resolutionNote: z.string().trim().max(2000).optional(),
+});
+
+export const batchReportUpdateSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(50),
+  status: z.enum(["reviewing", "actioned", "dismissed"]),
+  resolutionNote: z.string().trim().max(2000).optional(),
+});
+
+export const recoveryHandoffSchema = z.object({
+  reason: z.string().trim().max(240).optional(),
+  deviceLabel: z.string().trim().min(1).max(120).optional(),
+});
+
+export const suspendAccountSchema = z.object({
+  reason: z.string().trim().max(500).optional(),
 });
 
 export const contactCardSchema = z.object({

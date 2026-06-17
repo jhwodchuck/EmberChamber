@@ -263,7 +263,7 @@ assertKeys(
 assertKeys(fixture.meProfile, ["id", "username", "displayName", "email", "bio", "avatarUrl"], "meProfile");
 assertKeys(
   fixture.privacySettings,
-  ["notificationPreviewMode", "autoDownloadSensitiveMedia", "allowSensitiveExport", "secureAppSwitcher"],
+  ["notificationPreviewMode", "autoDownloadSensitiveMedia", "allowSensitiveExport", "secureAppSwitcher", "oledDark"],
   "privacySettings",
 );
 assertKeys(
@@ -294,3 +294,107 @@ assertKeys(
   "reportDisclosure",
 );
 assertObject(fixture.reportDisclosure.disclosedPayload, "reportDisclosure.disclosedPayload");
+
+// communitySummary — same ConversationSummary shape, kind:"community"
+assertKeys(fixture.communitySummary, Object.keys(fixture.conversationSummary), "communitySummary");
+assert.equal(fixture.communitySummary.kind, "community", "communitySummary.kind must be 'community'");
+assert.ok(Array.isArray(fixture.communitySummary.memberAccountIds), "communitySummary.memberAccountIds must be an array");
+
+// communityDetail
+assertKeys(
+  fixture.communityDetail,
+  [...Object.keys(fixture.communitySummary), "members", "rooms"],
+  "communityDetail",
+);
+assert.equal(fixture.communityDetail.kind, "community", "communityDetail.kind must be 'community'");
+assert.ok(Array.isArray(fixture.communityDetail.members), "communityDetail.members must be an array");
+assert.ok(Array.isArray(fixture.communityDetail.rooms), "communityDetail.rooms must be an array");
+assert.ok(fixture.communityDetail.rooms.length > 0, "communityDetail must have at least one room");
+assert.equal(fixture.communityDetail.rooms[0].kind, "room", "communityDetail.rooms[0].kind must be 'room'");
+
+// conversationInviteDescriptor
+assertKeys(
+  fixture.conversationInviteDescriptor,
+  [
+    "id",
+    "conversationId",
+    "conversationKind",
+    "scope",
+    "targetRoomConversationId",
+    "targetRoomTitle",
+    "inviteToken",
+    "inviteUrl",
+    "inviterDisplayName",
+    "expiresAt",
+    "maxUses",
+    "useCount",
+    "note",
+    "status",
+    "createdAt",
+  ],
+  "conversationInviteDescriptor",
+);
+assertString(fixture.conversationInviteDescriptor.inviteToken, "conversationInviteDescriptor.inviteToken");
+assertString(fixture.conversationInviteDescriptor.scope, "conversationInviteDescriptor.scope");
+assertIsoString(fixture.conversationInviteDescriptor.createdAt, "conversationInviteDescriptor.createdAt");
+
+// conversationInvitePreview
+assertKeys(fixture.conversationInvitePreview, ["invite", "conversation", "room"], "conversationInvitePreview");
+assertKeys(
+  fixture.conversationInvitePreview.invite,
+  [
+    "id",
+    "status",
+    "scope",
+    "inviterDisplayName",
+    "expiresAt",
+    "maxUses",
+    "useCount",
+    "note",
+    "targetRoomConversationId",
+    "targetRoomTitle",
+  ],
+  "conversationInvitePreview.invite",
+);
+assertKeys(
+  fixture.conversationInvitePreview.conversation,
+  [
+    "id",
+    "kind",
+    "title",
+    "memberCount",
+    "memberCap",
+    "joinRuleText",
+    "sensitiveMediaDefault",
+    "allowMemberInvites",
+    "inviteFreezeEnabled",
+  ],
+  "conversationInvitePreview.conversation",
+);
+assertObject(fixture.conversationInvitePreview.room, "conversationInvitePreview.room");
+assertKeys(
+  fixture.conversationInvitePreview.room,
+  ["id", "title", "memberCount", "roomAccessPolicy"],
+  "conversationInvitePreview.room",
+);
+
+// conversationSearchResult
+assertKeys(
+  fixture.conversationSearchResult,
+  ["query", "scopedCommunityId", "conversations", "accounts"],
+  "conversationSearchResult",
+);
+assertString(fixture.conversationSearchResult.query, "conversationSearchResult.query");
+assert.ok(
+  Array.isArray(fixture.conversationSearchResult.conversations),
+  "conversationSearchResult.conversations must be an array",
+);
+assert.ok(
+  Array.isArray(fixture.conversationSearchResult.accounts),
+  "conversationSearchResult.accounts must be an array",
+);
+assertKeys(
+  fixture.conversationSearchResult.accounts[0],
+  ["accountId", "username", "displayName", "sharedConversationId"],
+  "conversationSearchResult.accounts[0]",
+);

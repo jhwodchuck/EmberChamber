@@ -9,9 +9,29 @@ Operational procedures for the invite-only EmberChamber beta. Actions are limite
 | Review or revoke your own sessions                   | Web / mobile / desktop Settings → Sessions                            | Self-service only                              |
 | Create or revoke group invites                       | Group surface (owner/admin), or members if `allowMemberInvites` is on | No global freeze UI                            |
 | Remove a group member                                | Group surface (owner/admin)                                           | Bumps group epoch                              |
-| Submit a disclosure-based report                     | Relay `POST /v1/reports`                                              | Stored; no operator dashboard yet              |
+| Submit a disclosure-based report                     | Relay `POST /v1/reports`                                              | Reviewed in the operator console (`/app/admin`) |
+| Review and action reports                            | Operator console `/app/admin` (operator accounts)                     | Status queue; every action is audited          |
+| Force-signout another user & issue a recovery link   | Operator console `/app/admin/account`                                 | `/v1/admin/accounts/:id/recovery-handoff`      |
+| Read the operator audit log                          | Operator console `/app/admin/audit`                                   | Permanent record of operator actions           |
 | Issue a beta invite token                            | Manual D1 command (see below)                                         | No operator UI yet                             |
-| Suspend an account or revoke another user's sessions | **Not implemented**                                                   | Requires engineering or direct DB intervention |
+| Suspend an account (block re-auth)                   | **Not implemented**                                                   | Force-signout exists; full suspension does not |
+
+## Operator Console
+
+`/app/admin` in the web app, visible only to accounts with the `is_operator` flag:
+
+- **Reports** (`/app/admin`) — status queue (open → reviewing → actioned → dismissed) with disclosure payloads; each transition is audited.
+- **Account actions** (`/app/admin/account`) — look up an account, force-signout all sessions, and issue an account-recovery link (single-use magic link re-bootstrapping a fresh device on the same identity; expires in 24h).
+- **Audit log** (`/app/admin/audit`) — read-only record of all operator and break-glass actions.
+
+Seed the first operator with the shared admin secret (no self-service):
+
+```bash
+curl -fsS -X POST https://relay.emberchamber.com/v1/admin/grant-operator \
+  -H "authorization: Bearer $EMBERCHAMBER_ADMIN_SECRET" \
+  -H "content-type: application/json" \
+  -d '{"accountId":"<uuid>","isOperator":true}'
+```
 
 ## Invite Defaults
 
@@ -38,22 +58,22 @@ npx wrangler d1 execute emberchamber-relay-prod-db --env production --remote \
 1. Identify which device label is still trusted with the user.
 2. Have them revoke unfamiliar or stale sessions from a trusted client.
 3. If a sensitive group may have been exposed, ask the owner/admin to revoke active invites and remove affected members.
-4. If all devices are lost, force a fresh magic-link bootstrap and treat the account as a new device identity. Full trusted-device recovery handoff is not yet complete.
-5. Document manually: account ID, group ID, affected session IDs, any `reportId`.
+4. If all devices are lost, run an **account recovery handoff** from `/app/admin/account` — it force-signs-out every session and issues a single-use magic link on the same account identity. (Passkey-based trusted-device recovery is still deferred.)
+5. Session revocations and the handoff are captured in the audit log; add account ID, group ID, and any `reportId` for context.
 
 ## Leaked Invite or Boundary Change
 
 1. Revoke every known leaked invite for the group immediately.
 2. Create a fresh invite with tighter expiry and use-count limits.
 3. Remove members if the boundary has already been crossed.
-4. Document manually. (An invite-freeze flag exists in the schema but has no relay endpoint or UI today.)
+4. For communities, toggle invite-freeze from community settings (web/mobile) to pause new joins while you re-issue invites. The freeze is audited.
 
 ## Disclosure-Based Report Handling
 
 - Require minimal evidence. Do not ask for unrelated chat history.
 - Ask reporters to include the group or account involved plus specific message IDs, attachment IDs, or the invite path.
 - Preserve the returned `reportId`.
-- Triage notes must live out of band until an operator dashboard is built.
+- Triage in the operator console: move the report through reviewing → actioned/dismissed and record the outcome in the resolution note.
 
 ## Immediate Harm Escalation
 
@@ -65,7 +85,7 @@ Prioritize these report categories for engineering escalation:
 - `csam`
 - Credible impersonation or extortion
 
-The relay **cannot** currently suspend an account or revoke another user's sessions via an API. For urgent cases, escalate to direct infrastructure / database access and document every manual action taken.
+Operators can **force-signout all of an account's sessions** (and revoke push tokens) via the recovery-handoff action in `/app/admin/account`. Full account *suspension* (blocking re-auth) is still not implemented — escalate those to engineering. Routine operator actions are captured in the audit log.
 
 ## Communication Standards
 

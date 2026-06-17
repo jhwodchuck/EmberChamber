@@ -565,6 +565,7 @@ export interface PrivacySettings {
   autoDownloadSensitiveMedia: boolean;
   allowSensitiveExport: boolean;
   secureAppSwitcher: boolean;
+  oledDark: boolean;
 }
 
 export interface SessionDescriptor {

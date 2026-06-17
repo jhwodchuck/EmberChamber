@@ -40,6 +40,19 @@ const homepageSchema = {
   sameAs: ["https://github.com/jhwodchuck/EmberChamber"],
 };
 
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faqItems.map((item) => ({
+    "@type": "Question",
+    name: item.question,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: item.answer,
+    },
+  })),
+};
+
 const heroSignals = [
   "Invite-only access",
   "No public discovery surface",
@@ -84,6 +97,7 @@ export default function HomePage() {
   return (
     <MarketingShell>
       <JsonLd json={homepageSchema} />
+      <JsonLd json={faqSchema} />
       <section className="relative px-6 pb-16 pt-16 sm:pb-24 sm:pt-24">
         <div className="mx-auto max-w-6xl">
           <div className="grid gap-14 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center">

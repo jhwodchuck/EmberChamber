@@ -37,7 +37,8 @@
       }
     },
     "macOS": {
-      "infoPlist": "Info.plist"
+      "infoPlist": "Info.plist",
+      "minimumSystemVersion": "13.0"
     },
     "android": {
       "minSdkVersion": 24

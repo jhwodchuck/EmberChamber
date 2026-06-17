@@ -5,6 +5,7 @@ import { RateLimitDO } from "./do/rate-limit";
 import { errorResponse, HttpError, json, preflightResponse, withCors } from "./lib/http";
 import * as system from "./handlers/system";
 import * as admin from "./handlers/admin";
+import * as operator from "./handlers/operator";
 import * as auth from "./handlers/auth";
 import * as me from "./handlers/me";
 import * as devices from "./handlers/devices";
@@ -14,13 +15,16 @@ import * as messages from "./handlers/messages";
 import * as attachments from "./handlers/attachments";
 import * as reports from "./handlers/reports";
 import * as push from "./handlers/push";
+import * as passkeys from "./handlers/passkeys";
 import { consumeQueue } from "./handlers/queue";
 import type { Env } from "./types";
 
 const handlers = [
   system,
   admin,
+  operator,
   auth,
+  passkeys,
   me,
   devices,
   contacts,

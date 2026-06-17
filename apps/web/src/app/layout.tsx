@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { Cormorant_Garamond, Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
-import { siteUrl } from "@/lib/site";
+import { siteUrl, githubRepoUrl } from "@/lib/site";
+import { JsonLd } from "@/components/json-ld";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const cormorant = Cormorant_Garamond({
@@ -57,6 +58,25 @@ export const metadata: Metadata = {
   },
 };
 
+const organizationSchema = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "EmberChamber",
+  url: siteUrl,
+  logo: `${siteUrl}/brand/emberchamber-mark.svg`,
+  description:
+    "Invite-only encrypted messaging for trusted circles with a minimal relay, local-first history, and honest privacy boundaries.",
+  sameAs: [githubRepoUrl],
+};
+
+const websiteSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "EmberChamber",
+  url: siteUrl,
+  inLanguage: "en",
+};
+
 const themeInitScript = `
   (function () {
     try {
@@ -81,6 +101,8 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${cormorant.variable} font-sans`}>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <JsonLd json={organizationSchema} />
+        <JsonLd json={websiteSchema} />
         <a
           href="#main-content"
           className="sr-only absolute left-4 top-4 z-50 rounded-full bg-[var(--bg-secondary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] shadow focus:not-sr-only"

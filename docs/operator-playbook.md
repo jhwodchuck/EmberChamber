@@ -12,9 +12,56 @@ supports today and calls out where engineering or direct database access is stil
 | Review or revoke your own sessions                                               | Web, mobile, or desktop settings backed by relay `/v1/sessions`                       | Self-service only.                                                                                          |
 | Create or revoke group invites                                                   | Relay group surfaces for owners/admins, or members if `allowMemberInvites` is enabled | There is no global invite-freeze UI.                                                                        |
 | Remove a group member                                                            | Relay group surface for owners/admins                                                 | Bumps relay-side group epoch.                                                                               |
-| Submit a disclosure-based report                                                 | Relay `/v1/reports`                                                                   | Stored for follow-up, but there is no operator inbox or dashboard yet.                                      |
+| Submit a disclosure-based report                                                 | Relay `/v1/reports`                                                                   | Reviewed in the operator console (`/app/admin`) by operator accounts.                                       |
+| Review and action reports                                                        | Operator console `/app/admin` (operator accounts)                                     | Queue with status transitions (open → reviewing → actioned → dismissed); every action is audited.          |
+| Force-signout all of another user's sessions and issue an account-recovery link  | Operator console `/app/admin/account`, backed by `/v1/admin/accounts/:id/recovery-handoff` | Revokes every active session and mints a single-use magic link on the same account identity.           |
+| Read the operator audit log                                                      | Operator console `/app/admin/audit`, backed by `/v1/admin/audit-log`                  | Permanent record of operator and break-glass actions.                                                      |
 | Issue bootstrap beta invite tokens                                               | Manual today                                                                          | Use direct D1 access to `beta_invites` or the configured dev token in development. There is no operator UI. |
-| Suspend an account, revoke all sessions for another user, or bulk-review reports | Not implemented in the relay runtime                                                  | Requires engineering or direct infrastructure/database intervention.                                        |
+| Suspend an account or bulk-review reports                                         | Partially: force-signout + recovery handoff exist; account suspension and bulk review do not | Suspension still requires engineering or direct infrastructure/database intervention.                |
+
+## Operator Console
+
+The operator console lives at `/app/admin` in the web app and is visible only to accounts with the
+`is_operator` flag. It backs onto operator-session-gated relay endpoints (distinct from the
+shared-secret `/v1/admin/*` break-glass endpoints).
+
+### Seeding the first operator
+
+Operator status is not self-service. Bootstrap it with the shared admin secret
+(`EMBERCHAMBER_ADMIN_SECRET`), which is the scriptable form of editing D1 directly:
+
+```bash
+# accountId is the target account's UUID (look it up via the console once a
+# first operator exists, or from D1 during initial bootstrap).
+curl -fsS -X POST https://relay.emberchamber.com/v1/admin/grant-operator \
+  -H "authorization: Bearer $EMBERCHAMBER_ADMIN_SECRET" \
+  -H "content-type: application/json" \
+  -d '{"accountId":"<uuid>","isOperator":true}'
+```
+
+The equivalent raw D1 path is `UPDATE accounts SET is_operator = 1 WHERE id = '<uuid>'`. The grant
+is recorded in the audit log.
+
+### Report queue
+
+`/app/admin` lists reports newest-first with a status filter. Open a report to see its
+disclosure payload and evidence message IDs, then mark it **reviewing**, **actioned**, or
+**dismissed** with an optional resolution note. Each transition writes an audit row and stamps the
+acting operator.
+
+### Account recovery handoff (lost all devices)
+
+`/app/admin/account` looks up an account by ID or email (matched via the blind index — plaintext
+email is never shown). The **recovery handoff** action force-signs-out every active session and
+mints a single-use magic link that re-bootstraps a fresh device on the *same* account identity.
+Deliver that link to the verified account holder out-of-band; it expires in 24 hours. This is the
+supported answer to "I lost all my devices."
+
+### Audit log
+
+`/app/admin/audit` is a read-only, paginated view of every operator and break-glass action
+(session revocation, recovery handoff, report transitions, policy changes, member removals,
+operator grants). Use it to confirm what action was taken, by whom, and when.
 
 ## Invite Defaults
 
@@ -30,34 +77,91 @@ supports today and calls out where engineering or direct database access is stil
 1. Ask the user which device label is still trusted.
 2. Have them revoke unfamiliar or stale sessions from a remaining trusted client.
 3. If a sensitive group may have been exposed, ask the group owner or admin to revoke active invites and remove members as needed.
-4. If all devices are lost, force a fresh magic-link bootstrap and treat the account as a new device identity. There is no full trusted-device recovery handoff yet.
-5. Record the incident manually with account ID, group ID, affected session IDs, and any `reportId` that was created.
+4. If all devices are lost, run an **account recovery handoff** from `/app/admin/account`. It force-signs-out every session and issues a single-use magic link that re-bootstraps a new device on the same account identity. (Passkey-based trusted-device recovery is still deferred.)
+5. The recovery handoff and any session revocations are captured in the audit log; add account ID, group ID, and any `reportId` for context.
 
 ## Leaked Invite Or Boundary Change
 
 1. Revoke every known leaked invite for the group.
 2. Create a fresh invite with tighter expiry and use-count limits.
 3. Remove members if the boundary has already been crossed.
-4. Document the incident manually. The schema has an invite-freeze flag, but there is no relay endpoint or UI to set it today.
+4. For communities, toggle the invite-freeze policy from the community settings (web and mobile) to pause all new joins while you re-issue invites. The freeze is recorded in the audit log.
 
 ## Disclosure-Based Report Handling
 
 - Require minimal evidence only. Do not ask for unrelated chat history.
 - Ask reporters to include the group or account involved plus the specific message IDs, attachment IDs, or invite path they are disclosing.
 - Preserve and reference the returned `reportId`.
-- Because there is no operator dashboard yet, triage notes and escalation state must live out of band today.
+- Triage in the operator console (`/app/admin`): move the report through reviewing → actioned/dismissed and capture the outcome in the resolution note. Escalation state now lives in the report status rather than out of band.
 
 ## Immediate Harm Escalation
 
 - Prioritize `non_consensual_intimate_media`, `coercion_or_extortion`, `underage_risk`, `csam`, and credible impersonation/extortion reports.
-- The relay runtime cannot currently suspend an account or revoke another user’s sessions through an operator API.
-- For urgent cases, escalate to engineering or direct infrastructure access and document exactly what manual action was taken.
+- Operators can immediately **force-signout all of an account's sessions** via the recovery-handoff action in `/app/admin/account` (it also revokes push tokens). Full account *suspension* (blocking re-auth) is still not implemented and requires engineering/infrastructure intervention.
+- For cases needing suspension or data preservation beyond session revocation, escalate to engineering and document exactly what manual action was taken. Routine operator actions are already captured in the audit log.
 
 ## Communication Defaults
 
 - Do not describe the current relay-native group thread or attachment flow as fully E2EE.
 - Do describe the beta as invite-only, disclosure-based, with new device-encrypted groups and a few legacy compatibility paths still being retired.
 - Keep public language discreet and privacy-first.
+
+## iOS / macOS Build Prerequisites
+
+### iOS (Expo EAS)
+
+Building an iOS binary requires an Apple Developer Program membership and EAS credentials. No Apple
+credentials are committed to the repo — set them up on the machine that will trigger the build.
+
+1. **Apple Developer account** — enroll at `developer.apple.com`. The Team ID appears on your
+   membership certificate and must replace the `TEAMID` placeholder in
+   `apps/web/public/.well-known/apple-app-site-association` before App Store submission.
+2. **EAS CLI** — `npm install -g eas-cli`, then `eas login`.
+3. **EAS credentials** — from `apps/mobile/`, run `eas credentials` and follow the prompts to
+   create or import a Distribution Certificate and Provisioning Profile.
+4. **Build**:
+   ```bash
+   cd apps/mobile
+   eas build --platform ios --profile production
+   ```
+   Use `--profile preview` for internal TestFlight distribution or `--profile development` for a
+   dev client build.
+5. **Submit to App Store** — after EAS builds the `.ipa`:
+   ```bash
+   eas submit --platform ios --latest
+   ```
+   This requires `APPLE_ID` and `ASC_APP_ID` environment variables (or entry in `eas.json`
+   `submit.production`).
+
+Universal links (`/invite/*`, `/auth/complete`) are driven by the
+`apps/web/public/.well-known/apple-app-site-association` file already present in the web deploy.
+The `associatedDomains` entitlement is wired in `app.json`.
+
+Push notifications on iOS require a separate APN auth key or certificate. Add it to EAS via
+`eas credentials` → iOS → Push Notifications. The relay FCM path does not cover APNs — a separate
+`EMBERCHAMBER_APN_KEY` worker secret will be needed when iOS push is activated.
+
+### macOS (Tauri)
+
+The Tauri bundle config (`apps/desktop/src-tauri/tauri.conf.json`) already has `"targets": "all"`
+and `macOS.minimumSystemVersion: "13.0"`. Building a notarized macOS app additionally requires:
+
+1. **Xcode** — install from the App Store on a macOS machine (required for code-signing tools).
+2. **Apple Developer account** — same as iOS above.
+3. **Signing identity** — create a "Developer ID Application" certificate in Keychain Access or via
+   `tauri signer generate` (the Tauri docs cover this in detail).
+4. **Notarization credentials** — set `APPLE_ID`, `APPLE_PASSWORD` (app-specific password), and
+   `APPLE_TEAM_ID` environment variables before running the Tauri build.
+5. **Build**:
+   ```bash
+   cd apps/desktop
+   npm run tauri build -- --target aarch64-apple-darwin  # or x86_64-apple-darwin
+   ```
+   The signed `.dmg` and `.app.tar.gz` land under `apps/desktop/src-tauri/target/release/bundle/`.
+
+Notarization can be automated in CI with a macOS GitHub Actions runner using the same environment
+variables. A CI macOS lane is planned but not yet wired; refer to the Tauri notarization guide in
+their official documentation.
 
 ## Android Release Signing
 

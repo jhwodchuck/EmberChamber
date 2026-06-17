@@ -26,6 +26,12 @@ export async function runRelayCleanup(env: Env) {
 
   await dbRun(
     env.DB,
+    `DELETE FROM passkey_challenges WHERE expires_at <= ?1`,
+    nowIso,
+  );
+
+  await dbRun(
+    env.DB,
     `DELETE FROM device_links
       WHERE expires_at <= ?1
          OR (approved_at IS NOT NULL AND approved_at <= ?2)`,

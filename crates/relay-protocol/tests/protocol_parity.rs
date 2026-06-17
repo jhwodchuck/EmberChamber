@@ -1,7 +1,9 @@
 use emberchamber_relay_protocol::{
-    AttachmentTicket, AuthSession, AuthStartRequest, ConversationDetail, ConversationSummary,
-    DeviceLinkStatus, EnvelopeBatch, GroupInviteRecord, GroupMembershipSummary, GroupThreadMessage,
-    MailboxAck, MeProfile, PrivacySettings, ReportDisclosure, SessionDescriptor,
+    AttachmentTicket, AuthSession, AuthStartRequest, ConversationDetail,
+    ConversationInviteDescriptor, ConversationInvitePreview, ConversationSearchResult,
+    ConversationSummary, DeviceLinkStatus, EnvelopeBatch, GroupInviteRecord,
+    GroupMembershipSummary, GroupThreadMessage, MailboxAck, MeProfile, PrivacySettings,
+    ReportDisclosure, SessionDescriptor,
 };
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
@@ -39,6 +41,11 @@ fn rust_protocol_matches_shared_protocol_fixtures() {
     assert_roundtrip::<EnvelopeBatch>(&root, "envelopeBatch");
     assert_roundtrip::<ConversationSummary>(&root, "conversationSummary");
     assert_roundtrip::<ConversationDetail>(&root, "conversationDetail");
+    assert_roundtrip::<ConversationSummary>(&root, "communitySummary");
+    assert_roundtrip::<ConversationDetail>(&root, "communityDetail");
+    assert_roundtrip::<ConversationInviteDescriptor>(&root, "conversationInviteDescriptor");
+    assert_roundtrip::<ConversationInvitePreview>(&root, "conversationInvitePreview");
+    assert_roundtrip::<ConversationSearchResult>(&root, "conversationSearchResult");
     assert_roundtrip::<DeviceLinkStatus>(&root, "deviceLinkStatus");
     assert_roundtrip::<GroupInviteRecord>(&root, "groupInviteRecord");
     assert_roundtrip::<GroupMembershipSummary>(&root, "groupMembershipSummary");

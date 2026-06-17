@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { Pressable, Text, View, useWindowDimensions } from "react-native";
 import type {
   AuthSession,
+  CommunityListEntry,
   ContactCard,
   ConversationPreference,
   FormMessage,
@@ -24,6 +25,7 @@ const styles = { ...mainStyles, ...chatListStyles };
 import { StatusCard } from "../components/StatusCard";
 import type { DeviceLinkStatus } from "@emberchamber/protocol";
 import { ChatListScreen, type ChatListItem } from "./ChatListScreen";
+import { CommunityScreen } from "./CommunityScreen";
 import { ConversationScreen } from "./ConversationScreen";
 import { InviteFlow } from "../features/invites/InviteFlow";
 import { SettingsScreen } from "./SettingsScreen";
@@ -128,6 +130,16 @@ export type MainScreenProps = {
   onSaveMemberNote: (accountId: string, note: string) => Promise<void>;
   onOpenDm: (targetAccountId: string, displayName: string) => Promise<void>;
   onSendContactRequest: (targetAccountId: string, displayName: string) => void;
+  communities?: CommunityListEntry[];
+  selectedCommunityId?: string | null;
+  setSelectedCommunityId?: (id: string | null) => void;
+  onOpenRoom?: (syntheticGroup: GroupMembershipSummary) => void;
+  relayFetch?: <T>(
+    session: AuthSession,
+    path: string,
+    init?: RequestInit,
+    allowRefresh?: boolean,
+  ) => Promise<T>;
   initialShellState: PersistedMainShellState;
   onPersistShellState: (state: PersistedMainShellState) => void;
   restoredConversationAnchorId: string | null;
@@ -227,6 +239,11 @@ export function MainScreen(props: MainScreenProps) {
     onSaveMemberNote,
     onOpenDm,
     onSendContactRequest,
+    communities,
+    selectedCommunityId,
+    setSelectedCommunityId,
+    onOpenRoom,
+    relayFetch,
     initialShellState,
     onPersistShellState,
     restoredConversationAnchorId,
@@ -242,25 +259,28 @@ export function MainScreen(props: MainScreenProps) {
     initialShellState.chatView,
   );
 
+  const selectedCommunityEntry =
+    communities?.find((c) => c.id === selectedCommunityId) ?? null;
+
   // On narrow layouts the tab bar is a flex sibling of appBody. When Android's
   // resize mode shrinks the window for the keyboard, the tab bar's fixed height
   // (~80 px including gap and shell padding) eats space that the conversation
-  // composer needs. Hide it while a conversation fills the screen.
+  // composer needs. Hide it while a conversation or community detail fills the screen.
   const isNarrowConversation =
     !isWideChatsLayout &&
     activeTab === "chats" &&
-    chatView === "conversation" &&
-    !!selectedGroup;
+    ((chatView === "conversation" && !!selectedGroup) ||
+      (chatView === "community" && !!selectedCommunityEntry));
   const [chatFilter, setChatFilter] = useState<ChatListFilter>(
     initialShellState.chatFilter,
   );
   const [chatSearch, setChatSearch] = useState("");
 
   useEffect(() => {
-    if (!selectedGroup) {
+    if (!selectedGroup && chatView === "conversation") {
       setChatView("list");
     }
-  }, [selectedGroup]);
+  }, [selectedGroup, chatView]);
 
   useEffect(() => {
     if (inviteFocusToken === 0) {
@@ -349,6 +369,17 @@ export function MainScreen(props: MainScreenProps) {
     setChatView("conversation");
   }
 
+  function openCommunity(communityId: string) {
+    setSelectedCommunityId?.(communityId);
+    setActiveTab("chats");
+    setChatView("community");
+  }
+
+  function handleOpenRoom(syntheticGroup: GroupMembershipSummary) {
+    onOpenRoom?.(syntheticGroup);
+    openConversation(syntheticGroup.id);
+  }
+
   const handleConversationAnchorChange = useCallback(
     (messageId: string | null) => {
       if (!selectedGroup?.id) {
@@ -365,6 +396,7 @@ export function MainScreen(props: MainScreenProps) {
       profileName={profile?.displayName ?? null}
       selectedConversationId={selectedConversationId}
       items={chatItems}
+      communityItems={communities}
       activeFilter={chatFilter}
       onChangeFilter={setChatFilter}
       searchQuery={chatSearch}
@@ -372,6 +404,7 @@ export function MainScreen(props: MainScreenProps) {
       isLoadingAccount={isLoadingAccount}
       unreadIds={unreadIds}
       onSelectConversation={openConversation}
+      onSelectCommunity={openCommunity}
       onToggleConversationArchived={onToggleConversationArchived}
       onToggleConversationPinned={onToggleConversationPinned}
       onToggleConversationMuted={onToggleConversationMuted}
@@ -379,6 +412,17 @@ export function MainScreen(props: MainScreenProps) {
       onOpenInvites={() => setActiveTab("invites")}
     />
   );
+
+  const communityPane =
+    selectedCommunityEntry && relayFetch ? (
+      <CommunityScreen
+        session={session}
+        community={selectedCommunityEntry}
+        relayFetch={relayFetch}
+        onOpenRoom={handleOpenRoom}
+        onBack={() => setChatView("list")}
+      />
+    ) : null;
 
   const conversationPane = selectedGroup ? (
     <ConversationScreen
@@ -436,10 +480,16 @@ export function MainScreen(props: MainScreenProps) {
       isWideChatsLayout ? (
         <View style={styles.chatWorkspaceShell}>
           <View style={styles.chatWorkspaceListPane}>{chatListPane}</View>
-          <View style={styles.chatWorkspaceDetailPane}>{conversationPane}</View>
+          <View style={styles.chatWorkspaceDetailPane}>
+            {chatView === "community" && communityPane
+              ? communityPane
+              : conversationPane}
+          </View>
         </View>
       ) : chatView === "conversation" && selectedGroup ? (
         conversationPane
+      ) : chatView === "community" && communityPane ? (
+        communityPane
       ) : (
         chatListPane
       )

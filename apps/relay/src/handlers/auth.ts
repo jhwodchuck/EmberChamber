@@ -404,24 +404,5 @@ export async function handle(
     return json({ sent: true });
   }
 
-  if (
-    request.method === "POST" &&
-    [
-      "/v1/passkeys/register/options",
-      "/v1/passkeys/register/verify",
-      "/v1/passkeys/auth/options",
-      "/v1/passkeys/auth/verify",
-    ].includes(pathname)
-  ) {
-    return json(
-      {
-        supported: false,
-        message:
-          "Passkey enrollment is scaffolded in the protocol, but not yet wired in this beta relay.",
-      },
-      { status: 501 },
-    );
-  }
-
   return null;
 }

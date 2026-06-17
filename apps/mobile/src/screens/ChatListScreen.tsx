@@ -9,6 +9,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { FlashList } from "@shopify/flash-list";
 import type {
+  CommunityListEntry,
   ConversationPreference,
   GroupMembershipSummary,
   GroupThreadMessage,
@@ -349,6 +350,7 @@ export type ChatListScreenProps = {
   profileName: string | null;
   selectedConversationId: string | null;
   items: ChatListItem[];
+  communityItems?: CommunityListEntry[];
   activeFilter: ChatListFilter;
   onChangeFilter: (value: ChatListFilter) => void;
   searchQuery: string;
@@ -356,6 +358,7 @@ export type ChatListScreenProps = {
   isLoadingAccount: boolean;
   unreadIds: Set<string>;
   onSelectConversation: (conversationId: string) => void;
+  onSelectCommunity?: (communityId: string) => void;
   onToggleConversationArchived: (conversationId: string) => void;
   onToggleConversationPinned: (conversationId: string) => void;
   onToggleConversationMuted: (conversationId: string) => void;
@@ -367,6 +370,7 @@ export function ChatListScreen({
   profileName,
   selectedConversationId,
   items,
+  communityItems,
   activeFilter,
   onChangeFilter,
   searchQuery,
@@ -374,6 +378,7 @@ export function ChatListScreen({
   isLoadingAccount,
   unreadIds,
   onSelectConversation,
+  onSelectCommunity,
   onToggleConversationArchived,
   onToggleConversationPinned,
   onToggleConversationMuted,
@@ -568,6 +573,70 @@ export function ChatListScreen({
               <Pressable style={styles.secondaryButton} onPress={onOpenInvites}>
                 <Text style={styles.secondaryButtonLabel}>Open invites</Text>
               </Pressable>
+            </View>
+          ) : null
+        }
+        ListFooterComponent={
+          communityItems && communityItems.length > 0 ? (
+            <View style={{ marginTop: 16 }}>
+              <Text
+                style={[
+                  styles.chatRowMeta,
+                  {
+                    marginHorizontal: 4,
+                    marginBottom: 8,
+                    fontSize: 11,
+                    textTransform: "uppercase",
+                    letterSpacing: 0.8,
+                  },
+                ]}
+              >
+                Communities
+              </Text>
+              {communityItems.map((community) => (
+                <Pressable
+                  key={community.id}
+                  style={[
+                    chatListScreenStyles.chatRow,
+                    { marginBottom: 4 },
+                    selectedConversationId === community.id
+                      ? chatListScreenStyles.chatRowActive
+                      : null,
+                  ]}
+                  onPress={() => onSelectCommunity?.(community.id)}
+                  android_ripple={{ color: "rgba(255,255,255,0.06)" }}
+                >
+                  <View style={chatListScreenStyles.chatAvatar}>
+                    <Text style={chatListScreenStyles.chatAvatarText}>
+                      {community.title.trim().charAt(0).toUpperCase() || "#"}
+                    </Text>
+                  </View>
+                  <View style={chatListScreenStyles.chatRowCopy}>
+                    <View style={chatListScreenStyles.chatRowTop}>
+                      <Text
+                        style={chatListScreenStyles.chatRowTitle}
+                        numberOfLines={1}
+                      >
+                        {community.title}
+                      </Text>
+                    </View>
+                    <Text style={chatListScreenStyles.chatRowPreview}>
+                      {community.memberCount} members · {community.roomCount}{" "}
+                      rooms
+                    </Text>
+                    <View style={chatListScreenStyles.chatMetaRow}>
+                      <Text style={chatListScreenStyles.chatRowMeta}>
+                        Community
+                      </Text>
+                      {community.inviteFreezeEnabled ? (
+                        <Text style={chatListScreenStyles.chatRowMeta}>
+                          Frozen
+                        </Text>
+                      ) : null}
+                    </View>
+                  </View>
+                </Pressable>
+              ))}
             </View>
           ) : null
         }

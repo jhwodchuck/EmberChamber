@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "TEAMID.com.emberchamber.mobile",
+        "paths": ["/invite/*", "/auth/complete"]
+      }
+    ]
+  }
+}

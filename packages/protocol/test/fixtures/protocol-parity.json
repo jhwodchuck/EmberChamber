@@ -257,7 +257,8 @@
     "notificationPreviewMode": "discreet",
     "autoDownloadSensitiveMedia": false,
     "allowSensitiveExport": false,
-    "secureAppSwitcher": true
+    "secureAppSwitcher": true,
+    "oledDark": false
   },
   "sessionDescriptor": {
     "id": "44444444-4444-4444-8444-444444444444",
@@ -280,5 +281,211 @@
       "excerpt": "See attached",
       "source": "manual_report"
     }
+  },
+  "communitySummary": {
+    "id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+    "kind": "community",
+    "title": "The Grove",
+    "epoch": 1,
+    "historyMode": "relay_hosted",
+    "parentConversationId": null,
+    "memberAccountIds": [
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "memberCount": 12,
+    "roomCount": 2,
+    "memberCap": 150,
+    "sensitiveMediaDefault": false,
+    "joinRuleText": "Adults-only trusted circle",
+    "allowMemberInvites": false,
+    "inviteFreezeEnabled": false,
+    "roomAccessPolicy": null,
+    "createdAt": "2026-06-01T10:00:00Z",
+    "updatedAt": "2026-06-15T10:00:00Z",
+    "lastMessageAt": null,
+    "lastMessageKind": null,
+    "capabilities": {
+      "relayHostedMessages": true,
+      "mailboxTransport": false,
+      "encryptedAttachments": false,
+      "canCreateInvites": true,
+      "canManageMembers": true,
+      "canManagePolicies": true,
+      "canManageRooms": true,
+      "canGrantRoomAccess": true
+    }
+  },
+  "communityDetail": {
+    "id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+    "kind": "community",
+    "title": "The Grove",
+    "epoch": 1,
+    "historyMode": "relay_hosted",
+    "parentConversationId": null,
+    "memberAccountIds": [
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "memberCount": 12,
+    "roomCount": 2,
+    "memberCap": 150,
+    "sensitiveMediaDefault": false,
+    "joinRuleText": "Adults-only trusted circle",
+    "allowMemberInvites": false,
+    "inviteFreezeEnabled": false,
+    "roomAccessPolicy": null,
+    "createdAt": "2026-06-01T10:00:00Z",
+    "updatedAt": "2026-06-15T10:00:00Z",
+    "lastMessageAt": null,
+    "lastMessageKind": null,
+    "capabilities": {
+      "relayHostedMessages": true,
+      "mailboxTransport": false,
+      "encryptedAttachments": false,
+      "canCreateInvites": true,
+      "canManageMembers": true,
+      "canManagePolicies": true,
+      "canManageRooms": true,
+      "canGrantRoomAccess": true
+    },
+    "members": [
+      {
+        "accountId": "22222222-2222-4222-8222-222222222222",
+        "username": "ember-alpha",
+        "displayName": "Ember Alpha",
+        "role": "owner",
+        "joinedAt": "2026-06-01T10:00:00Z",
+        "removedAt": null
+      }
+    ],
+    "rooms": [
+      {
+        "id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "kind": "room",
+        "title": "Restricted Lounge",
+        "epoch": 1,
+        "historyMode": "relay_hosted",
+        "parentConversationId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        "memberAccountIds": [
+          "22222222-2222-4222-8222-222222222222"
+        ],
+        "memberCount": 5,
+        "roomCount": null,
+        "memberCap": 150,
+        "sensitiveMediaDefault": false,
+        "joinRuleText": null,
+        "allowMemberInvites": false,
+        "inviteFreezeEnabled": false,
+        "roomAccessPolicy": "restricted",
+        "createdAt": "2026-06-01T10:05:00Z",
+        "updatedAt": "2026-06-15T10:05:00Z",
+        "lastMessageAt": null,
+        "lastMessageKind": null,
+        "capabilities": {
+          "relayHostedMessages": true,
+          "mailboxTransport": false,
+          "encryptedAttachments": false,
+          "canCreateInvites": true,
+          "canManageMembers": false,
+          "canManagePolicies": false,
+          "canManageRooms": false,
+          "canGrantRoomAccess": true
+        }
+      }
+    ]
+  },
+  "conversationInviteDescriptor": {
+    "id": "inv-descriptor-1",
+    "conversationId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+    "conversationKind": "community",
+    "scope": "room",
+    "targetRoomConversationId": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+    "targetRoomTitle": "Restricted Lounge",
+    "inviteToken": "tok-abc123def456ghi789jkl012",
+    "inviteUrl": "https://relay.example.com/invite/cccccccc-cccc-4ccc-8ccc-cccccccccccc/tok-abc123def456ghi789jkl012",
+    "inviterDisplayName": "Ember Alpha",
+    "expiresAt": "2026-06-22T10:00:00Z",
+    "maxUses": 5,
+    "useCount": 0,
+    "note": "VIP access to restricted lounge",
+    "status": "active",
+    "createdAt": "2026-06-15T10:00:00Z"
+  },
+  "conversationInvitePreview": {
+    "invite": {
+      "id": "inv-descriptor-1",
+      "status": "active",
+      "scope": "room",
+      "inviterDisplayName": "Ember Alpha",
+      "expiresAt": "2026-06-22T10:00:00Z",
+      "maxUses": 5,
+      "useCount": 0,
+      "note": "VIP access to restricted lounge",
+      "targetRoomConversationId": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      "targetRoomTitle": "Restricted Lounge"
+    },
+    "conversation": {
+      "id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "kind": "community",
+      "title": "The Grove",
+      "memberCount": 12,
+      "memberCap": 150,
+      "joinRuleText": "Adults-only trusted circle",
+      "sensitiveMediaDefault": false,
+      "allowMemberInvites": false,
+      "inviteFreezeEnabled": false
+    },
+    "room": {
+      "id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      "title": "Restricted Lounge",
+      "memberCount": 5,
+      "roomAccessPolicy": "restricted"
+    }
+  },
+  "conversationSearchResult": {
+    "query": "restricted",
+    "scopedCommunityId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+    "conversations": [
+      {
+        "id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "kind": "room",
+        "title": "Restricted Lounge",
+        "epoch": 1,
+        "historyMode": "relay_hosted",
+        "parentConversationId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        "memberAccountIds": [
+          "22222222-2222-4222-8222-222222222222"
+        ],
+        "memberCount": 5,
+        "roomCount": null,
+        "memberCap": 150,
+        "sensitiveMediaDefault": false,
+        "joinRuleText": null,
+        "allowMemberInvites": false,
+        "inviteFreezeEnabled": false,
+        "roomAccessPolicy": "restricted",
+        "createdAt": "2026-06-01T10:05:00Z",
+        "updatedAt": "2026-06-15T10:05:00Z",
+        "lastMessageAt": null,
+        "lastMessageKind": null,
+        "capabilities": {
+          "relayHostedMessages": true,
+          "mailboxTransport": false,
+          "encryptedAttachments": false,
+          "canCreateInvites": true,
+          "canManageMembers": false,
+          "canManagePolicies": false,
+          "canManageRooms": false,
+          "canGrantRoomAccess": true
+        }
+      }
+    ],
+    "accounts": [
+      {
+        "accountId": "22222222-2222-4222-8222-222222222222",
+        "username": "ember-alpha",
+        "displayName": "Ember Alpha",
+        "sharedConversationId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+      }
+    ]
   }
 }

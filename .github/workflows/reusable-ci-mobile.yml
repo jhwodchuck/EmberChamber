@@ -51,6 +51,9 @@ jobs:
       - name: Verify Android mobile project
         run: npm run verify:android --workspace=apps/mobile
 
+      - name: Run mobile unit tests
+        run: npm test --workspace=apps/mobile
+
       - name: Fix failing Android verification
         uses: fly-ci/wingman-action@v1
         if: ${{ failure() && github.event.pull_request != null }}
