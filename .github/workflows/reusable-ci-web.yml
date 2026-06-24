@@ -26,7 +26,7 @@ jobs:
     name: Type-check relay, build web, test relay, and check desktop
     runs-on: ${{ fromJSON(inputs.runner) }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: ./.github/actions/setup-node-workspace
 
@@ -64,7 +64,7 @@ jobs:
     env:
       ARTIFACT_SUFFIX: ${{ inputs.artifact_suffix != '' && inputs.artifact_suffix || github.run_number }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: ./.github/actions/setup-node-workspace
 

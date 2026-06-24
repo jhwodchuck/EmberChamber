@@ -34,7 +34,7 @@ jobs:
       RELAY_ENV: ${{ github.event.inputs.environment || 'production' }}
       RELAY_HEALTH_URL_INPUT: ${{ github.event.inputs.health_url || '' }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Setup Node workspace
         uses: ./.github/actions/setup-node-workspace

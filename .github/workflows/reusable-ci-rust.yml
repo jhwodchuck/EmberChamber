@@ -22,7 +22,7 @@ jobs:
     name: Format, test, and check Rust core crates
     runs-on: ${{ fromJSON(inputs.runner) }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: ./.github/actions/setup-rust-toolchain
         with:

@@ -37,7 +37,7 @@ jobs:
     name: Verify Android mobile app
     runs-on: ${{ fromJSON(inputs.runner) }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: ./.github/actions/setup-node-workspace
 
@@ -102,7 +102,7 @@ jobs:
     env:
       ARTIFACT_SUFFIX: ${{ inputs.artifact_suffix != '' && inputs.artifact_suffix || github.run_number }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Download release APK artifact
         uses: actions/download-artifact@v8
