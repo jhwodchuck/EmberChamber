@@ -42,7 +42,7 @@ jobs:
     name: Build ${{ inputs.platform }} desktop artifact
     runs-on: ${{ fromJSON(inputs.runner) }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: ./.github/actions/setup-node-workspace
 
