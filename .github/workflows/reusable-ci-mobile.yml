@@ -120,7 +120,7 @@ jobs:
           echo "APK_PATH=$APK_PATH" >> "$GITHUB_ENV"
 
       - name: Capture emulator screenshots
-        uses: reactivecircus/android-emulator-runner@v2.37.0
+        uses: reactivecircus/android-emulator-runner@v2.38.0
         continue-on-error: true
         with:
           api-level: ${{ matrix.device_class == 'auto' && '33' || '30' }}
