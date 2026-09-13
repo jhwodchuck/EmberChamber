@@ -3,119 +3,141 @@
 import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { authBootstrapEnabled, primaryNav, publicSignInCta } from "@/lib/site";
 
 export function SiteMobileNav() {
   const pathname = usePathname();
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const ctaLinks = authBootstrapEnabled
-    ? [
-        publicSignInCta,
-        { href: "/start", label: "Join Beta" },
-      ]
-    : [publicSignInCta, { href: "/download", label: "View Downloads" }];
+    ? [publicSignInCta, { href: "/start", label: "Join with an invitation" }]
+    : [publicSignInCta, { href: "/start", label: "Start Here" }];
 
   useEffect(() => {
-    setIsOpen(false);
+    dialogRef.current?.close();
   }, [pathname]);
 
   useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsOpen(false);
-      }
-    };
-
+    if (!isOpen) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", handleEscape);
-
+    const desktop = window.matchMedia("(min-width: 1280px)");
+    const closeOnDesktop = () => {
+      if (desktop.matches) dialogRef.current?.close();
+    };
+    desktop.addEventListener("change", closeOnDesktop);
+    closeOnDesktop();
     return () => {
       document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleEscape);
+      desktop.removeEventListener("change", closeOnDesktop);
     };
   }, [isOpen]);
+
+  function closeNavigation() {
+    dialogRef.current?.close();
+  }
+
+  function keepFocusInDialog(event: React.KeyboardEvent<HTMLDialogElement>) {
+    if (event.key !== "Tab") return;
+
+    const focusable = Array.from(
+      event.currentTarget.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ),
+    ).filter((element) => element.getClientRects().length > 0);
+
+    const first = focusable[0];
+    const last = focusable.at(-1);
+    if (!first || !last) return;
+
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
 
   return (
     <>
       <button
+        ref={triggerRef}
         type="button"
-        aria-label={isOpen ? "Close navigation menu" : "Open navigation menu"}
+        aria-label="Open navigation menu"
         aria-controls="site-mobile-nav"
         aria-expanded={isOpen}
-        className="btn-ghost px-3 md:hidden"
-        onClick={() => setIsOpen((current) => !current)}
+        className="btn-ghost px-3 xl:hidden"
+        onClick={() => {
+          dialogRef.current?.showModal();
+          setIsOpen(true);
+        }}
       >
-        {isOpen ? (
-          <X className="h-4 w-4" aria-hidden="true" />
-        ) : (
-          <Menu className="h-4 w-4" aria-hidden="true" />
-        )}
+        <Menu className="h-5 w-5" aria-hidden="true" />
       </button>
-
-      {isOpen ? (
-        <div
-          className="fixed inset-0 z-50 md:hidden"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Site navigation"
-        >
+      {/* The native modal supplies Escape handling and top-layer rendering.
+          The key handler keeps keyboard focus inside the dialog in browsers
+          that allow Tab to leave a modal dialog. */}
+      <dialog
+        ref={dialogRef}
+        id="site-mobile-nav"
+        aria-label="Site navigation"
+        className="m-auto max-h-[85dvh] w-11/12 max-w-md overflow-y-auto overscroll-contain rounded-3xl border border-white/15 bg-[#100c0b] p-6 text-[#fff1e8] shadow-2xl backdrop:bg-black/70 backdrop:backdrop-blur-sm"
+        onKeyDown={keepFocusInDialog}
+        onClose={() => {
+          setIsOpen(false);
+          if (triggerRef.current?.getClientRects().length) {
+            triggerRef.current.focus();
+          }
+        }}
+      >
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#ffb890]">
+            Explore EmberChamber
+          </p>
           <button
             type="button"
-            className="absolute inset-0 bg-black/55 backdrop-blur-sm"
             aria-label="Close navigation menu"
-            onClick={() => setIsOpen(false)}
-          />
-          <div
-            id="site-mobile-nav"
-            className="absolute inset-x-4 top-4 overscroll-contain rounded-[2rem] border border-white/10 bg-[rgba(13,8,9,0.94)] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.42)]"
+            className="btn-ghost p-3"
+            onClick={closeNavigation}
           >
-            <div className="flex items-center justify-between gap-4">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#ffb890]">
-                Navigate
-              </p>
-              <button
-                type="button"
-                aria-label="Close navigation menu"
-                className="rounded-full border border-white/10 bg-white/[0.04] p-2 text-[#ecd9ce] transition-[border-color,background-color,color] hover:border-white/20 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-                onClick={() => setIsOpen(false)}
-              >
-                <X className="h-4 w-4" aria-hidden="true" />
-              </button>
-            </div>
-
-            <nav className="mt-5 space-y-2" aria-label="Primary">
-              {primaryNav.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="flex items-center justify-between rounded-[1.25rem] border border-white/8 bg-white/[0.04] px-4 py-3 text-sm font-medium text-[#fff1e8] transition-[border-color,background-color,transform] hover:border-brand-500/30 hover:bg-white/[0.07] hover:translate-y-[-1px]"
-                >
-                  <span>{item.label}</span>
-                  <span className="text-[#b9968f]">/</span>
-                </Link>
-              ))}
-            </nav>
-
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              {ctaLinks.map((item, index) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={index === 0 ? "btn-ghost" : "btn-primary"}
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </div>
-          </div>
+            <X className="h-5 w-5" aria-hidden="true" />
+          </button>
         </div>
-      ) : null}
+        <nav className="mt-5 space-y-2" aria-label="Mobile navigation">
+          {primaryNav.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={closeNavigation}
+              className="block rounded-xl border border-white/10 bg-white/[0.035] px-4 py-3 text-sm font-medium transition-colors hover:bg-white/[0.08]"
+            >
+              {item.label}
+            </Link>
+          ))}
+          <Link
+            href="/support"
+            onClick={closeNavigation}
+            className="block rounded-xl border border-white/10 bg-white/[0.035] px-4 py-3 text-sm font-medium transition-colors hover:bg-white/[0.08]"
+          >
+            Support
+          </Link>
+        </nav>
+        <div className="mt-5 grid gap-3">
+          {ctaLinks.map((item, index) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={closeNavigation}
+              className={index === 0 ? "btn-ghost" : "btn-primary"}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </div>
+      </dialog>
     </>
   );
 }

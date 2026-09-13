@@ -21,47 +21,49 @@ export default function RelayBoundaryDoc() {
         <h2>What is a relay?</h2>
         <p>
           Unlike a pure peer-to-peer system that requires both devices to be
-          online simultaneously to exchange packets, EmberChamber routes messages
-          through a hosted edge relay. The relay acts as a mailbox, holding
-          incoming messages until your device connects and pulls them down.
+          online simultaneously to exchange packets, EmberChamber routes
+          messages through a hosted edge relay. The relay acts as a mailbox,
+          holding incoming messages until your device connects and pulls them
+          down.
         </p>
       </section>
 
       <section>
         <h2>Why is the relay necessary?</h2>
         <p>
-          Mobile operating systems put background apps to sleep to save battery, making
-          pure peer-to-peer synchronization highly unreliable on mobile. The
-          hosted relay ensures that your direct messages, group updates, and
-          invites are safely queued and delivered as soon as you open the app or receive
-          a push notification ticket.
+          Mobile operating systems put background apps to sleep to save battery,
+          making pure peer-to-peer synchronization highly unreliable on mobile.
+          The hosted relay ensures that your direct messages, group updates, and
+          invites are safely queued and delivered as soon as you open the app or
+          receive a push notification ticket.
         </p>
       </section>
 
       <section>
         <h2>What the relay CAN see</h2>
         <p>
-          We do not claim &quot;zero metadata&quot; because that is operationally impossible
-          for a routed delivery network. The relay coordinates, and therefore observes,
-          the following:
+          We do not claim &quot;zero metadata&quot; because that is
+          operationally impossible for a routed delivery network. The relay
+          coordinates, and therefore observes, the following:
         </p>
         <ul>
           <li>
-            <strong>Account Identifiers:</strong> Your account registration address,
-            associated public keys, and device names.
+            <strong>Account Identifiers:</strong> Your account registration
+            address, associated public keys, and device names.
           </li>
           <li>
-            <strong>Social Graph Details:</strong> Which spaces or rooms you belong
-            to, who invited you, and who you invite.
+            <strong>Social Graph Details:</strong> Which spaces or rooms you
+            belong to, who invited you, and who you invite.
           </li>
           <li>
-            <strong>Delivery Metadata:</strong> The time ciphertext envelopes are queued
-            and acknowledged, and the IP address your device uses to connect to the
-            endpoints.
+            <strong>Delivery Metadata:</strong> The time ciphertext envelopes
+            are queued and acknowledged, and the IP address your device uses to
+            connect to the endpoints.
           </li>
           <li>
-            <strong>Temporary Ciphertext:</strong> The encrypted content payloads,
-            which remain stored in delivery queues until they are pulled.
+            <strong>Temporary Ciphertext:</strong> The encrypted content
+            payloads, which remain stored in delivery queues until they are
+            pulled.
           </li>
         </ul>
       </section>
@@ -69,8 +71,8 @@ export default function RelayBoundaryDoc() {
       <section>
         <h2>What the relay CANNOT read</h2>
         <p>
-          Because message payloads are encrypted end-to-end on the clients before
-          reaching the network, the relay is technically unable to read:
+          Because message payloads are encrypted end-to-end on the clients
+          before reaching the network, the relay is technically unable to read:
         </p>
         <ul>
           <li>The plaintext content of your direct messages.</li>
@@ -87,18 +89,20 @@ export default function RelayBoundaryDoc() {
         </p>
         <ul>
           <li>
-            <strong>Attachments Caveat:</strong> While web companion attachments
-            are encrypted client-side before upload to cloud storage, native
-            attachment flows (on mobile and desktop) currently upload raw bytes
-            through temporary tickets. We are actively migrating native attachments
-            to the browser E2EE standard.
+            <strong>Attachments Caveat:</strong> Current web, mobile, and
+            desktop source encrypts conversation attachment bytes before upload.
+            In device-encrypted conversations, file keys stay inside encrypted
+            message payloads. Relay-hosted rooms and legacy groups give the
+            relay recoverable key material, so those flows are not end-to-end
+            protected from the relay. Production and published-installer parity
+            require separate verification.
           </li>
           <li>
-            <strong>Legacy Compatibility Paths:</strong> Older groups and rooms may
-            still utilize legacy compatibility schemas where history is stored on
-            the relay to facilitate synchronization. Make sure your active circles
-            transition to our new device-encrypted groups to bypass hosted history
-            reads.
+            <strong>Legacy Compatibility Paths:</strong> Older groups and rooms
+            may still utilize legacy compatibility schemas where history is
+            stored on the relay to facilitate synchronization. Make sure your
+            active circles transition to our new device-encrypted groups to
+            bypass hosted history reads.
           </li>
         </ul>
         <p>

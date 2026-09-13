@@ -15,49 +15,56 @@ export const githubSourceZipUrl = `${githubRepoUrl}/archive/refs/heads/main.zip`
 export const githubIssuesUrl = `${githubRepoUrl}/issues`;
 export const supportEmail = "support@emberchamber.com";
 
+// These labels describe scope, not an assertion that every implementation has
+// been deployed and verified on every client or in every published installer.
 export const betaScopeItems = [
   {
     feature: "E2EE direct messages",
     status: "live" as const,
-    detail: "Encrypted mailbox delivery across active beta surfaces",
+    detail:
+      "Encrypted mailbox delivery across the active beta clients, with device-local history.",
   },
   {
     feature: "Small group messages",
     status: "live" as const,
     detail:
-      "New groups are created as device-encrypted; legacy relay-hosted compatibility history still exists for older group and room flows",
+      "New groups use device-encrypted history. Legacy group history and relay-hosted communities and rooms have different boundaries.",
   },
   {
-    feature: "Encrypted attachments",
-    status: "live" as const,
+    feature: "Attachment encryption",
+    status: "implemented" as const,
     detail:
-      "Browser encrypted-conversation uploads use client-side ciphertext; native attachment rollout is still uneven",
+      "Current client source encrypts conversation attachments before upload. End-to-end key custody applies to device-encrypted conversations, not relay-hosted rooms or legacy groups; deployment and installer parity need separate verification.",
   },
   {
     feature: "Invite-only onboarding",
     status: "live" as const,
-    detail: "Email magic-link, no public registration",
+    detail:
+      "Invitation-based access with email bootstrap and self-attested 18+ eligibility; no public registration.",
   },
   {
     feature: "Device-local search",
     status: "live" as const,
-    detail: "Index never sent to relay",
+    detail:
+      "Private-message content is searched on the device, not indexed by the relay.",
   },
   {
     feature: "Account recovery",
-    status: "live" as const,
-    detail: "Private email bootstrap with limited total-device-loss recovery",
+    status: "partial" as const,
+    detail:
+      "Restoring account access does not guarantee recovery of lost device-local keys or message history.",
   },
   {
     feature: "Passkey sign-in",
-    status: "live" as const,
+    status: "implemented" as const,
     detail:
-      "Implemented for the relay and web workspace; native-client UX remains future work",
+      "Present in web and relay source. Native-client UX and authenticator validation remain incomplete; source availability is not a production-rollout guarantee.",
   },
   {
     feature: "iPhone client",
     status: "planned" as const,
-    detail: "After first-wave targets are stable",
+    detail:
+      "Planned after the initial native clients are stable; not listed as a released beta client.",
   },
 ];
 
@@ -88,22 +95,22 @@ export const privacyBoundaryItems: PrivacyBoundaryItem[] = [
       "Legacy relay-hosted group and room history still exists in compatibility paths and older data.",
   },
   {
-    title: "Browser attachments",
+    title: "Device-encrypted conversation attachments",
     staysLocal:
-      "Browser encrypted-conversation flows can encrypt attachment bytes and keep file keys with the client before upload.",
+      "Current web, mobile, and desktop source encrypts attachment bytes before upload and carries file keys inside encrypted conversation payloads.",
     relayRole:
-      "R2 stores attachment blobs and signed access metadata so downloads can be delivered to authorized members.",
+      "R2 stores ciphertext. The relay currently also receives attachment metadata, including exact plaintext length and a deterministic plaintext hash.",
     currentNote:
-      "This browser DM path is ahead of the native attachment path today.",
+      "Current first-party source implements this boundary; production and published-installer parity require separate verification.",
   },
   {
-    title: "Native attachments",
+    title: "Relay-hosted conversation attachments",
     staysLocal:
-      "File selection, local cache, and local trust state remain with the client.",
+      "Current clients encrypt bytes before upload, but file keys do not remain exclusively on participant devices.",
     relayRole:
-      "Current mobile and desktop flows can still upload raw bytes to R2 through signed upload and download tickets.",
+      "Relay-hosted rooms and legacy groups give the relay recoverable file-key material so their hosted history can serve attachments.",
     currentNote:
-      "Native attachment encryption is still being rolled out and does not yet match browser DM attachment protection.",
+      "This is encrypted storage, not end-to-end protection from the relay.",
   },
   {
     title: "Search",
@@ -137,7 +144,7 @@ export const surfaceCapabilities = [
   {
     name: "Web",
     badge: "browser",
-    recommended: "Fastest start — no install",
+    recommended: "Companion — no install",
     capabilities: [
       "Onboarding & registration",
       "Direct messages",
@@ -154,46 +161,50 @@ export const surfaceCapabilities = [
     badge: ".apk",
     recommended: "Primary daily use",
     capabilities: [
-      "Everything in web",
+      "Direct and group messaging",
       "Local SQLite cache",
       "Native device integration",
       "Installable daily client",
     ],
     caveat:
-      "Push wiring is complete on mobile and relay. Production delivery requires EMBERCHAMBER_FCM_SERVICE_ACCOUNT_JSON and EMBERCHAMBER_PUSH_TOKEN_SECRET to be configured as relay secrets — see the operator playbook.",
+      "Push delivery depends on the deployed relay configuration and client setup. Communities, rooms, and passkey controls do not yet have full web parity.",
   },
   {
     name: "Windows",
     badge: ".exe / .msi",
     recommended: "Desktop daily use",
     capabilities: [
-      "Everything in web",
+      "Direct and group messaging",
       "Longer sessions",
       "Native desktop shell",
     ],
-    caveat: "No desktop push channel yet",
+    caveat:
+      "No desktop push channel yet; native feature parity remains in progress.",
   },
   {
     name: "Ubuntu",
     badge: ".deb / AppImage",
     recommended: "Linux / operators",
     capabilities: [
-      "Everything in web",
+      "Direct and group messaging",
       "Longer sessions",
       ".deb and AppImage packaging",
     ],
-    caveat: "No desktop push channel yet",
+    caveat:
+      "No desktop push channel yet; native feature parity remains in progress.",
   },
 ];
 
 export const primaryNav = [
-  { href: "/start", label: "Start Here" },
+  { href: "/tour", label: "Product Tour" },
+  { href: "/engineering", label: "Engineering" },
   { href: "/download", label: "Download" },
   { href: "/trust-and-safety", label: "Trust & Safety" },
-  { href: "/support", label: "Support" },
 ];
 
 export const footerLinks = [
+  { href: "/tour", label: "Product Tour" },
+  { href: "/engineering", label: "Engineering" },
   { href: "/start", label: "Start Here" },
   { href: "/download", label: "Download" },
   { href: "/trust-and-safety", label: "Trust & Safety" },
@@ -250,15 +261,15 @@ export const launchPlatforms = [
 export const trustFacts = [
   {
     title: "What the relay can see",
-    body: "Account, device, session, invite, and membership metadata, plus ciphertext envelopes until ack and attachment blobs needed for delivery. The relay is narrow, but it is not empty.",
+    body: "Account, device, session, invite, and membership metadata, plus ciphertext envelopes until acknowledgement and attachment blobs needed for delivery. Encrypted-attachment metadata currently includes exact plaintext length and a deterministic plaintext hash. The relay is narrow, but it is not empty.",
   },
   {
     title: "What the relay cannot read",
-    body: "Direct-message content and new device-encrypted group history are not exposed through relay-hosted history endpoints. That does not make every legacy path or attachment flow equally mature yet.",
+    body: "Direct-message content and new device-encrypted group history are not exposed through relay-hosted history endpoints. Device-encrypted conversation file keys remain inside encrypted message payloads; relay-hosted rooms and legacy groups use a different boundary.",
   },
   {
     title: "What stays on your device",
-    body: "Private keys, DM history, local search index, and contact trust state stay on your device. Browser and native attachment protection differ today, and older group and room paths may still use relay-hosted compatibility history.",
+    body: "Private keys, DM history, local search index, contact trust state, and file keys for device-encrypted conversations stay on participant devices. Relay-hosted rooms and legacy groups can give the relay recoverable attachment-key material.",
   },
 ];
 
@@ -280,7 +291,7 @@ export const faqItems = [
     summary:
       "New groups use device-encrypted history; legacy paths are still called out.",
     answer:
-      "New groups in the active beta runtime are created with device-encrypted history. Legacy relay-hosted group and room history still exists in compatibility paths, and attachment encryption is not yet uniform across every client.",
+      "New groups in the active beta runtime are created with device-encrypted history. Relay-hosted communities, rooms, and legacy groups use different history and attachment-key boundaries. Current client source encrypts conversation attachment bytes before upload, but production and published-installer parity require separate verification.",
   },
   {
     question: "Who is this beta for?",

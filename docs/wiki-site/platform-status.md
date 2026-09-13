@@ -29,7 +29,7 @@ This page is the single authoritative table for what is live, in-progress, or pl
 | Session listing and revocation            | ✅        | ✅                                    | ✅                            | ✅                            |
 | Account recovery (email bootstrap)        | ✅        | ✅                                    | ✅                            | ✅                            |
 | Full trusted-device recovery              | 🔜        | 🔜                                    | 🔜                            | 🔜                            |
-| Attachments (client-side encrypted)       | ✅        | ⚠️ migration in progress              | ⚠️ migration in progress      | ⚠️ migration in progress      |
+| Conversation attachment byte encryption  | ✅ source | ✅ source                              | ✅ source                      | ✅ source                      |
 | Local SQLite history cache                | ❌        | ✅                                    | ✅                            | ✅                            |
 | Push notifications                        | ❌        | ⚠️ code complete, needs relay secrets | ❌                            | ❌                            |
 | Disclosure-based report flow              | ✅        | ✅                                    | ✅                            | ✅                            |
@@ -63,7 +63,7 @@ See the [Operator Playbook](./operator-playbook.md) for the exact `wrangler secr
 
 ## Attachment Encryption Note
 
-Browser DM flows encrypt attachment bytes client-side before upload. Native clients (Android, Windows, Ubuntu) currently upload some attachment bytes without per-file client-side encryption — this is an active migration track. Do not describe the native attachment path as fully E2EE until it converges with the browser path.
+Current web, mobile, and desktop source encrypts conversation attachment bytes before upload. That does not make every flow end-to-end protected from the relay: device-encrypted conversations keep file keys inside encrypted message payloads, while relay-hosted rooms and legacy groups give the relay recoverable key material. Encrypted-upload metadata also includes exact plaintext length and a deterministic plaintext hash today. Production and published-installer parity require separate verification.
 
 ## Recovery Note
 

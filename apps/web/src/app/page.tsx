@@ -1,408 +1,246 @@
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
-  BadgeCheck,
-  Cloud,
-  Download,
   LockKeyhole,
   MonitorSmartphone,
-  Sparkles,
   Users,
 } from "lucide-react";
-import { HomeScreenshotProof } from "@/components/home-screenshot-proof";
-import { MarketingShell } from "@/components/marketing-shell";
-import { ProductPreview } from "@/components/product-mockup";
-import { StartHereSummary } from "@/components/start-here-guide";
-import {
-  betaScopeItems,
-  faqItems,
-  launchPlatforms,
-  trustFacts,
-} from "@/lib/site";
-import { createMetadata } from "@/lib/metadata";
 import { JsonLd } from "@/components/json-ld";
+import { MarketingShell } from "@/components/marketing-shell";
+import { createMetadata } from "@/lib/metadata";
+import { betaScopeItems, faqItems, githubRepoUrl, siteUrl } from "@/lib/site";
 
-export const metadata = createMetadata({
-  path: "/",
-  description:
-    "Invite-only encrypted messaging for private DMs and trusted small groups, with local-first history, device-local search, and clear relay boundaries.",
-});
+export const metadata = createMetadata();
 
-const homepageSchema = {
-  "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  name: "EmberChamber",
-  applicationCategory: "CommunicationApplication",
-  operatingSystem: "Web, Android, Windows, Ubuntu",
-  url: "https://emberchamber.com",
-  description:
-    "Invite-only encrypted messaging for trusted circles with local-first history and clear relay boundaries.",
-  sameAs: ["https://github.com/jhwodchuck/EmberChamber"],
-};
-
-const faqSchema = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: faqItems.map((item) => ({
-    "@type": "Question",
-    name: item.question,
-    acceptedAnswer: {
-      "@type": "Answer",
-      text: item.answer,
-    },
-  })),
-};
-
-const heroSignals = [
-  "Invite-only access",
-  "No public discovery surface",
-  "Controlled beta boundary",
-];
-
-const liveTodayCards = [
+const principles = [
   {
-    title: "Direct messages are live",
-    body: "Encrypted mailbox delivery works across the active beta surfaces, with DM history staying local to the device.",
-    icon: LockKeyhole,
-  },
-  {
-    title: "New groups start device-encrypted",
-    body: "Older relay-hosted compatibility history still exists, but new groups no longer depend on relay-hosted history reads.",
     icon: Users,
+    title: "A circle, not a public feed",
+    body: "Invite-only access for direct conversations and small groups. No public people directory or phone-number discovery.",
   },
   {
-    title: "Invite-only onboarding is live",
-    body: "Magic-link access, invite confirmation, and device naming now happen in a short staged flow.",
-    icon: Sparkles,
+    icon: LockKeyhole,
+    title: "History close to you",
+    body: "Device-local message history and private-content search, with a hosted relay for delivery rather than a universal message archive.",
+  },
+  {
+    icon: MonitorSmartphone,
+    title: "Native clients. Web companion.",
+    body: "Android, Windows and Ubuntu clients for everyday use, with a browser companion for onboarding and messaging.",
   },
 ];
 
-const launchAccent = {
-  android: "from-brand-500/18 via-brand-500/5 to-transparent",
-  windows: "from-sky-300/14 via-sky-200/4 to-transparent",
-  ubuntu: "from-amber-300/14 via-amber-200/4 to-transparent",
-} as const;
-
-const launchSignals = {
-  android: [
-    "Installable daily client",
-    "Local SQLite cache",
-    "Native device integration",
-  ],
-  windows: ["Long sessions", "Native desktop shell", "Full beta surface"],
-  ubuntu: ["Linux packaging", "Operator friendly", "Desktop-first flow"],
+const statusLabels = {
+  live: "Available in beta",
+  partial: "Partial support",
+  implemented: "In source",
+  planned: "Planned",
 } as const;
 
 export default function HomePage() {
   return (
     <MarketingShell>
-      <JsonLd json={homepageSchema} />
-      <JsonLd json={faqSchema} />
-      <section className="relative px-6 pb-16 pt-16 sm:pb-24 sm:pt-24">
-        <div className="mx-auto max-w-6xl">
-          <div className="grid gap-14 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center">
-            <div>
-              <div className="eyebrow">
-                Private Messaging For Trusted Circles
-              </div>
-              <h1 className="mt-6 max-w-4xl text-balance font-display text-6xl font-semibold tracking-tight text-[#fff1e8] sm:text-7xl lg:text-[5.4rem]">
-                Invite-only encrypted messaging for trusted circles.
-              </h1>
-              <p className="mt-6 max-w-3xl text-lg leading-8 text-[#cdb1a5] sm:text-xl">
-                EmberChamber is a private messaging app for encrypted direct messages and small group chats. It uses invite-only onboarding, keeps private history and search device-local, and documents what the relay can and cannot see.
-              </p>
-
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link href="/start" className="btn-primary px-6 py-3 text-base">
-                  Start Here
-                </Link>
-                <Link
-                  href="/register"
-                  className="btn-ghost px-6 py-3 text-base"
-                >
-                  Request Access
-                </Link>
-              </div>
-
-              <div className="mt-3 flex flex-wrap gap-4 text-sm text-[var(--text-secondary)]">
-                <Link
-                  href="/download"
-                  className="underline-offset-4 hover:underline"
-                >
-                  View launch targets
-                </Link>
-                <Link
-                  href="/trust-and-safety"
-                  className="underline-offset-4 hover:underline"
-                >
-                  Trust & safety
-                </Link>
-              </div>
-
-              <div className="mt-5 flex flex-wrap gap-3">
-                {heroSignals.map((item) => (
-                  <div key={item} className="info-chip">
-                    <BadgeCheck
-                      aria-hidden="true"
-                      className="h-3.5 w-3.5 text-brand-400"
-                    />
-                    {item}
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-8 grid gap-3 sm:grid-cols-3">
-                {liveTodayCards.map((stat) => (
-                  <div
-                    key={stat.title}
-                    className="rounded-[1.35rem] border border-white/10 bg-white/[0.04] p-4"
-                  >
-                    <div className="flex items-center gap-2 text-brand-400">
-                      <stat.icon aria-hidden="true" className="h-4 w-4" />
-                      <span className="section-kicker">Live Today</span>
-                    </div>
-                    <h2 className="mt-3 text-base font-semibold text-[var(--text-primary)]">
-                      {stat.title}
-                    </h2>
-                    <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                      {stat.body}
-                    </p>
-                  </div>
-                ))}
-              </div>
+      <JsonLd
+        json={{
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          name: "EmberChamber",
+          applicationCategory: "CommunicationApplication",
+          operatingSystem: "Android, Windows, Ubuntu, Web",
+          url: siteUrl,
+          sameAs: githubRepoUrl,
+          description:
+            "Invite-only messaging with device-local history and a hosted delivery relay. Available as beta software with documented client and privacy limitations.",
+        }}
+      />
+      <JsonLd
+        json={{
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: faqItems.map((item) => ({
+            "@type": "Question",
+            name: item.question,
+            acceptedAnswer: { "@type": "Answer", text: item.answer },
+          })),
+        }}
+      />
+      <section className="px-6 pb-16 pt-14 sm:pb-20 sm:pt-20">
+        <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[0.9fr_1.1fr]">
+          <div>
+            <p className="section-kicker">
+              Local-first messaging · Invite-only beta
+            </p>
+            <h1 className="mt-5 max-w-[14ch] text-balance font-display text-5xl font-semibold leading-[1.06] text-[#fff1e8] sm:text-6xl xl:text-7xl">
+              Invite-only encrypted messaging for trusted circles.
+            </h1>
+            <p className="mt-6 max-w-xl text-lg leading-8 text-[#d6bfb4]">
+              A private place for direct conversations and small groups. Explore
+              the product, see how it is built, or join with an invitation.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link href="/tour" className="btn-primary">
+                Explore the product{" "}
+                <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+              </Link>
+              <Link href="/engineering" className="btn-ghost">
+                Engineering &amp; source
+              </Link>
             </div>
-
-            <div className="relative rounded-[2rem] border border-white/10 bg-white/[0.02] p-4 shadow-[0_30px_90px_rgba(0,0,0,0.4)]">
-              <ProductPreview />
-            </div>
+            <p className="mt-4 text-sm leading-6 text-[#cbb0a3]">
+              No account needed for the tour.{" "}
+              <Link
+                href="/start"
+                className="font-medium text-[#ffb890] underline underline-offset-4"
+              >
+                Already invited? Start here.
+              </Link>
+            </p>
           </div>
-        </div>
-      </section>
-
-      <HomeScreenshotProof />
-
-      <section className="mx-auto max-w-6xl px-6 py-10 sm:py-14">
-        <div className="section-spotlight relative overflow-hidden rounded-[2.4rem] px-6 py-8 sm:px-8 sm:py-10">
-          <div
-            className="pointer-events-none absolute right-[-6%] top-[-8%] h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(255,170,110,0.16),transparent_65%)] blur-3xl"
-            aria-hidden="true"
-          />
-          <div className="relative grid gap-8 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] lg:items-start">
-            <div>
-              <div className="section-kicker">Relay Boundary</div>
-              <h2 className="mt-4 text-balance font-display text-4xl font-semibold text-[var(--text-primary)] sm:text-5xl">
-                A relay that delivers without pretending to disappear.
-              </h2>
-              <p className="mt-4 section-copy">
-                EmberChamber uses a hosted edge relay for metadata, mailbox
-                delivery, and attachment storage. Private keys, DM history, and
-                private-content search stay with the people in the circle.
-              </p>
-
-              <div className="mt-6 rounded-[1.7rem] border border-white/8 bg-white/[0.04] p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 text-brand-400">
-                    <Cloud aria-hidden="true" className="h-5 w-5" />
-                  </div>
-                  <ArrowRight
-                    aria-hidden="true"
-                    className="h-4 w-4 text-[#b9968f]"
-                  />
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 text-brand-400">
-                    <MonitorSmartphone aria-hidden="true" className="h-5 w-5" />
-                  </div>
-                </div>
-                <div className="mt-4 grid gap-3 text-sm leading-6 text-[var(--text-secondary)] sm:grid-cols-3">
-                  <div>Ciphertext envelopes move through the relay.</div>
-                  <div>Private keys stay on the devices in the circle.</div>
-                  <div>
-                    Legacy hosted history still exists in a few compatibility
-                    paths while migration finishes.
-                  </div>
-                </div>
-              </div>
+          <figure className="min-w-0 overflow-hidden rounded-3xl border border-white/15 bg-[#130e0d] shadow-[0_24px_70px_rgba(0,0,0,0.3)]">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 px-5 py-4 text-sm">
+              <span className="font-medium text-[#fff1e8]">
+                Inside the web companion
+              </span>
+              <span className="text-[#cbb0a3]">Captured beta interface</span>
             </div>
-
-            <div className="grid gap-4 md:grid-cols-3">
-              {trustFacts.map((fact) => (
-                <div key={fact.title} className="card h-full p-5">
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 text-brand-400">
-                    <LockKeyhole aria-hidden="true" className="h-5 w-5" />
-                  </div>
-                  <h3 className="mt-4 text-lg font-semibold text-[var(--text-primary)]">
-                    {fact.title}
-                  </h3>
-                  <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">
-                    {fact.body}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-6 py-10 sm:py-14">
-        <div className="mb-8 max-w-2xl">
-          <div className="section-kicker">First-Wave Surfaces</div>
-          <h2 className="mt-4 text-balance font-display text-4xl font-semibold text-[var(--text-primary)] sm:text-5xl">
-            Choose the surface that fits the session.
-          </h2>
-          <p className="mt-4 section-copy">
-            Android, Windows, and Ubuntu are the first posted native clients.
-            The browser covers onboarding, messaging, search, and settings when
-            you need immediate access.
-          </p>
-        </div>
-
-        <div className="grid gap-5 lg:grid-cols-3">
-          {launchPlatforms.map((platform) => (
-            <div
-              key={platform.name}
-              className="card relative h-full overflow-hidden p-6"
+            <Link
+              href="/tour#messages"
+              className="block"
+              aria-label="Explore the messaging screen in the product tour"
             >
-              <div
-                className={`absolute inset-x-0 top-0 h-24 bg-gradient-to-r ${
-                  launchAccent[platform.id as keyof typeof launchAccent]
-                } opacity-90`}
+              <Image
+                src="/screenshots/home/04-first-message-sent.png"
+                alt="EmberChamber beta web interface showing a conversation after a message has been sent"
+                width={1280}
+                height={1068}
+                sizes="(min-width: 1024px) 640px, 100vw"
+                priority
+                className="h-auto w-full"
               />
-              <div className="relative flex h-full flex-col">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="section-kicker">{platform.artifact}</p>
-                    <h3 className="mt-3 text-2xl font-semibold text-[var(--text-primary)]">
-                      {platform.name}
-                    </h3>
-                  </div>
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 text-brand-400">
-                    <MonitorSmartphone aria-hidden="true" className="h-5 w-5" />
-                  </div>
-                </div>
-                <p className="mt-3 text-sm font-medium text-brand-300">
-                  {platform.status}
-                </p>
-                <p className="mt-4 text-sm leading-7 text-[var(--text-secondary)]">
-                  {platform.detail}
-                </p>
-
-                <div className="mt-5 flex flex-wrap gap-2">
-                  {launchSignals[platform.id as keyof typeof launchSignals].map(
-                    (item) => (
-                      <span key={item} className="metric-pill">
-                        {item}
-                      </span>
-                    ),
-                  )}
-                </div>
-
-                <div className="mt-auto pt-6">
-                  <Link href="/download" className="btn-ghost">
-                    See Posted Builds
-                    <Download aria-hidden="true" className="h-4 w-4" />
-                  </Link>
-                </div>
-              </div>
-            </div>
+            </Link>
+            <figcaption className="border-t border-white/10 px-5 py-4 text-sm leading-6 text-[#cbb0a3]">
+              A real product screen, not an interactive demo. Follow the{" "}
+              <Link
+                href="/tour"
+                className="text-[#ffb890] underline underline-offset-4"
+              >
+                invite-to-message walkthrough
+              </Link>
+              .
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+      <section aria-label="Product principles" className="px-6">
+        <div className="mx-auto grid max-w-6xl gap-8 border-y border-white/10 py-10 md:grid-cols-3">
+          {principles.map(({ icon: Icon, title, body }) => (
+            <article key={title}>
+              <Icon className="h-6 w-6 text-[#ffb890]" aria-hidden="true" />
+              <h2 className="mt-4 text-xl font-semibold text-[#fff1e8]">
+                {title}
+              </h2>
+              <p className="mt-3 text-sm leading-7 text-[#d0b8ab]">{body}</p>
+            </article>
           ))}
         </div>
       </section>
-
-      <section className="mx-auto max-w-6xl px-6 py-10 sm:py-14">
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]">
-          <div className="section-spotlight rounded-[2.2rem] px-6 py-8 sm:px-8">
-            <div className="eyebrow">Beta Scope</div>
-            <h2 className="mt-5 text-balance font-display text-4xl font-semibold text-[var(--text-primary)] sm:text-5xl">
-              The beta is intentionally narrow, and that is part of the value.
+      <section className="px-6 py-16 sm:py-20">
+        <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1fr_1.15fr] lg:items-center">
+          <div>
+            <p className="section-kicker">Built in the open</p>
+            <h2 className="mt-4 text-balance font-display text-4xl font-semibold text-[#fff1e8] sm:text-5xl">
+              Look beyond the interface.
             </h2>
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-              The beta focuses on private conversations, trusted circles, and
-              clear security boundaries. New capabilities will arrive as they
-              become ready for everyday use.
+            <p className="mt-5 max-w-lg leading-8 text-[#d0b8ab]">
+              Explore the delivery architecture, local-state decisions, shared
+              protocols and release workflow. The engineering case study links
+              directly to the code and documented tradeoffs.
             </p>
-
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              {betaScopeItems.map((item) => (
-                <div
-                  key={item.feature}
-                  className="rounded-[1.4rem] border border-white/8 bg-white/[0.04] p-4"
-                >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`h-2.5 w-2.5 rounded-full ${
-                        item.status === "live"
-                          ? "bg-green-400 shadow-[0_0_14px_rgba(74,222,128,0.5)]"
-                          : "bg-[#5a4037]"
-                      }`}
-                    />
-                    <span
-                      className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${
-                        item.status === "live"
-                          ? "text-green-300"
-                          : "text-[#c7a89a]"
-                      }`}
-                    >
-                      {item.status === "live" ? "Live" : "Planned"}
-                    </span>
-                  </div>
-                  <p className="mt-3 text-sm font-semibold text-[var(--text-primary)]">
-                    {item.feature}
-                  </p>
-                  <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
-                    {item.detail}
-                  </p>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-6">
-              <Link href="/trust-and-safety" className="btn-ghost">
-                Read The Trust Model
-                <ArrowRight aria-hidden="true" className="h-4 w-4" />
+            <div className="mt-6 flex flex-wrap gap-4">
+              <Link href="/engineering" className="btn-primary">
+                Read the engineering case study
               </Link>
+              <a href={githubRepoUrl} className="btn-ghost">
+                View GitHub
+              </a>
             </div>
           </div>
-
-          <StartHereSummary />
+          <dl className="divide-y divide-white/10 rounded-3xl border border-white/10 bg-white/[0.025] px-6">
+            {[
+              ["Clients", "Next.js · React Native / Expo · Tauri"],
+              ["Delivery", "Cloudflare Workers · Durable Objects · WebSockets"],
+              ["Storage", "Device-local state · D1 metadata · R2 attachments"],
+              ["Contracts", "TypeScript and Rust protocol definitions"],
+            ].map(([label, detail]) => (
+              <div key={label} className="py-5">
+                <dt className="text-sm font-medium text-[#ffb890]">{label}</dt>
+                <dd className="mt-2 leading-7 text-[#fff1e8]">{detail}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
       </section>
-
-      <section className="mx-auto max-w-6xl px-6 py-10 sm:py-14">
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-          <div className="max-w-xl">
-            <div className="section-kicker">FAQ</div>
-            <h2 className="mt-4 text-balance font-display text-4xl font-semibold text-[var(--text-primary)] sm:text-5xl">
-              Honest answers before the beta opens wider.
-            </h2>
-            <p className="mt-4 section-copy">
-              Clear answers matter when you choose where to have private
-              conversations. See what EmberChamber protects today, where the
-              relay remains involved, and what is still in progress.
-            </p>
+      <section id="beta-status" className="px-6 pb-16 sm:pb-20">
+        <div className="mx-auto max-w-6xl">
+          <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+            <div className="max-w-2xl">
+              <p className="section-kicker">Current scope</p>
+              <h2 className="mt-4 font-display text-4xl font-semibold text-[#fff1e8] sm:text-5xl">
+                Know what the beta supports.
+              </h2>
+              <p className="mt-4 leading-7 text-[#d0b8ab]">
+                A feature in source is not the same as a verified production
+                rollout. Client support, recovery and privacy boundaries matter.
+              </p>
+            </div>
+            <Link href="/download" className="btn-ghost shrink-0">
+              View available downloads
+            </Link>
           </div>
-
-          <div className="space-y-3">
-            {faqItems.map((item) => (
-              <details
-                key={item.question}
-                className="group rounded-[1.35rem] border border-white/8 bg-white/[0.035] px-5 py-4"
+          <dl className="mt-8 divide-y divide-white/10 rounded-3xl border border-white/10 bg-white/[0.02] px-5 sm:px-7">
+            {betaScopeItems.map((item) => (
+              <div
+                key={item.feature}
+                className="grid gap-3 py-5 sm:grid-cols-[13rem_1fr]"
               >
-                <summary className="flex cursor-pointer list-none items-start gap-3">
-                  <div className="mt-0.5 rounded-xl border border-white/10 bg-white/[0.05] p-2 text-brand-400">
-                    <Sparkles aria-hidden="true" className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-base font-semibold text-[var(--text-primary)]">
-                      {item.question}
-                    </h3>
-                    <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
-                      {item.summary}
-                    </p>
-                  </div>
-                  <span className="mt-1 text-lg leading-none text-[#b9968f] transition-transform group-open:rotate-45">
-                    +
+                <dt className="font-medium text-[#fff1e8]">
+                  {item.feature}
+                  <span className="mt-2 block w-fit rounded-full border border-white/15 px-2.5 py-1 text-xs font-normal text-[#edc7af]">
+                    {statusLabels[item.status]}
                   </span>
+                </dt>
+                <dd className="text-sm leading-7 text-[#d0b8ab]">
+                  {item.detail}
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <p className="mt-5 max-w-4xl text-sm leading-7 text-[#cbb0a3]">
+            Direct messages and new encrypted groups are not the same as
+            relay-hosted communities, rooms or legacy group history. Read the{" "}
+            <Link
+              href="/trust-and-safety"
+              className="text-[#ffb890] underline underline-offset-4"
+            >
+              privacy boundaries
+            </Link>{" "}
+            before choosing where to share sensitive information.
+          </p>
+        </div>
+      </section>
+      <section className="px-6 pb-8">
+        <div className="mx-auto max-w-6xl border-t border-white/10 pt-12">
+          <h2 className="font-display text-4xl font-semibold text-[#fff1e8]">
+            A few useful answers.
+          </h2>
+          <div className="mt-6 divide-y divide-white/10">
+            {faqItems.map((item) => (
+              <details key={item.question} className="group py-5">
+                <summary className="cursor-pointer text-lg font-medium text-[#fff1e8]">
+                  {item.question}
                 </summary>
-                <p className="mt-4 border-t border-white/8 pt-4 text-sm leading-7 text-[var(--text-secondary)]">
+                <p className="mt-4 max-w-3xl text-sm leading-7 text-[#d0b8ab]">
                   {item.answer}
                 </p>
               </details>

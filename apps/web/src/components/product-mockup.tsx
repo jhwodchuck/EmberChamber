@@ -203,7 +203,7 @@ export function ProductPreview() {
                       <div className="flex items-center gap-2">
                         <Paperclip className="h-3.5 w-3.5 text-brand-400" />
                         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#ffd0b6]">
-                          Browser attachment
+                          Conversation attachment
                         </p>
                       </div>
                       <div className="mt-3 flex items-center justify-between gap-3 rounded-[1rem] border border-white/8 bg-black/20 px-3 py-2">
@@ -212,7 +212,7 @@ export function ProductPreview() {
                             tickets.pdf
                           </p>
                           <p className="text-[9px] text-[#a98982]">
-                            Encrypted before upload on the browser DM path
+                            Encrypted before upload in current client source
                           </p>
                         </div>
                         <div className="rounded-full border border-white/10 bg-white/[0.05] p-2 text-brand-400">
