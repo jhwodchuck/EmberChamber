@@ -27,7 +27,7 @@ export function SiteHeader() {
             alt=""
             width={232}
             height={47}
-            className="h-auto w-[128px] sm:w-[180px]"
+            className="h-auto w-[150px] sm:w-[180px]"
           />
         </Link>
         <div className="hidden items-center gap-1 xl:flex">

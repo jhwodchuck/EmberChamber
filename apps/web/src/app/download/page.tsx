@@ -9,7 +9,11 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { formatUtcDate } from "@/lib/format";
-import { getLatestPlatformRelease } from "@/lib/releases";
+import {
+  getDownloadAction,
+  getLatestPlatformRelease,
+  hasArtifactIdentityMismatch,
+} from "@/lib/releases";
 import {
   githubReleasesUrl,
   githubSourceZipUrl,
@@ -336,7 +340,7 @@ async function DownloadPageInner({
                 {build ? (
                   <div className="mt-4 rounded-[1.35rem] border border-white/8 bg-white/[0.04] px-4 py-4">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#a98982]">
-                      Latest posted build
+                      Release tag
                     </p>
                     <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">
                       {build.releaseTag}
@@ -357,6 +361,26 @@ async function DownloadPageInner({
                         className="h-3.5 w-3.5"
                       />
                     </a>
+                    <div className="mt-4 border-t border-white/8 pt-4">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#a98982]">
+                        Artifact identity
+                      </p>
+                      {hasArtifactIdentityMismatch(
+                        build.releaseTag,
+                        build.downloads,
+                      ) ? (
+                        <p className="mt-2 text-xs leading-5 text-amber-100/80">
+                          Historical mismatch: these artifact filenames identify
+                          a different beta than the release tag. For the beta.30
+                          desktop installers, embedded metadata also reports
+                          beta.25.
+                        </p>
+                      ) : (
+                        <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
+                          {build.downloads.map((item) => item.label).join(", ")}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 ) : null}
 
@@ -389,15 +413,21 @@ async function DownloadPageInner({
                 <div className="mt-6 space-y-3">
                   {build ? (
                     <>
-                      {build.downloads.map((download) => (
-                        <a
-                          key={download.url}
-                          href={download.url}
-                          className="btn-primary inline-flex w-full items-center justify-center"
-                        >
-                          Download {download.label}
-                        </a>
-                      ))}
+                      {build.downloads.map((download) => {
+                        const action = getDownloadAction(
+                          platform.id,
+                          download.label,
+                        );
+                        return (
+                          <a
+                            key={download.url}
+                            href={download.url}
+                            className={`${action.primary ? "btn-primary" : "btn-ghost"} inline-flex w-full items-center justify-center`}
+                          >
+                            {action.label}
+                          </a>
+                        );
+                      })}
                       <ul className="space-y-1 text-xs text-[var(--text-secondary)]">
                         {build.downloads.map((download) => (
                           <li key={`${download.url}-meta`}>

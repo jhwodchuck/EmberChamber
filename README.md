@@ -32,22 +32,22 @@
 <table>
   <tr>
     <td width="33%" align="center">
-      <a href="apps/web/public/screenshots/home/01-public-invite-preview.png">
-        <img src="apps/web/public/screenshots/home/01-public-invite-preview.png" alt="Previewing an invite-only EmberChamber space" />
+      <a href="apps/web/public/screenshots/marketing/01-invite-preview.png">
+        <img src="apps/web/public/screenshots/marketing/01-invite-preview.png" alt="Previewing an invite-only EmberChamber space" />
       </a>
       <br /><strong>Review before joining</strong><br />
       <sub>Preview who issued an invite, its scope, and its access rules.</sub>
     </td>
     <td width="33%" align="center">
-      <a href="apps/web/public/screenshots/home/03-profile-created.png">
-        <img src="apps/web/public/screenshots/home/03-profile-created.png" alt="EmberChamber profile and privacy settings" />
+      <a href="apps/web/public/screenshots/marketing/02-privacy-controls.png">
+        <img src="apps/web/public/screenshots/marketing/02-privacy-controls.png" alt="EmberChamber profile and privacy settings" />
       </a>
-      <br /><strong>Private identity</strong><br />
-      <sub>Use a pseudonymous profile while email stays private.</sub>
+      <br /><strong>Privacy controls</strong><br />
+      <sub>Keep notification previews, sensitive exports, and app-switcher behavior explicit.</sub>
     </td>
     <td width="33%" align="center">
-      <a href="apps/web/public/screenshots/home/04-first-message-sent.png">
-        <img src="apps/web/public/screenshots/home/04-first-message-sent.png" alt="Sending an encrypted direct message in EmberChamber" />
+      <a href="apps/web/public/screenshots/marketing/03-conversation-desktop.png">
+        <img src="apps/web/public/screenshots/marketing/03-conversation-desktop.png" alt="Sending an encrypted direct message in EmberChamber" />
       </a>
       <br /><strong>Local-first conversations</strong><br />
       <sub>Send through a ciphertext mailbox while history stays on device.</sub>

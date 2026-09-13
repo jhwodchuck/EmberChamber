@@ -73,6 +73,21 @@ const evidence = [
   },
 ];
 
+const roleScope = [
+  {
+    title: "Product and architecture",
+    body: "I set the invite-only, local-first product direction and define the trust boundaries that keep client state, relay responsibilities, and hosted exceptions explicit.",
+  },
+  {
+    title: "Cross-surface integration",
+    body: "I integrate the web, mobile, desktop, relay, and shared protocol work so changes are reviewed as one product rather than isolated technology demos.",
+  },
+  {
+    title: "Validation and release ownership",
+    body: "I own the verification bar, release evidence, and published limitations—including calling out when source, deployment, and downloadable artifacts do not match.",
+  },
+];
+
 export default function EngineeringPage() {
   return (
     <MarketingShell>
@@ -99,10 +114,29 @@ export default function EngineeringPage() {
             </Link>
           </div>
           <p className="mt-5 max-w-3xl text-sm leading-7 text-[#cbb0a3]">
-            Development is AI-assisted. Use the links below to review
-            architecture notes, source changes, repository guidance and
-            automated workflow results.
+            I use AI-assisted development as part of the implementation
+            workflow, while retaining ownership of architecture, integration,
+            review, and release decisions. The linked source and automated
+            results make that validation inspectable.
           </p>
+        </div>
+      </section>
+      <section className="px-6 py-10">
+        <div className="mx-auto max-w-6xl rounded-3xl border border-white/10 bg-white/[0.03] p-7 sm:p-10">
+          <p className="section-kicker">My role and engineering scope</p>
+          <h2 className="mt-4 max-w-3xl font-display text-4xl font-semibold text-[#fff1e8]">
+            Creator, engineering owner, and release decision-maker.
+          </h2>
+          <div className="mt-7 grid gap-5 lg:grid-cols-3">
+            {roleScope.map((item) => (
+              <article key={item.title} className="border-l border-[#ffb890]/35 pl-5">
+                <h3 className="font-semibold text-[#fff1e8]">{item.title}</h3>
+                <p className="mt-3 text-sm leading-7 text-[#d0b8ab]">
+                  {item.body}
+                </p>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
       <section className="px-6 py-10">
@@ -157,6 +191,50 @@ export default function EngineeringPage() {
               </p>
             </li>
           </ol>
+        </div>
+      </section>
+      <section className="px-6 py-10">
+        <div className="mx-auto max-w-6xl">
+          <p className="section-kicker">One engineering story</p>
+          <h2 className="mt-4 max-w-3xl font-display text-4xl font-semibold text-[#fff1e8]">
+            Turning a release mismatch into an enforced contract.
+          </h2>
+          <dl className="mt-8 grid gap-4 md:grid-cols-2">
+            {[
+              [
+                "Problem",
+                "The beta.30 release included desktop installers whose filenames and embedded metadata still identified beta.25. A tag alone could not prove what a user installed.",
+              ],
+              [
+                "Decision",
+                "Treat release identity as a cross-repository contract and fail verification when the tag, JavaScript manifests, Rust workspace, desktop configuration, or lockfiles diverge.",
+              ],
+              [
+                "Implementation evidence",
+                "scripts/check-release-version.mjs checks 16 version positions and validates a supplied release ref; repository contracts require the checker to remain wired in.",
+              ],
+              [
+                "Measured result and limitation",
+                "The current beta.31 source passes all 16 checks. It is not a published replacement yet, so the download page continues to disclose the historical beta.30/beta.25 mismatch.",
+              ],
+            ].map(([term, detail]) => (
+              <div key={term} className="rounded-2xl border border-white/10 bg-white/[0.025] p-5">
+                <dt className="text-sm font-semibold text-[#ffb890]">{term}</dt>
+                <dd className="mt-3 text-sm leading-7 text-[#d0b8ab]">{detail}</dd>
+              </div>
+            ))}
+          </dl>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <a
+              href={`${githubRepoUrl}/blob/main/scripts/check-release-version.mjs`}
+              className="btn-ghost"
+            >
+              Inspect the version contract
+            </a>
+            <a href={`${githubRepoUrl}#current-release-identity`} className="btn-ghost">
+              Review current release identity
+            </a>
+          </div>
         </div>
       </section>
       <section className="px-6 py-12">
