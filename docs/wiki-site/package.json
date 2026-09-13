@@ -2,6 +2,7 @@
   "name": "emberchamber-wiki",
   "version": "0.0.0",
   "private": true,
+  "packageManager": "pnpm@10.17.1",
   "type": "module",
   "devDependencies": {
     "vitepress": "^1.6.4",
@@ -15,9 +16,9 @@
   },
   "pnpm": {
     "overrides": {
-      "esbuild": ">=0.25.0",
-      "postcss": "8.5.12",
-      "vite": ">=6.4.2"
+      "esbuild": "0.28.1",
+      "postcss": "8.5.28",
+      "vite": "7.3.5"
     }
   }
 }
