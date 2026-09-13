@@ -136,6 +136,19 @@ Do not feed every reviewer the entire repo or every report from every other revi
 
 If you want to bypass `npm`, the direct entrypoint is `bash llm_council/scripts/orchestrate_review.sh`.
 
+## LiteLLM runner (PowerShell)
+
+`scripts/run_council_litellm.ps1` expects a local LiteLLM profile that defines the CLI wrapper functions. Its path is deliberately not checked into the repository. Configure it either per invocation or through an environment variable:
+
+```powershell
+pwsh -File llm_council/scripts/run_council_litellm.ps1 -LiteLLMProfile "C:\tools\LiteLLM\scripts\LiteLLM-Profile.ps1"
+
+$env:EMBERCHAMBER_LITELLM_PROFILE = "C:\tools\LiteLLM\scripts\LiteLLM-Profile.ps1"
+pwsh -File llm_council/scripts/run_council_litellm.ps1
+```
+
+The `-LiteLLMProfile` argument takes precedence over `EMBERCHAMBER_LITELLM_PROFILE`. The runner stops with configuration guidance when neither option identifies a valid file.
+
 ## Notes
 
 This kit is intentionally opinionated.
