@@ -24,8 +24,8 @@ const statusLabels = {
 export default function HomePage() {
   return (
     <MarketingShell>
-      <JsonLd data={{ "@context": "https://schema.org", "@type": "SoftwareApplication", name: "EmberChamber", applicationCategory: "CommunicationApplication", operatingSystem: "Android, Windows, Ubuntu, Web", url: siteUrl, sameAs: githubRepoUrl, description: "Invite-only messaging with device-local history and a hosted delivery relay. Available as beta software with documented client and privacy limitations." }} />
-      <JsonLd data={{ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: faqItems.map((item) => ({ "@type": "Question", name: item.question, acceptedAnswer: { "@type": "Answer", text: item.answer } })) }} />
+      <JsonLd json={{ "@context": "https://schema.org", "@type": "SoftwareApplication", name: "EmberChamber", applicationCategory: "CommunicationApplication", operatingSystem: "Android, Windows, Ubuntu, Web", url: siteUrl, sameAs: githubRepoUrl, description: "Invite-only messaging with device-local history and a hosted delivery relay. Available as beta software with documented client and privacy limitations." }} />
+      <JsonLd json={{ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: faqItems.map((item) => ({ "@type": "Question", name: item.question, acceptedAnswer: { "@type": "Answer", text: item.answer } })) }} />
       <section className="px-6 pb-16 pt-14 sm:pb-20 sm:pt-20">
         <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[0.9fr_1.1fr]">
           <div>
