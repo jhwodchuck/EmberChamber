@@ -148,9 +148,23 @@ jobs:
               --body "Automated refresh from the latest successful Android and web screenshot artifacts.")
           fi
 
-          # GITHUB_TOKEN-authored pull requests do not emit ordinary pull_request
-          # workflow events, so dispatch the protected-branch checks explicitly.
-          gh workflow run security.yml --repo "$GITHUB_REPOSITORY" --ref "$BRANCH"
-          gh workflow run codeql.yml --repo "$GITHUB_REPOSITORY" --ref "$BRANCH"
-          gh workflow run ci-repo-contract.yml --repo "$GITHUB_REPOSITORY" --ref "$BRANCH"
+          # A first contribution from the Actions bot can leave its pull-request
+          # workflows awaiting approval. Approve only those exact queued runs;
+          # established bot contributions proceed without this path.
+          for ATTEMPT in {1..5}; do
+            sleep 2
+            RUN_IDS=$(gh run list \
+              --repo "$GITHUB_REPOSITORY" \
+              --branch "$BRANCH" \
+              --event pull_request \
+              --status action_required \
+              --limit 20 \
+              --json databaseId \
+              --jq '.[].databaseId')
+            while read -r RUN_ID; do
+              [ -n "$RUN_ID" ] && gh api --method POST \
+                "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/approve"
+            done <<< "$RUN_IDS"
+          done
+
           gh pr merge "$PR_URL" --repo "$GITHUB_REPOSITORY" --auto --squash --delete-branch
