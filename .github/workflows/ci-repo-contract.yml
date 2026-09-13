@@ -26,6 +26,7 @@ on:
       - "apps/web/src/app/app/**"
       - "apps/relay/src/index.ts"
       - "package.json"
+      - "package-lock.json"
       - "Cargo.toml"
   pull_request:
     paths:
@@ -51,6 +52,7 @@ on:
       - "apps/web/src/app/app/**"
       - "apps/relay/src/index.ts"
       - "package.json"
+      - "package-lock.json"
       - "Cargo.toml"
 
 concurrency:
@@ -69,10 +71,16 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 22
+          cache: npm
+
+      - name: Install workspace dependencies
+        run: npm ci --ignore-scripts
 
       - name: Check repo contracts
         run: npm run check:repo-contracts
 
-      - name: Fix failing repo-contract checks
-        uses: fly-ci/wingman-action@v1
-        if: ${{ failure() && github.event.pull_request != null }}
+      - name: Check documentation links
+        run: npm run check:links
+
+      - name: Check release version alignment
+        run: npm run check:release-version

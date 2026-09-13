@@ -76,5 +76,5 @@ apps/web/
 | ------------------------------- | ---------------------------------------------------------------------------------------------- |
 | Encrypted-group rollout         | In progress — new groups are device-encrypted, while legacy compatibility history still exists |
 | Universal encrypted attachments | In progress — DM path encrypts; group path does not yet                                        |
-| Passkey enrollment              | Scaffolded in relay; UI not yet wired                                                          |
+| Passkey enrollment              | Relay and web UI implemented; successful authenticator E2E coverage still needed               |
 | Trusted-device recovery         | Partially implemented                                                                          |

@@ -1,11 +1,12 @@
 "use client";
 
 import { Toaster } from "react-hot-toast";
+import { SecureStorageBootstrap } from "@/components/secure-storage-bootstrap";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <>
-      {children}
+      <SecureStorageBootstrap>{children}</SecureStorageBootstrap>
       <Toaster
         position="top-right"
         toastOptions={{

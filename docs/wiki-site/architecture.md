@@ -77,7 +77,8 @@ Canonical contract definitions — envelope shapes, session tokens, group invite
 1. `POST /v1/auth/start` — client submits an invite token + blinded email; relay validates the invite and sends a magic-link email via Resend.
 2. `POST /v1/auth/complete` — client exchanges the magic-link token for a device-bound session pair.
 3. Session tokens are bound to the device that completed the challenge. Session listing and self-revocation are available from every client surface.
-4. Passkey endpoints exist in the relay (`/v1/auth/passkey/*`) but currently return 501.
+4. Current source implements WebAuthn registration and authentication under `/v1/passkeys/*`, plus
+   credential listing/removal under `/v1/me/passkeys`; the web workspace exposes enrollment and sign-in.
 
 Email is stored blinded and encrypted. It is never the social identity and is never publicly discoverable.
 

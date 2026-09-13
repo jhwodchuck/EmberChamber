@@ -54,10 +54,6 @@ jobs:
       - name: Run mobile unit tests
         run: npm test --workspace=apps/mobile
 
-      - name: Fix failing Android verification
-        uses: fly-ci/wingman-action@v1
-        if: ${{ failure() && github.event.pull_request != null }}
-
   build-android-release:
     name: Build Android release APK for screenshots
     needs: verify-android
@@ -143,7 +139,3 @@ jobs:
           path: apps/mobile/artifacts/android-screenshots/${{ matrix.device_class }}
           retention-days: 14
           if-no-files-found: warn
-
-      - name: Fix failing Android screenshot capture
-        uses: fly-ci/wingman-action@v1
-        if: ${{ failure() && github.event.pull_request != null }}

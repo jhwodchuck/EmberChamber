@@ -108,7 +108,7 @@ export default function NewCommunityPage() {
               className="input resize-none"
               rows={4}
               maxLength={500}
-              placeholder="Adults only. Invite-only. No reposting, no forwarding, no surprise additions."
+              placeholder="Invite-only. No reposting, no forwarding, no surprise additions."
             />
             <p className="mt-1 text-xs text-[var(--text-secondary)]">
               This appears in invite preview before someone joins.

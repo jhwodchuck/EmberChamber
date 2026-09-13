@@ -14,30 +14,30 @@ This page is the single authoritative table for what is live, in-progress, or pl
 
 ## Feature Matrix
 
-| Feature                                   | Web | Android                               | Windows                  | Ubuntu                   |
-| ----------------------------------------- | --- | ------------------------------------- | ------------------------ | ------------------------ |
-| Onboarding & invite registration          | ✅  | ✅                                    | ✅                       | ✅                       |
-| Email magic-link auth                     | ✅  | ✅                                    | ✅                       | ✅                       |
-| 18+ age affirmation                       | ✅  | ✅                                    | ✅                       | ✅                       |
-| Pseudonymous profile setup                | ✅  | ✅                                    | ✅                       | ✅                       |
-| E2EE direct messages                      | ✅  | ✅                                    | ✅                       | ✅                       |
-| Small private groups (≤ 12)               | ✅  | ✅                                    | ✅                       | ✅                       |
-| Device-encrypted group history            | ✅  | ✅                                    | ✅                       | ✅                       |
-| Legacy relay-hosted compatibility history | ⚠️  | ⚠️                                    | ⚠️                       | ⚠️                       |
-| Invite review and management              | ✅  | ✅                                    | ✅                       | ✅                       |
-| Device-local search                       | ✅  | ✅                                    | ✅                       | ✅                       |
-| Session listing and revocation            | ✅  | ✅                                    | ✅                       | ✅                       |
-| Account recovery (email bootstrap)        | ✅  | ✅                                    | ✅                       | ✅                       |
-| Full trusted-device recovery              | 🔜  | 🔜                                    | 🔜                       | 🔜                       |
-| Attachments (client-side encrypted)       | ✅  | ⚠️ migration in progress              | ⚠️ migration in progress | ⚠️ migration in progress |
-| Local SQLite history cache                | ❌  | ✅                                    | ✅                       | ✅                       |
-| Push notifications                        | ❌  | ⚠️ code complete, needs relay secrets | ❌                       | ❌                       |
-| Disclosure-based report flow              | ✅  | ✅                                    | ✅                       | ✅                       |
-| Passkey sign-in                           | 📋  | 📋                                    | 📋                       | 📋                       |
-| Encrypted backup / export / import        | 📋  | 📋                                    | 📋                       | 📋                       |
-| Self-serve invite validation              | 📋  | 📋                                    | ❌                       | ❌                       |
-| Magic-link self-serve resend              | 📋  | 📋                                    | ❌                       | ❌                       |
-| Native desktop shell                      | ❌  | ❌                                    | ✅                       | ✅                       |
+| Feature                                   | Web       | Android                               | Windows                       | Ubuntu                        |
+| ----------------------------------------- | --------- | ------------------------------------- | ----------------------------- | ----------------------------- |
+| Onboarding & invite registration          | ✅        | ✅                                    | ✅                            | ✅                            |
+| Email magic-link auth                     | ✅        | ✅                                    | ✅                            | ✅                            |
+| 18+ age affirmation                       | ✅        | ✅                                    | ✅                            | ✅                            |
+| Pseudonymous profile setup                | ✅        | ✅                                    | ✅                            | ✅                            |
+| E2EE direct messages                      | ✅        | ✅                                    | ✅                            | ✅                            |
+| Small private groups (≤ 12)               | ✅        | ✅                                    | ✅                            | ✅                            |
+| Device-encrypted group history            | ✅        | ✅                                    | ✅                            | ✅                            |
+| Legacy relay-hosted compatibility history | ⚠️        | ⚠️                                    | ⚠️                            | ⚠️                            |
+| Invite review and management              | ✅        | ✅                                    | ✅                            | ✅                            |
+| Device-local search                       | ✅        | ✅                                    | ✅                            | ✅                            |
+| Session listing and revocation            | ✅        | ✅                                    | ✅                            | ✅                            |
+| Account recovery (email bootstrap)        | ✅        | ✅                                    | ✅                            | ✅                            |
+| Full trusted-device recovery              | 🔜        | 🔜                                    | 🔜                            | 🔜                            |
+| Attachments (client-side encrypted)       | ✅        | ⚠️ migration in progress              | ⚠️ migration in progress      | ⚠️ migration in progress      |
+| Local SQLite history cache                | ❌        | ✅                                    | ✅                            | ✅                            |
+| Push notifications                        | ❌        | ⚠️ code complete, needs relay secrets | ❌                            | ❌                            |
+| Disclosure-based report flow              | ✅        | ✅                                    | ✅                            | ✅                            |
+| Passkey sign-in                           | ✅ source | ❌ native UX                          | ⚠️ bundled web UI, unverified | ⚠️ bundled web UI, unverified |
+| Encrypted backup / export / import        | 📋        | 📋                                    | 📋                            | 📋                            |
+| Self-serve invite validation              | 📋        | 📋                                    | ❌                            | ❌                            |
+| Magic-link self-serve resend              | 📋        | 📋                                    | ❌                            | ❌                            |
+| Native desktop shell                      | ❌        | ❌                                    | ✅                            | ✅                            |
 
 ## Posted Builds
 
@@ -59,7 +59,7 @@ Android push is wired end-to-end in both the mobile client (`apps/mobile/src/lib
 - `EMBERCHAMBER_FCM_SERVICE_ACCOUNT_JSON` — Firebase service account secret on the production relay
 - `EMBERCHAMBER_PUSH_TOKEN_SECRET` — push token encryption secret on the production relay
 
-See the [Operator Playbook](./operator-playbook) for the exact `wrangler secret put` commands.
+See the [Operator Playbook](./operator-playbook.md) for the exact `wrangler secret put` commands.
 
 ## Attachment Encryption Note
 

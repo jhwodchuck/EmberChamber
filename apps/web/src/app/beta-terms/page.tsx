@@ -36,9 +36,9 @@ export default function BetaTermsPage() {
       <section>
         <h2>Operational limitations</h2>
         <p>
-          Early builds may include degraded delivery, incomplete device-linking
-          flows, or placeholder onboarding paths while the core secure-state
-          logic is still being integrated.
+          Early builds may experience degraded delivery or incomplete
+          device-linking and onboarding while secure-state integration
+          continues.
         </p>
       </section>
 

@@ -34,7 +34,7 @@ async function getReleases(): Promise<GitHubReleaseItem[]> {
         next: {
           revalidate: 3600, // cache for 1 hour
         },
-      }
+      },
     );
     if (!res.ok) {
       return [];
@@ -48,14 +48,11 @@ async function getReleases(): Promise<GitHubReleaseItem[]> {
 // Fallback changelog entries if API fails or is rate-limited
 const staticChanges = [
   {
-    version: "v0.1.0-beta.25",
-    date: "2026-06-12",
+    version: "v0.1.0-beta.30",
+    date: "2026-06-16",
     details: [
-      "Integrated SQLite local state on Android and Tauri desktop surfaces",
-      "Added invite-only onboarding email verification flow",
-      "Implemented device-encrypted group history routing for new groups",
-      "Established self-attested 18+ age verification gate during onboarding",
-      "Fixed alternate canonical meta declarations on all marketing routes",
+      "Polished the web chat surface toward parity with the Android client",
+      "Known packaging issue: desktop artifacts embed and display version 0.1.0-beta.25",
     ],
   },
   {
@@ -109,11 +106,12 @@ export default async function ChangelogPage() {
               Note on Beta Version Alignment
             </h2>
             <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-              EmberChamber code packages align under version `v0.1.0-beta.25`.
-              Individual platform binaries (like the Android APK or Windows MSI)
-              are generated on independent pipelines when builds are verified.
-              If you notice different tag references on platform files, this is
-              by design to ensure you only run stable, verified binaries.
+              The latest published release is `v0.1.0-beta.30`; current source
+              is preparing `0.1.0-beta.31`. The beta.30 desktop artifacts were
+              built with stale beta.25 metadata, so their beta.25 filenames are
+              a known packaging defect, not intentional platform versioning.
+              Release checks now require tags and release-facing manifests to
+              agree.
             </p>
           </div>
 

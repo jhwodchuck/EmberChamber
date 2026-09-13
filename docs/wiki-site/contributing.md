@@ -15,8 +15,6 @@ Default to these paths for new work:
 | Shared secure-state logic                             | `crates/core`                                        |
 | Relay contract changes                                | `crates/relay-protocol` + `packages/protocol` (both) |
 
-Legacy paths (`apps/api`, `infra/docker-compose.yml`, `services/*`) are not the target for new work. Only touch them if explicitly asked or if they block active builds.
-
 ## Before Opening a PR
 
 Run the smallest relevant checks for the paths you changed:

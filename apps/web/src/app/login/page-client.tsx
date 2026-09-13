@@ -1,0 +1,45 @@
+"use client";
+
+import { useSearchParams } from "next/navigation";
+import { AuthPageIntro } from "@/components/auth-page-intro";
+import { LoginForm } from "@/components/login-form";
+import { MarketingShell } from "@/components/marketing-shell";
+
+export default function LoginPageClient() {
+  const searchParams = useSearchParams();
+  const continueTo = searchParams?.get("next") ?? null;
+  const requestedMethod = searchParams?.get("method") ?? null;
+  const initialEntryMethod =
+    requestedMethod === "device-link" ? "device-link" : "magic-link";
+  const prefersDeviceLink = initialEntryMethod === "device-link";
+
+  return (
+    <MarketingShell>
+      <section className="mx-auto grid max-w-6xl gap-8 px-6 py-16 sm:py-20 lg:grid-cols-[minmax(0,0.95fr)_28rem] lg:items-start">
+        <AuthPageIntro
+          eyebrow={prefersDeviceLink ? "QR device link" : "Email bootstrap"}
+          title={
+            prefersDeviceLink
+              ? "Link this browser from a device that is already signed in."
+              : "Sign in with the private email tied to this account."
+          }
+          description={
+            prefersDeviceLink
+              ? "Use a trusted EmberChamber phone or desktop client to approve this browser with a short-lived QR instead of waiting on email."
+              : "If every device was signed out, use the same private email to recover access with a fresh magic link."
+          }
+          emphasis={
+            prefersDeviceLink
+              ? "Use this only when another EmberChamber device already has a live session. The trusted device approves this browser and the web client finishes sign-in here."
+              : "Returning accounts do not need a password or a device-link approval. If this email does not match an existing beta account, the form will stop before anything new is created."
+          }
+        />
+
+        <LoginForm
+          continueTo={continueTo}
+          initialEntryMethod={initialEntryMethod}
+        />
+      </section>
+    </MarketingShell>
+  );
+}

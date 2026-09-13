@@ -1,64 +1,23 @@
-import { AuthPageIntro } from "@/components/auth-page-intro";
-import { LoginForm } from "@/components/login-form";
-import { MarketingShell } from "@/components/marketing-shell";
+import { Suspense } from "react";
 import { createMetadata } from "@/lib/metadata";
+import LoginPageClient from "./page-client";
 
 export const metadata = createMetadata({
   title: "Sign In",
   description:
-    "Request a private age-gated email magic link for an existing EmberChamber beta account.",
+    "Request a private email magic link for an existing EmberChamber beta account.",
   path: "/login",
   noIndex: true,
 });
 
-export default async function LoginPage({
-  searchParams,
-}: {
-  searchParams?: Promise<{
-    next?: string | string[];
-    method?: string | string[];
-  }>;
-}) {
-  const resolvedSearchParams = searchParams ? await searchParams : undefined;
-  const continueTo =
-    typeof resolvedSearchParams?.next === "string"
-      ? resolvedSearchParams.next
-      : null;
-  const requestedMethod =
-    typeof resolvedSearchParams?.method === "string"
-      ? resolvedSearchParams.method
-      : null;
-  const initialEntryMethod =
-    requestedMethod === "device-link" ? "device-link" : "magic-link";
-  const prefersDeviceLink = initialEntryMethod === "device-link";
-
+// `?next=` / `?method=` are read client-side via useSearchParams() (see
+// page-client.tsx) instead of the server `searchParams` prop, so this page
+// is compatible with `output: "export"` (the desktop static-export build).
+// Suspense is required by Next.js around any useSearchParams() consumer.
+export default function LoginPage() {
   return (
-    <MarketingShell>
-      <section className="mx-auto grid max-w-6xl gap-8 px-6 py-16 sm:py-20 lg:grid-cols-[minmax(0,0.95fr)_28rem] lg:items-start">
-        <AuthPageIntro
-          eyebrow={prefersDeviceLink ? "QR device link" : "Email bootstrap"}
-          title={
-            prefersDeviceLink
-              ? "Link this browser from a device that is already signed in."
-              : "Sign in with the private email tied to this account."
-          }
-          description={
-            prefersDeviceLink
-              ? "Use a trusted EmberChamber phone or desktop client to approve this browser with a short-lived QR instead of waiting on email."
-              : "If every device was signed out, use the same private email to recover access with a fresh magic link."
-          }
-          emphasis={
-            prefersDeviceLink
-              ? "Use this only when another EmberChamber device already has a live session. The trusted device approves this browser and the web client finishes sign-in here."
-              : "Returning accounts do not need a password or a device-link approval. If this email does not match an existing beta account, the form will stop before anything new is created."
-          }
-        />
-
-        <LoginForm
-          continueTo={continueTo}
-          initialEntryMethod={initialEntryMethod}
-        />
-      </section>
-    </MarketingShell>
+    <Suspense>
+      <LoginPageClient />
+    </Suspense>
   );
 }

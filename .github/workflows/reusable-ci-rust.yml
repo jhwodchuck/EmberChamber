@@ -36,7 +36,3 @@ jobs:
 
       - name: cargo test
         run: cargo test -p emberchamber-core -p emberchamber-relay-protocol
-
-      - name: Fix failing Rust CI checks
-        uses: fly-ci/wingman-action@v1
-        if: ${{ failure() && github.event.pull_request != null }}

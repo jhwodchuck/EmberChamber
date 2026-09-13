@@ -14,14 +14,14 @@ EmberChamber is built to store as little as possible on the relay and to keep de
 
 ## What Is Still In Progress
 
-| Feature                 | Current state                                                                   | Target                                                                      |
-| ----------------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| Group thread E2EE       | Thread text stored server-side in D1                                            | Replace relay-hosted readable history with end-to-end encrypted group state |
-| Attachment encryption   | Browser DM path encrypts client-side; mobile and desktop still upload raw bytes | Encrypt all attachments client-side before upload on every surface          |
-| Passkeys                | Relay endpoints exist but return 501                                            | Wire passkey enrollment and use across all clients                          |
-| Trusted-device recovery | Device-link start/confirm exists; full handoff flow not complete                | Finish recovery, safety-number style change signalling                      |
-| Operator safety tooling | Report records stored; no review dashboard                                      | Add operator review queue, audit log, and controlled intervention API       |
-| Automated cleanup       | Cleanup queue wired                                                             | Finish mailbox envelope expiry and expired attachment record cleanup        |
+| Feature                 | Current state                                                                                   | Target                                                                      |
+| ----------------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Group thread E2EE       | Thread text stored server-side in D1                                                            | Replace relay-hosted readable history with end-to-end encrypted group state |
+| Attachment encryption   | Browser DM path encrypts client-side; mobile and desktop still upload raw bytes                 | Encrypt all attachments client-side before upload on every surface          |
+| Passkeys                | Relay/web enrollment and sign-in are implemented in current source                              | Add native-client UX, deployment proof, and authenticator E2E coverage      |
+| Trusted-device recovery | Device-link start/confirm exists; full handoff flow not complete                                | Finish recovery, safety-number style change signalling                      |
+| Operator safety tooling | Operator review queue, audit log, suspension, recovery handoff, and bulk review are implemented | Broaden tested, audited intervention coverage                               |
+| Automated cleanup       | Cleanup queue wired                                                                             | Finish mailbox envelope expiry and expired attachment record cleanup        |
 
 ## Identity Model
 
@@ -44,13 +44,13 @@ EmberChamber is built to store as little as possible on the relay and to keep de
 
 ## Threat Model Summary
 
-| Threat               | Current mitigation                                                    | Gap                                             |
-| -------------------- | --------------------------------------------------------------------- | ----------------------------------------------- |
-| Account takeover     | Magic-link + invite-only bootstrap, session revocation, device labels | Passkeys and full recovery not yet live         |
-| Metadata leakage     | Blinded email, no public discovery graph                              | Relay sees group-thread text in current path    |
-| Attachment overreach | Signed tickets, relay-side metadata                                   | No client-side encryption on mobile/desktop yet |
-| Spam and raid        | Invite-only, rate limiting, small-group caps, blocks                  | No operator dashboard or bulk review queue      |
-| Compromised device   | Session listing and self-revocation, manual group cleanup             | No force-signout-all operator API               |
+| Threat               | Current mitigation                                                                        | Gap                                                    |
+| -------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| Account takeover     | Magic-link + optional web passkey bootstrap, session revocation, device labels            | Native passkey parity and full recovery are incomplete |
+| Metadata leakage     | Blinded email, no public discovery graph                                                  | Relay sees group-thread text in current path           |
+| Attachment overreach | Signed tickets, relay-side metadata                                                       | No client-side encryption on mobile/desktop yet        |
+| Spam and raid        | Invite-only, rate limiting, small-group caps, blocks, operator dashboard, and bulk review | Broader operational acceptance testing is needed       |
+| Compromised device   | Session listing/self-revocation, operator force-signout-all, and recovery handoff         | Trusted-device recovery remains incomplete             |
 
 ## Communication Standards
 

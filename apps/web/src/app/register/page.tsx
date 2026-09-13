@@ -1,39 +1,23 @@
-import { AuthPageIntro } from "@/components/auth-page-intro";
-import { MarketingShell } from "@/components/marketing-shell";
-import { RegisterForm } from "@/components/register-form";
+import { Suspense } from "react";
 import { createMetadata } from "@/lib/metadata";
+import RegisterPageClient from "./page-client";
 
 export const metadata = createMetadata({
   title: "Join Beta",
   description:
-    "Start age-gated invite-only EmberChamber beta onboarding with a private email bootstrap.",
+    "Start invite-only EmberChamber beta onboarding with a private email bootstrap.",
   path: "/register",
   noIndex: true,
 });
 
-export default async function RegisterPage({
-  searchParams,
-}: {
-  searchParams?: Promise<{ next?: string | string[] }>;
-}) {
-  const resolvedSearchParams = searchParams ? await searchParams : undefined;
-  const continueTo =
-    typeof resolvedSearchParams?.next === "string"
-      ? resolvedSearchParams.next
-      : null;
-
+// `?next=` is read client-side via useSearchParams() (see page-client.tsx)
+// instead of the server `searchParams` prop, so this page is compatible
+// with `output: "export"` (the desktop static-export build). Suspense is
+// required by Next.js around any useSearchParams() consumer.
+export default function RegisterPage() {
   return (
-    <MarketingShell>
-      <section className="mx-auto grid max-w-6xl gap-8 px-6 py-16 sm:py-20 lg:grid-cols-[minmax(0,0.95fr)_28rem] lg:items-start">
-        <AuthPageIntro
-          eyebrow="Age-gated onboarding"
-          title="Join the beta with an invite and a private inbox."
-          description="New accounts still need a trusted invite path, a private email, and an age-gated confirmation."
-          emphasis="Confirm access, name this browser so you can recognize it later, then open the email link on the device you want to use first."
-        />
-
-        <RegisterForm continueTo={continueTo} />
-      </section>
-    </MarketingShell>
+    <Suspense>
+      <RegisterPageClient />
+    </Suspense>
   );
 }

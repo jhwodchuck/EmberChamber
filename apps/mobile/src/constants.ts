@@ -29,8 +29,8 @@ export const onboardingSteps = [
   },
   {
     number: "02",
-    title: "Confirm age-gated access",
-    body: "EmberChamber beta access is limited to adults 18 and over with a clear self-attested gate.",
+    title: "Confirm beta eligibility",
+    body: "Complete the self-attested eligibility check required for beta access.",
   },
   {
     number: "03",

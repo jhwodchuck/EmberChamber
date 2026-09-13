@@ -43,12 +43,12 @@ The repo is well ahead of where the original phase prose implied. A code-grounde
   (`/v1/invite/check`) and magic-link resend (`/v1/auth/resend-magic-link`) and Android encrypted
   backup/export-import also shipped.
 - **Phase 2 (closed-beta expansion): complete.**
-  - *Done:* community container + rooms (`POST /v1/communities`, default room, `createCommunityRoom`),
+  - _Done:_ community container + rooms (`POST /v1/communities`, default room, `createCommunityRoom`),
     community policies (`PATCH /v1/communities/:id/policies`), policy-gated member invites and
     room-scoped invites, community-scoped search (`?communityId=`), the 150-member community cap,
     and organizer controls (invite freeze, room-access revoke, member removal). Web has a community
     surface (`/app/community/[id]`). Protocol carries `Community`/`Room` on both Rust and TS sides.
-  - *Also done (2026-06-16):* **Mobile parity** — `CommunityScreen` added to the Expo Android client
+  - _Also done (2026-06-16):_ **Mobile parity** — `CommunityScreen` added to the Expo Android client
     with capability-gated rooms list, policy toggles, invite management, member roster, and
     community-scoped room search. **Test coverage** — relay integration tests for community/room
     flows added to `apps/relay/test/routes.test.ts`; protocol parity fixtures for
@@ -56,7 +56,7 @@ The repo is well ahead of where the original phase prose implied. A code-grounde
     `conversationInvitePreview`, and `conversationSearchResult` added to both the TS and Rust parity
     suites.
 - **Phase 3 (stable beta): in progress.**
-  - *Done (2026-06-17):* **Operational reporting & revocation tooling** — operator role (`is_operator`),
+  - _Done (2026-06-17):_ **Operational reporting & revocation tooling** — operator role (`is_operator`),
     `requireOperator` gating, a permanent `operator_audit_log`, and an operator console at `/app/admin`
     (report queue with status lifecycle, account lookup, audit-log viewer). **Operator-assisted recovery** —
     `POST /v1/admin/accounts/:id/recovery-handoff` force-signs-out all sessions and mints a single-use
@@ -66,9 +66,12 @@ The repo is well ahead of where the original phase prose implied. A code-grounde
     vitest cases plus web Playwright operator-flow and network-resilience specs. **Privacy tuning** —
     `oledDark` now syncs server-side through `PrivacySettings` (TS + Rust parity). Docs/runbooks and
     public-copy transparency refreshed.
-  - *Outstanding:* passkeys + passkey-based trusted-device recovery (deferred to Phase 4), account
-    *suspension* and bulk report review, uniform client-side attachment encryption, and retiring the
-    remaining relay-hosted group/room history.
+  - _Done (2026-06-17):_ **Phase 4 auth and operator hardening** — WebAuthn registration,
+    authentication, credential listing/removal, and web enrollment/sign-in UI; account suspension;
+    and bulk report review. iOS/macOS build scaffolding also landed.
+  - _Outstanding:_ native-client passkey UX, passkey-based trusted-device recovery, successful
+    authenticator end-to-end coverage, uniform client-side attachment encryption, and retiring the
+    remaining relay-hosted compatibility history.
 
 Phase prose below is the original agreement and is retained for intent; the status block above is
 authoritative on current progress.
@@ -143,8 +146,9 @@ authoritative on current progress.
 
 ### Phase 4: Post-Stable-Beta Reassessment
 
-- Reassess iPhone and macOS only after stable beta criteria are met.
-- Reassess whether passkeys, stronger auth depth, and additional client platforms are worth the cost once the core age-gated trusted-circles product is proven.
+- Relay/web passkeys, account suspension, bulk report review, and iOS/macOS build scaffolding are
+  implemented in current post-beta.30 source.
+- Native-client passkey UX, passkey-based recovery, and signed Apple distribution remain deferred.
 
 ## Required Public API, Interface, And Type Changes
 
@@ -183,7 +187,8 @@ authoritative on current progress.
 - Mobile and desktop:
   - prioritize media flow, reliability, and organizer clarity over platform expansion
 - Legacy boundaries:
-  - keep `apps/api`, `infra/docker-compose.yml`, and `services/*` out of roadmap-critical work unless needed for cleanup or explicit legacy maintenance
+  - the legacy `apps/api` Express/Postgres prototype, `infra/docker-compose.yml`, and `services/*`
+    scaffolds were removed from the repo (2026-07); no active surface depended on them
 
 ## Test Cases And Scenarios
 

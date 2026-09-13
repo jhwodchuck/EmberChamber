@@ -14,24 +14,23 @@ endpoint map for the current Cloudflare Worker runtime, not a full OpenAPI file.
 - Refresh tokens are exchanged through `/v1/auth/refresh`.
 - Sessions use a 30-day sliding deadline: completing auth creates a 30-day session, and `/v1/auth/refresh` extends that deadline unless the session was revoked. As an incident recovery guard, a matching refresh token can also recover an unrevoked recently seen session that crossed the old fixed deadline.
 - Magic-link challenges currently expire after 10 minutes.
-- Passkey endpoints exist, but the relay currently responds with `501`.
+- Current source implements WebAuthn/FIDO2 registration and authentication. Registration requires
+  an authenticated session; authentication options and verification are public bootstrap calls.
 
 ## Public And Bootstrap Endpoints
 
-| Method | Path                                                       | Purpose                           | Notes                                                                                        |
-| ------ | ---------------------------------------------------------- | --------------------------------- | -------------------------------------------------------------------------------------------- |
-| `GET`  | `/health`                                                  | Worker health check               | Returns runtime status and timestamp.                                                        |
-| `GET`  | `/ready`                                                   | Binding-aware readiness check     | Verifies D1 plus required bindings and secrets.                                              |
-| `GET`  | `/auth/complete`                                           | Redirect helper                   | Redirects email-link clicks into the public web origin.                                      |
-| `POST` | `/v1/auth/start`                                           | Start magic-link auth             | Accepts email plus either a beta invite token or a qualifying group invite for new accounts. |
-| `POST` | `/v1/auth/complete`                                        | Finish magic-link auth            | Creates or resumes account, device, and session.                                             |
-| `POST` | `/v1/auth/refresh`                                         | Refresh access token              | Uses the refresh token stored in the session row and returns the extended `expiresAt`.        |
-| `POST` | `/v1/passkeys/register/options`                            | Passkey scaffold                  | Currently returns `501`.                                                                     |
-| `POST` | `/v1/passkeys/register/verify`                             | Passkey scaffold                  | Currently returns `501`.                                                                     |
-| `POST` | `/v1/passkeys/auth/options`                                | Passkey scaffold                  | Currently returns `501`.                                                                     |
-| `POST` | `/v1/passkeys/auth/verify`                                 | Passkey scaffold                  | Currently returns `501`.                                                                     |
-| `GET`  | `/v1/conversations/:conversationId/invites/:token/preview` | Preview group or community invite | Public preview used before sign-in or acceptance.                                            |
-| `GET`  | `/v1/groups/:groupId/invites/:token/preview`               | Preview group invite              | Public preview used before sign-in or acceptance.                                            |
+| Method | Path                                                       | Purpose                           | Notes                                                                                                 |
+| ------ | ---------------------------------------------------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `GET`  | `/health`                                                  | Worker health check               | Returns runtime status and timestamp.                                                                 |
+| `GET`  | `/ready`                                                   | Binding-aware readiness check     | Verifies D1 plus required bindings and secrets.                                                       |
+| `GET`  | `/auth/complete`                                           | Redirect helper                   | Redirects email-link clicks into the public web origin.                                               |
+| `POST` | `/v1/auth/start`                                           | Start magic-link auth             | Accepts email plus either a beta invite token or a qualifying group invite for new accounts.          |
+| `POST` | `/v1/auth/complete`                                        | Finish magic-link auth            | Creates or resumes account, device, and session.                                                      |
+| `POST` | `/v1/auth/refresh`                                         | Refresh access token              | Uses the refresh token stored in the session row and returns the extended `expiresAt`.                |
+| `POST` | `/v1/passkeys/auth/options`                                | Start passkey authentication      | Returns a challenge token and WebAuthn request options; an optional account hint narrows credentials. |
+| `POST` | `/v1/passkeys/auth/verify`                                 | Finish passkey authentication     | Verifies the assertion, updates the signature counter, and creates a device-bound session.            |
+| `GET`  | `/v1/conversations/:conversationId/invites/:token/preview` | Preview group or community invite | Public preview used before sign-in or acceptance.                                                     |
+| `GET`  | `/v1/groups/:groupId/invites/:token/preview`               | Preview group invite              | Public preview used before sign-in or acceptance.                                                     |
 
 ## Authenticated Account And Device Endpoints
 
@@ -41,6 +40,10 @@ endpoint map for the current Cloudflare Worker runtime, not a full OpenAPI file.
 | `PATCH`  | `/v1/me`                                 | Update display name and bio                                               |
 | `GET`    | `/v1/me/privacy`                         | Read privacy defaults                                                     |
 | `PATCH`  | `/v1/me/privacy`                         | Update privacy defaults                                                   |
+| `GET`    | `/v1/me/passkeys`                        | List passkey credential metadata for the current account                  |
+| `POST`   | `/v1/passkeys/register/options`          | Create authenticated passkey registration options                         |
+| `POST`   | `/v1/passkeys/register/verify`           | Verify and persist a passkey registration                                 |
+| `DELETE` | `/v1/me/passkeys/:credentialId`          | Remove one passkey from the current account                               |
 | `GET`    | `/v1/sessions`                           | List active sessions for the current account                              |
 | `DELETE` | `/v1/sessions/:sessionId`                | Revoke one session for the current account                                |
 | `POST`   | `/v1/devices/register`                   | Upload device-bundle material                                             |
@@ -92,13 +95,13 @@ endpoint map for the current Cloudflare Worker runtime, not a full OpenAPI file.
 ## Cipher Mailbox And Attachment Endpoints
 
 | Method | Path                                     | Purpose                                                   |
-| ------ | ---------------------------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| ------ | ---------------------------------------- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `POST` | `/v1/messages/batch`                     | Submit ciphertext envelopes to the mailbox path           |
 | `GET`  | `/v1/mailbox/sync`                       | Read pending mailbox envelopes for the current device     |
 | `POST` | `/v1/mailbox/ack`                        | Ack and delete mailbox envelopes                          |
-| `POST` | `/v1/attachments/ticket`                 | Mint signed upload/download URLs plus attachment metadata | Accepts plaintext or client-encrypted metadata and returns `encryptionMode`. |
+| `POST` | `/v1/attachments/ticket`                 | Mint signed upload/download URLs plus attachment metadata | Requires `encryptionMode: "device_encrypted"` whenever `conversationId` is set; plaintext (`"none"`) is only accepted for profile media (avatar uploads), which carry no `conversationId`. Returns `encryptionMode`. |
 | `GET`  | `/v1/attachments/:attachmentId/access`   | Mint a fresh member-scoped download URL                   |
-| `PUT`  | `/v1/attachments/upload/:attachmentId`   | Upload attachment bytes                                   | Verifies byte length and checksum for the declared encryption mode.          |
+| `PUT`  | `/v1/attachments/upload/:attachmentId`   | Upload attachment bytes                                   | Verifies byte length and checksum for the declared encryption mode.                                                                                                                                                  |
 | `GET`  | `/v1/attachments/download/:attachmentId` | Download attachment bytes                                 |
 
 ## Safety Endpoint
@@ -115,7 +118,3 @@ endpoint map for the current Cloudflare Worker runtime, not a full OpenAPI file.
 - `CLEANUP_QUEUE` and `PUSH_QUEUE` are now consumed by the worker for retention work and Android wake delivery.
 - The browser now uses relay APIs for authenticated messaging, community and room management, search, invite, and settings flows. Legacy channel routes remain intentionally retired placeholders, not the target beta direction.
 - Browser DM history is local-first. The relay indexes conversation metadata and transports ciphertext envelopes, but it does not serve plaintext DM history back to the browser.
-
-## Legacy Reference
-
-For the older centralized prototype stack, see [`openapi.yaml`](openapi.yaml).

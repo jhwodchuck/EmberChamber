@@ -1390,9 +1390,10 @@ export async function handle(
     const conversation = await dbFirst<{
       id: string;
       history_mode: string | null;
+      legacy_history_retired_at: string | null;
     }>(
       env.DB,
-      "SELECT id, history_mode FROM conversations WHERE id = ?1 AND kind = 'group'",
+      "SELECT id, history_mode, legacy_history_retired_at FROM conversations WHERE id = ?1 AND kind = 'group'",
       conversationId,
     );
 
@@ -1408,6 +1409,14 @@ export async function handle(
         409,
         "Relay-hosted group history is not available for encrypted groups.",
         "HISTORY_MODE_UNSUPPORTED",
+      );
+    }
+
+    if (conversation.legacy_history_retired_at) {
+      throw new HttpError(
+        410,
+        "This group's legacy history is retired. Create a new encrypted group to keep messaging.",
+        "GROUP_HISTORY_RETIRED",
       );
     }
 
@@ -1445,9 +1454,10 @@ export async function handle(
     const conversation = await dbFirst<{
       id: string;
       history_mode: string | null;
+      legacy_history_retired_at: string | null;
     }>(
       env.DB,
-      "SELECT id, history_mode FROM conversations WHERE id = ?1 AND kind = 'group'",
+      "SELECT id, history_mode, legacy_history_retired_at FROM conversations WHERE id = ?1 AND kind = 'group'",
       conversationId,
     );
 
@@ -1463,6 +1473,14 @@ export async function handle(
         409,
         "Relay-hosted group history is not available for encrypted groups.",
         "HISTORY_MODE_UNSUPPORTED",
+      );
+    }
+
+    if (conversation.legacy_history_retired_at) {
+      throw new HttpError(
+        410,
+        "This group's legacy history is retired. Create a new encrypted group to keep messaging.",
+        "GROUP_HISTORY_RETIRED",
       );
     }
 
@@ -1627,6 +1645,21 @@ export async function handle(
       );
     }
 
+    const parentConversation = await dbFirst<{
+      legacy_history_retired_at: string | null;
+    }>(
+      env.DB,
+      "SELECT legacy_history_retired_at FROM conversations WHERE id = ?1",
+      conversationId,
+    );
+    if (parentConversation?.legacy_history_retired_at) {
+      throw new HttpError(
+        410,
+        "This group's legacy history is retired. Create a new encrypted group to keep messaging.",
+        "GROUP_HISTORY_RETIRED",
+      );
+    }
+
     const deletedAt = new Date().toISOString();
     await dbRun(
       env.DB,
@@ -1688,6 +1721,21 @@ export async function handle(
         403,
         "You can only edit your own messages",
         "FORBIDDEN",
+      );
+    }
+
+    const parentConversation = await dbFirst<{
+      legacy_history_retired_at: string | null;
+    }>(
+      env.DB,
+      "SELECT legacy_history_retired_at FROM conversations WHERE id = ?1",
+      conversationId,
+    );
+    if (parentConversation?.legacy_history_retired_at) {
+      throw new HttpError(
+        410,
+        "This group's legacy history is retired. Create a new encrypted group to keep messaging.",
+        "GROUP_HISTORY_RETIRED",
       );
     }
 

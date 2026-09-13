@@ -42,11 +42,16 @@ const defaultClientHeaders = {
   "x-emberchamber-device-model": "Google Pixel 8",
 };
 
-let worker: Awaited<ReturnType<typeof unstable_dev>>;
-let persistPath: string;
+let worker: Awaited<ReturnType<typeof unstable_dev>> | undefined;
+let persistPath: string | undefined;
+const wranglerCli = path.join(
+  path.dirname(require.resolve("wrangler/package.json")),
+  "bin",
+  "wrangler.js",
+);
 
 async function relayFetch(pathname: string, init?: RequestInit) {
-  return worker.fetch(`http://127.0.0.1${pathname}`, init as never);
+  return worker!.fetch(`http://127.0.0.1${pathname}`, init as never);
 }
 
 async function relayJson<T>(pathname: string, init?: RequestInit): Promise<T> {
@@ -56,15 +61,15 @@ async function relayJson<T>(pathname: string, init?: RequestInit): Promise<T> {
 
 function executeLocalSql(sql: string) {
   execFileSync(
-    "npx",
+    process.execPath,
     [
-      "wrangler",
+      wranglerCli,
       "d1",
       "execute",
       "emberchamber-relay-dev",
       "--local",
       "--persist-to",
-      persistPath,
+      persistPath!,
       "--config",
       "wrangler.jsonc",
       "--command",
@@ -181,7 +186,7 @@ function testClientIp(seed: string) {
 }
 
 function relayWebSocketUrl(pathname: string) {
-  return `ws://${worker.address}:${worker.port}${pathname}`;
+  return `ws://${worker!.address}:${worker!.port}${pathname}`;
 }
 
 async function openWebSocket(url: string): Promise<WebSocket> {
@@ -268,9 +273,9 @@ async function createRelayHostedGroup(session: RelaySession, title: string) {
 beforeAll(async () => {
   persistPath = mkdtempSync(path.join(tmpdir(), "relay-test-"));
   execFileSync(
-    "npx",
+    process.execPath,
     [
-      "wrangler",
+      wranglerCli,
       "d1",
       "migrations",
       "apply",
@@ -295,14 +300,15 @@ beforeAll(async () => {
     vars: relaySecrets,
     experimental: {
       disableExperimentalWarning: true,
-      testMode: true,
     },
   });
 }, 60_000);
 
 afterAll(async () => {
-  await worker.stop();
-  rmSync(persistPath, { recursive: true, force: true });
+  await worker?.stop();
+  if (persistPath) {
+    rmSync(persistPath, { recursive: true, force: true });
+  }
 });
 
 describe("relay routes", () => {
@@ -639,6 +645,77 @@ describe("relay routes", () => {
     expect(access.downloadUrl).toContain(
       `/v1/attachments/download/${ticket.attachmentId}`,
     );
+  });
+
+  it("rejects plaintext attachment tickets scoped to a conversation", async () => {
+    const owner = await bootstrapAccount(
+      "plaintext-owner@example.com",
+      "Owner browser",
+    );
+    const peer = await bootstrapAccount(
+      "plaintext-peer@example.com",
+      "Peer browser",
+    );
+    await updateDisplayName(peer, "Peer");
+    const dm = await relayJson<{ id: string; epoch: number }>("/v1/dm/open", {
+      method: "POST",
+      headers: authHeaders(owner),
+      body: JSON.stringify({ peerAccountId: peer.accountId }),
+    });
+
+    const rejected = await relayFetch("/v1/attachments/ticket", {
+      method: "POST",
+      headers: authHeaders(owner),
+      body: JSON.stringify({
+        fileName: "plaintext.bin",
+        mimeType: "application/octet-stream",
+        byteLength: 4,
+        sha256B64: sha256B64("plain"),
+        conversationId: dm.id,
+        conversationEpoch: dm.epoch,
+        contentClass: "file",
+        retentionMode: "private_vault",
+        protectionProfile: "standard",
+      }),
+    });
+
+    expect(rejected.status).toBe(400);
+
+    // Encryption mode omitted entirely (defaults to "none") is rejected the
+    // same way once a conversationId is present.
+    const rejectedDefault = await relayFetch("/v1/attachments/ticket", {
+      method: "POST",
+      headers: authHeaders(owner),
+      body: JSON.stringify({
+        fileName: "plaintext-default.bin",
+        mimeType: "application/octet-stream",
+        byteLength: 4,
+        sha256B64: sha256B64("plain"),
+        conversationId: dm.id,
+        conversationEpoch: dm.epoch,
+        contentClass: "file",
+        retentionMode: "private_vault",
+        protectionProfile: "standard",
+      }),
+    });
+    expect(rejectedDefault.status).toBe(400);
+
+    // Plaintext tickets remain valid for profile media (no conversationId).
+    const avatarTicket = await relayFetch("/v1/attachments/ticket", {
+      method: "POST",
+      headers: authHeaders(owner),
+      body: JSON.stringify({
+        fileName: "avatar.jpg",
+        mimeType: "image/jpeg",
+        byteLength: 4,
+        sha256B64: sha256B64("plain"),
+        contentClass: "image",
+        retentionMode: "private_vault",
+        protectionProfile: "standard",
+        encryptionMode: "none",
+      }),
+    });
+    expect(avatarTicket.status).toBe(201);
   });
 
   it("routes encrypted group attachment delivery through mailbox fanout", async () => {
@@ -1120,19 +1197,16 @@ describe("relay routes", () => {
       "Policy phone",
     );
 
-    const community = await relayJson<{ id: string }>(
-      "/v1/communities",
-      {
-        method: "POST",
-        headers: authHeaders(organizer),
-        body: JSON.stringify({
-          title: "Policy Community",
-          memberAccountIds: [],
-          memberCap: 50,
-          sensitiveMediaDefault: false,
-        }),
-      },
-    );
+    const community = await relayJson<{ id: string }>("/v1/communities", {
+      method: "POST",
+      headers: authHeaders(organizer),
+      body: JSON.stringify({
+        title: "Policy Community",
+        memberAccountIds: [],
+        memberCap: 50,
+        sensitiveMediaDefault: false,
+      }),
+    });
 
     const withMemberInvites = await relayJson<{
       allowMemberInvites: boolean;
@@ -1377,7 +1451,9 @@ describe("relay routes", () => {
       },
     );
     expect(nonOrganizerRevoke.status).toBe(403);
-    expect(await nonOrganizerRevoke.json()).toMatchObject({ code: "FORBIDDEN" });
+    expect(await nonOrganizerRevoke.json()).toMatchObject({
+      code: "FORBIDDEN",
+    });
 
     const grant = await relayJson<{ added: boolean }>(
       `/v1/communities/${community.id}/rooms/${room.id}/members/${member.accountId}/add`,
@@ -1472,18 +1548,15 @@ describe("relay routes", () => {
       }),
     });
 
-    await relayJson<{ id: string }>(
-      `/v1/communities/${community.id}/rooms`,
-      {
-        method: "POST",
-        headers: authHeaders(organizer),
-        body: JSON.stringify({
-          title: "Alpha Room",
-          roomAccessPolicy: "all_members",
-          memberAccountIds: [],
-        }),
-      },
-    );
+    await relayJson<{ id: string }>(`/v1/communities/${community.id}/rooms`, {
+      method: "POST",
+      headers: authHeaders(organizer),
+      body: JSON.stringify({
+        title: "Alpha Room",
+        roomAccessPolicy: "all_members",
+        memberAccountIds: [],
+      }),
+    });
 
     const scopedSearch = await relayJson<{
       conversations: Array<{ id: string; title: string }>;
@@ -1559,6 +1632,212 @@ describe("relay routes", () => {
     expect(await postMessage.json()).toMatchObject({
       code: "HISTORY_MODE_UNSUPPORTED",
     });
+  });
+
+  it("lets an operator retire and freeze a legacy relay-hosted group, never a room or encrypted group", async () => {
+    const operator = await bootstrapAccount(
+      "legacy-retire-operator@example.com",
+      "Legacy retire operator",
+    );
+    const owner = await bootstrapAccount(
+      "legacy-retire-owner@example.com",
+      "Legacy retire owner",
+    );
+    executeLocalSql(
+      `UPDATE accounts SET is_operator = 1 WHERE id = '${operator.accountId}'`,
+    );
+
+    const legacyGroupId = await createRelayHostedGroup(
+      owner,
+      "Legacy retirement group",
+    );
+
+    const sent = await relayJson<{ id: string }>(
+      `/v1/groups/${legacyGroupId}/messages`,
+      {
+        method: "POST",
+        headers: authHeaders(owner),
+        body: JSON.stringify({ text: "Before retirement" }),
+      },
+    );
+
+    const forbidden = await relayFetch(
+      `/v1/admin/conversations/${legacyGroupId}/retire-legacy-history`,
+      { method: "POST", headers: authHeaders(owner) },
+    );
+    expect(forbidden.status).toBe(403);
+
+    const encryptedGroup = await relayJson<{ id: string }>("/v1/groups", {
+      method: "POST",
+      headers: authHeaders(owner),
+      body: JSON.stringify({
+        title: "Still encrypted",
+        memberAccountIds: [],
+        memberCap: 6,
+        sensitiveMediaDefault: false,
+      }),
+    });
+    const notLegacy = await relayFetch(
+      `/v1/admin/conversations/${encryptedGroup.id}/retire-legacy-history`,
+      { method: "POST", headers: authHeaders(operator) },
+    );
+    expect(notLegacy.status).toBe(409);
+    expect(await notLegacy.json()).toMatchObject({
+      code: "NOT_A_LEGACY_GROUP",
+    });
+
+    const retired = await relayJson<{
+      retired: boolean;
+      alreadyRetired: boolean;
+      retiredAt: string;
+    }>(`/v1/admin/conversations/${legacyGroupId}/retire-legacy-history`, {
+      method: "POST",
+      headers: authHeaders(operator),
+    });
+    expect(retired.retired).toBe(true);
+    expect(retired.alreadyRetired).toBe(false);
+
+    const retiredAgain = await relayJson<{ alreadyRetired: boolean }>(
+      `/v1/admin/conversations/${legacyGroupId}/retire-legacy-history`,
+      { method: "POST", headers: authHeaders(operator) },
+    );
+    expect(retiredAgain.alreadyRetired).toBe(true);
+
+    const blockedSend = await relayFetch(
+      `/v1/groups/${legacyGroupId}/messages`,
+      {
+        method: "POST",
+        headers: authHeaders(owner),
+        body: JSON.stringify({ text: "After retirement" }),
+      },
+    );
+    expect(blockedSend.status).toBe(410);
+    expect(await blockedSend.json()).toMatchObject({
+      code: "GROUP_HISTORY_RETIRED",
+    });
+
+    const blockedReaction = await relayFetch(
+      `/v1/groups/${legacyGroupId}/messages/${sent.id}/reactions`,
+      {
+        method: "POST",
+        headers: authHeaders(owner),
+        body: JSON.stringify({ emoji: "🔥" }),
+      },
+    );
+    expect(blockedReaction.status).toBe(410);
+    expect(await blockedReaction.json()).toMatchObject({
+      code: "GROUP_HISTORY_RETIRED",
+    });
+
+    const blockedEdit = await relayFetch(
+      `/v1/groups/${legacyGroupId}/messages/${sent.id}`,
+      {
+        method: "PATCH",
+        headers: authHeaders(owner),
+        body: JSON.stringify({ text: "Edited after retirement" }),
+      },
+    );
+    expect(blockedEdit.status).toBe(410);
+    expect(await blockedEdit.json()).toMatchObject({
+      code: "GROUP_HISTORY_RETIRED",
+    });
+
+    const blockedDelete = await relayFetch(
+      `/v1/groups/${legacyGroupId}/messages/${sent.id}`,
+      { method: "DELETE", headers: authHeaders(owner) },
+    );
+    expect(blockedDelete.status).toBe(410);
+    expect(await blockedDelete.json()).toMatchObject({
+      code: "GROUP_HISTORY_RETIRED",
+    });
+
+    // Reads stay available — retirement freezes writes, it does not hide
+    // history.
+    const stillReadable = await relayFetch(
+      `/v1/groups/${legacyGroupId}/messages`,
+      { headers: authHeaders(owner) },
+    );
+    expect(stillReadable.status).toBe(200);
+
+    const audit = await relayJson<{
+      events: Array<{ action: string; targetConversationId: string | null }>;
+    }>("/v1/admin/audit-log", { headers: authHeaders(operator) });
+    expect(
+      audit.events.some(
+        (e) =>
+          e.action === "legacy_group_history_retired" &&
+          e.targetConversationId === legacyGroupId,
+      ),
+    ).toBe(true);
+  });
+
+  it("only purges a legacy group's history after it has been retired, and is idempotent", async () => {
+    const operator = await bootstrapAccount(
+      "legacy-purge-operator@example.com",
+      "Legacy purge operator",
+    );
+    const owner = await bootstrapAccount(
+      "legacy-purge-owner@example.com",
+      "Legacy purge owner",
+    );
+    executeLocalSql(
+      `UPDATE accounts SET is_operator = 1 WHERE id = '${operator.accountId}'`,
+    );
+
+    const legacyGroupId = await createRelayHostedGroup(
+      owner,
+      "Legacy purge group",
+    );
+    await relayFetch(`/v1/groups/${legacyGroupId}/messages`, {
+      method: "POST",
+      headers: authHeaders(owner),
+      body: JSON.stringify({ text: "First" }),
+    });
+    await relayFetch(`/v1/groups/${legacyGroupId}/messages`, {
+      method: "POST",
+      headers: authHeaders(owner),
+      body: JSON.stringify({ text: "Second" }),
+    });
+
+    const tooSoon = await relayFetch(
+      `/v1/admin/conversations/${legacyGroupId}/purge-legacy-history`,
+      { method: "POST", headers: authHeaders(operator) },
+    );
+    expect(tooSoon.status).toBe(409);
+    expect(await tooSoon.json()).toMatchObject({ code: "GROUP_NOT_RETIRED" });
+
+    await relayFetch(
+      `/v1/admin/conversations/${legacyGroupId}/retire-legacy-history`,
+      { method: "POST", headers: authHeaders(operator) },
+    );
+
+    const purged = await relayJson<{
+      purged: boolean;
+      alreadyPurged: boolean;
+      deletedMessageCount: number;
+    }>(`/v1/admin/conversations/${legacyGroupId}/purge-legacy-history`, {
+      method: "POST",
+      headers: authHeaders(operator),
+    });
+    expect(purged.purged).toBe(true);
+    expect(purged.alreadyPurged).toBe(false);
+    expect(purged.deletedMessageCount).toBeGreaterThanOrEqual(2);
+
+    const emptyHistory = await relayJson<Array<{ id: string }>>(
+      `/v1/groups/${legacyGroupId}/messages`,
+      { headers: authHeaders(owner) },
+    );
+    expect(emptyHistory.length).toBe(0);
+
+    const purgedAgain = await relayJson<{
+      alreadyPurged: boolean;
+      deletedMessageCount: number;
+    }>(`/v1/admin/conversations/${legacyGroupId}/purge-legacy-history`, {
+      method: "POST",
+      headers: authHeaders(operator),
+    });
+    expect(purgedAgain.alreadyPurged).toBe(true);
+    expect(purgedAgain.deletedMessageCount).toBe(0);
   });
 
   it("reports operator status and gates the operator surface (non-operator 403)", async () => {
@@ -1711,7 +1990,10 @@ describe("relay routes", () => {
     const recovered = await relayJson<RelaySession>("/v1/auth/complete", {
       method: "POST",
       headers: { "content-type": "application/json", ...defaultClientHeaders },
-      body: JSON.stringify({ completionToken: token, deviceLabel: "Recovered" }),
+      body: JSON.stringify({
+        completionToken: token,
+        deviceLabel: "Recovered",
+      }),
     });
     expect(recovered.accountId).toBe(victim.accountId);
     expect(recovered.deviceId).not.toBe(victim.deviceId);
@@ -1989,14 +2271,20 @@ describe("relay routes", () => {
   });
 
   it("PATCH /v1/admin/reports/batch updates multiple reports in one call", async () => {
-    const reporter = await bootstrapAccount("batch-reporter@example.com", "Batch reporter");
-    const operator = await bootstrapAccount("batch-operator@example.com", "Batch operator");
+    const reporter = await bootstrapAccount(
+      "batch-reporter@example.com",
+      "Batch reporter",
+    );
+    const operator = await bootstrapAccount(
+      "batch-operator@example.com",
+      "Batch operator",
+    );
     executeLocalSql(
       `UPDATE accounts SET is_operator = 1 WHERE id = '${operator.accountId}'`,
     );
 
     // File two reports.
-    const r1 = await relayJson<{ id: string }>("/v1/reports", {
+    const r1 = await relayJson<{ reportId: string }>("/v1/reports", {
       method: "POST",
       headers: authHeaders(reporter),
       body: JSON.stringify({
@@ -2005,7 +2293,7 @@ describe("relay routes", () => {
         disclosedPayload: {},
       }),
     });
-    const r2 = await relayJson<{ id: string }>("/v1/reports", {
+    const r2 = await relayJson<{ reportId: string }>("/v1/reports", {
       method: "POST",
       headers: authHeaders(reporter),
       body: JSON.stringify({
@@ -2016,28 +2304,34 @@ describe("relay routes", () => {
     });
 
     // Batch-dismiss both.
-    const batch = await relayJson<{ updated: number; status: string }>("/v1/admin/reports/batch", {
-      method: "PATCH",
-      headers: authHeaders(operator),
-      body: JSON.stringify({
-        ids: [r1.id, r2.id],
-        status: "dismissed",
-        resolutionNote: "batch test",
-      }),
-    });
+    const batch = await relayJson<{ updated: number; status: string }>(
+      "/v1/admin/reports/batch",
+      {
+        method: "PATCH",
+        headers: authHeaders(operator),
+        body: JSON.stringify({
+          ids: [r1.reportId, r2.reportId],
+          status: "dismissed",
+          resolutionNote: "batch test",
+        }),
+      },
+    );
     expect(batch.updated).toBe(2);
     expect(batch.status).toBe("dismissed");
 
     // Verify both are now dismissed.
     const detail1 = await relayJson<{ status: string }>(
-      `/v1/admin/reports/${r1.id}`,
+      `/v1/admin/reports/${r1.reportId}`,
       { headers: authHeaders(operator) },
     );
     expect(detail1.status).toBe("dismissed");
   });
 
   it("GET /v1/me/passkeys returns empty array for a fresh account", async () => {
-    const user = await bootstrapAccount("passkey-list@example.com", "List device");
+    const user = await bootstrapAccount(
+      "passkey-list@example.com",
+      "List device",
+    );
     const passkeys = await relayJson<
       Array<{ credentialId: string; transports: string[]; createdAt: string }>
     >("/v1/me/passkeys", { headers: authHeaders(user) });
@@ -2046,7 +2340,10 @@ describe("relay routes", () => {
   });
 
   it("POST /v1/passkeys/register/options returns valid options shape", async () => {
-    const user = await bootstrapAccount("passkey-opts@example.com", "Opts device");
+    const user = await bootstrapAccount(
+      "passkey-opts@example.com",
+      "Opts device",
+    );
     const options = await relayJson<{
       challenge: string;
       rp: { id: string; name: string };
@@ -2063,7 +2360,10 @@ describe("relay routes", () => {
   });
 
   it("POST /v1/passkeys/register/verify rejects a bad attestation", async () => {
-    const user = await bootstrapAccount("passkey-bad-reg@example.com", "Bad reg device");
+    const user = await bootstrapAccount(
+      "passkey-bad-reg@example.com",
+      "Bad reg device",
+    );
     // Obtain a challenge first so one exists in the DB.
     await relayFetch("/v1/passkeys/register/options", {
       method: "POST",
@@ -2159,14 +2459,14 @@ describe("relay routes", () => {
   });
 
   it("DELETE /v1/me/passkeys/:credentialId with non-existent credential returns 404", async () => {
-    const user = await bootstrapAccount("passkey-del@example.com", "Del device");
-    const res = await relayFetch(
-      "/v1/me/passkeys/AAAAAAAAAAAAAAAAAAAAAA",
-      {
-        method: "DELETE",
-        headers: authHeaders(user),
-      },
+    const user = await bootstrapAccount(
+      "passkey-del@example.com",
+      "Del device",
     );
+    const res = await relayFetch("/v1/me/passkeys/AAAAAAAAAAAAAAAAAAAAAA", {
+      method: "DELETE",
+      headers: authHeaders(user),
+    });
     expect(res.status).toBe(404);
     expect(await res.json()).toMatchObject({ code: "NOT_FOUND" });
   });

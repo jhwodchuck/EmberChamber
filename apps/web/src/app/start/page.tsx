@@ -40,7 +40,7 @@ export default function StartPage() {
               </p>
 
               <div className="mt-6 flex flex-wrap gap-3">
-                {["Invite-only access", "Age-gated beta"].map((item) => (
+                {["Invite-only access", "Controlled beta"].map((item) => (
                   <div key={item} className="metric-pill">
                     <BadgeCheck
                       aria-hidden="true"

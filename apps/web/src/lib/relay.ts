@@ -30,18 +30,35 @@ import type {
   PrivacySettings,
   SessionDescriptor,
 } from "@emberchamber/protocol";
+import { getSecureItem, removeSecureItem, setSecureItem } from "@/lib/secure-storage";
 
-const relayUrl =
+const buildTimeRelayUrl =
   process.env.NEXT_PUBLIC_RELAY_URL?.replace(/\/$/, "") ?? "http://127.0.0.1:8787";
 
+// Desktop bakes its relay URL into the static export at build time (same as
+// the public web deployment), which loses the previous shell's ability to
+// auto-detect a local dev relay without a rebuild. <SecureStorageBootstrap>
+// restores that for desktop specifically by calling this once at startup if
+// a local relay answers; the public web build never calls it, so its
+// behavior is unchanged.
+let runtimeRelayUrlOverride: string | null = null;
+
+export function setRelayUrlOverride(url: string) {
+  runtimeRelayUrlOverride = url.replace(/\/$/, "");
+}
+
+export function getRelayBaseUrl() {
+  return runtimeRelayUrlOverride ?? buildTimeRelayUrl;
+}
+
 export function getRelayWebsocketUrl() {
-  const url = new URL(relayUrl);
+  const url = new URL(getRelayBaseUrl());
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
   return url.origin;
 }
 
 export function getRelayOrigin() {
-  return new URL(relayUrl).origin;
+  return new URL(getRelayBaseUrl()).origin;
 }
 
 const RELAY_SESSION_STORAGE_KEY = "emberchamber.relay.session.v1";
@@ -74,7 +91,7 @@ export function readRelaySession(): RelayStoredSession | null {
     return null;
   }
 
-  const raw = window.localStorage.getItem(RELAY_SESSION_STORAGE_KEY);
+  const raw = getSecureItem(RELAY_SESSION_STORAGE_KEY);
   if (!raw) {
     return null;
   }
@@ -82,7 +99,7 @@ export function readRelaySession(): RelayStoredSession | null {
   try {
     return JSON.parse(raw) as RelayStoredSession;
   } catch {
-    window.localStorage.removeItem(RELAY_SESSION_STORAGE_KEY);
+    removeSecureItem(RELAY_SESSION_STORAGE_KEY);
     return null;
   }
 }
@@ -92,7 +109,7 @@ export function storeRelaySession(session: RelayStoredSession) {
     return;
   }
 
-  window.localStorage.setItem(RELAY_SESSION_STORAGE_KEY, JSON.stringify(session));
+  setSecureItem(RELAY_SESSION_STORAGE_KEY, JSON.stringify(session));
 }
 
 export function clearRelaySession() {
@@ -100,7 +117,7 @@ export function clearRelaySession() {
     return;
   }
 
-  window.localStorage.removeItem(RELAY_SESSION_STORAGE_KEY);
+  removeSecureItem(RELAY_SESSION_STORAGE_KEY);
 }
 
 export function hasRelaySession() {
@@ -158,7 +175,7 @@ async function refreshRelaySession(): Promise<RelayStoredSession | null> {
     const timeoutId = window.setTimeout(() => controller.abort(), RELAY_FETCH_TIMEOUT_MS);
 
     try {
-      const response = await fetch(`${relayUrl}/v1/auth/refresh`, {
+      const response = await fetch(`${getRelayBaseUrl()}/v1/auth/refresh`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ refreshToken: current.refreshToken }),
@@ -246,7 +263,7 @@ async function relayFetch<T>(
 
   let response: Response;
   try {
-    response = await fetch(`${relayUrl}${path}`, {
+    response = await fetch(`${getRelayBaseUrl()}${path}`, {
       ...options,
       headers,
       signal: controller.signal,

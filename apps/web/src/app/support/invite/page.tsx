@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { MarketingShell } from "@/components/marketing-shell";
 import { StatusCallout } from "@/components/status-callout";
+import { getRelayBaseUrl } from "@/lib/relay";
 
 type InviteStatus =
   | { status: "valid"; expiresAt?: string; usesRemaining: number | null }
@@ -11,9 +12,6 @@ type InviteStatus =
   | { status: "expired"; expiresAt?: string }
   | { status: "revoked" }
   | { status: "not_found" };
-
-const relayUrl =
-  process.env.NEXT_PUBLIC_RELAY_URL?.replace(/\/$/, "") ?? "http://127.0.0.1:8787";
 
 export default function InviteCheckPage() {
   const [code, setCode] = useState("");
@@ -30,7 +28,7 @@ export default function InviteCheckPage() {
     setError(null);
 
     try {
-      const res = await fetch(`${relayUrl}/v1/invite/check`, {
+      const res = await fetch(`${getRelayBaseUrl()}/v1/invite/check`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ code: code.trim() }),

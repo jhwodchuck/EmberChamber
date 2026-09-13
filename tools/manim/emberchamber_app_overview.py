@@ -127,14 +127,14 @@ class EmberChamberAppOverviewVideo(Scene):
         self.play(Transform(heading, onboarding))
 
         invite = card("Invite Link", color=EMBER_ORANGE, label_color=EMBER_ORANGE, width=2.4)
-        adult = card("18+ Affirmation", color=EMBER_ORANGE, label_color=EMBER_ORANGE, width=2.9)
+        eligibility = card("Eligibility Check", color=EMBER_ORANGE, label_color=EMBER_ORANGE, width=2.9)
         magic = card("Email Magic Link", color=KEY_GREEN, label_color=KEY_GREEN, width=3.1)
-        passkey = card("Passkeys (Next)", color=PLAIN_TEAL, label_color=PLAIN_TEAL, width=2.8)
+        passkey = card("Web Passkeys", color=PLAIN_TEAL, label_color=PLAIN_TEAL, width=2.8)
 
-        flow = VGroup(invite, adult, magic, passkey).arrange(RIGHT, buff=0.45).shift(DOWN * 0.5)
+        flow = VGroup(invite, eligibility, magic, passkey).arrange(RIGHT, buff=0.45).shift(DOWN * 0.5)
         flow_arrows = VGroup(
-            Arrow(invite.get_right(), adult.get_left(), buff=0.1, color=EMBER_CREAM),
-            Arrow(adult.get_right(), magic.get_left(), buff=0.1, color=EMBER_CREAM),
+            Arrow(invite.get_right(), eligibility.get_left(), buff=0.1, color=EMBER_CREAM),
+            Arrow(eligibility.get_right(), magic.get_left(), buff=0.1, color=EMBER_CREAM),
             Arrow(magic.get_right(), passkey.get_left(), buff=0.1, color=EMBER_CREAM),
         )
 

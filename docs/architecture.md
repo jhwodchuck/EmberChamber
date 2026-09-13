@@ -5,15 +5,14 @@ from target direction so the docs do not overstate privacy, platform maturity, o
 
 ## Runtime Map
 
-| Runtime          | Repo path                                            | Current status | Notes                                                                                                                                                                                                                                       |
-| ---------------- | ---------------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Mobile client    | `apps/mobile`                                        | Active         | Expo client using relay APIs for bootstrap, age-gated affirmation, sessions, privacy, group invite flows, group threads, and attachment upload/download with local SQLite and SecureStore.                                                |
-| Desktop client   | `apps/desktop`                                       | Active         | Tauri shell with bundled local HTML/JS UI. Talks directly to the relay for auth, age-gated affirmation, groups, invites, sessions, privacy, and attachments.                                                                              |
-| Web app          | `apps/web`                                           | Active         | Relay-native for onboarding, age-gated affirmation, DMs, groups, community and room management, settings, joined-space search, and invite preview/accept. Legacy channel pages are retired placeholders, not active backend dependencies. |
-| Relay runtime    | `apps/relay`                                         | Active         | Cloudflare Worker with D1, Durable Objects, R2, and queue bindings.                                                                                                                                                                         |
-| Shared contracts | `packages/protocol`, `crates/relay-protocol`         | Active         | Shared types for sessions, group flows, mailbox envelopes, device bundles, and attachments.                                                                                                                                                 |
-| Rust core        | `crates/core`                                        | Partial        | Present in repo and instantiated by desktop bootstrap, but not yet the primary engine behind every client flow.                                                                                                                             |
-| Legacy prototype | `apps/api`, `infra/docker-compose.yml`, `services/*` | Retained       | Older centralized Express/Postgres stack plus archived Rust service scaffolds. Not the target beta runtime or the default root Cargo workspace.                                                                                             |
+| Runtime          | Repo path                                    | Current status | Notes                                                                                                                                                                                                                                       |
+| ---------------- | -------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mobile client    | `apps/mobile`                                | Active         | Expo client using relay APIs for bootstrap, age-gated affirmation, sessions, privacy, group invite flows, group threads, and attachment upload/download with local SQLite and SecureStore.                                                |
+| Desktop client   | `apps/desktop`                               | Active         | Tauri shell rendering a static export of `apps/web`'s authenticated workspace (bundled at build time; see `apps/desktop/AGENTS.md`). Session/device keys route through the OS keyring instead of localStorage.                              |
+| Web app          | `apps/web`                                   | Active         | Relay-native for onboarding, age-gated affirmation, DMs, groups, community and room management, settings, joined-space search, and invite preview/accept. Legacy channel pages are retired placeholders, not active backend dependencies. |
+| Relay runtime    | `apps/relay`                                 | Active         | Cloudflare Worker with D1, Durable Objects, R2, and queue bindings.                                                                                                                                                                         |
+| Shared contracts | `packages/protocol`, `crates/relay-protocol` | Active         | Shared types for sessions, group flows, mailbox envelopes, device bundles, and attachments.                                                                                                                                                 |
+| Rust core        | `crates/core`                                | Partial        | Present in repo and instantiated by desktop bootstrap, but not yet the primary engine behind every client flow.                                                                                                                             |
 
 ## Relay Storage Planes
 
@@ -28,6 +27,9 @@ from target direction so the docs do not overstate privacy, platform maturity, o
 ## Active Relay Capabilities
 
 - Email magic-link bootstrap with invite-only account creation and optional group-invite bootstrap.
+- WebAuthn/FIDO2 passkey registration, discoverable authentication, credential listing/removal,
+  expiring challenges, and signature-counter updates. The web workspace provides enrollment and
+  sign-in UI; native-client passkey UX is not implemented.
 - Age-gated affirmation on bootstrap, with email kept private and non-discoverable.
 - Session listing and self-revocation.
 - Group creation, membership listing, owner or admin invite minting, invite preview/accept, and member removal.
@@ -38,8 +40,9 @@ from target direction so the docs do not overstate privacy, platform maturity, o
 
 ## Present but Not Finished
 
-- Passkey endpoints exist but currently return `501`.
-- Operator-assisted recovery is implemented: operators can force-signout all of an account's sessions and mint a single-use recovery magic link (same account identity) from the operator console (`/app/admin`), which also backs disclosure-report review and a permanent operator audit log. Account *suspension* and bulk review are not built.
+- WebAuthn is implemented for the relay and web workspace, but native-client passkey UX and a
+  successful authenticator end-to-end test are still missing.
+- Operator-assisted recovery is implemented: operators can force-signout all of an account's sessions and mint a single-use recovery magic link (same account identity) from the operator console (`/app/admin`), which also backs disclosure-report review, account suspension, bulk report review, and a permanent operator audit log.
 - Device-link start/confirm exists, but passkey-based peer-to-peer trusted-device recovery is not complete.
 - Android FCM token registration, encrypted token storage, and `PUSH_QUEUE` delivery are now wired for the mobile client, but production push still depends on deployed Cloudflare secrets plus Apple-side APNS work for iPhone.
 - The encrypted mailbox/device-bundle path now powers the browser DM flow and new group creation in the relay runtime, but the repo does not yet expose a fully uniform encrypted-group and encrypted-attachment experience across every client surface.
@@ -47,11 +50,11 @@ from target direction so the docs do not overstate privacy, platform maturity, o
 
 ## Current Client Surface Matrix
 
-| Surface            | Relay-native today                                                                                                                                                                                                                          | Still legacy or missing                                                                                                               |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Android and iPhone | Bootstrap, age-gated affirmation, sessions, privacy defaults, contact card, device bundle registration, group invite preview/accept, group messaging, attachment upload/download, local cache, and Android-native FCM token registration. | Real production key handling, uniform encrypted attachments, and APNS/iPhone push delivery are still scaffolded rather than complete. |
-| Desktop            | Bootstrap, age-gated affirmation, sessions, privacy defaults, group creation, group invite management, invite preview/accept, group messaging, and attachment upload/download.                                                            | Passkeys, polished recovery, deeper Rust-core integration, and uniform encrypted attachments are incomplete.                          |
-| Web                | Public site, invite landing, magic-link bootstrap, profile/privacy settings, relay-native DM/chat, joined-space metadata search, device-encrypted group creation, community and room management, and invite preview/accept.                 | Uniform encrypted attachments, room-history migration, and passkey/recovery maturity are still incomplete.                            |
+| Surface            | Relay-native today                                                                                                                                                                                                                                                  | Still legacy or missing                                                                                                                 |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Android and iPhone | Bootstrap, age-gated affirmation, sessions, privacy defaults, contact card, device bundle registration, group invite preview/accept, group messaging, attachment upload/download, local cache, and Android-native FCM token registration.                         | Real production key handling, uniform encrypted attachments, and APNS/iPhone push delivery are still scaffolded rather than complete.   |
+| Desktop            | Bootstrap, age-gated affirmation, sessions, privacy defaults, group creation, group invite management, invite preview/accept, group messaging, attachment upload/download, and the bundled web passkey UI.                                                        | Packaged-webview passkey acceptance, polished recovery, deeper Rust-core integration, and uniform encrypted attachments are incomplete. |
+| Web                | Public site, invite landing, magic-link and passkey bootstrap, passkey enrollment/removal, profile/privacy settings, relay-native DM/chat, joined-space metadata search, device-encrypted group creation, community and room management, and invite preview/accept. | Uniform encrypted attachments, room-history migration, native passkey parity, and recovery maturity are still incomplete.               |
 
 ## D1 Schema Summary
 
@@ -70,9 +73,15 @@ from target direction so the docs do not overstate privacy, platform maturity, o
 
 ## Architectural Gaps To Close
 
-- Finish retiring the remaining relay-hosted readable group and room history in favor of the encrypted path.
-- Add client-side attachment encryption before upload and document ciphertext retention precisely.
-- Wire passkeys, safer recovery/device-link flows, and safety-number style change handling end to end.
+- Operators can now retire (freeze) and purge any remaining pre-migration relay-hosted **group**
+  history via `/v1/admin/conversations/:id/{retire,purge}-legacy-history` (see
+  `docs/operator-playbook.md`). Communities and rooms are relay-hosted by permanent product
+  design, not a legacy leftover, and are intentionally out of scope for this retirement path.
+- Client-side attachment encryption is now enforced at the relay: `POST /v1/attachments/ticket`
+  rejects plaintext tickets whenever `conversationId` is set, so message attachments must be
+  encrypted on-device before upload on every surface. Plaintext remains only for profile media
+  (avatar uploads), which carries no `conversationId`.
+- Extend passkey UX beyond web, add authenticator end-to-end coverage, and finish safer
+  recovery/device-link flows plus safety-number style change handling.
 - Finish APNS delivery plus more capable background sync and inbox surfacing on mobile for the encrypted mailbox path.
-- Finish the remaining removal of legacy `apps/api` dependencies outside retired placeholder routes and docs.
 - Add automated cleanup for mailbox envelopes and expired attachment records.

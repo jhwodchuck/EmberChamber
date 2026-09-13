@@ -32,6 +32,7 @@ import {
   relayMailboxApi,
   uploadAttachment,
 } from "@/lib/relay";
+import { getSecureItem, removeSecureItem, setSecureItem } from "@/lib/secure-storage";
 
 const WORKSPACE_STORAGE_KEY = "emberchamber.relay.workspace.v1";
 const WORKSPACE_DB_NAME = "emberchamber-relay-workspace";
@@ -123,11 +124,9 @@ function readWorkspaceState(): WorkspaceState {
     return defaultWorkspaceState();
   }
 
-  const parsed = parseWorkspaceState(
-    window.localStorage.getItem(WORKSPACE_STORAGE_KEY),
-  );
+  const parsed = parseWorkspaceState(getSecureItem(WORKSPACE_STORAGE_KEY));
   if (!parsed) {
-    window.localStorage.removeItem(WORKSPACE_STORAGE_KEY);
+    removeSecureItem(WORKSPACE_STORAGE_KEY);
     return defaultWorkspaceState();
   }
 
@@ -145,7 +144,7 @@ function writeWorkspaceState(state: WorkspaceState) {
     return;
   }
 
-  window.localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(state));
+  setSecureItem(WORKSPACE_STORAGE_KEY, JSON.stringify(state));
 }
 
 function trimStoredMessages(messages: StoredDmMessage[]) {
@@ -312,9 +311,7 @@ async function migrateLegacyWorkspaceState() {
       return;
     }
 
-    const parsed = parseWorkspaceState(
-      window.localStorage.getItem(WORKSPACE_STORAGE_KEY),
-    );
+    const parsed = parseWorkspaceState(getSecureItem(WORKSPACE_STORAGE_KEY));
     if (
       !parsed?.messagesByConversation ||
       Object.keys(parsed.messagesByConversation).length === 0

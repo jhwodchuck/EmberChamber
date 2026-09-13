@@ -25,7 +25,7 @@ Then ground yourself in the current EmberChamber first-use UX using, when releva
 
 Find real user-facing friction in EmberChamber’s invite, bootstrap, trust, and first-use flows.
 
-Focus on whether a newly invited adult can understand:
+Focus on whether a newly invited participant can understand:
 
 - where they are
 - what just happened
@@ -197,7 +197,7 @@ If there are no material findings in your scope, say `No material findings.`
 
 ## Final instruction
 
-Review EmberChamber like an invited adult using it for the first time, without insider context.
+Review EmberChamber like an invited participant using it for the first time, without insider context.
 
 Your job is not to redesign the product.
 Your job is to find the places where the current product fails to explain itself at the exact moment the user needs confidence to continue.

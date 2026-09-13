@@ -51,6 +51,9 @@ jobs:
       - name: Install JavaScript dependencies
         run: npm install --no-audit --no-fund
 
+      - name: Verify release version alignment
+        run: npm run check:release-version -- --ref "$GITHUB_REF"
+
       - name: Patch Expo iOS packages for Xcode 16.4
         shell: bash
         run: |

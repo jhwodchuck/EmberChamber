@@ -74,8 +74,11 @@ jobs:
             done
           done
 
-      # ── Web + desktop screenshots ───────────────────────────────────────────
-      - name: Download latest web and desktop screenshots
+      # ── Web screenshots ──────────────────────────────────────────────────────
+      # Desktop renders a static export of this same web workspace (see
+      # apps/desktop/AGENTS.md), so there is no separate desktop screenshot
+      # artifact to download here anymore.
+      - name: Download latest web screenshots
         run: |
           RUN_ID=$(gh run list \
             --repo "$GITHUB_REPOSITORY" \
@@ -87,11 +90,11 @@ jobs:
             --jq '.[0].databaseId // empty')
 
           if [ -z "$RUN_ID" ]; then
-            echo "No successful CI - Relay and Companion Apps run on main; skipping web/desktop screenshots."
+            echo "No successful CI - Relay and Companion Apps run on main; skipping web screenshots."
             exit 0
           fi
 
-          echo "Downloading web and desktop screenshots from run $RUN_ID"
+          echo "Downloading web screenshots from run $RUN_ID"
 
           gh run download "$RUN_ID" \
             --repo "$GITHUB_REPOSITORY" \
@@ -102,14 +105,6 @@ jobs:
           # Artifact path is apps/web/artifacts/screenshots/new-user-flow/*.png;
           # flatten all PNGs regardless of subdirectory.
           find staging/web -name '*.png' -exec cp {} docs/wiki-site/public/screenshots/web/ \; 2>/dev/null || true
-
-          gh run download "$RUN_ID" \
-            --repo "$GITHUB_REPOSITORY" \
-            --pattern "emberchamber-desktop-screenshots-*" \
-            --dir staging/desktop 2>/dev/null || true
-
-          mkdir -p docs/wiki-site/public/screenshots/desktop
-          find staging/desktop -name '*.png' -exec cp {} docs/wiki-site/public/screenshots/desktop/ \; 2>/dev/null || true
 
       # ── Regenerate gallery markdown ─────────────────────────────────────────
       - name: Generate gallery page

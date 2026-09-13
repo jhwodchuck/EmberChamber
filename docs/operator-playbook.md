@@ -63,6 +63,37 @@ supported answer to "I lost all my devices."
 (session revocation, recovery handoff, report transitions, policy changes, member removals,
 operator grants). Use it to confirm what action was taken, by whom, and when.
 
+### Legacy relay-hosted group history retirement (API-only)
+
+New groups have been created `device_encrypted` since the encrypted-group migration; any
+conversation with `kind = 'group'` and `history_mode = 'relay_hosted'` still visible in D1 is a
+pre-migration leftover, not an ongoing product mode. This does **not** apply to communities or
+rooms — those are relay-hosted by permanent design and must never be retired or purged.
+
+There is no web UI for this yet; it is a two-step, operator-authenticated API flow:
+
+1. **Retire** (freeze writes, history stays readable):
+   `POST /v1/admin/conversations/:conversationId/retire-legacy-history`
+   Rejects with `409 NOT_A_LEGACY_GROUP` for anything that is not a `kind = 'group'` row still on
+   `history_mode = 'relay_hosted'` (communities, rooms, and device-encrypted groups are always
+   rejected). Idempotent — retiring an already-retired group returns `alreadyRetired: true`.
+2. **Purge** (delete message and attachment rows, after a retention window you choose):
+   `POST /v1/admin/conversations/:conversationId/purge-legacy-history`
+   Requires the group to already be retired (`409 GROUP_NOT_RETIRED` otherwise) — this ordering
+   is enforced so a group can never be purged while still accepting new messages. Deletes
+   `conversation_messages` rows and any relay-hosted attachment blobs (D1 rows and R2 objects)
+   scoped to that conversation. Idempotent — purging again returns `alreadyPurged: true` and zero
+   counts.
+
+Both actions write an `operator_audit_log` entry (`legacy_group_history_retired` /
+`legacy_group_history_purged`), visible at `/app/admin/audit`. Find candidate groups with:
+
+```sql
+SELECT id, title, created_at, legacy_history_retired_at, legacy_history_purged_at
+  FROM conversations
+ WHERE kind = 'group' AND history_mode = 'relay_hosted';
+```
+
 ## Invite Defaults
 
 - Treat every group invite as deliberate access, not as a growth loop.

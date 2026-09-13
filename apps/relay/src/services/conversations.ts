@@ -371,7 +371,11 @@ export async function createCommunityRoom(
        join_rule_text,
        allow_member_invites,
        history_mode
-     ) VALUES (?1, 'room', ?2, 1, ?3, ?4, ?4, ?5, ?6, NULL, ?7, ?8, 0, 'relay_hosted')`,
+     ) VALUES (
+       ?1, 'room', ?2, 1, ?3, ?4, ?4, ?5, ?6,
+       (SELECT member_cap FROM conversations WHERE id = ?5),
+       ?7, ?8, 0, 'relay_hosted'
+     )`,
     roomId,
     input.title,
     input.createdBy,

@@ -43,21 +43,16 @@ test.describe("Operator admin surface", () => {
     });
     expect(reportResponse.ok()).toBeTruthy();
 
-    // Sign the browser into the operator account via the magic-link debug token.
-    const startBody = await request
-      .post(`${relayBaseUrl}/v1/auth/start`, {
-        data: {
-          email: `ci-operator-${seed}@example.test`,
-          inviteToken: "dev-beta-invite",
-          ageConfirmed18: true,
-          deviceLabel: `CI Operator Browser ${seed}`,
-        },
-      })
-      .then((response) => response.json());
-    await page.goto(
-      `${webBaseUrl}/auth/complete?token=${encodeURIComponent(startBody.debugCompletionToken ?? "")}&browser=1`,
-    );
-    await page.waitForURL(/\/app$/, { timeout: 20_000 });
+    // Reuse the bootstrapped operator session in the browser. Other e2e flows
+    // cover magic-link completion; this test stays focused on operator access
+    // and avoids racing a second session against the account elevation.
+    await page.goto(webBaseUrl);
+    await page.evaluate((session) => {
+      window.localStorage.setItem(
+        "emberchamber.relay.session.v1",
+        JSON.stringify(session),
+      );
+    }, operator);
 
     // The operator nav entry should be visible; open the admin surface.
     await page.goto(`${webBaseUrl}/app/admin`);
