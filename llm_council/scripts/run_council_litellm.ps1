@@ -4,15 +4,21 @@ param(
     [string]$Cli = "copilot",
     [string]$BaseRef = "main",
     [string]$HeadRef = "HEAD",
-    [string]$ReviewTarget = "manual-review"
+    [string]$ReviewTarget = "manual-review",
+    [string]$LiteLLMProfile
 )
 
 # 1. Source the LiteLLM Profile to get wrapper functions
-$liteLLMProfile = "C:\gh\LocalPC\LiteLLM\scripts\LiteLLM-Profile.ps1"
+$liteLLMProfile = if ([string]::IsNullOrWhiteSpace($LiteLLMProfile)) {
+    $env:EMBERCHAMBER_LITELLM_PROFILE
+} else {
+    $LiteLLMProfile
+}
+
 if (Test-Path $liteLLMProfile) {
     . $liteLLMProfile
 } else {
-    Write-Error "LiteLLM Profile script not found at $liteLLMProfile"
+    Write-Error "LiteLLM profile script was not found. Provide -LiteLLMProfile <path> or set EMBERCHAMBER_LITELLM_PROFILE to the path of LiteLLM-Profile.ps1."
     return
 }
 
