@@ -28,13 +28,9 @@ Default to these paths unless the user explicitly asks for legacy work:
 
 ## Legacy Paths
 
-These remain in the repo, but they are not the default place for new beta work:
-
-- `apps/api`: legacy Express and Postgres prototype
-- `infra/docker-compose.yml`: legacy centralized stack
-- `services/*`: archived Rust service scaffolds kept for reference and explicit legacy maintenance
-
-Only change legacy paths when the user explicitly asks for them or when they block current builds.
+The legacy Express/Postgres prototype (`apps/api`), the centralized `infra/docker-compose.yml`
+stack, and the archived `services/*` Rust scaffolds have been removed from the repo (2026-07). No
+active surface ever depended on them; git history retains them if a reference is ever needed.
 
 ## Routing Work
 
@@ -52,7 +48,7 @@ Preserve the current beta direction:
 
 - invite-only access
 - age-gated access with self-attested 18+ affirmation
-- email magic-link bootstrap, with passkeys later
+- email magic-link bootstrap, with optional passkeys implemented on the relay and web surfaces
 - E2EE direct messages and small groups, with invite-gated communities and rooms as a closed-beta expansion surface
 - organizer or admin invite control in phase 1
 - local-first history on device

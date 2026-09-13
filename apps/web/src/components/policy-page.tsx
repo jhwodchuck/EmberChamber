@@ -38,9 +38,9 @@ export function PolicyPage({
 
             <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
               {[
-                "Write the boundary plainly.",
-                "Keep the trust model specific.",
-                "Do not hide operational reality.",
+                "Clear privacy boundaries",
+                "Specific security claims",
+                "Transparent operational limits",
               ].map((item) => (
                 <div
                   key={item}
@@ -57,11 +57,11 @@ export function PolicyPage({
           <aside className="cinema-panel h-fit rounded-[2rem] px-6 py-6 lg:sticky lg:top-28">
             <p className="section-kicker">Short Version</p>
             <p className="mt-4 text-balance font-display text-3xl font-semibold text-[var(--text-primary)]">
-              This page exists to define the product boundary, not to soften it.
+              Private by design, with clear operational boundaries.
             </p>
             <p className="mt-4 text-sm leading-7 text-[var(--text-secondary)]">
-              EmberChamber is private by design, but it is not a fantasy system
-              with no operator obligations or no platform rules.
+              EmberChamber limits centralized visibility while recognizing the
+              responsibilities required to operate a safe, reliable platform.
             </p>
 
             <div className="mt-6 flex flex-col gap-3">

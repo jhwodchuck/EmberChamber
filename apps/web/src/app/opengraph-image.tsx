@@ -1,5 +1,8 @@
 import { ImageResponse } from "next/og";
 
+// Purely static content (no per-request data) — required explicitly for
+// `output: "export"` compatibility (the desktop static-export build).
+export const dynamic = "force-static";
 export const alt = "EmberChamber";
 export const size = {
   width: 1200,

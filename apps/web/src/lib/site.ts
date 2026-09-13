@@ -50,8 +50,9 @@ export const betaScopeItems = [
   },
   {
     feature: "Passkey sign-in",
-    status: "planned" as const,
-    detail: "After email bootstrap stabilises",
+    status: "live" as const,
+    detail:
+      "Implemented for the relay and web workspace; native-client UX remains future work",
   },
   {
     feature: "iPhone client",
@@ -102,7 +103,7 @@ export const privacyBoundaryItems: PrivacyBoundaryItem[] = [
     relayRole:
       "Current mobile and desktop flows can still upload raw bytes to R2 through signed upload and download tickets.",
     currentNote:
-      "Native attachment encryption is still being migrated and should not be flattened into the browser DM story.",
+      "Native attachment encryption is still being rolled out and does not yet match browser DM attachment protection.",
   },
   {
     title: "Search",
@@ -124,10 +125,11 @@ export const privacyBoundaryItems: PrivacyBoundaryItem[] = [
   {
     title: "Passkeys",
     staysLocal:
-      "When shipped, passkey private keys will live on user devices or platform authenticators rather than on the relay.",
+      "Passkey private keys stay on user devices or platform authenticators rather than on the relay.",
     relayRole:
-      "The relay schema and endpoints exist only as scaffolding today so the beta can add passkeys later without changing the product boundary.",
-    currentNote: "Passkey sign-in is not live in the current beta.",
+      "The relay issues and verifies WebAuthn challenges, stores public credential material and counters, and creates a device-bound session after successful authentication.",
+    currentNote:
+      "Enrollment and sign-in are implemented in current web source; native-client UX and trusted-device recovery are not.",
   },
 ];
 
@@ -218,7 +220,6 @@ export const docsNav = [
   { href: "/docs/ubuntu-encrypted-messenger", label: "Ubuntu & Linux Client" },
 ];
 
-
 export const launchPlatforms = [
   {
     id: "android",
@@ -257,7 +258,7 @@ export const trustFacts = [
   },
   {
     title: "What stays on your device",
-    body: "Private keys, DM history, local search index, and contact trust state. Attachment encryption and legacy relay-hosted compatibility paths still need to be described separately instead of flattened into one claim.",
+    body: "Private keys, DM history, local search index, and contact trust state stay on your device. Browser and native attachment protection differ today, and older group and room paths may still use relay-hosted compatibility history.",
   },
 ];
 
@@ -275,12 +276,6 @@ export const faqItems = [
       "No. The beta uses invite-only email bootstrap. Your email handles identity and session recovery — it doesn't link your account to Google, Apple, or a carrier.",
   },
   {
-    question: "Is EmberChamber age-gated?",
-    summary: "Yes. The beta has a self-attested 18+ access gate.",
-    answer:
-      "Yes. Beta access is limited to adults 18 and over, with a self-attested age gate during onboarding. This is not a platform for minors.",
-  },
-  {
     question: "Will group chats be encrypted?",
     summary:
       "New groups use device-encrypted history; legacy paths are still called out.",
@@ -289,8 +284,8 @@ export const faqItems = [
   },
   {
     question: "Who is this beta for?",
-    summary: "Adults who want a private space for an invite-gated circle.",
+    summary: "People who want a private space for an invite-gated circle.",
     answer:
-      "Adults who want a genuine private space for their trusted circle — people who are tired of messaging apps that treat their conversation history as an asset.",
+      "People who want a genuine private space for their trusted circle — and who are tired of messaging apps that treat conversation history as an asset.",
   },
 ];

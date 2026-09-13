@@ -400,7 +400,7 @@
     "scope": "room",
     "targetRoomConversationId": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
     "targetRoomTitle": "Restricted Lounge",
-    "inviteToken": "tok-abc123def456ghi789jkl012",
+    "inviteToken": "fixture-invite-token",
     "inviteUrl": "https://relay.example.com/invite/cccccccc-cccc-4ccc-8ccc-cccccccccccc/tok-abc123def456ghi789jkl012",
     "inviterDisplayName": "Ember Alpha",
     "expiresAt": "2026-06-22T10:00:00Z",

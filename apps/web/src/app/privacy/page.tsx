@@ -15,7 +15,7 @@ export default function PrivacyPage() {
     <PolicyPage
       eyebrow="Privacy"
       title="Privacy-first does not mean hand-wavy."
-      intro="This beta policy is a product-facing summary of how EmberChamber is intended to reduce unnecessary centralized visibility while still operating a usable hosted relay."
+      intro="EmberChamber limits unnecessary centralized visibility while using a hosted relay for reliable delivery. This policy explains what stays on your devices, what the relay handles, and which protections are still evolving."
     >
       <section>
         <h2>Core commitments</h2>
@@ -62,8 +62,8 @@ export default function PrivacyPage() {
         <h2>Metadata that still exists</h2>
         <p>
           A practical relay still needs account, device, session, invitation,
-          and delivery metadata to function. The product direction is to keep
-          that set narrow, document it honestly, and avoid expanding it into
+          and delivery metadata to function. We keep that set narrow, document
+          it honestly, and avoid expanding it into
           unnecessary behavioral analytics.
         </p>
       </section>
@@ -72,9 +72,8 @@ export default function PrivacyPage() {
         <h2>Search and storage</h2>
         <p>
           Search for private content is a local device capability. The relay
-          should not become a searchable archive of private message bodies, even
-          while joined-space metadata search and hosted attachment delivery
-          still exist.
+          is not a searchable archive of private message bodies. Joined-space
+          metadata search and hosted attachment delivery still exist.
         </p>
       </section>
 

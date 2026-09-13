@@ -80,10 +80,6 @@ jobs:
       - name: Check desktop shell
         run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
 
-      - name: Fix failing relay and companion app checks
-        uses: fly-ci/wingman-action@v1
-        if: ${{ failure() && github.event.pull_request != null }}
-
   screenshots:
     name: Capture web auth-flow and desktop shell screenshots
     permissions:
@@ -178,14 +174,6 @@ jobs:
           path: apps/web/e2e/__snapshots__
           retention-days: 30
           if-no-files-found: warn
-
-      - name: Capture desktop shell screenshot
-        run: |
-          mkdir -p apps/desktop/artifacts/screenshots
-          node_modules/.bin/playwright screenshot --device="Desktop Chrome" \
-            "file://$GITHUB_WORKSPACE/apps/desktop/shell/index.html" \
-            apps/desktop/artifacts/screenshots/01-shell.png
-
       - name: Upload web screenshot artifacts
         if: always()
         uses: actions/upload-artifact@v7
@@ -194,16 +182,3 @@ jobs:
           path: apps/web/artifacts/screenshots
           retention-days: 14
           if-no-files-found: warn
-
-      - name: Upload desktop screenshot artifacts
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: emberchamber-desktop-screenshots-${{ github.run_number }}
-          path: apps/desktop/artifacts/screenshots
-          retention-days: 14
-          if-no-files-found: warn
-
-      - name: Fix failing web screenshot capture
-        uses: fly-ci/wingman-action@v1
-        if: ${{ failure() && github.event.pull_request != null }}

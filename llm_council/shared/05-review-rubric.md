@@ -39,7 +39,7 @@ Does it accidentally revive legacy assumptions or code paths?
 
 ## EmberChamber-specific review pressure points
 
-- onboarding and trust flow clarity for invited adults
+- onboarding and trust flow clarity for invited participants
 - privacy-boundary accuracy between code and public copy
 - cross-surface drift between relay, web, mobile, desktop, TypeScript, and Rust
 - missing verification for protocol, auth, release, or storage changes

@@ -58,7 +58,7 @@ export const groupSchema = z.object({
 
 export const communitySchema = z.object({
   title: z.string().min(1).max(80),
-  memberAccountIds: z.array(z.string().uuid()).max(149).default([]),
+  memberAccountIds: z.array(z.string().uuid()).max(249).default([]),
   memberCap: z.number().int().min(10).max(250).default(150),
   sensitiveMediaDefault: z.boolean().default(false),
   joinRuleText: z.string().min(1).max(500).optional(),
@@ -158,6 +158,19 @@ export const attachmentTicketSchema = z
         code: z.ZodIssueCode.custom,
         message: "Encrypted attachments need plaintextByteLength.",
         path: ["plaintextByteLength"],
+      });
+    }
+
+    // Message attachments (anything scoped to a conversation) must be
+    // client-side encrypted before upload. Plaintext tickets remain only for
+    // profile media (e.g. avatars), which have no conversationId and are
+    // already visible account metadata, not message content.
+    if (value.conversationId && value.encryptionMode !== "device_encrypted") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "Conversation attachments must be encrypted on-device before upload.",
+        path: ["encryptionMode"],
       });
     }
   });

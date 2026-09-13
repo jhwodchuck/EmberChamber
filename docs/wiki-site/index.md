@@ -26,7 +26,7 @@ features:
     details: Android is the primary mobile surface. Windows and Ubuntu desktop ship via Tauri. Web is a capable secondary client.
   - icon: 🔑
     title: Email Magic-Link Auth
-    details: Email is used only for authentication and recovery — never as the social identity. Passkey enrollment comes later.
+    details: Email is used only for authentication and recovery — never as the social identity. Current web source also supports optional passkey enrollment and sign-in.
   - icon: 🛡️
     title: Invite-Only Beta
     details: Every account requires a valid beta invite or a qualifying group invite. No public sign-up, no phone-number discovery.

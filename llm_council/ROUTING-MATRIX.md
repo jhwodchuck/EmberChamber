@@ -13,7 +13,6 @@
 | `crates/core/**`                         | `C-13`, `C-08`, `C-09`, `C-11`, `C-00`                    |
 | `AGENTS.md`, `README.md`, `docs/**`      | `C-13`, `C-12`, optional `C-01`, `C-09`, `C-10`, `C-00`   |
 | `.github/workflows/**`                   | `C-13`, `C-11`, `C-12`, `C-00`                            |
-| `apps/api/**`, `infra/**`, `services/**` | `C-13`, `C-12`, plus the relevant domain reviewer, `C-00` |
 
 ## Risk-based routing overlays
 

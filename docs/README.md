@@ -25,14 +25,7 @@
 
 ## Work Plans
 
-- [`plansforwork/relay-hardening-and-relay-first-migration.md`](plansforwork/relay-hardening-and-relay-first-migration.md): relay hardening and relay-first migration program plan
-- [`plansforwork/2026-04-09-mobile-modularization-plan.md`](plansforwork/2026-04-09-mobile-modularization-plan.md): mobile App.tsx monolith decomposition and modularization plan
-- [`plansforwork/telegram-signal-level-polish-plan.md`](plansforwork/telegram-signal-level-polish-plan.md): active unifying meta-roadmap for cross-client visual and interaction polish
-- [`plansforwork/phase2-completion-plan.md`](plansforwork/phase2-completion-plan.md): close the two outstanding Phase 2 gaps — Android community/room surface and relay/protocol test coverage
-
-## Legacy Prototype Docs
-
-- [`api/openapi.yaml`](api/openapi.yaml): legacy Express/Postgres prototype API spec for `apps/api`
+- [`plansforwork/2026-07-18-strategic-plan-1mo-3mo-1yr-5yr.md`](plansforwork/2026-07-18-strategic-plan-1mo-3mo-1yr-5yr.md): product strategy (1 month / 3 months / 1 year / 5 years) plus the consolidated outstanding engineering backlog; supersedes the retired relay-hardening, polish, modularization, and phase-2 plan docs, whose completed work is recorded in `roadmap.md`
 
 ## Maintenance Notes
 

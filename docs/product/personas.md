@@ -23,7 +23,8 @@ This document describes the current beta experience in the repo, not just the in
 4. Register device-bundle material if the client supports it.
 5. Review sessions and privacy defaults on the client you just bootstrapped.
 
-Passkeys remain future work. The endpoints exist, but the relay does not complete a passkey flow yet.
+Current source also supports optional passkey enrollment and sign-in in the web workspace. Native
+client passkey UX and passkey-based trusted-device recovery remain future work.
 
 ### Trusted-circle setup
 

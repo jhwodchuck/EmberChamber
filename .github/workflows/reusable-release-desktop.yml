@@ -48,11 +48,24 @@ jobs:
 
       - uses: ./.github/actions/setup-rust-toolchain
 
+      - name: Verify release version alignment
+        shell: bash
+        run: npm run check:release-version -- --ref "$GITHUB_REF"
+
       - uses: ./.github/actions/install-tauri-linux-deps
         if: inputs.install_linux_deps
 
       - name: Build desktop shell
         shell: bash
+        env:
+          # Baked into the static web export at build time (see
+          # apps/web/next.config.js NEXT_OUTPUT=desktop and
+          # apps/desktop/src-tauri/tauri.conf.json beforeBuildCommand).
+          # Without these, the packaged app would default to the local-dev
+          # relay URL from apps/web/.env.example.
+          NEXT_PUBLIC_RELAY_URL: https://relay.emberchamber.com
+          NEXT_PUBLIC_WEB_URL: https://emberchamber.com
+          NEXT_PUBLIC_EMBERCHAMBER_AUTH_BOOTSTRAP_ENABLED: "true"
         run: |
           if [ "${{ inputs.platform }}" = "windows" ] && [ "${{ inputs.prerelease }}" = "true" ]; then
             # Windows MSI packaging rejects semver prerelease labels like

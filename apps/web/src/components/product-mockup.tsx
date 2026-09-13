@@ -330,7 +330,7 @@ export function ProductPreview() {
                         <div
                           className={`max-w-[9rem] rounded-[1rem] px-3 py-2 text-[10px] leading-5 ${
                             message.own
-                              ? "bg-brand-500 text-white"
+                              ? "bg-brand-800 text-white"
                               : "bg-white/[0.06] text-[#ecd9ce]"
                           }`}
                         >

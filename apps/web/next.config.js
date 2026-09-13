@@ -99,23 +99,42 @@ const securityHeaders = [
   { key: "Content-Security-Policy", value: cspDirectives },
 ];
 
+// NEXT_OUTPUT=desktop produces a static export consumed directly by the
+// Tauri desktop shell as its bundled frontend (apps/desktop/src-tauri,
+// build.frontendDist). Static export cannot use next/headers, middleware, or
+// the `headers()` config (there is no server to run them) — the equivalent
+// CSP/security headers are enforced by Tauri's own `app.security.csp` in
+// tauri.conf.json instead. It also requires next/image to run unoptimized,
+// since Next's built-in image-optimization endpoint needs a live server.
+const isDesktopExport = process.env.NEXT_OUTPUT === "desktop";
+
 const nextConfig = {
   reactStrictMode: true,
   // Keep standalone output available for containerised deployment paths without
   // changing the default web build used by local dev and CI.
-  output: process.env.NEXT_OUTPUT === "standalone" ? "standalone" : undefined,
+  output: isDesktopExport
+    ? "export"
+    : process.env.NEXT_OUTPUT === "standalone"
+      ? "standalone"
+      : undefined,
 
-  async headers() {
-    return [
-      {
-        // Apply security headers to every route.
-        source: "/(.*)",
-        headers: securityHeaders,
-      },
-    ];
-  },
+  ...(isDesktopExport
+    ? {}
+    : {
+        async headers() {
+          return [
+            {
+              // Apply security headers to every route.
+              source: "/(.*)",
+              headers: securityHeaders,
+            },
+          ];
+        },
+      }),
 
   images: {
+    // Static export has no server to run Next's image-optimization endpoint.
+    unoptimized: isDesktopExport,
     // Restrict Next.js image optimisation to explicit trusted origins only.
     // All brand assets are local (/brand/*). QR codes use data: URLs via the
     // `unoptimised` prop and are not governed by this list.  The relay origin

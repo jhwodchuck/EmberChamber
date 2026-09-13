@@ -71,7 +71,7 @@ export default defineConfig({
       text: 'Edit this page on GitHub',
     },
     footer: {
-      message: 'Invite-only beta · Adults only · Private by design.',
+      message: 'Invite-only beta · Local-first · Private by design.',
       copyright: '© 2025–2026 EmberChamber',
     },
   },

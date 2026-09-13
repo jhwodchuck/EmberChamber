@@ -1,6 +1,6 @@
 {
   "name": "@emberchamber/mobile",
-  "version": "0.1.0-beta.26",
+  "version": "0.1.0-beta.31",
   "private": true,
   "main": "index.js",
   "scripts": {
@@ -38,7 +38,7 @@
     "expo-blur": "~55.0.14",
     "expo-camera": "~55.0.19",
     "expo-clipboard": "~55.0.13",
-    "expo-constants": "55.0.16",
+    "expo-constants": "~55.0.17",
     "expo-document-picker": "~55.0.13",
     "expo-file-system": "~55.0.22",
     "expo-haptics": "~55.0.14",
@@ -54,7 +54,7 @@
     "expo-system-ui": "~55.0.18",
     "expo-task-manager": "~55.0.16",
     "react": "19.2.0",
-    "react-native": "0.83.6",
+    "react-native": "0.83.10",
     "react-native-gesture-handler": "~2.30.0",
     "react-native-get-random-values": "^2.0.0",
     "react-native-keyboard-controller": "1.20.7",
@@ -66,10 +66,10 @@
   },
   "devDependencies": {
     "@types/jest": "^29.5.12",
-    "@types/react": "^19.2.2",
+    "@types/react": "~19.2.10",
     "expo-doctor": "^1.18.15",
     "jest": "^29.7.0",
-    "jest-expo": "55.0.18",
+    "jest-expo": "~55.0.22",
     "typescript": "^5.4.5"
   }
 }

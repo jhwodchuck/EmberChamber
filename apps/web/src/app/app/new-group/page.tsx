@@ -277,7 +277,7 @@ export default function NewGroupPage() {
               className="input resize-none"
               rows={4}
               maxLength={500}
-              placeholder="Example: Consensual adults only. No reposting, no forwarding, no surprise additions."
+              placeholder="Example: Invite-only. No reposting, no forwarding, no surprise additions."
             />
             <p className="mt-1 text-xs text-[var(--text-secondary)]">
               This shows up in invite preview before someone joins.

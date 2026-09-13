@@ -63,11 +63,6 @@ token_budget_tier: normal
 
 - `crates/core/...`
 
-## Legacy
-
-- `apps/api/...`
-- `services/...`
-
 # Architecture and runtime impact
 
 - <impacted runtime surfaces>

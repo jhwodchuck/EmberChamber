@@ -59,10 +59,8 @@ export function HomeScreenshotProof() {
               Real screens from the live beta flow.
             </h2>
             <p className="mt-4 section-copy">
-              The homepage mockup stays in place, but the product no longer has
-              to speak only through a concept render. These captures show the
-              current invite review, profile setup, and first-message handoff
-              in the browser companion.
+              These live beta screens show invite review, profile setup, and
+              the first-message experience in the browser companion.
             </p>
 
             <div className="mt-6 space-y-3">

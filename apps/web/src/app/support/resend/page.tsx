@@ -4,9 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { MarketingShell } from "@/components/marketing-shell";
 import { StatusCallout } from "@/components/status-callout";
-
-const relayUrl =
-  process.env.NEXT_PUBLIC_RELAY_URL?.replace(/\/$/, "") ?? "http://127.0.0.1:8787";
+import { getRelayBaseUrl } from "@/lib/relay";
 
 export default function ResendMagicLinkPage() {
   const [email, setEmail] = useState("");
@@ -23,7 +21,7 @@ export default function ResendMagicLinkPage() {
     setError(null);
 
     try {
-      const res = await fetch(`${relayUrl}/v1/auth/resend-magic-link`, {
+      const res = await fetch(`${getRelayBaseUrl()}/v1/auth/resend-magic-link`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ email: email.trim() }),

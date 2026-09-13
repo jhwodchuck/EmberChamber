@@ -121,6 +121,13 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
+      - name: Verify release version alignment
+        if: inputs.build_type == 'release'
+        shell: bash
+        env:
+          RELEASE_REF: ${{ inputs.ref || github.ref }}
+        run: npm run check:release-version -- --ref "$RELEASE_REF"
+
       - name: Assert Firebase Android app config is configured
         if: inputs.require_google_services
         env:
@@ -253,7 +260,9 @@ jobs:
           BUILD_TYPE: ${{ inputs.build_type }}
           INPUT_ARTIFACT_NAME: ${{ inputs.artifact_name }}
         run: |
-          SAFE_REF=$(printf '%s' "${{ inputs.ref || github.ref_name }}" | tr '/:@' '-')
+          RAW_REF=$(printf '%s' "${{ inputs.ref || github.ref_name }}")
+          RELEASE_REF=${RAW_REF#refs/tags/}
+          SAFE_REF=$(printf '%s' "$RELEASE_REF" | tr '/:@' '-')
           OUT_DIR=apps/mobile/artifacts/android-build
           mkdir -p "$OUT_DIR"
 
@@ -298,7 +307,3 @@ jobs:
           path: apps/mobile/artifacts/android-build/*
           retention-days: 30
           if-no-files-found: error
-
-      - name: Fix failing Android build
-        uses: fly-ci/wingman-action@v1
-        if: ${{ failure() && github.event.pull_request != null }}

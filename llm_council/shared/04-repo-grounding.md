@@ -15,21 +15,13 @@ Default to these paths unless the task explicitly calls for legacy cleanup:
 - `crates/relay-protocol`: canonical Rust relay contracts
 - `packages/protocol`: TypeScript mirror of relay contracts
 
-## Legacy or non-default paths
-
-These remain in the repo but should not be treated as the default beta runtime:
-
-- `apps/api`: legacy Express/Postgres prototype
-- `infra/docker-compose.yml`: legacy centralized stack
-- `services/*`: archived Rust service scaffolds with standalone manifests, not part of the root Cargo workspace
-
 ## Product constraints
 
 Preserve the current beta direction:
 
 - invite-only access
 - age-gated access with self-attested 18+ affirmation
-- email magic-link bootstrap with passkeys later
+- email magic-link bootstrap with optional relay/web passkeys
 - E2EE direct messages and new device-encrypted small groups
 - organizer/admin invite control in phase 1
 - local-first history on device
@@ -49,9 +41,8 @@ Treat these as high-interest areas:
 
 - migration from legacy relay-hosted group threads to the current device-encrypted group path
 - attachment encryption and signed-upload parity across every client surface
-- passkey, recovery, device-link, and safety-change handling maturity
+- native-client passkey parity, recovery, device-link, and safety-change handling maturity
 - APNS and mobile background delivery maturity
-- remaining cleanup of legacy `apps/api` assumptions
 - cleanup and retention behavior for mailbox envelopes and expired attachment records
 
 ## Current implementation truths worth checking
@@ -75,7 +66,7 @@ Treat these as high-interest areas:
 - Root `package.json` declares `packageManager: npm@10.9.7`
 - Root workspace scripts and CI use `npm`
 - `docs/wiki-site` remains the standalone `pnpm` surface
-- Root Cargo work is centered on `crates/core` and `crates/relay-protocol`; `services/*` are archived legacy scaffolds
+- Root Cargo work is centered on `crates/core` and `crates/relay-protocol`
 - CI exists for relay, web, desktop, and mobile verification plus screenshot capture
 
 Reviewers should treat the active-vs-legacy boundary, mixed tooling surfaces, and public-claim precision as real repo risks.

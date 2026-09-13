@@ -37,7 +37,7 @@ const attentionCards = [
 const honestyCards = [
   "We do not promise “uncensorable forever.”",
   "We do not promise zero server visibility in an absolute sense.",
-  "We do not position EmberChamber as law-enforcement proof or anonymity guaranteed.",
+  "We do not position EmberChamber as law-enforcement proof or promise guaranteed anonymity.",
 ];
 
 const encryptionStatus = [
@@ -63,7 +63,7 @@ export default function TrustAndSafetyPage() {
     <PolicyPage
       eyebrow="Trust & safety"
       title="Designed to protect your conversations — and keep the platform healthy."
-      intro="Invite-only access and end-to-end encrypted direct messages are the current privacy floor, not the excuse for inflated claims. The design still needs clear boundaries, real reporting paths, and accurate language about what is already true versus what is still being migrated."
+      intro="Invite-only access and end-to-end encrypted direct messages form the current privacy baseline. Clear boundaries, real reporting paths, and accurate status details show what is protected today and what is still being migrated."
     >
       <section>
         <div className="section-kicker">Current Encryption Status</div>
@@ -156,9 +156,9 @@ export default function TrustAndSafetyPage() {
           Trust starts with accurate limits, not inflated claims.
         </h2>
         <p>
-          The strongest privacy position on this site is honesty. If a boundary
-          is still evolving, say that plainly instead of borrowing the language
-          of systems with very different threat models.
+          Honesty is part of EmberChamber&apos;s privacy model. We explain
+          evolving boundaries plainly and avoid claims that belong to systems
+          with very different threat models.
         </p>
 
         <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">

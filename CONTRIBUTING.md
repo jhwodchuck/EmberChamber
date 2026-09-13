@@ -15,9 +15,6 @@ Default to these paths for new work:
 | Shared secure-state logic                             | `crates/core`                                   |
 | Relay contract changes                                | `crates/relay-protocol` and `packages/protocol` |
 
-Legacy paths like `apps/api`, `infra/docker-compose.yml`, and `services/*` are not the default place
-for new beta work.
-
 ## Prerequisites
 
 - Node.js 22 recommended for the active app and relay workflows

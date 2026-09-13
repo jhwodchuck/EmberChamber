@@ -5,7 +5,6 @@ This kit is a lower-token, higher-discipline review council for EmberChamber.
 It is designed around the current repo reality:
 
 - active beta runtime in `apps/relay`, `apps/web`, `apps/mobile`, `apps/desktop`, `crates/core`, `crates/relay-protocol`, and `packages/protocol`
-- retained legacy paths in `apps/api`, `infra`, and `services/*`
 - cross-surface risk areas around encrypted groups, attachment encryption, recovery, push maturity, and release reliability
 
 ## What changed from v1

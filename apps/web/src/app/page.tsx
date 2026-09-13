@@ -56,7 +56,7 @@ const faqSchema = {
 const heroSignals = [
   "Invite-only access",
   "No public discovery surface",
-  "Age-gated beta boundary",
+  "Controlled beta boundary",
 ];
 
 const liveTodayCards = [
@@ -72,7 +72,7 @@ const liveTodayCards = [
   },
   {
     title: "Invite-only onboarding is live",
-    body: "Magic-link access, age-gated confirmation, and device naming now happen in a short staged flow.",
+    body: "Magic-link access, invite confirmation, and device naming now happen in a short staged flow.",
     icon: Sparkles,
   },
 ];
@@ -315,8 +315,9 @@ export default function HomePage() {
               The beta is intentionally narrow, and that is part of the value.
             </h2>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-              Keep the surface tight, keep the trust story honest, and expand
-              only where the runtime is already credible.
+              The beta focuses on private conversations, trusted circles, and
+              clear security boundaries. New capabilities will arrive as they
+              become ready for everyday use.
             </p>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -373,9 +374,9 @@ export default function HomePage() {
               Honest answers before the beta opens wider.
             </h2>
             <p className="mt-4 section-copy">
-              The strongest advantage on this site is still honesty. Keep that,
-              then make the rest of the experience feel deliberate enough to
-              deserve it.
+              Clear answers matter when you choose where to have private
+              conversations. See what EmberChamber protects today, where the
+              relay remains involved, and what is still in progress.
             </p>
           </div>
 

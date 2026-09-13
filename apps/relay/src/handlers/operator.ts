@@ -9,6 +9,10 @@ import { blindIndex, normalizeEmail, sha256Hex } from "../lib/crypto";
 import { dbAll, dbFirst, dbRun } from "../lib/d1";
 import { HttpError, json, readJson } from "../lib/http";
 import { recordAuditEvent } from "../services/audit";
+import {
+  purgeLegacyGroupHistory,
+  retireLegacyGroupHistory,
+} from "../services/legacy-group-retirement";
 import { accountUsername, publicWebUrl } from "../services/utils";
 import type { Env } from "../types";
 
@@ -523,6 +527,67 @@ export async function handle(
       completionUrl,
       expiresAt,
       note: "Deliver this single-use link to the account holder out-of-band. It re-bootstraps a new device on the same account and expires in 24 hours.",
+    });
+  }
+
+  // Legacy relay-hosted group history retirement. Scoped strictly to
+  // kind = 'group' rows still on history_mode = 'relay_hosted' (pre-dating
+  // the device-encrypted-group migration) — never communities or rooms,
+  // which are relay-hosted by permanent design. See
+  // services/legacy-group-retirement.ts.
+  const legacyGroupRetireMatch = pathname.match(
+    /^\/v1\/admin\/conversations\/([0-9a-f-]{36})\/retire-legacy-history$/i,
+  );
+  if (request.method === "POST" && legacyGroupRetireMatch) {
+    const operator = await requireOperator(request, env);
+    const conversationId = legacyGroupRetireMatch[1];
+
+    const result = await retireLegacyGroupHistory(env, conversationId);
+
+    if (!result.alreadyRetired) {
+      await recordAuditEvent(env, {
+        actorAccountId: operator.accountId,
+        action: "legacy_group_history_retired",
+        targetConversationId: conversationId,
+      });
+    }
+
+    return json({
+      retired: true,
+      conversationId,
+      retiredAt: result.retiredAt,
+      alreadyRetired: result.alreadyRetired,
+    });
+  }
+
+  const legacyGroupPurgeMatch = pathname.match(
+    /^\/v1\/admin\/conversations\/([0-9a-f-]{36})\/purge-legacy-history$/i,
+  );
+  if (request.method === "POST" && legacyGroupPurgeMatch) {
+    const operator = await requireOperator(request, env);
+    const conversationId = legacyGroupPurgeMatch[1];
+
+    const result = await purgeLegacyGroupHistory(env, conversationId);
+
+    if (!result.alreadyPurged) {
+      await recordAuditEvent(env, {
+        actorAccountId: operator.accountId,
+        action: "legacy_group_history_purged",
+        targetConversationId: conversationId,
+        metadata: {
+          deletedMessageCount: result.deletedMessageCount,
+          deletedAttachmentCount: result.deletedAttachmentCount,
+        },
+      });
+    }
+
+    return json({
+      purged: true,
+      conversationId,
+      purgedAt: result.purgedAt,
+      alreadyPurged: result.alreadyPurged,
+      deletedMessageCount: result.deletedMessageCount,
+      deletedAttachmentCount: result.deletedAttachmentCount,
     });
   }
 

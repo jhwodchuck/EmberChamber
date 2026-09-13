@@ -25,6 +25,9 @@ cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
 
 # Repo contracts
 npm run check:repo-contracts
+
+# Release-facing manifests and lockfiles agree
+npm run check:release-version
 ```
 
 All commands must exit zero. Do not tag or publish if any gate fails.
@@ -92,9 +95,15 @@ If any file in `crates/relay-protocol/` or `packages/protocol/` was modified:
 
 1. Confirm all automated gates passed on the release branch.
 2. Create a tag (`git tag vX.Y.Z`) and push it — CI will build and upload artifacts.
-3. Verify the release page has: Android APK and AAB, Windows `.exe` and `.msi`, Linux `.deb` and `.AppImage`.
-4. Check artifact filesizes are in the expected range (large drops or gains indicate a bundling regression).
-5. Pin the release notes: list breaking changes first, then new features, then known limitations.
+3. Verify the tag matches every release-facing manifest with
+   `npm run check:release-version -- --ref refs/tags/vX.Y.Z`.
+4. Verify the release page has Android `.apk` and `.aab`, Linux `.deb` and `.AppImage`,
+   and the expected Windows artifacts: beta/RC releases produce an NSIS `.exe`; stable releases
+   produce both `.exe` and `.msi`.
+5. Verify desktop artifact filenames contain the release version and Android artifact filenames
+   contain the normalized tag (for example, `v0.1.0-beta.31`, never `refs-tags-...`).
+6. Check artifact filesizes are in the expected range (large drops or gains indicate a bundling regression).
+7. Pin the release notes: list breaking changes first, then new features, then known limitations.
 
 ## Deferred surfaces (do not hold release)
 

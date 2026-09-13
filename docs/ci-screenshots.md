@@ -7,14 +7,19 @@ This repository now captures UI screenshots in GitHub Actions for the currently 
 - Android mobile (`apps/mobile`, `ci-mobile.yml`) — already implemented.
 - iOS mobile scaffold (`apps/mobile`, `release-apple.yml`).
 - Web companion (`apps/web`, `ci-web.yml`).
-- Desktop shell UI (`apps/desktop/shell`, `ci-web.yml`) used by macOS/Windows/Linux Tauri packaging workflows.
+
+Desktop (`apps/desktop`) no longer has a separately-maintained shell UI to screenshot: since
+2026-07 it renders a static export of `apps/web`'s authenticated workspace directly
+(`apps/desktop/src-tauri/tauri.conf.json` `build.frontendDist` → `apps/web/out`), so the web
+screenshots above are the desktop UI. What desktop still needs verified separately — native window
+chrome, OS keyring-backed secure storage, and Tauri packaging — isn't a screenshot concern; see
+`apps/desktop/AGENTS.md`.
 
 ## Chosen approach by platform
 
 - **Android**: emulator + `adb screencap` in `CI - Mobile`.
 - **iOS**: Xcode-built simulator app + `xcrun simctl io screenshot` in `Release - Apple Beta`.
-- **Web**: Next.js production server + Playwright Chromium screenshots in `CI - Relay and Companion Apps`.
-- **Desktop shell**: Playwright screenshot of `apps/desktop/shell/index.html` in `CI - Relay and Companion Apps`.
+- **Web**: Next.js production server + Playwright Chromium screenshots in `CI - Relay and Companion Apps`. Also stands in for desktop's UI (see above).
 
 These choices prioritize reliability and low maintenance with the tooling already present in this repo.
 
@@ -29,13 +34,12 @@ These choices prioritize reliability and low maintenance with the tooling alread
   - `apps/mobile/artifacts/ios-screenshots/*.png`
 - Web: `emberchamber-web-screenshots-<run_number>`
   - `apps/web/artifacts/screenshots/*.png`
-- Desktop shell: `emberchamber-desktop-screenshots-<run_number>`
-  - `apps/desktop/artifacts/screenshots/*.png`
 
 ## Limitations / tradeoffs
 
 - iOS screenshots currently run in the Apple build workflow (tags/manual dispatch), not in Linux CI.
-- Desktop screenshots currently validate the shared shell UI HTML. Native window chrome and OS-specific compositor behavior are not captured yet.
+- Desktop has no automated screenshot of its own; native window chrome and OS-specific compositor
+  behavior are not captured. `npm run ubuntu:ready` remains the manual desktop smoke path.
 - Future improvement path: add platform-native UI automation for deep in-app navigation and multi-screen captures per target.
 
 ## Gallery publishing

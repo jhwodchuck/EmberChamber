@@ -6,7 +6,7 @@ EmberChamber ships in phases. Each phase has a clear success criterion before mo
 
 Align all documentation, marketing copy, and agent guides to the agreed product contract:
 
-- Age-gated, invite-gated, discreet privacy-first positioning
+- Invite-gated, local-first, privacy-first positioning
 - Android, Windows, Ubuntu, and web as committed beta surfaces
 - iPhone and macOS deferred
 - Web as secondary but capable client
@@ -32,10 +32,10 @@ Ship a reliable end-to-end closed beta for organizer-led private groups.
 - [x] Disclosure-based report flow and invite/session revocation
 - [ ] Full E2EE group history (in progress — replacing relay-hosted thread text)
 - [ ] Client-side attachment encryption on mobile and desktop
-- [ ] Passkey enrollment
+- [x] Passkey enrollment and sign-in in relay/web source (native-client UX remains open)
 - [ ] Full trusted-device recovery flow
 
-**Success criterion:** A small invited adult group can join, exchange media, and keep using the product without major confusion or trust failures.
+**Success criterion:** A small invited group can join, exchange media, and keep using the product without major confusion or trust failures.
 
 ## Phase 2 — Closed Beta Expansion (Next)
 
@@ -54,7 +54,7 @@ Expand from small groups into invite-gated multi-room communities.
 
 - No public discovery
 - No global member directory
-- Age-gated invite-gated access
+- Eligibility-confirmed, invite-gated access
 
 ## Later Phases
 
