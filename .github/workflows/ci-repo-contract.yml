@@ -1,6 +1,7 @@
 name: CI - Repo Contracts
 
 on:
+  workflow_dispatch:
   push:
     branches: [main, "copilot/**"]
     paths:

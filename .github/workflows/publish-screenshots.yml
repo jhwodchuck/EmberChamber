@@ -12,7 +12,8 @@ on:
 
 permissions:
   contents: write
-  actions: read
+  actions: write
+  pull-requests: write
 
 # Serialize publishes; a second trigger while one is running queues behind it
 # so each run sees the latest artifact from both CI workflows.
@@ -110,14 +111,46 @@ jobs:
       - name: Generate gallery page
         run: node scripts/generate-screenshot-gallery.mjs
 
-      # ── Commit and push (triggers deploy-wiki.yml redeploy) ─────────────────
-      - name: Commit and push gallery update
+      # ── Commit through a protected pull request ─────────────────────────────
+      - name: Open or update gallery pull request
         run: |
           git add docs/wiki-site/public/screenshots/ docs/wiki-site/screenshots.md
           if git diff --cached --quiet; then
             echo "No screenshot changes detected; skipping commit."
             exit 0
           fi
+
+          BRANCH="automation/screenshot-gallery"
+          REMOTE_SHA=$(git ls-remote --heads origin "$BRANCH" | awk '{print $1}')
+          git switch -c "$BRANCH"
           STATS=$(git diff --cached --stat | tail -1)
           git commit -m "chore: update screenshot gallery (${STATS})"
-          git push origin main
+
+          if [ -n "$REMOTE_SHA" ]; then
+            git push --force-with-lease="refs/heads/${BRANCH}:${REMOTE_SHA}" origin "HEAD:${BRANCH}"
+          else
+            git push origin "HEAD:${BRANCH}"
+          fi
+
+          PR_URL=$(gh pr list \
+            --repo "$GITHUB_REPOSITORY" \
+            --head "$BRANCH" \
+            --state open \
+            --json url \
+            --jq '.[0].url // empty')
+
+          if [ -z "$PR_URL" ]; then
+            PR_URL=$(gh pr create \
+              --repo "$GITHUB_REPOSITORY" \
+              --base main \
+              --head "$BRANCH" \
+              --title "chore: update screenshot gallery" \
+              --body "Automated refresh from the latest successful Android and web screenshot artifacts.")
+          fi
+
+          # GITHUB_TOKEN-authored pull requests do not emit ordinary pull_request
+          # workflow events, so dispatch the protected-branch checks explicitly.
+          gh workflow run security.yml --repo "$GITHUB_REPOSITORY" --ref "$BRANCH"
+          gh workflow run codeql.yml --repo "$GITHUB_REPOSITORY" --ref "$BRANCH"
+          gh workflow run ci-repo-contract.yml --repo "$GITHUB_REPOSITORY" --ref "$BRANCH"
+          gh pr merge "$PR_URL" --repo "$GITHUB_REPOSITORY" --auto --squash --delete-branch
