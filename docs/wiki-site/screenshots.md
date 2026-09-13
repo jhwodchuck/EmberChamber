@@ -56,6 +56,8 @@ _New-user auth flow · Playwright + Chromium_
 
 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin:1.5rem 0">
 
+<img src="/screenshots/web/01-invite-preview.png" alt="Web companion — 01 invite preview" loading="lazy" style="width:100%;border-radius:6px;border:1px solid var(--vp-c-divider)">
+
 <img src="/screenshots/web/01-public-invite-preview.png" alt="Web companion — 01 public invite preview" loading="lazy" style="width:100%;border-radius:6px;border:1px solid var(--vp-c-divider)">
 
 <img src="/screenshots/web/01-report-detail.png" alt="Web companion — 01 report detail" loading="lazy" style="width:100%;border-radius:6px;border:1px solid var(--vp-c-divider)">
@@ -66,13 +68,25 @@ _New-user auth flow · Playwright + Chromium_
 
 <img src="/screenshots/web/02-magic-link-completed.png" alt="Web companion — 02 magic link completed" loading="lazy" style="width:100%;border-radius:6px;border:1px solid var(--vp-c-divider)">
 
+<img src="/screenshots/web/02-privacy-controls.png" alt="Web companion — 02 privacy controls" loading="lazy" style="width:100%;border-radius:6px;border:1px solid var(--vp-c-divider)">
+
 <img src="/screenshots/web/02-report-actioned.png" alt="Web companion — 02 report actioned" loading="lazy" style="width:100%;border-radius:6px;border:1px solid var(--vp-c-divider)">
+
+<img src="/screenshots/web/03-conversation-desktop.png" alt="Web companion — 03 conversation desktop" loading="lazy" style="width:100%;border-radius:6px;border:1px solid var(--vp-c-divider)">
+
+<img src="/screenshots/web/03-conversation-focus.png" alt="Web companion — 03 conversation focus" loading="lazy" style="width:100%;border-radius:6px;border:1px solid var(--vp-c-divider)">
 
 <img src="/screenshots/web/03-profile-created.png" alt="Web companion — 03 profile created" loading="lazy" style="width:100%;border-radius:6px;border:1px solid var(--vp-c-divider)">
 
 <img src="/screenshots/web/03-returned-to-invite.png" alt="Web companion — 03 returned to invite" loading="lazy" style="width:100%;border-radius:6px;border:1px solid var(--vp-c-divider)">
 
+<img src="/screenshots/web/04-conversation-mobile.png" alt="Web companion — 04 conversation mobile" loading="lazy" style="width:100%;border-radius:6px;border:1px solid var(--vp-c-divider)">
+
 <img src="/screenshots/web/04-first-message-sent.png" alt="Web companion — 04 first message sent" loading="lazy" style="width:100%;border-radius:6px;border:1px solid var(--vp-c-divider)">
+
+<img src="/screenshots/web/homepage-desktop.png" alt="Web companion — homepage desktop" loading="lazy" style="width:100%;border-radius:6px;border:1px solid var(--vp-c-divider)">
+
+<img src="/screenshots/web/homepage-mobile.png" alt="Web companion — homepage mobile" loading="lazy" style="width:100%;border-radius:6px;border:1px solid var(--vp-c-divider)">
 
 </div>
 
