@@ -37,6 +37,40 @@ export type PlatformReleaseAvailability = {
   buildsByPlatform: Record<string, PlatformPostedBuild | null>;
 };
 
+export function getDownloadAction(platformId: string, fileName: string) {
+  const lowerName = fileName.toLowerCase();
+  if (platformId === "android") {
+    return lowerName.endsWith(".apk")
+      ? { label: "Download Android APK", primary: true }
+      : { label: "Android App Bundle (advanced)", primary: false };
+  }
+  if (platformId === "ubuntu") {
+    return lowerName.endsWith(".deb")
+      ? { label: "Download Ubuntu package (.deb)", primary: true }
+      : { label: "Portable AppImage (advanced)", primary: false };
+  }
+  if (platformId === "windows") {
+    return lowerName.endsWith(".exe")
+      ? { label: "Download Windows installer (.exe)", primary: true }
+      : { label: "Windows MSI package (advanced)", primary: false };
+  }
+  return { label: `Download ${fileName}`, primary: true };
+}
+
+export function hasArtifactIdentityMismatch(
+  releaseTag: string,
+  downloads: Pick<PlatformDownload, "label">[],
+) {
+  const releaseBeta = releaseTag.match(/beta[.-]?(\d+)/i)?.[1];
+  if (!releaseBeta) {
+    return false;
+  }
+  return downloads.some((download) => {
+    const artifactBeta = download.label.match(/beta[.-]?(\d+)/i)?.[1];
+    return artifactBeta !== undefined && artifactBeta !== releaseBeta;
+  });
+}
+
 const RELEASES_API_URL = "https://api.github.com/repos/jhwodchuck/EmberChamber/releases";
 
 const PLATFORM_SUFFIXES = {
@@ -53,6 +87,20 @@ function matchesAsset(name: string, suffixes: string[]) {
 function pickPlatformDownloads(release: GitHubRelease, suffixes: string[]) {
   return release.assets
     .filter((asset) => matchesAsset(asset.name, suffixes))
+    .sort((left, right) => {
+      const priority = (name: string) => {
+        const lowerName = name.toLowerCase();
+        if (
+          lowerName.endsWith(".apk") ||
+          lowerName.endsWith(".exe") ||
+          lowerName.endsWith(".deb")
+        ) {
+          return 0;
+        }
+        return 1;
+      };
+      return priority(left.name) - priority(right.name);
+    })
     .map((asset) => ({
       label: asset.name,
       url: asset.browser_download_url,

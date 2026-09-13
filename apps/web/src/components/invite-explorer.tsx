@@ -223,7 +223,10 @@ export function InviteExplorer({
       ) : null}
 
       {preview ? (
-        <div className="space-y-4 rounded-[1.35rem] border border-[var(--border)] bg-[var(--bg-secondary)] p-5">
+        <div
+          data-testid="invite-preview-summary"
+          className="space-y-4 rounded-[1.35rem] border border-[var(--border)] bg-[var(--bg-secondary)] p-5"
+        >
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">
               Invite-only space

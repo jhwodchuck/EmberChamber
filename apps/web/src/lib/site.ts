@@ -246,7 +246,7 @@ export const launchPlatforms = [
     artifact: ".exe / .msi",
     status: "First-wave desktop",
     detail:
-      "Full desktop experience in a native Tauri shell for auth, messaging, groups, invites, and settings.",
+      "A native Tauri shell for desk-first beta testing. Core messaging is available, while native feature parity and push delivery remain in progress.",
   },
   {
     id: "ubuntu",

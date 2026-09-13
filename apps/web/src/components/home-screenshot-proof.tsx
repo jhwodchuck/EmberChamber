@@ -3,32 +3,32 @@ import Link from "next/link";
 import { ArrowRight, BadgeCheck } from "lucide-react";
 
 const featuredShot = {
-  src: "/screenshots/home/01-public-invite-preview.png",
+  src: "/screenshots/marketing/01-invite-preview.png",
   alt: "Invite preview screen in the EmberChamber web companion showing invite details before account handoff.",
   title: "Invite review before account handoff",
   body: "Check the space, issuer, and boundary before the link turns into a session.",
-  width: 1280,
-  height: 1470,
+  width: 806,
+  height: 252,
   pill: "Preview the space",
 };
 
 const supportingShots = [
   {
-    src: "/screenshots/home/03-profile-created.png",
+    src: "/screenshots/marketing/02-privacy-controls.png",
     alt: "Settings screen in the EmberChamber web companion showing profile setup during onboarding.",
     title: "Profile and recovery details stay visible",
     body: "The browser flow covers the quiet setup work without sending people into a public profile funnel.",
     width: 1280,
-    height: 1042,
+    height: 704,
     pill: "Settings live",
   },
   {
-    src: "/screenshots/home/04-first-message-sent.png",
+    src: "/screenshots/marketing/03-conversation-desktop.png",
     alt: "Direct message screen in the EmberChamber web companion after the first message has been sent.",
     title: "Direct messages are already usable",
     body: "Search, settings, invite review, and first-message handoff already fit in the same companion surface.",
     width: 1280,
-    height: 1068,
+    height: 706,
     pill: "DM handoff live",
   },
 ] as const;

@@ -65,20 +65,20 @@ export default function HomePage() {
           })),
         }}
       />
-      <section className="px-6 pb-16 pt-14 sm:pb-20 sm:pt-20">
-        <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[0.9fr_1.1fr]">
+      <section className="px-6 pb-12 pt-8 sm:pb-20 sm:pt-20">
+        <div className="mx-auto grid max-w-6xl items-center gap-8 sm:gap-12 lg:grid-cols-[0.9fr_1.1fr]">
           <div>
             <p className="section-kicker">
               Local-first messaging · Invite-only beta
             </p>
-            <h1 className="mt-5 max-w-[14ch] text-balance font-display text-5xl font-semibold leading-[1.06] text-[#fff1e8] sm:text-6xl xl:text-7xl">
+            <h1 className="mt-4 max-w-[14ch] text-balance font-display text-4xl font-semibold leading-[1.06] text-[#fff1e8] sm:mt-5 sm:text-6xl xl:text-7xl">
               Invite-only encrypted messaging for trusted circles.
             </h1>
-            <p className="mt-6 max-w-xl text-lg leading-8 text-[#d6bfb4]">
-              A private place for direct conversations and small groups. Explore
-              the product, see how it is built, or join with an invitation.
+            <p className="mt-4 max-w-xl text-base leading-7 text-[#d6bfb4] sm:mt-6 sm:text-lg sm:leading-8">
+              Private direct conversations and small groups, with the product
+              and engineering open for review.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="mt-6 flex flex-wrap gap-3 sm:mt-8">
               <Link href="/tour" className="btn-primary">
                 Explore the product{" "}
                 <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
@@ -110,13 +110,22 @@ export default function HomePage() {
               aria-label="Explore the messaging screen in the product tour"
             >
               <Image
-                src="/screenshots/home/04-first-message-sent.png"
+                src="/screenshots/marketing/04-conversation-mobile.png"
                 alt="EmberChamber beta web interface showing a conversation after a message has been sent"
-                width={1280}
-                height={1068}
-                sizes="(min-width: 1024px) 640px, 100vw"
+                width={390}
+                height={642}
+                sizes="(min-width: 768px) 0px, 100vw"
                 priority
-                className="h-auto w-full"
+                className="h-auto w-full md:hidden"
+              />
+              <Image
+                src="/screenshots/marketing/03-conversation-focus.png"
+                alt="EmberChamber beta desktop web workspace showing a conversation and encrypted attachment"
+                width={888}
+                height={642}
+                sizes="(min-width: 1024px) 640px, (min-width: 768px) 100vw, 0px"
+                priority
+                className="hidden h-auto w-full md:block"
               />
             </Link>
             <figcaption className="border-t border-white/10 px-5 py-4 text-sm leading-6 text-[#cbb0a3]">
