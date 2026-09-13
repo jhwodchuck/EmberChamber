@@ -8,8 +8,7 @@ import AxeBuilder from "@axe-core/playwright";
 import type { Result } from "axe-core";
 import { expect, test } from "@playwright/test";
 
-const webBaseUrl =
-  process.env.CI_WEB_BASE_URL ?? "http://127.0.0.1:3000";
+const webBaseUrl = process.env.CI_WEB_BASE_URL ?? "http://127.0.0.1:3000";
 
 function formatViolations(violations: Result[]) {
   return violations
@@ -27,8 +26,12 @@ test.describe("Public page accessibility (axe-core)", () => {
     ["register (/register)", "/register"],
     ["login (/login)", "/login"],
     ["download (/download)", "/download"],
+    ["product tour (/tour)", "/tour"],
+    ["engineering case study (/engineering)", "/engineering"],
   ] as const) {
-    test(`${label} has no critical/serious axe violations`, async ({ page }) => {
+    test(`${label} has no critical/serious axe violations`, async ({
+      page,
+    }) => {
       await page.goto(`${webBaseUrl}${path}`);
       await page.waitForLoadState("networkidle");
 
@@ -45,4 +48,28 @@ test.describe("Public page accessibility (axe-core)", () => {
       ).toHaveLength(0);
     });
   }
+
+  test("open mobile navigation has no critical/serious axe violations", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto(webBaseUrl);
+    await page.getByRole("button", { name: "Open navigation menu" }).click();
+
+    const dialog = page.getByRole("dialog", { name: "Site navigation" });
+    await expect(dialog).toBeVisible();
+
+    const { violations } = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+      .analyze();
+
+    const critical = violations.filter(
+      (violation) =>
+        violation.impact === "critical" || violation.impact === "serious",
+    );
+    expect(
+      critical,
+      `Critical/serious axe violations found:\n${formatViolations(violations)}`,
+    ).toHaveLength(0);
+  });
 });

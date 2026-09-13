@@ -157,7 +157,9 @@ async function DownloadPageInner({
                 Download EmberChamber for Android, Windows, and Ubuntu
               </h1>
               <p className="mt-5 text-lg leading-8 text-[var(--text-secondary)]">
-                Download EmberChamber for Android, Windows, Ubuntu, or use the web app. EmberChamber is an invite-only encrypted messaging beta for trusted circles.
+                Download EmberChamber for Android, Windows, Ubuntu, or use the
+                web app. EmberChamber is an invite-only encrypted messaging beta
+                for trusted circles.
               </p>
 
               <div className="mt-6 flex flex-wrap gap-3">
@@ -430,10 +432,10 @@ async function DownloadPageInner({
             </h2>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
               All surfaces share the same relay contracts and local-first
-              direction, but not the same current encryption maturity. Browser
-              DMs and new groups are ahead of legacy compatibility history and
-              native attachment encryption, so read these cards as current-state
-              guidance rather than parity claims.
+              direction, but not every product capability has the same maturity.
+              Current source encrypts conversation attachments before upload
+              across web, mobile, and desktop; production and
+              published-installer parity still require separate verification.
             </p>
 
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -506,7 +508,7 @@ async function DownloadPageInner({
                   {
                     icon: ShieldCheck,
                     title: "Shared local-first direction",
-                    body: "Keys, search, and DM history stay device-centered, even though legacy group history and native attachment encryption are still being migrated.",
+                    body: "Keys, search, and DM history stay device-centered. Relay-hosted rooms and legacy groups retain different history and attachment-key boundaries.",
                   },
                   {
                     icon: Download,

@@ -53,8 +53,8 @@ const encryptionStatus = [
   },
   {
     title: "Attachments",
-    status: "Mixed by client flow",
-    body: "The web direct-message flow encrypts attachments before upload. The Android and desktop clients still upload raw bytes today, so attachment encryption is not yet uniform across surfaces.",
+    status: "Protection depends on conversation type",
+    body: "Current web, mobile, and desktop source encrypts conversation attachment bytes before upload. Device-encrypted conversations keep file keys inside encrypted message payloads; relay-hosted rooms and legacy groups give the relay recoverable key material. Encrypted-upload metadata currently includes exact plaintext length and a deterministic plaintext hash.",
   },
 ];
 
@@ -99,9 +99,9 @@ export default function TrustAndSafetyPage() {
           compatibility paths during the migration.
         </p>
         <p>
-          The product is also age-gated by design. Invite gating,
-          self-attested 18+ onboarding, and organizer-controlled spaces mean the
-          people in a circle chose each other deliberately.
+          The product is also age-gated by design. Invite gating, self-attested
+          18+ onboarding, and organizer-controlled spaces mean the people in a
+          circle chose each other deliberately.
         </p>
 
         <div className="mt-5 grid gap-4 md:grid-cols-3">

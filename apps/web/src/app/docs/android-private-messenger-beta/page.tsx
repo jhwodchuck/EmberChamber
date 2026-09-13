@@ -21,9 +21,10 @@ export default function AndroidPrivateMessengerDoc() {
         <h2>The primary daily client</h2>
         <p>
           The Android application is EmberChamber&apos;s primary native surface.
-          Because mobile devices are carried everywhere, the Android client is designed
-          to stay connected to the edge relay, receive real-time push tickets, and
-          provide a responsive, portable portal to your trusted circles.
+          Because mobile devices are carried everywhere, the Android client is
+          designed to stay connected to the edge relay, receive real-time push
+          tickets, and provide a responsive, portable portal to your trusted
+          circles.
         </p>
       </section>
 
@@ -43,8 +44,8 @@ export default function AndroidPrivateMessengerDoc() {
             or GitHub Releases.
           </li>
           <li>
-            Enable &quot;Install from Unknown Sources&quot; in your Android security
-            settings for your browser or file manager.
+            Enable &quot;Install from Unknown Sources&quot; in your Android
+            security settings for your browser or file manager.
           </li>
           <li>Open the downloaded APK and confirm the installation.</li>
         </ol>
@@ -53,40 +54,46 @@ export default function AndroidPrivateMessengerDoc() {
       <section>
         <h2>Local SQLite storage and cache</h2>
         <p>
-          Unlike the web companion which relies on temporary in-memory database mocks
-          or basic IndexedDB caching, the Android client utilizes a native SQLite database.
-          This local database stores your keys, contact trust records, DM history, and
-          group updates. All message content searches are queried directly against this
-          local SQLite cache, keeping your search index completely off the network.
+          Unlike the web companion which relies on temporary in-memory database
+          mocks or basic IndexedDB caching, the Android client utilizes a native
+          SQLite database. This local database stores your keys, contact trust
+          records, DM history, and group updates. All message content searches
+          are queried directly against this local SQLite cache, keeping your
+          search index completely off the network.
         </p>
       </section>
 
       <section>
         <h2>Onboarding & invitations</h2>
         <p>
-          Onboarding on Android requires a valid invite code from an existing member.
-          Once input, the app initiates an email bootstrap, sending a secure magic link
-          to verify your identity. You will be prompted to perform a self-attested 18+
-          affirmation to finalize account activation.
+          Onboarding on Android requires a valid invite code from an existing
+          member. Once input, the app initiates an email bootstrap, sending a
+          secure magic link to verify your identity. You will be prompted to
+          perform a self-attested 18+ affirmation to finalize account
+          activation.
         </p>
       </section>
 
       <section>
         <h2>Current beta status</h2>
         <p>
-          Android is our most feature-complete native client, but it is still a beta
-          product:
+          Android is our most feature-complete native client, but it is still a
+          beta product:
         </p>
         <ul>
           <li>
-            <strong>Push Notifications:</strong> Push channels are wired and functional
-            on mobile and the relay. Note that production delivery requires
-            operator keys to be fully configured in the relay control plane.
+            <strong>Push Notifications:</strong> Push channels are wired and
+            functional on mobile and the relay. Note that production delivery
+            requires operator keys to be fully configured in the relay control
+            plane.
           </li>
           <li>
-            <strong>Attachment Encryption:</strong> Native attachment E2EE is in
-            active development. Large files or media uploads might bypass standard
-            ciphertext wrapping compared to the browser.
+            <strong>Attachment Encryption:</strong> Current Android source
+            encrypts conversation attachment bytes before upload.
+            Device-encrypted conversations keep file keys in encrypted message
+            payloads, while relay-hosted threads use recoverable relay-side key
+            material. Published installer parity still requires separate
+            verification.
           </li>
         </ul>
         <p>

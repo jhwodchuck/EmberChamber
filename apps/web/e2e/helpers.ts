@@ -1,5 +1,9 @@
 import { mkdirSync } from "node:fs";
 import { expect, type APIRequestContext, type Page } from "@playwright/test";
+import {
+  createStoredDeviceBundle,
+  toPublicPrekeyBundle,
+} from "@emberchamber/protocol";
 
 type AuthStartResponse = {
   id: string;
@@ -87,6 +91,21 @@ export async function bootstrapAccount(
   return (await completeResponse.json()) as AuthSession;
 }
 
+export async function registerDeviceBundle(
+  request: APIRequestContext,
+  session: AuthSession,
+) {
+  const bundle = toPublicPrekeyBundle(createStoredDeviceBundle());
+  const response = await request.post(`${relayBaseUrl}/v1/devices/register`, {
+    headers: {
+      authorization: `Bearer ${session.accessToken}`,
+    },
+    data: bundle,
+  });
+
+  expect(response.ok()).toBeTruthy();
+}
+
 export async function requestMagicLinkChallenge(
   request: APIRequestContext,
   input: {
@@ -96,6 +115,7 @@ export async function requestMagicLinkChallenge(
   },
 ): Promise<AuthStartResponse> {
   const startResponse = await request.post(`${relayBaseUrl}/v1/auth/start`, {
+    headers: { "cf-connecting-ip": `e2e:${input.email}` },
     data: {
       email: input.email,
       inviteToken: input.inviteToken,

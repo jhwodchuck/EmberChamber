@@ -100,7 +100,7 @@ Group thread text is currently stored server-side in D1 (`conversation_messages`
 
 ### Attachments
 
-Clients request a signed upload ticket from the relay, upload the blob directly to R2, and share the ticket with recipients. The browser DM path encrypts attachments client-side before upload. Mobile and desktop client-side encryption is in progress.
+Clients request a signed upload ticket from the relay and upload conversation ciphertext to R2. Current web, mobile, and desktop source encrypts conversation attachment bytes before upload. Device-encrypted conversations carry file keys inside encrypted message payloads; relay-hosted rooms and legacy groups give the relay recoverable key material. Encrypted-upload metadata currently includes exact plaintext length and a deterministic plaintext hash.
 
 ## D1 Schema Summary
 

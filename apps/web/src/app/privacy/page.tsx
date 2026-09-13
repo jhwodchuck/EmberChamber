@@ -50,8 +50,8 @@ export default function PrivacyPage() {
           The right privacy question is not whether the relay exists. It does.
           The real question is what it stores today, what stays local, and which
           compatibility paths are still being retired. That includes DMs, group
-          history, browser versus native attachments, search, recovery, and
-          passkeys.
+          history, device-encrypted versus relay-hosted attachments, search,
+          recovery, and passkeys.
         </p>
         <div className="mt-5">
           <PrivacyBoundaryMatrix items={privacyBoundaryItems} />
@@ -63,16 +63,16 @@ export default function PrivacyPage() {
         <p>
           A practical relay still needs account, device, session, invitation,
           and delivery metadata to function. We keep that set narrow, document
-          it honestly, and avoid expanding it into
-          unnecessary behavioral analytics.
+          it honestly, and avoid expanding it into unnecessary behavioral
+          analytics.
         </p>
       </section>
 
       <section>
         <h2>Search and storage</h2>
         <p>
-          Search for private content is a local device capability. The relay
-          is not a searchable archive of private message bodies. Joined-space
+          Search for private content is a local device capability. The relay is
+          not a searchable archive of private message bodies. Joined-space
           metadata search and hosted attachment delivery still exist.
         </p>
       </section>

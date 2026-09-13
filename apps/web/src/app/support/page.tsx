@@ -76,7 +76,7 @@ const quickAnswers = [
   {
     question: "What data stays on my device?",
     answer:
-      "Private keys, DM history, private-content search, and new device-encrypted group history stay device-centered. Legacy group history, account metadata, and native attachment uploads still use hosted beta paths, so check the privacy page for the exact current boundary.",
+      "Private keys, DM history, private-content search, and new device-encrypted group history stay device-centered. Account metadata and relay-hosted history remain hosted. Current clients encrypt conversation attachment bytes before upload, but relay-hosted threads can give the relay recoverable file-key material.",
   },
 ];
 
@@ -212,8 +212,8 @@ export default function SupportPage() {
               private-content search, and new device-encrypted group history
               stay device-centered, while the hosted beta still keeps account
               metadata, signed attachment storage, and a few legacy
-              compatibility paths. Browser and native attachment handling are
-              not uniform yet.
+              compatibility paths. Device-encrypted conversations and
+              relay-hosted threads use different attachment-key boundaries.
             </p>
             <div className="mt-5">
               <PrivacyBoundaryMatrix items={privacyBoundaryItems.slice(0, 5)} />

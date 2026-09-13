@@ -114,7 +114,7 @@ endpoint map for the current Cloudflare Worker runtime, not a full OpenAPI file.
 
 - New groups are created as `device_encrypted`; only legacy relay-hosted group and room compatibility paths still store readable text in D1 `conversation_messages`.
 - Community containers and room threads are now active closed-beta surfaces on relay plus web, but they still use relay-hosted history and organizer-managed access policies.
-- Current mobile and desktop clients still upload raw bytes to R2; the new browser DM attachment path encrypts before upload, but that is not yet universal across every client.
+- Current web, mobile, and desktop source encrypts conversation attachment bytes before upload. Device-encrypted conversations keep file keys in encrypted message payloads, while relay-hosted rooms and legacy groups give the relay recoverable key material. Production and published-installer parity require separate verification.
 - `CLEANUP_QUEUE` and `PUSH_QUEUE` are now consumed by the worker for retention work and Android wake delivery.
 - The browser now uses relay APIs for authenticated messaging, community and room management, search, invite, and settings flows. Legacy channel routes remain intentionally retired placeholders, not the target beta direction.
 - Browser DM history is local-first. The relay indexes conversation metadata and transports ciphertext envelopes, but it does not serve plaintext DM history back to the browser.

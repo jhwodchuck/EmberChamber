@@ -4,6 +4,7 @@ import {
   bootstrapAccount,
   inviteToken,
   openDirectMessage,
+  registerDeviceBundle,
   relayBaseUrl,
   requestMagicLinkFromUi,
   saveCheckpoint,
@@ -66,6 +67,7 @@ test.describe("CI new-user bootstrap flow", () => {
       peerEmail,
       `CI Peer Device ${seed}`,
     );
+    await registerDeviceBundle(request, peerSession);
 
     const peerProfileResponse = await request.patch(`${relayBaseUrl}/v1/me`, {
       headers: {
@@ -85,11 +87,20 @@ test.describe("CI new-user bootstrap flow", () => {
     );
     await page.goto(`${webBaseUrl}/app/chat/${dmConversation.id}`);
     const firstMessage = `Hello from CI bootstrap flow ${seed}`;
-    await page
-      .getByPlaceholder("Write a direct message for relay mailbox delivery…")
-      .fill(firstMessage);
+    const composer = page.getByPlaceholder(
+      "Write a direct message for relay mailbox delivery…",
+    );
+    await composer.fill(firstMessage);
     await page.getByRole("button", { name: "Send" }).click();
-    await expect(page.getByText(firstMessage)).toBeVisible();
+    await expect(composer).toHaveValue("");
+    const sentMessage = page.getByText(firstMessage, { exact: true });
+    await expect(sentMessage).toBeVisible();
+    await expect(
+      page.getByText(/No recipient devices are registered/),
+    ).not.toBeVisible();
+    await sentMessage.evaluate((element) =>
+      element.scrollIntoView({ block: "center" }),
+    );
     await saveCheckpoint(page, screenshotDir, "04-first-message-sent");
   });
 });
