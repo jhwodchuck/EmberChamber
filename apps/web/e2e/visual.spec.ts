@@ -86,7 +86,7 @@ test.describe("Public page visual baselines", () => {
     ).toBeVisible();
     await expect(
       page.getByText(
-        "The account and device are set up, and the profile has been saved.",
+        "The account and device are set up, with privacy controls loaded.",
       ),
     ).toBeVisible();
     await page
