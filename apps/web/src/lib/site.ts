@@ -15,50 +15,17 @@ export const githubSourceZipUrl = `${githubRepoUrl}/archive/refs/heads/main.zip`
 export const githubIssuesUrl = `${githubRepoUrl}/issues`;
 export const supportEmail = "support@emberchamber.com";
 
+// These labels describe scope, not an assertion that every implementation has
+// been deployed and verified on every client or in every published installer.
 export const betaScopeItems = [
-  {
-    feature: "E2EE direct messages",
-    status: "live" as const,
-    detail: "Encrypted mailbox delivery across active beta surfaces",
-  },
-  {
-    feature: "Small group messages",
-    status: "live" as const,
-    detail:
-      "New groups are created as device-encrypted; legacy relay-hosted compatibility history still exists for older group and room flows",
-  },
-  {
-    feature: "Encrypted attachments",
-    status: "live" as const,
-    detail:
-      "Browser encrypted-conversation uploads use client-side ciphertext; native attachment rollout is still uneven",
-  },
-  {
-    feature: "Invite-only onboarding",
-    status: "live" as const,
-    detail: "Email magic-link, no public registration",
-  },
-  {
-    feature: "Device-local search",
-    status: "live" as const,
-    detail: "Index never sent to relay",
-  },
-  {
-    feature: "Account recovery",
-    status: "live" as const,
-    detail: "Private email bootstrap with limited total-device-loss recovery",
-  },
-  {
-    feature: "Passkey sign-in",
-    status: "live" as const,
-    detail:
-      "Implemented for the relay and web workspace; native-client UX remains future work",
-  },
-  {
-    feature: "iPhone client",
-    status: "planned" as const,
-    detail: "After first-wave targets are stable",
-  },
+  { feature: "E2EE direct messages", status: "live" as const, detail: "Encrypted mailbox delivery across the active beta clients, with device-local history." },
+  { feature: "Small group messages", status: "live" as const, detail: "New groups use device-encrypted history. Legacy group history and relay-hosted communities and rooms have different boundaries." },
+  { feature: "Attachment encryption", status: "partial" as const, detail: "Client support and protection are not yet uniform. Review the client-specific trust notes before sending files." },
+  { feature: "Invite-only onboarding", status: "live" as const, detail: "Invitation-based access with email bootstrap and self-attested 18+ eligibility; no public registration." },
+  { feature: "Device-local search", status: "live" as const, detail: "Private-message content is searched on the device, not indexed by the relay." },
+  { feature: "Account recovery", status: "partial" as const, detail: "Restoring account access does not guarantee recovery of lost device-local keys or message history." },
+  { feature: "Passkey sign-in", status: "implemented" as const, detail: "Present in web and relay source. Native-client UX and authenticator validation remain incomplete; source availability is not a production-rollout guarantee." },
+  { feature: "iPhone client", status: "planned" as const, detail: "Planned after the initial native clients are stable; not listed as a released beta client." },
 ];
 
 export type PrivacyBoundaryItem = {
@@ -137,7 +104,7 @@ export const surfaceCapabilities = [
   {
     name: "Web",
     badge: "browser",
-    recommended: "Fastest start — no install",
+    recommended: "Companion — no install",
     capabilities: [
       "Onboarding & registration",
       "Direct messages",
@@ -154,46 +121,48 @@ export const surfaceCapabilities = [
     badge: ".apk",
     recommended: "Primary daily use",
     capabilities: [
-      "Everything in web",
+      "Direct and group messaging",
       "Local SQLite cache",
       "Native device integration",
       "Installable daily client",
     ],
     caveat:
-      "Push wiring is complete on mobile and relay. Production delivery requires EMBERCHAMBER_FCM_SERVICE_ACCOUNT_JSON and EMBERCHAMBER_PUSH_TOKEN_SECRET to be configured as relay secrets — see the operator playbook.",
+      "Push delivery depends on the deployed relay configuration and client setup. Native features and attachment support do not yet have full web parity.",
   },
   {
     name: "Windows",
     badge: ".exe / .msi",
     recommended: "Desktop daily use",
     capabilities: [
-      "Everything in web",
+      "Direct and group messaging",
       "Longer sessions",
       "Native desktop shell",
     ],
-    caveat: "No desktop push channel yet",
+    caveat: "No desktop push channel yet; native feature parity remains in progress.",
   },
   {
     name: "Ubuntu",
     badge: ".deb / AppImage",
     recommended: "Linux / operators",
     capabilities: [
-      "Everything in web",
+      "Direct and group messaging",
       "Longer sessions",
       ".deb and AppImage packaging",
     ],
-    caveat: "No desktop push channel yet",
+    caveat: "No desktop push channel yet; native feature parity remains in progress.",
   },
 ];
 
 export const primaryNav = [
-  { href: "/start", label: "Start Here" },
+  { href: "/tour", label: "Product Tour" },
+  { href: "/engineering", label: "Engineering" },
   { href: "/download", label: "Download" },
   { href: "/trust-and-safety", label: "Trust & Safety" },
-  { href: "/support", label: "Support" },
 ];
 
 export const footerLinks = [
+  { href: "/tour", label: "Product Tour" },
+  { href: "/engineering", label: "Engineering" },
   { href: "/start", label: "Start Here" },
   { href: "/download", label: "Download" },
   { href: "/trust-and-safety", label: "Trust & Safety" },
