@@ -5,6 +5,19 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    ignore:
+      # Expo packages are versioned as an SDK-aligned set. Individual major
+      # bumps install incompatible SDK 57/58 packages into the SDK 55 app and
+      # fail the mobile verification lane. Upgrade them together during an
+      # explicit Expo SDK migration instead of opening one broken PR per package.
+      - dependency-name: "expo"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "expo-*"
+        update-types: ["version-update:semver-major"]
+      # react-native-worklets is coupled to the current React Native Reanimated
+      # line; take its next major as part of the same deliberate mobile upgrade.
+      - dependency-name: "react-native-worklets"
+        update-types: ["version-update:semver-major"]
 
   # Cargo – root workspace (crates/*, apps/desktop/src-tauri)
   - package-ecosystem: "cargo"
