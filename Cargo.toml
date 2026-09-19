@@ -36,7 +36,7 @@ anyhow = "1"
 dotenvy = "0.15"
 # Crypto
 ring = "0.17"
-base64 = "0.22"
+base64 = "0.23"
 # Tauri desktop / mobile shell
 tauri = { version = "2", features = ["protocol-asset"] }
 tauri-build = { version = "2", features = [] }
