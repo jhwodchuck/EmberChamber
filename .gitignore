@@ -103,7 +103,13 @@ docs/wiki/
 
 # Playwright test artifacts
 apps/web/test-results/
+.playwright-cli/
+
+# Local visual-review output
+output/playwright/
 
 # Model workspace configuration
 .claude/
 CLAUDE.md
+.kilo/
+.roomodes

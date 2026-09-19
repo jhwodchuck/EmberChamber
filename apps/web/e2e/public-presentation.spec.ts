@@ -41,7 +41,7 @@ async function expectLoadedImage(image: ReturnType<Page["locator"]>) {
 }
 
 test.describe("public presentation", () => {
-  test("renders the portfolio homepage at desktop and phone widths", async ({
+  test("renders the public homepage at desktop and phone widths", async ({
     page,
   }) => {
     const errors = watchPageErrors(page);

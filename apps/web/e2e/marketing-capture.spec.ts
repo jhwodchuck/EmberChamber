@@ -75,7 +75,7 @@ async function updateProfile(
   expect(response.ok()).toBeTruthy();
 }
 
-test.describe("portfolio marketing captures", () => {
+test.describe("public product captures", () => {
   test.setTimeout(90_000);
 
   test("captures a deliberate invite, settings view, and useful conversation", async ({
