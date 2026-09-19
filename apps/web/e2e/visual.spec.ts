@@ -1,5 +1,5 @@
 /**
- * Public-page visual evidence and portfolio entry-path regressions.
+ * Public-page visual evidence and entry-path regressions.
  * CI runs this file with --update-snapshots and uploads screenshots for review;
  * generated images are evidence, not proof of a reviewed visual baseline.
  */
