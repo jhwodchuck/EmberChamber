@@ -5,6 +5,11 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 3
+    groups:
+      routine-npm-updates:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
     ignore:
       # Expo packages are versioned as an SDK-aligned set. Individual major
       # bumps install incompatible SDK 57/58 packages into the SDK 55 app and
@@ -15,8 +20,28 @@ updates:
       - dependency-name: "expo-*"
         update-types: ["version-update:semver-major"]
       # react-native-worklets is coupled to the current React Native Reanimated
-      # line; take its next major as part of the same deliberate mobile upgrade.
+      # line; take 0.x minor and major changes as a deliberate mobile upgrade.
       - dependency-name: "react-native-worklets"
+        update-types:
+          - "version-update:semver-minor"
+          - "version-update:semver-major"
+      # These libraries are coupled to framework/toolchain upgrades and need
+      # targeted migration validation rather than isolated bot PRs.
+      - dependency-name: "react-native-reanimated"
+        update-types:
+          - "version-update:semver-minor"
+          - "version-update:semver-major"
+      - dependency-name: "react"
+        update-types:
+          - "version-update:semver-minor"
+          - "version-update:semver-major"
+      - dependency-name: "react-dom"
+        update-types:
+          - "version-update:semver-minor"
+          - "version-update:semver-major"
+      - dependency-name: "date-fns"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint"
         update-types: ["version-update:semver-major"]
 
   # Cargo – root workspace (crates/*, apps/desktop/src-tauri)
@@ -24,22 +49,16 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 3
+    groups:
+      routine-cargo-updates:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
     ignore:
       # glib >=0.20.0 requires gtk-rs 0.20.x which tauri has not adopted yet.
       # The root gtk->glib constraint comes from tauri and cannot be overridden.
       # Re-enable once tauri ships a release using gtk-rs 0.20.x.
       # Tracks: https://github.com/tauri-apps/tauri/issues
-      - dependency-name: "glib"
-        versions: [">=0.20.0"]
-
-  # Cargo – desktop Tauri crate (has its own Cargo.lock)
-  - package-ecosystem: "cargo"
-    directory: "/apps/desktop/src-tauri"
-    schedule:
-      interval: "weekly"
-    ignore:
-      # Same upstream blocker as above – glib 0.20.x is incompatible with
-      # the gtk 0.18.x that tauri 2.x currently depends on.
       - dependency-name: "glib"
         versions: [">=0.20.0"]
 
