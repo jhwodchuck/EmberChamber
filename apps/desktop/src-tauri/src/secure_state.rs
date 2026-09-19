@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::fs;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager, Runtime};
 
@@ -165,6 +164,7 @@ fn write_to_file(path: &Path, state: &Value) -> Result<(), String> {
     #[cfg(unix)]
     {
         use std::fs::OpenOptions;
+        use std::io::Write;
         use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 
         let mut file = OpenOptions::new()
